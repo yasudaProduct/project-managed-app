@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Menu } from "lucide-react";
 import { Button } from "./ui/button";
@@ -14,10 +13,7 @@ import {
 } from "./ui/sheet";
 
 export function SideMenu() {
-  // const [isOpen, setIsOpen] = useState(false);
-
   return (
-    // <Sheet open={isOpen} onOpenChange={setIsOpen}>
     <Sheet>
       <SheetTrigger asChild>
         <Button
@@ -34,25 +30,13 @@ export function SideMenu() {
           <SheetDescription>menu</SheetDescription>
         </SheetHeader>
         <nav className="flex flex-col space-y-4">
-          <Link
-            href="/"
-            className="text-lg font-semibold"
-            // onClick={() => setIsOpen(false)}
-          >
+          <Link href="/" className="text-lg font-semibold">
             ホーム
           </Link>
-          <Link
-            href="/projects"
-            className="text-lg"
-            // onClick={() => setIsOpen(false)}
-          >
+          <Link href="/projects" className="text-lg">
             プロジェクト
           </Link>
-          <Link
-            href="/tasks"
-            className="text-lg"
-            // onClick={() => setIsOpen(false)}
-          >
+          <Link href="/tasks" className="text-lg">
             タスク
           </Link>
         </nav>

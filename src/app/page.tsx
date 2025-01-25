@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { SideMenu } from "@/components/side-menu";
 import {
   Card,
