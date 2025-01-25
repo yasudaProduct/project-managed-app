@@ -7,21 +7,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model projects {
-  id          String   @id(map: "Project_pkey")
+model Projects {
+  id          String   @id @default(uuid())
   name        String
   status      String
   description String?
   startDate   DateTime
   endDate     DateTime
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
+
+  @@map("projects")
 }
 
-model users {
-  id        String   @id(map: "User_pkey")
-  email     String   @unique(map: "User_email_key")
-  name      String?
+model Users {
+  id        String   @id
+  email     String   @unique
+  name      String
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
 }

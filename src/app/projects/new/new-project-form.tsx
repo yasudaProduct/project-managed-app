@@ -23,8 +23,8 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: "プロジェクト名は2文字以上で入力してください。",
   }),
-  description: z.string().min(10, {
-    message: "説明は10文字以上で入力してください。",
+  description: z.string().max(10, {
+    message: "説明は100文字以内で入力してください。",
   }),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "開始日は YYYY-MM-DD 形式で入力してください。",

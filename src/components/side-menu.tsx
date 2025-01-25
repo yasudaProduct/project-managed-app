@@ -33,11 +33,11 @@ export function SideMenu() {
           <Link href="/" className="text-lg font-semibold">
             ホーム
           </Link>
-          <Link href="/projects" className="text-lg">
+          <Link href="/projects/new" className="text-lg">
             プロジェクト
           </Link>
-          <Link href="/tasks" className="text-lg">
-            タスク
+          <Link href="/users" className="text-lg">
+            ユーザー
           </Link>
         </nav>
       </SheetContent>
