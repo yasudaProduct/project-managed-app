@@ -13,11 +13,13 @@ import { Button } from "@/components/ui/button";
 export default async function ProjectPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id: projectId } = await params;
+
   const project = await prisma.projects.findUnique({
     where: {
-      id: params.id,
+      id: projectId,
     },
   });
 
