@@ -7,7 +7,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
@@ -37,12 +36,9 @@ export const columns: ColumnDef<Wbs>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>アクション</DropdownMenuLabel>
-            <DropdownMenuItem>
-              <Link href={`/projects/${wbs.projectId}/wbs/${wbs.id}/edit`}>
-                編集
-              </Link>
-            </DropdownMenuItem>
+            <Link href={`/projects/${wbs.projectId}/wbs/${wbs.id}/edit`}>
+              <DropdownMenuItem>編集</DropdownMenuItem>
+            </Link>
           </DropdownMenuContent>
         </DropdownMenu>
       );

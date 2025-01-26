@@ -7,7 +7,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
@@ -41,13 +40,12 @@ export const columns: ColumnDef<User>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>アクション</DropdownMenuLabel>
-            <DropdownMenuItem>
-              <Link href={`/users/${user.id}`}>詳細</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link href={`/users/${user.id}/edit`}>編集</Link>
-            </DropdownMenuItem>
+            <Link href={`/users/${user.id}`}>
+              <DropdownMenuItem>詳細</DropdownMenuItem>
+            </Link>
+            <Link href={`/users/${user.id}/edit`}>
+              <DropdownMenuItem>編集</DropdownMenuItem>
+            </Link>
           </DropdownMenuContent>
         </DropdownMenu>
       );
