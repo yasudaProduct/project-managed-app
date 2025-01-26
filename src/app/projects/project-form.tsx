@@ -26,6 +26,7 @@ import {
 import { createProject, updateProject } from "./project-actions";
 import { ProjectStatus } from "@prisma/client";
 import { formatDateyyyymmdd } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -81,19 +82,43 @@ export function ProjectForm({ project }: ProjectFormProps) {
     setIsSubmitting(true);
     try {
       if (project) {
-        const { project: updatedProject } = await updateProject(
+        const { project: updatedProject, error } = await updateProject(
           project.id,
           values
         );
-        router.push(`/projects/${updatedProject.id}`);
+        if (!updatedProject) {
+          toast({
+            title: "プロジェクトの更新に失敗しました",
+            description: error,
+          });
+        } else {
+          toast({
+            title: "プロジェクトを更新しました",
+            description: `プロジェクトID: ${updatedProject.id}`,
+          });
+          router.push(`/projects/${updatedProject.id}`);
+        }
       } else {
-        const { project: newProject } = await createProject(values);
-        router.push(`/projects/${newProject.id}`);
+        const { project: newProject, error } = await createProject(values);
+        if (!newProject) {
+          toast({
+            title: "プロジェクトの作成に失敗しました",
+            description: error,
+          });
+        } else {
+          toast({
+            title: "プロジェクトを作成しました",
+            description: `プロジェクトID: ${newProject.id}`,
+          });
+          router.push(`/projects/${newProject.id}`);
+        }
       }
       router.refresh();
     } catch (error) {
-      console.error("Failed to save project:", error);
-      // エラーハンドリングをここに追加（例：エラーメッセージの表示）
+      toast({
+        title: "プロジェクトの作成に失敗しました",
+        description: "error: \n" + error,
+      });
     } finally {
       setIsSubmitting(false);
     }

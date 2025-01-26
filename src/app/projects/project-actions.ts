@@ -17,6 +17,19 @@ export async function createProject(projectData: {
     endDate: string
 }) {
 
+    const check = await prisma.projects.findFirst({
+        select: {
+            name: true,
+        },
+        where: {
+            name: projectData.name,
+        },
+    })
+
+    if (check) {
+        return { success: false, error: "同様のプロジェクト名が存在します。" }
+    }
+
     const project = await prisma.projects.create({
         data: {
             name: projectData.name,
@@ -43,6 +56,21 @@ export async function updateProject(
         status: ProjectStatus
     },
 ) {
+
+    const check = await prisma.projects.findFirst({
+        select: {
+            id: true,
+            name: true,
+        },
+        where: {
+            name: projectData.name,
+        },
+    })
+
+    if (check && check.id != id) {
+        return { success: false, error: "同様のプロジェクト名が存在します。" }
+    }
+
     const project = await prisma.projects.update({
         where: { id: id },
         data: {
