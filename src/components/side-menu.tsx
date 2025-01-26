@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { Home, Menu, PlusCircle, Users } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Sheet,
@@ -30,13 +30,19 @@ export function SideMenu() {
           <SheetDescription>menu</SheetDescription>
         </SheetHeader>
         <nav className="flex flex-col space-y-4">
-          <Link href="/" className="text-lg font-semibold">
+          <Link href="/" className="text-lg flex items-center gap-2">
+            <Home className="h-4 w-4" />
             ホーム
           </Link>
-          <Link href="/projects/new" className="text-lg">
-            プロジェクト
+          <Link
+            href="/projects/new"
+            className="text-lg flex items-center gap-2"
+          >
+            <PlusCircle className="h-4 w-4" />
+            プロジェクト追加
           </Link>
-          <Link href="/users" className="text-lg">
+          <Link href="/users" className="text-lg flex items-center gap-2">
+            <Users className="h-4 w-4" />
             ユーザー
           </Link>
         </nav>
