@@ -81,11 +81,14 @@ export function ProjectForm({ project }: ProjectFormProps) {
     setIsSubmitting(true);
     try {
       if (project) {
-        await updateProject(project.id, values);
-        router.push(`/projects/${project.id}`);
+        const { project: updatedProject } = await updateProject(
+          project.id,
+          values
+        );
+        router.push(`/projects/${updatedProject.id}`);
       } else {
-        await createProject(values);
-        router.push("/projects");
+        const { project: newProject } = await createProject(values);
+        router.push(`/projects/${newProject.id}`);
       }
       router.refresh();
     } catch (error) {

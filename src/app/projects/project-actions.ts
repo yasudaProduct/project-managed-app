@@ -10,7 +10,6 @@ export async function createProject(projectData: {
     startDate: string
     endDate: string
 }) {
-    console.log("createProject:", projectData)
 
     const project = await prisma.projects.create({
         data: {
@@ -22,12 +21,10 @@ export async function createProject(projectData: {
         }
     })
 
-    console.log("project:", project)
-
     // プロジェクト一覧ページを再検証
     revalidatePath("/projects")
 
-    return { success: true }
+    return { success: true, project: project }
 }
 
 export async function updateProject(
@@ -51,11 +48,9 @@ export async function updateProject(
         },
     })
 
-    console.log("project:", project)
-
     // プロジェクト一覧ページと詳細ページを再検証
     revalidatePath("/projects")
-    revalidatePath(`/projects/${id}`)
+    revalidatePath(`/projects/${project.id}`)
 
-    return { success: true }
+    return { success: true, project: project }
 }
