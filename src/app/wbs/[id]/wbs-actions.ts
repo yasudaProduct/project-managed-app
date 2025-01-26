@@ -1,6 +1,7 @@
 "use server"
 
-import { Wbs } from '@/app/types/wbs'
+import prisma from '@/lib/prisma'
+import { Wbs } from '@/types/wbs'
 import { revalidatePath } from 'next/cache'
 
 // モックデータ
@@ -15,8 +16,13 @@ export async function getWbsByProjectId(projectId: string): Promise<Wbs[]> {
     return wbsList.filter(wbs => wbs.projectId === projectId)
 }
 
-export async function getWbsById(id: number): Promise<Wbs | undefined> {
-    return wbsList.find(wbs => wbs.id === id)
+export async function getWbsById(id: number) {
+    const wbs = await prisma.wbs.findUnique({
+        where: {
+            id: Number(id),
+        },
+    })
+    return wbs
 }
 
 export async function createWbs(projectId: string, wbsData: { name: string }): Promise<{ success: boolean; wbs: Wbs }> {
@@ -40,4 +46,26 @@ export async function updateWbs(id: number, wbsData: { name: string }): Promise<
         return { success: true, wbs: wbsList[index] }
     }
     return { success: false }
+}
+
+export async function createWbsPhase(wbsId: number, wbsPhaseData: { name: string; seq: number }) {
+
+    const cheack = await prisma.wbsPhase.findFirst({
+        where: {
+            wbsId: wbsId,
+            name: wbsPhaseData.name,
+        },
+    });
+
+    if (cheack) {
+        return { success: false, message: "すでにフェーズが存在します。" };
+    }
+
+    const newWbsPhase = await prisma.wbsPhase.create({
+        data: {
+            wbsId,
+            ...wbsPhaseData,
+        },
+    });
+    return { success: true, wbsPhase: newWbsPhase };
 }

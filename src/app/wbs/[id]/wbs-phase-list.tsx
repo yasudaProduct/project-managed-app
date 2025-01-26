@@ -1,4 +1,4 @@
-import type { WbsPhase } from "@/app/types/wbs";
+import type { WbsPhase } from "@/types/wbs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { WbsTaskList } from "./wbs-task-list";
 

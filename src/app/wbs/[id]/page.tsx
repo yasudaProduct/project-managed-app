@@ -8,14 +8,16 @@ import Link from "next/link";
 export default async function WbsManagementPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: number }>;
 }) {
-  const wbs = await getWbsById(Number.parseInt(params.id));
+  const { id } = await params;
+
+  const wbs = await getWbsById(id);
   if (!wbs) {
     notFound();
   }
 
-  const phases = await getWbsPhases(Number.parseInt(params.id));
+  const phases = await getWbsPhases(wbs.id);
 
   return (
     <div className="container mx-auto py-10">

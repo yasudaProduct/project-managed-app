@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from 'next/cache'
-import { WbsPhase, WbsTask } from '@/app/types/wbs'
+import { WbsPhase, WbsTask } from '@/types/wbs'
 
 // モックデータ
 const wbsPhases: WbsPhase[] = [
