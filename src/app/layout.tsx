@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SideMenu } from "@/components/side-menu";
 import { Toaster } from "@/components/ui/toaster";
+import ProgressBar from "@/components/progress-bar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,9 +30,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SideMenu />
-        {children}
-        <Toaster />
+        <ProgressBar>
+          <SideMenu />
+          {children}
+          <Toaster />
+        </ProgressBar>
       </body>
     </html>
   );
