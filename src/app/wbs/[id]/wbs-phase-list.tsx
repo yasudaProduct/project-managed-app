@@ -1,13 +1,13 @@
-import type { WbsPhase } from "@/types/wbs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { WbsTaskList } from "./wbs-task-list";
+// import { WbsTaskList } from "@/components/wbs/wbs-task-list";
+import { WbsPhase } from "@prisma/client";
 
 type WbsPhaseListProps = {
   wbsId: number;
   phases: WbsPhase[];
 };
 
-export function WbsPhaseList({ wbsId, phases }: WbsPhaseListProps) {
+export function WbsPhaseList({ phases }: WbsPhaseListProps) {
   return (
     <div className="space-y-6">
       {phases.map((phase) => (
@@ -16,7 +16,7 @@ export function WbsPhaseList({ wbsId, phases }: WbsPhaseListProps) {
             <CardTitle>{phase.name}</CardTitle>
           </CardHeader>
           <CardContent>
-            <WbsTaskList wbsId={wbsId} phaseId={phase.id} tasks={phase.tasks} />
+            {/* <WbsTaskList wbsId={wbsId} phaseId={phase.id} tasks={phase.tasks} /> */}
           </CardContent>
         </Card>
       ))}

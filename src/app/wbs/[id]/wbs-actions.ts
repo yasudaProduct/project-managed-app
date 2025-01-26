@@ -25,27 +25,26 @@ export async function getWbsById(id: number) {
     return wbs
 }
 
-export async function createWbs(projectId: string, wbsData: { name: string }): Promise<{ success: boolean; wbs: Wbs }> {
-    const newWbs: Wbs = {
-        id: wbsList.length + 1,
-        projectId,
-        ...wbsData,
-    }
-    wbsList.push(newWbs)
+export async function createWbs(projectId: string, wbsData: { name: string }) {
+    const newWbs = await prisma.wbs.create({
+        data: {
+            projectId,
+            ...wbsData,
+        },
+    });
 
     revalidatePath(`/projects/${projectId}/wbs`)
     return { success: true, wbs: newWbs }
 }
 
-export async function updateWbs(id: number, wbsData: { name: string }): Promise<{ success: boolean; wbs?: Wbs }> {
-    const index = wbsList.findIndex(wbs => wbs.id === id)
-    if (index !== -1) {
-        wbsList[index] = { ...wbsList[index], ...wbsData }
-
-        revalidatePath(`/projects/${wbsList[index].projectId}/wbs`)
-        return { success: true, wbs: wbsList[index] }
-    }
-    return { success: false }
+export async function updateWbs(id: number, wbsData: { name: string }) {
+    const wbs = await prisma.wbs.update({
+        where: {
+            id: Number(id),
+        },
+        data: wbsData,
+    });
+    return { success: true, wbs: wbs }
 }
 
 export async function createWbsPhase(wbsId: number, wbsPhaseData: { name: string; seq: number }) {

@@ -5,9 +5,11 @@ import { NewWbsPhaseForm } from "./new-wbs-phase-form";
 export default async function NewWbsPhasePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: number }>;
 }) {
-  const wbs = await getWbsById(Number.parseInt(params.id));
+  const { id } = await params;
+
+  const wbs = await getWbsById(id);
   if (!wbs) {
     notFound();
   }
