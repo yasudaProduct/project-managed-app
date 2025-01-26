@@ -6,9 +6,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getProjectById } from "../project-actions";
 
 export default async function ProjectPage({
   params,
@@ -17,11 +17,7 @@ export default async function ProjectPage({
 }) {
   const { id: projectId } = await params;
 
-  const project = await prisma.projects.findUnique({
-    where: {
-      id: projectId,
-    },
-  });
+  const project = await getProjectById(projectId);
 
   if (!project) {
     notFound();
