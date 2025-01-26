@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -17,14 +16,23 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { createProject } from "./project-actions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { createProject, updateProject } from "./project-actions";
+import { ProjectStatus } from "@prisma/client";
+import { formatDateyyyymmdd } from "@/lib/utils";
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "プロジェクト名は2文字以上で入力してください。",
+  name: z.string().min(1, {
+    message: "プロジェクト名を入力して下さい",
   }),
-  description: z.string().max(10, {
-    message: "説明は100文字以内で入力してください。",
+  description: z.string().max(100, {
+    message: "説明は100文字以下で入力してください。",
   }),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "開始日は YYYY-MM-DD 形式で入力してください。",
@@ -32,30 +40,56 @@ const formSchema = z.object({
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "終了予定日は YYYY-MM-DD 形式で入力してください。",
   }),
+  status: z.nativeEnum(ProjectStatus),
 });
 
-export function NewProjectForm() {
+type ProjectFormProps = {
+  project?: {
+    id: string;
+    name: string;
+    description?: string;
+    startDate: string;
+    endDate: string;
+    status: ProjectStatus;
+  };
+};
+
+export function ProjectForm({ project }: ProjectFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  console.log("ProjectForm project:", project);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      startDate: "",
-      endDate: "",
-    },
+    defaultValues: project
+      ? {
+          ...project,
+          startDate: formatDateyyyymmdd(project.startDate),
+          endDate: formatDateyyyymmdd(project.endDate),
+        }
+      : {
+          name: "",
+          description: "",
+          startDate: "",
+          endDate: "",
+          status: ProjectStatus.INACTIVE,
+        },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      await createProject(values);
-      router.push("/projects");
+      if (project) {
+        await updateProject(project.id, values);
+        router.push(`/projects/${project.id}`);
+      } else {
+        await createProject(values);
+        router.push("/projects");
+      }
       router.refresh();
     } catch (error) {
-      console.error("Failed to create project:", error);
+      console.error("Failed to save project:", error);
       // エラーハンドリングをここに追加（例：エラーメッセージの表示）
     } finally {
       setIsSubmitting(false);
@@ -74,9 +108,6 @@ export function NewProjectForm() {
               <FormControl>
                 <Input placeholder="新規プロジェクト" {...field} />
               </FormControl>
-              <FormDescription>
-                プロジェクトの名前を入力してください。
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -94,9 +125,6 @@ export function NewProjectForm() {
                   {...field}
                 />
               </FormControl>
-              <FormDescription>
-                プロジェクトの目的や概要を記述してください。
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -127,8 +155,33 @@ export function NewProjectForm() {
             </FormItem>
           )}
         />
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>ステータス</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="ステータスを選択" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="INACTIVE">計画中</SelectItem>
+                  <SelectItem value="ACTIVE">進行中</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "作成中..." : "プロジェクトを作成"}
+          {isSubmitting
+            ? "保存中..."
+            : project
+            ? "プロジェクトを更新"
+            : "プロジェクトを作成"}
         </Button>
       </form>
     </Form>

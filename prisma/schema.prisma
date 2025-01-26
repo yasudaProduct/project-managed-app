@@ -10,7 +10,7 @@ datasource db {
 model Projects {
   id          String   @id @default(uuid())
   name        String
-  status      String
+  status      ProjectStatus @default(ACTIVE)
   description String?
   startDate   DateTime
   endDate     DateTime
@@ -28,4 +28,12 @@ model Users {
   updatedAt DateTime @updatedAt
 
   @@map("users")
+}
+
+enum ProjectStatus {
+  INACTIVE
+  ACTIVE
+  DONE
+  CANCELLED
+  PENDING
 }
