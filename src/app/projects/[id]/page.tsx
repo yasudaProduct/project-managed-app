@@ -6,20 +6,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getProjectById } from "../project-actions";
+import { getWbsByProjectId } from "./wbs/wbs-actions";
 
 export default async function ProjectPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const project = await prisma.projects.findUnique({
-    where: {
-      id: params.id,
-    },
-  });
+  const { id: projectId } = await params;
+
+  const project = await getProjectById(projectId);
+  const wbsList = await getWbsByProjectId(projectId);
 
   if (!project) {
     notFound();
@@ -27,10 +27,16 @@ export default async function ProjectPage({
 
   return (
     <div className="container mx-auto py-10">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items- mb-6">
         <h1 className="text-3xl font-bold">{project.name}</h1>
         <Link href={`/projects/${project.id}/edit`}>
           <Button>編集</Button>
+        </Link>
+        <Link href={`/projects/${project.id}/wbs/new`}>
+          <Button>WBS作成</Button>
+        </Link>
+        <Link href={`/qqa/${project.id}`}>
+          <Button variant="outline">定量品質評価</Button>
         </Link>
       </div>
       <Card>
@@ -49,6 +55,15 @@ export default async function ProjectPage({
               <p>開始日: {project.startDate.toLocaleDateString()}</p>
               <p>終了予定日: {project.endDate.toLocaleDateString()}</p>
             </div>
+            <h3 className="text-lg font-semibold">WBS</h3>
+            <ul>
+              {wbsList.map((wbs) => (
+                <li key={wbs.id}>{wbs.name}</li>
+              ))}
+            </ul>
+            <Link href={`/projects/${project.id}/wbs`}>
+              <Button variant="link">WBS一覧を見る</Button>
+            </Link>
           </div>
         </CardContent>
       </Card>

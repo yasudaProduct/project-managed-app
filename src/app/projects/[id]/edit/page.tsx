@@ -1,18 +1,16 @@
 import { notFound } from "next/navigation";
 import { ProjectForm } from "../../project-form";
-import prisma from "@/lib/prisma";
 import { Projects } from "@prisma/client";
+import { getProjectById } from "../../project-actions";
 
 export default async function EditProjectPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const project: Projects | null = await prisma.projects.findUnique({
-    where: {
-      id: params.id,
-    },
-  });
+  const { id: projectId } = await params;
+
+  const project: Projects | null = await getProjectById(projectId);
 
   console.log("EditProjectPage project:", project);
 

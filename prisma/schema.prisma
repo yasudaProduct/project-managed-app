@@ -16,18 +16,103 @@ model Projects {
   endDate     DateTime
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  wbs         Wbs[]
 
   @@map("projects")
 }
 
 model Users {
-  id        String   @id
-  email     String   @unique
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String          @id
+  email      String          @unique
+  name       String
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  tasks      WbsTask[]       @relation("TaskAssignee")
+  statusLogs TaskStatusLog[] @relation("StatusChanger")
 
   @@map("users")
+}
+
+model Wbs {
+  id        Int        @id @default(autoincrement())
+  projectId String
+  name      String
+  project   Projects   @relation(fields: [projectId], references: [id])
+  phases    WbsPhase[]
+  tasks     WbsTask[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("wbs")
+}
+
+model WbsPhase {
+  id        Int       @id @default(autoincrement())
+  wbsId     Int
+  seq       Int
+  name      String
+  wbs       Wbs       @relation(fields: [wbsId], references: [id])
+  tasks     WbsTask[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("wbs_phase")
+}
+
+model PhaseTemplate {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  order     Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("phase_template")
+}
+
+model WbsTask {
+  id               String           @id @default(uuid())
+  wbsId            Int
+  phaseId          Int?
+  name             String
+  assigneeId       String?
+  kijunStartDate   DateTime?
+  kijunEndDate     DateTime?
+  kijunKosu        Int?
+  yoteiStartDate   DateTime?
+  yoteiEndDate     DateTime?
+  yoteiKosu        Int?
+  jissekiStartDate DateTime?
+  jissekiEndDate   DateTime?
+  jissekiKosu      Int?
+  status           TaskStatus       @default(NOT_STARTED)
+  wbs              Wbs              @relation(fields: [wbsId], references: [id])
+  phase            WbsPhase?        @relation(fields: [phaseId], references: [id])
+  assignee         Users?           @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  statusLogs       TaskStatusLog[]  @relation("TaskStatusLogs")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@map("wbs_task")
+}
+
+model TaskStatusLog {
+  id        Int        @id @default(autoincrement())
+  taskId    String
+  status    TaskStatus
+  changedAt DateTime
+  changedBy String?
+  task      WbsTask    @relation("TaskStatusLogs",fields: [taskId], references: [id])
+  changer   Users?     @relation("StatusChanger", fields: [changedBy], references: [id])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("task_status_log")
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
 }
 
 enum ProjectStatus {

@@ -4,13 +4,31 @@ import prisma from "@/lib/prisma"
 import { ProjectStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 
+export async function getProjectById(id: string) {
+    return await prisma.projects.findUnique({
+        where: { id: id },
+    })
+}
+
 export async function createProject(projectData: {
     name: string
     description: string
     startDate: string
     endDate: string
 }) {
-    console.log("createProject:", projectData)
+
+    const check = await prisma.projects.findFirst({
+        select: {
+            name: true,
+        },
+        where: {
+            name: projectData.name,
+        },
+    })
+
+    if (check) {
+        return { success: false, error: "同様のプロジェクト名が存在します。" }
+    }
 
     const project = await prisma.projects.create({
         data: {
@@ -22,12 +40,10 @@ export async function createProject(projectData: {
         }
     })
 
-    console.log("project:", project)
-
     // プロジェクト一覧ページを再検証
-    revalidatePath("/projects")
+    revalidatePath("/")
 
-    return { success: true }
+    return { success: true, project: project }
 }
 
 export async function updateProject(
@@ -40,6 +56,21 @@ export async function updateProject(
         status: ProjectStatus
     },
 ) {
+
+    const check = await prisma.projects.findFirst({
+        select: {
+            id: true,
+            name: true,
+        },
+        where: {
+            name: projectData.name,
+        },
+    })
+
+    if (check && check.id != id) {
+        return { success: false, error: "同様のプロジェクト名が存在します。" }
+    }
+
     const project = await prisma.projects.update({
         where: { id: id },
         data: {
@@ -51,11 +82,9 @@ export async function updateProject(
         },
     })
 
-    console.log("project:", project)
-
     // プロジェクト一覧ページと詳細ページを再検証
-    revalidatePath("/projects")
-    revalidatePath(`/projects/${id}`)
+    revalidatePath("/")
+    revalidatePath(`/projects/${project.id}`)
 
-    return { success: true }
+    return { success: true, project: project }
 }
