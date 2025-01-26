@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Home, Menu, PlusCircle, Users } from "lucide-react";
+import { Home, Menu, PlusCircle, Trello, Users } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Sheet,
@@ -44,6 +44,10 @@ export function SideMenu() {
           <Link href="/users" className="text-lg flex items-center gap-2">
             <Users className="h-4 w-4" />
             ユーザー
+          </Link>
+          <Link href="/wbs/phase" className="text-lg flex items-center gap-2">
+            <Trello className="h-4 w-4" />
+            工程
           </Link>
         </nav>
       </SheetContent>

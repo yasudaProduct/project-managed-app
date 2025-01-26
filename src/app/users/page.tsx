@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getUsers } from "@/app/users/user-actions";
 import { DataTable } from "@/components/data-table";
-import { columns } from "@/components/columns";
+import { columns } from "@/app/users/columns";
 
 export default async function UsersPage() {
   const users = await getUsers();
