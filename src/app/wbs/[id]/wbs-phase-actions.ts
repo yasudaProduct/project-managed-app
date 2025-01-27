@@ -12,8 +12,8 @@ const wbsPhases: WbsPhase[] = [
         seq: 1,
         name: "計画",
         tasks: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
     },
     {
         id: 2,
@@ -21,8 +21,8 @@ const wbsPhases: WbsPhase[] = [
         seq: 2,
         name: "実行",
         tasks: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
     },
 ]
 
@@ -44,8 +44,8 @@ export async function createWbsPhase(wbsId: number, phaseData: { name: string; s
         wbsId,
         ...phaseData,
         tasks: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
     }
     wbsPhases.push(newPhase)
 
@@ -56,7 +56,7 @@ export async function createWbsPhase(wbsId: number, phaseData: { name: string; s
 export async function updateWbsPhase(id: number, phaseData: { name?: string; seq?: number }): Promise<{ success: boolean; phase?: WbsPhase }> {
     const index = wbsPhases.findIndex(phase => phase.id === id)
     if (index !== -1) {
-        wbsPhases[index] = { ...wbsPhases[index], ...phaseData, updatedAt: new Date().toISOString() }
+        wbsPhases[index] = { ...wbsPhases[index], ...phaseData, updatedAt: new Date() }
 
         revalidatePath(`/wbs/${wbsPhases[index].wbsId}`)
         return { success: true, phase: wbsPhases[index] }

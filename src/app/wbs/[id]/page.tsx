@@ -1,8 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getWbsById } from "@/app/wbs/[id]/wbs-actions";
-import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
-import { WbsManagement } from "@/components/wbs/wbs-management";
+// import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
@@ -19,7 +18,7 @@ export default async function WbsManagementPage({
     notFound();
   }
 
-  const phases = await getWbsPhases(wbs.id);
+  // const phases = await getWbsPhases(wbs.id);
 
   return (
     <div className="container mx-auto py-10">
@@ -36,7 +35,7 @@ export default async function WbsManagementPage({
           </div>
         }
       >
-        <WbsManagement wbsId={wbs.id} initialPhases={phases} />
+        {/* <WbsManagement wbsId={wbs.id} initialPhases={phases} /> */}
       </Suspense>
     </div>
   );

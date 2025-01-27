@@ -24,8 +24,8 @@ export async function createTask(
         jissekiStartDate: null,
         jissekiEndDate: null,
         jissekiKosu: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
     }
     tasks.push(newTask)
 
@@ -39,7 +39,7 @@ export async function updateTask(
 ): Promise<{ success: boolean; task?: WbsTask }> {
     const taskIndex = tasks.findIndex((task) => task.id === taskId)
     if (taskIndex !== -1) {
-        tasks[taskIndex] = { ...tasks[taskIndex], ...taskData, updatedAt: new Date().toISOString() }
+        tasks[taskIndex] = { ...tasks[taskIndex], ...taskData, updatedAt: new Date() }
         revalidatePath(`/wbs/${tasks[taskIndex].wbsId}`)
         return { success: true, task: tasks[taskIndex] }
     }

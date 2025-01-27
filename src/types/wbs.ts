@@ -5,9 +5,9 @@ export type WbsPhase = {
     wbsId: number
     seq: number
     name: string
-    tasks: WbsTask[]
-    createdAt: string
-    updatedAt: string
+    tasks?: WbsTask[]
+    createdAt: Date
+    updatedAt: Date
 }
 
 export type WbsTask = {
@@ -20,18 +20,18 @@ export type WbsTask = {
         id: string
         name: string
     }
-    kijunStartDate: string | null
-    kijunEndDate: string | null
+    kijunStartDate: Date | null
+    kijunEndDate: Date | null
     kijunKosu: number | null
-    yoteiStartDate: string | null
-    yoteiEndDate: string | null
+    yoteiStartDate: Date | null
+    yoteiEndDate: Date | null
     yoteiKosu: number | null
-    jissekiStartDate: string | null
-    jissekiEndDate: string | null
+    jissekiStartDate: Date | null
+    jissekiEndDate: Date | null
     jissekiKosu: number | null
     status: TaskStatus
-    createdAt: string
-    updatedAt: string
+    createdAt: Date
+    updatedAt: Date
 }
 
 export type Wbs = {

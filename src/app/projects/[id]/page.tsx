@@ -58,7 +58,14 @@ export default async function ProjectPage({
             <h3 className="text-lg font-semibold">WBS</h3>
             <ul>
               {wbsList.map((wbs) => (
-                <li key={wbs.id}>{wbs.name}</li>
+                <li key={wbs.id}>
+                  <Link
+                    href={`/wbs/${wbs.id}`}
+                    className="text-blue-500 hover:underline"
+                  >
+                    {wbs.name}
+                  </Link>
+                </li>
               ))}
             </ul>
             <Link href={`/projects/${project.id}/wbs`}>
