@@ -5,6 +5,8 @@ import { getWbsById } from "@/app/wbs/[id]/wbs-actions";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import WbsManagementTable from "@/components/wbs/data-management-table";
+import prisma from "@/lib/prisma";
 
 export default async function WbsManagementPage({
   params,
@@ -19,6 +21,15 @@ export default async function WbsManagementPage({
   }
 
   // const phases = await getWbsPhases(wbs.id);
+
+  const tasks = await prisma.wbsTask.findMany({
+    where: {
+      wbsId: wbs.id,
+    },
+    orderBy: {
+      id: "asc",
+    },
+  });
 
   return (
     <div className="container mx-auto py-10">
@@ -35,7 +46,7 @@ export default async function WbsManagementPage({
           </div>
         }
       >
-        {/* <WbsManagement wbsId={wbs.id} initialPhases={phases} /> */}
+        <WbsManagementTable wbsId={wbs.id} wbsTasks={tasks} />
       </Suspense>
     </div>
   );

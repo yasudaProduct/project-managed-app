@@ -2,32 +2,33 @@
 
 import { revalidatePath } from "next/cache"
 import { type WbsTask } from "@/types/wbs"
+import prisma from "@/lib/prisma";
 
 const tasks: WbsTask[] = []
 
 export async function createTask(
     wbsId: number,
-    taskData: { name: string; phaseId: number },
-): Promise<{ success: boolean; task?: WbsTask }> {
-    const newTask: WbsTask = {
-        id: `task_${tasks.length + 1}`,
-        wbsId,
-        ...taskData,
-        status: "NOT_STARTED",
-        assigneeId: null,
-        kijunStartDate: null,
-        kijunEndDate: null,
-        kijunKosu: null,
-        yoteiStartDate: null,
-        yoteiEndDate: null,
-        yoteiKosu: null,
-        jissekiStartDate: null,
-        jissekiEndDate: null,
-        jissekiKosu: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    }
-    tasks.push(newTask)
+    taskData: { id: string; name: string; },
+): Promise<{ success: boolean; task?: WbsTask; error?: string }> {
+
+    const newTask = await prisma.wbsTask.create({
+        data: {
+            id: taskData.id,
+            wbsId: wbsId,
+            name: taskData.name,
+            status: "NOT_STARTED",
+            assigneeId: null,
+            kijunStartDate: null,
+            kijunEndDate: null,
+            kijunKosu: null,
+            yoteiStartDate: null,
+            yoteiEndDate: null,
+            yoteiKosu: null,
+            jissekiStartDate: null,
+            jissekiEndDate: null,
+            jissekiKosu: null,
+        }
+    })
 
     revalidatePath(`/wbs/${wbsId}`)
     return { success: true, task: newTask }
