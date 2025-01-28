@@ -123,7 +123,10 @@ export default function WbsManagementTable({
               </TableCell>
               <TableCell>
                 {editingId === item.id ? (
-                  <Button onClick={() => saveEdit(item.id)}>保存</Button>
+                  <>
+                    <Button onClick={() => saveEdit(item.id)}>保存</Button>
+                    <Button variant="secondary" onClick={() => setEditingId(null)}>キャンセル</Button>
+                  </>
                 ) : (
                   <Button variant="ghost" onClick={() => startEditing(item.id)}>
                     <Pencil className="h-4 w-4" />
