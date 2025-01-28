@@ -22,6 +22,15 @@ export default async function WbsManagementPage({
 
   // const phases = await getWbsPhases(wbs.id);
 
+  const project = await prisma.projects.findUnique({
+    where: {
+      id: wbs.projectId,
+    },
+  })
+  if(!project) {
+    notFound();
+  }
+
   const tasks = await prisma.wbsTask.findMany({
     where: {
       wbsId: wbs.id,
@@ -34,11 +43,12 @@ export default async function WbsManagementPage({
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">WBS管理: {wbs.name}</h1>
+        <h1 className="text-3xl font-bold">WBS: {wbs.name}</h1>
         <Link href={`/wbs/${wbs.id}/phase/new`}>
           <Button>新規フェーズ追加</Button>
         </Link>
       </div>
+      <p>{project.status}</p>
       <Suspense
         fallback={
           <div className="flex justify-center">
