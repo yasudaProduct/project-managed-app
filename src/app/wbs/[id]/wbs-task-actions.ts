@@ -8,7 +8,13 @@ const tasks: WbsTask[] = []
 
 export async function createTask(
     wbsId: number,
-    taskData: { id: string; name: string; },
+    taskData: { 
+        id: string; 
+        name: string; 
+        kijunStartDate: string;
+        kijunEndDate: string;
+        kijunKosu: number;
+    },
 ): Promise<{ success: boolean; task?: WbsTask; error?: string }> {
 
     const newTask = await prisma.wbsTask.create({
@@ -18,9 +24,9 @@ export async function createTask(
             name: taskData.name,
             status: "NOT_STARTED",
             assigneeId: null,
-            kijunStartDate: null,
-            kijunEndDate: null,
-            kijunKosu: null,
+            kijunStartDate: new Date(taskData.kijunStartDate).toISOString(),
+            kijunEndDate: new Date(taskData.kijunEndDate).toISOString(),
+            kijunKosu: taskData.kijunKosu,
             yoteiStartDate: null,
             yoteiEndDate: null,
             yoteiKosu: null,

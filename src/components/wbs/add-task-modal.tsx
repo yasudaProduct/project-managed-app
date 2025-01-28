@@ -22,6 +22,15 @@ const formSchema = z.object({
   name: z.string().min(1, {
     message: "タスク名は必須です。",
   }),
+  kijunStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "基準開始日は YYYY-MM-DD 形式で入力してください。",
+  }),
+  kijunEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "基準終了日は YYYY-MM-DD 形式で入力してください。",
+  }),
+  kijunKosu: z.number().min(0, {
+    message: "工数は0以上の数値を入力してください。",
+  }),
 });
 
 
@@ -40,6 +49,9 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
     defaultValues: {
       id: "",
       name: "",
+      kijunStartDate: "",
+      kijunEndDate: "",
+      kijunKosu: 0,
     },
   });
 
@@ -69,12 +81,6 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
                 <label htmlFor="wbsId">
                   WBS ID
                 </label>
-                {/* <Input
-                  id="id"
-                  value={newItem.id}
-                  onChange={(e) => setNewItem({ ...newItem, id: e.target.value })}
-                  className="col-span-3"
-                /> */}
                 <FormField
                   control={form.control}
                   name="id"
@@ -90,12 +96,6 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
                 <label htmlFor="name">
                   名前
                 </label>
-                {/* <Input
-                  id="name"
-                  value={newItem.name}
-                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                  className="col-span-3"
-                /> */}
                 <FormField
                   control={form.control}
                   name="name"
@@ -103,6 +103,51 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
                     <FormItem>
                       <FormControl>
                         <Input placeholder="機能A作成" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <label htmlFor="kijunStartDate">
+                基準開始日
+                </label>
+                <FormField
+                  control={form.control}
+                  name="kijunStartDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <label htmlFor="kijunEndDate">
+                基準終了日
+                </label>
+                <FormField
+                  control={form.control}
+                  name="kijunEndDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <label htmlFor="kijunKosu">
+                基準工数
+                </label>
+                <FormField
+                  control={form.control}
+                  name="kijunKosu"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input type="number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

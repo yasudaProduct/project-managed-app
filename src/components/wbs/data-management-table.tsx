@@ -19,6 +19,9 @@ import { toast } from "@/hooks/use-toast";
 export interface WbsTasks {
   id: string;
   name: string;
+  kijunStartDate: string;
+  kijunEndDate: string;
+  kijunKosu: number;
   // assigneeId: string | null;
   // assignee?: {
   //   id: string;
@@ -50,6 +53,9 @@ export default function WbsManagementTable({
       const result = await createTask(wbsIdState, {
         id: newTasks.id,
         name: newTasks.name,
+        kijunStartDate: newTasks.kijunStartDate,
+        kijunEndDate: newTasks.kijunEndDate,
+        kijunKosu: newTasks.kijunKosu,
       });
       if (result.success) {
         toast({
