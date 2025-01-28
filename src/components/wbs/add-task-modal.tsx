@@ -9,11 +9,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { WbsTasks } from "./data-management-table";
+import { WbsTask } from "./data-management-table";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
+import { TaskStatus } from "@/types/wbs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 const formSchema = z.object({
   id: z.string().min(1, {
@@ -28,21 +30,42 @@ const formSchema = z.object({
   kijunEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "基準終了日は YYYY-MM-DD 形式で入力してください。",
   }),
-  kijunKosu: z.number().min(0, {
+  kijunKosu: z.preprocess((val) => Number(val), z.number().min(0, {
     message: "工数は0以上の数値を入力してください。",
+  })),
+  yoteiStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "予定開始日は YYYY-MM-DD 形式で入力してください。",
+  }),
+  yoteiEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "予定基準終了日は YYYY-MM-DD 形式で入力してください。",
+  }),
+  yoteiKosu: z.preprocess((val) => Number(val), z.number().min(0, {
+    message: "工数は0以上の数値を入力してください。",
+  })),
+  jissekiStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "実績開始日は YYYY-MM-DD 形式で入力してください。",
+  }),
+  jissekiEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "実績終了日は YYYY-MM-DD 形式で入力してください。",
+  }),
+  jissekiKosu: z.preprocess((val) => Number(val), z.number().min(0, {
+    message: "工数は0以上の数値を入力してください。",
+  })),
+  status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] as const, {
+    message: "有効なタスクステータスを選択してください。",
   }),
 });
 
 
 interface AddTaskModalProps {
-  onAddItem: (newTasks: WbsTasks) => void;
+  onAddItem: (newTasks: WbsTask) => void;
   wbsId: number;
 }
 
 export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newItem, setNewItem] = useState({ id: "", name: "" });
+  const [newItem, setNewItem] = useState<WbsTask | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,6 +75,13 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
       kijunStartDate: "",
       kijunEndDate: "",
       kijunKosu: 0,
+      yoteiStartDate: "",
+      yoteiEndDate: "",
+      yoteiKosu: 0,
+      jissekiStartDate: "",
+      jissekiEndDate: "",
+      jissekiKosu: 0,
+      status: "NOT_STARTED",
     },
   });
 
@@ -59,7 +89,7 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
     setIsSubmitting(true);
     onAddItem(values);
     setIsSubmitting(false);
-    setNewItem({ id: "", name: "" });
+    setNewItem(null);
     setIsOpen(false);
   };
 
@@ -109,7 +139,7 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
                   )}
                 />
                 <label htmlFor="kijunStartDate">
-                基準開始日
+                  基準開始日
                 </label>
                 <FormField
                   control={form.control}
@@ -124,7 +154,7 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
                   )}
                 />
                 <label htmlFor="kijunEndDate">
-                基準終了日
+                  基準終了日
                 </label>
                 <FormField
                   control={form.control}
@@ -139,7 +169,7 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
                   )}
                 />
                 <label htmlFor="kijunKosu">
-                基準工数
+                  基準工数
                 </label>
                 <FormField
                   control={form.control}
@@ -147,7 +177,135 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <Input {...field}
+                          type="number"
+                          step="any"
+                          placeholder="工数" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <label htmlFor="yoteiStartDate">
+                  予定開始日
+                </label>
+                <FormField
+                  control={form.control}
+                  name="yoteiStartDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <label htmlFor="yoteiEndDate">
+                  予定終了日
+                </label>
+                <FormField
+                  control={form.control}
+                  name="yoteiEndDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <label htmlFor="yoteiKosu">
+                  予定工数
+                </label>
+                <FormField
+                  control={form.control}
+                  name="yoteiKosu"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input {...field}
+                          type="number"
+                          step="any"
+                          placeholder="工数" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <label htmlFor="jissekiStartDate">
+                  実績開始日
+                </label>
+                <FormField
+                  control={form.control}
+                  name="jissekiStartDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <label htmlFor="jissekiEndDate">
+                  実績終了日
+                </label>
+                <FormField
+                  control={form.control}
+                  name="jissekiEndDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <label htmlFor="jissekiKosu">
+                  実績工数
+                </label>
+                <FormField
+                  control={form.control}
+                  name="jissekiKosu"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input {...field}
+                          type="number"
+                          step="any"
+                          placeholder="工数" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <label htmlFor="status">
+                  状況
+                </label>
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange} defaultValue={field.value}
+                        >
+                          <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="ステータスを選択" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem key="NOT_STARTED" value="NOT_STARTED">未着手</SelectItem>
+                            <SelectItem key="IN_PROGRESS" value="IN_PROGRESS">進行中</SelectItem>
+                            <SelectItem key="COMPLETED" value="COMPLETED">完了</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -156,7 +314,6 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
               </div>
             </div>
             <div className="flex justify-end">
-              {/* <Button onClick={handleSubmit}>追加</Button> */}
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "追加中..." : "追加"}
               </Button>
