@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pencil, Trash2 } from "lucide-react";
 import { AddTaskModal } from "./add-task-modal";
-import { createTask } from "@/app/wbs/[id]/wbs-task-actions";
+import { createTask, deleteTask } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
 
 export interface WbsTasks {
@@ -40,7 +40,7 @@ export default function WbsManagementTable({
 }: WbsManagementTableProps) {
   const [wbsIdState, setWbsIdState] = useState(wbsId);
   const [tasks, setData] = useState<WbsTasks[]>(wbsTasks);
-  const [editItem, setEditItem] = useState({ name: "" });
+  const [editItem, setEditItem] = useState({ id: "", name: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -67,6 +67,7 @@ export default function WbsManagementTable({
       toast({
         title: "タスクの追加に失敗しました",
         description: error instanceof Error ? error.message : "不明なエラー",
+        variant: "destructive",
       });
     }
   };
@@ -74,7 +75,7 @@ export default function WbsManagementTable({
   const startEditing = (id: string) => {
     const item = tasks.find((item) => item.id === id);
     if (item) {
-      setEditItem({ name: item.name });
+      setEditItem({ id: item.id ,name: item.name });
       setEditingId(id);
     }
   };
@@ -84,17 +85,35 @@ export default function WbsManagementTable({
       tasks.map((item) => (item.id === id ? { ...item, ...editItem } : item))
     );
     setEditingId(null);
-    setEditItem({ name: "" });
+    setEditItem({ id: "", name: "" });
   };
 
-  const deleteItem = (id: string) => {
-    setData(tasks.filter((item) => item.id !== id));
+  const deleteItem = async (id: string) => {
+    try{
+      const result = await deleteTask(id);
+      if (result.success) {
+        toast({
+          title: "タスクを削除しました",
+          description: "タスクが削除されました",
+        });
+      }else{
+        toast({
+          title: "タスクの削除に失敗しました",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    }catch(error){
+      toast({
+        title: "タスクの削除に失敗しました",
+        description: error instanceof Error ? error.message : "不明なエラー",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">データ管理テーブル</h1>
-
       <div className="mb-4 flex gap-2">
         <AddTaskModal onAddItem={addItem} wbsId={wbsId} />
       </div>
@@ -102,6 +121,7 @@ export default function WbsManagementTable({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>WBSID</TableHead>
             <TableHead>タスク名</TableHead>
             <TableHead>操作</TableHead>
           </TableRow>
@@ -109,6 +129,18 @@ export default function WbsManagementTable({
         <TableBody>
           {tasks.map((item) => (
             <TableRow key={item.id}>
+              <TableCell>
+                {editingId === item.id ? (
+                  <Input
+                    value={editItem.id || item.id}
+                    onChange={(e) =>
+                      setEditItem({ ...editItem, id: e.target.value })
+                    }
+                  />
+                ) : (
+                  item.id
+                )}
+              </TableCell>
               <TableCell>
                 {editingId === item.id ? (
                   <Input

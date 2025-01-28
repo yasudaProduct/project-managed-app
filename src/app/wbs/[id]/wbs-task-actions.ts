@@ -53,13 +53,20 @@ export async function updateTask(
     return { success: false }
 }
 
-export async function deleteTask(taskId: string): Promise<{ success: boolean }> {
-    const taskIndex = tasks.findIndex((task) => task.id === taskId)
-    if (taskIndex !== -1) {
-        const deletedTask = tasks.splice(taskIndex, 1)[0]
-        revalidatePath(`/wbs/${deletedTask.wbsId}`)
+export async function deleteTask(taskId: string): Promise<{ success: boolean, error?: string }> {
+
+    const task = await prisma.wbsTask.findUnique({
+        where: { id: taskId }
+    })
+
+    if (task) {
+        await prisma.wbsTask.delete({
+            where: { id: taskId }
+        })
+        revalidatePath(`/wbs/${task.wbsId}`)
         return { success: true }
+    }else{
+        return { success: false, error: "タスクが存在しません" }
     }
-    return { success: false }
 }
 
