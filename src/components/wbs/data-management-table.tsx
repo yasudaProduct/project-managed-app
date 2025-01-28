@@ -46,7 +46,6 @@ export default function WbsManagementTable({
   }, [wbsId, wbsTasks]);
 
   const addItem = async (newTasks: WbsTasks) => {
-    console.log("addItem", newTasks);
     try {
       const result = await createTask(wbsIdState, {
         id: newTasks.id,
