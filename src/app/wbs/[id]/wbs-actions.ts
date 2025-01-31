@@ -63,7 +63,8 @@ export async function createWbsPhase(wbsId: number, wbsPhaseData: { name: string
     const newWbsPhase = await prisma.wbsPhase.create({
         data: {
             wbsId,
-            ...wbsPhaseData,
+            name: wbsPhaseData.name,
+            seq: wbsPhaseData.seq,
         },
     });
     return { success: true, wbsPhase: newWbsPhase };

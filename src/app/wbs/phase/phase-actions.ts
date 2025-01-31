@@ -3,7 +3,11 @@
 import prisma from "@/lib/prisma";
 
 export const getPhases = async () => {
-    return await prisma.phaseTemplate.findMany({ orderBy: { order: "asc" } });
+    return await prisma.phaseTemplate.findMany({
+        orderBy: {
+            order: "asc",
+        },
+    });
 };
 
 export const getPhaseById = async (id: number) => {

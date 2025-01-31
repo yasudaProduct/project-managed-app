@@ -22,9 +22,14 @@ const formSchema = z.object({
   name: z.string().min(1, {
     message: "名前は必須です。",
   }),
-  order: z.number().min(1, {
-    message: "順番は必須です。",
-  }),
+  order: z
+    .number()
+    .min(1, {
+      message: "順番は必須です。",
+    })
+    .refine((value) => !isNaN(value), {
+      message: "順番は数値である必要があります。",
+    }),
 });
 
 type PhaseFormProps = {
@@ -117,7 +122,6 @@ export function PhaseForm({ phase }: PhaseFormProps) {
               <FormLabel>順番</FormLabel>
               <FormControl>
                 <Input
-                  type="number"
                   placeholder="1"
                   {...field}
                   onChange={(e) => field.onChange(Number(e.target.value))}
