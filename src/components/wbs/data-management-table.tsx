@@ -13,11 +13,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pencil, Trash2 } from "lucide-react";
 import { AddTaskModal } from "./add-task-modal";
-import { createTask, deleteTask, updateTask } from "@/app/wbs/[id]/wbs-task-actions";
+import {
+  createTask,
+  deleteTask,
+  updateTask,
+} from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
 import { formatDateyyyymmdd } from "@/lib/utils";
 import { TaskStatus } from "@prisma/client";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { getUsers } from "@/app/users/user-actions";
 
 export interface WbsTask {
@@ -53,7 +63,9 @@ export default function WbsManagementTable({
   const [tasks, setData] = useState<WbsTask[]>(wbsTasks);
   const [editItem, setEditItem] = useState<WbsTask | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [assigneeList, setAssigneeList] = useState<{ id: string; name: string }[]>([]);
+  const [assigneeList, setAssigneeList] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   useEffect(() => {
     setWbsIdState(wbsId);
@@ -63,15 +75,16 @@ export default function WbsManagementTable({
     const fetchUsers = async () => {
       const result = await getUsers();
       if (result) {
-        setAssigneeList(result.map((user: any) => ({
-          id: user.id,
-          name: user.name
-        })));
+        setAssigneeList(
+          result.map((user: { id: string; name: string }) => ({
+            id: user.id,
+            name: user.name,
+          }))
+        );
       }
-    }
+    };
 
     fetchUsers();
-
   }, [wbsId, wbsTasks]);
 
   const addItem = async (newTasks: WbsTask) => {
@@ -89,7 +102,7 @@ export default function WbsManagementTable({
         jissekiEndDate: newTasks.jissekiEndDate,
         jissekiKosu: newTasks.jissekiKosu,
         status: newTasks.status,
-        assigneeId: newTasks.assigneeId
+        assigneeId: newTasks.assigneeId,
       });
       if (result.success) {
         toast({
@@ -114,37 +127,36 @@ export default function WbsManagementTable({
     }
   };
 
-  const saveEdit = async (id: string) => {   
+  const saveEdit = async (id: string) => {
     try {
-        const result = await updateTask(id, {
-          id: editItem!.id,
-          name: editItem!.name,
-          kijunStartDate: editItem!.kijunStartDate,
-          kijunEndDate: editItem!.kijunEndDate,
-          kijunKosu: editItem!.kijunKosu,
-          yoteiStartDate: editItem!.yoteiStartDate,
-          yoteiEndDate: editItem!.yoteiEndDate,
-          yoteiKosu: editItem!.yoteiKosu,
-          jissekiStartDate: editItem!.jissekiStartDate,
-          jissekiEndDate: editItem!.jissekiEndDate,
-          jissekiKosu: editItem!.jissekiKosu,
-          status: editItem!.status,
-          assigneeId: editItem!.assigneeId
-        });
+      const result = await updateTask(id, {
+        id: editItem!.id,
+        name: editItem!.name,
+        kijunStartDate: editItem!.kijunStartDate,
+        kijunEndDate: editItem!.kijunEndDate,
+        kijunKosu: editItem!.kijunKosu,
+        yoteiStartDate: editItem!.yoteiStartDate,
+        yoteiEndDate: editItem!.yoteiEndDate,
+        yoteiKosu: editItem!.yoteiKosu,
+        jissekiStartDate: editItem!.jissekiStartDate,
+        jissekiEndDate: editItem!.jissekiEndDate,
+        jissekiKosu: editItem!.jissekiKosu,
+        status: editItem!.status,
+        assigneeId: editItem!.assigneeId,
+      });
 
-        if (result.success) {
-          toast({
-            title: "タスクを更新しました",
-            description: "タスクが更新されました",
-          })
-        } else {
-          toast({
-            title: "タスクの更新に失敗しました",
-            description: result.error,
-            variant: "destructive",
-          });
-        }
-      
+      if (result.success) {
+        toast({
+          title: "タスクを更新しました",
+          description: "タスクが更新されました",
+        });
+      } else {
+        toast({
+          title: "タスクの更新に失敗しました",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
         title: "タスクの更新に失敗しました",
@@ -155,7 +167,6 @@ export default function WbsManagementTable({
       setEditingId(null);
       setEditItem(null);
     }
-    
   };
 
   const deleteItem = async (id: string) => {
@@ -185,7 +196,11 @@ export default function WbsManagementTable({
   return (
     <div className="container mx-auto p-4">
       <div className="mb-4 flex gap-2">
-        <AddTaskModal onAddItem={addItem} wbsId={wbsId} assigneeList={assigneeList} />
+        <AddTaskModal
+          onAddItem={addItem}
+          wbsId={wbsId}
+          assigneeList={assigneeList}
+        />
       </div>
 
       <Table>
@@ -269,7 +284,10 @@ export default function WbsManagementTable({
                     type="date"
                     value={editItem.kijunStartDate || item.kijunStartDate}
                     onChange={(e) =>
-                      setEditItem({ ...editItem, kijunStartDate: e.target.value })
+                      setEditItem({
+                        ...editItem,
+                        kijunStartDate: e.target.value,
+                      })
                     }
                   />
                 ) : (
@@ -295,11 +313,14 @@ export default function WbsManagementTable({
                     type="number"
                     value={editItem.kijunKosu || item.kijunKosu}
                     onChange={(e) =>
-                      setEditItem({ ...editItem, kijunKosu: Number(e.target.value) })
+                      setEditItem({
+                        ...editItem,
+                        kijunKosu: Number(e.target.value),
+                      })
                     }
                   />
                 ) : (
-                  item.kijunKosu
+                  item.kijunKosu || 0
                 )}
               </TableCell>
 
@@ -309,7 +330,10 @@ export default function WbsManagementTable({
                     type="date"
                     value={editItem.yoteiStartDate || item.yoteiStartDate}
                     onChange={(e) =>
-                      setEditItem({ ...editItem, yoteiStartDate: e.target.value })
+                      setEditItem({
+                        ...editItem,
+                        yoteiStartDate: e.target.value,
+                      })
                     }
                   />
                 ) : (
@@ -335,7 +359,10 @@ export default function WbsManagementTable({
                     type="number"
                     value={editItem.yoteiKosu || item.yoteiKosu}
                     onChange={(e) =>
-                      setEditItem({ ...editItem, yoteiKosu: Number(e.target.value) })
+                      setEditItem({
+                        ...editItem,
+                        yoteiKosu: Number(e.target.value),
+                      })
                     }
                   />
                 ) : (
@@ -349,7 +376,10 @@ export default function WbsManagementTable({
                     type="date"
                     value={editItem.jissekiStartDate || item.jissekiStartDate}
                     onChange={(e) =>
-                      setEditItem({ ...editItem, jissekiStartDate: e.target.value })
+                      setEditItem({
+                        ...editItem,
+                        jissekiStartDate: e.target.value,
+                      })
                     }
                   />
                 ) : (
@@ -362,7 +392,10 @@ export default function WbsManagementTable({
                     type="date"
                     value={editItem.jissekiEndDate || item.jissekiEndDate}
                     onChange={(e) =>
-                      setEditItem({ ...editItem, jissekiEndDate: e.target.value })
+                      setEditItem({
+                        ...editItem,
+                        jissekiEndDate: e.target.value,
+                      })
                     }
                   />
                 ) : (
@@ -375,7 +408,10 @@ export default function WbsManagementTable({
                     type="number"
                     value={editItem.jissekiKosu || item.jissekiKosu}
                     onChange={(e) =>
-                      setEditItem({ ...editItem, jissekiKosu: Number(e.target.value) })
+                      setEditItem({
+                        ...editItem,
+                        jissekiKosu: Number(e.target.value),
+                      })
                     }
                   />
                 ) : (
@@ -394,9 +430,15 @@ export default function WbsManagementTable({
                       <SelectValue placeholder="ステータスを選択" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem key="NOT_STARTED" value="NOT_STARTED">未着手</SelectItem>
-                      <SelectItem key="IN_PROGRESS" value="IN_PROGRESS">進行中</SelectItem>
-                      <SelectItem key="COMPLETED" value="COMPLETED">完了</SelectItem>
+                      <SelectItem key="NOT_STARTED" value="NOT_STARTED">
+                        未着手
+                      </SelectItem>
+                      <SelectItem key="IN_PROGRESS" value="IN_PROGRESS">
+                        進行中
+                      </SelectItem>
+                      <SelectItem key="COMPLETED" value="COMPLETED">
+                        完了
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
@@ -409,7 +451,12 @@ export default function WbsManagementTable({
                 {editingId === item.id ? (
                   <>
                     <Button onClick={() => saveEdit(item.id)}>保存</Button>
-                    <Button variant="secondary" onClick={() => setEditingId(null)}>キャンセル</Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setEditingId(null)}
+                    >
+                      キャンセル
+                    </Button>
                   </>
                 ) : (
                   <Button variant="ghost" onClick={() => startEditing(item.id)}>

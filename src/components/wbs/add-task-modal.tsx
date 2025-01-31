@@ -13,9 +13,20 @@ import { WbsTask } from "./data-management-table";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
-import { TaskStatus } from "@/types/wbs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "../ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 const formSchema = z.object({
   id: z.string().min(1, {
@@ -33,37 +44,45 @@ const formSchema = z.object({
   kijunEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "基準終了日は YYYY-MM-DD 形式で入力してください。",
   }),
-  kijunKosu: z.preprocess((val) => Number(val), z.number().min(0, {
-    message: "工数は0以上の数値を入力してください。",
-  })),
+  kijunKosu: z.preprocess(
+    (val) => Number(val),
+    z.number().min(0, {
+      message: "工数は0以上の数値を入力してください。",
+    })
+  ),
   yoteiStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "予定開始日は YYYY-MM-DD 形式で入力してください。",
   }),
   yoteiEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "予定基準終了日は YYYY-MM-DD 形式で入力してください。",
   }),
-  yoteiKosu: z.preprocess((val) => Number(val), z.number().min(0, {
-    message: "工数は0以上の数値を入力してください。",
-  })),
+  yoteiKosu: z.preprocess(
+    (val) => Number(val),
+    z.number().min(0, {
+      message: "工数は0以上の数値を入力してください。",
+    })
+  ),
   jissekiStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "実績開始日は YYYY-MM-DD 形式で入力してください。",
   }),
   jissekiEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "実績終了日は YYYY-MM-DD 形式で入力してください。",
   }),
-  jissekiKosu: z.preprocess((val) => Number(val), z.number().min(0, {
-    message: "工数は0以上の数値を入力してください。",
-  })),
+  jissekiKosu: z.preprocess(
+    (val) => Number(val),
+    z.number().min(0, {
+      message: "工数は0以上の数値を入力してください。",
+    })
+  ),
   status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] as const, {
     message: "有効なタスクステータスを選択してください。",
   }),
 });
 
-
 interface AddTaskModalProps {
   onAddItem: (newTasks: WbsTask) => void;
   wbsId: number;
-  assigneeList: {id:string, name: string}[]
+  assigneeList: { id: string; name: string }[];
 }
 
 export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
@@ -96,7 +115,7 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
     setIsSubmitting(false);
     setNewItem(null);
     setIsOpen(false);
-  };
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -113,9 +132,7 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="grid gap-1 py-4">
               <div className="grid grid-cols-2 items-center gap-2">
-                <label htmlFor="wbsId">
-                  WBS ID
-                </label>
+                <label htmlFor="wbsId">WBS ID</label>
                 <FormField
                   control={form.control}
                   name="id"
@@ -128,9 +145,7 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="name">
-                  名前
-                </label>
+                <label htmlFor="name">名前</label>
                 <FormField
                   control={form.control}
                   name="name"
@@ -143,9 +158,7 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="assigneeId">
-                  担当者
-                </label>
+                <label htmlFor="assigneeId">担当者</label>
                 <FormField
                   control={form.control}
                   name="assigneeId"
@@ -153,7 +166,8 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
                     <FormItem>
                       <FormControl>
                         <Select
-                          onValueChange={field.onChange} defaultValue={field.value}
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
                         >
                           <SelectTrigger className="col-span-3">
                             <SelectValue placeholder="担当者を選択" />
@@ -177,9 +191,8 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="kijunStartDate">
-                  基準開始日
-                </label>
+                <label htmlFor="kijunStartDate">基準開始日</label>
+                <label htmlFor="kijunStartDate">基準開始日</label>
                 <FormField
                   control={form.control}
                   name="kijunStartDate"
@@ -192,9 +205,7 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="kijunEndDate">
-                  基準終了日
-                </label>
+                <label htmlFor="kijunEndDate">基準終了日</label>
                 <FormField
                   control={form.control}
                   name="kijunEndDate"
@@ -207,28 +218,26 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="kijunKosu">
-                  基準工数
-                </label>
+                <label htmlFor="kijunKosu">基準工数</label>
                 <FormField
                   control={form.control}
                   name="kijunKosu"
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input {...field}
+                        <Input
+                          {...field}
                           type="number"
                           step="any"
-                          placeholder="工数" />
+                          placeholder="工数"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <label htmlFor="yoteiStartDate">
-                  予定開始日
-                </label>
+                <label htmlFor="yoteiStartDate">予定開始日</label>
                 <FormField
                   control={form.control}
                   name="yoteiStartDate"
@@ -241,9 +250,7 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="yoteiEndDate">
-                  予定終了日
-                </label>
+                <label htmlFor="yoteiEndDate">予定終了日</label>
                 <FormField
                   control={form.control}
                   name="yoteiEndDate"
@@ -256,28 +263,26 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="yoteiKosu">
-                  予定工数
-                </label>
+                <label htmlFor="yoteiKosu">予定工数</label>
                 <FormField
                   control={form.control}
                   name="yoteiKosu"
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input {...field}
+                        <Input
+                          {...field}
                           type="number"
                           step="any"
-                          placeholder="工数" />
+                          placeholder="工数"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <label htmlFor="jissekiStartDate">
-                  実績開始日
-                </label>
+                <label htmlFor="jissekiStartDate">実績開始日</label>
                 <FormField
                   control={form.control}
                   name="jissekiStartDate"
@@ -290,9 +295,7 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="jissekiEndDate">
-                  実績終了日
-                </label>
+                <label htmlFor="jissekiEndDate">実績終了日</label>
                 <FormField
                   control={form.control}
                   name="jissekiEndDate"
@@ -305,28 +308,26 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="jissekiKosu">
-                  実績工数
-                </label>
+                <label htmlFor="jissekiKosu">実績工数</label>
                 <FormField
                   control={form.control}
                   name="jissekiKosu"
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input {...field}
+                        <Input
+                          {...field}
                           type="number"
                           step="any"
-                          placeholder="工数" />
+                          placeholder="工数"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <label htmlFor="status">
-                  状況
-                </label>
+                <label htmlFor="status">状況</label>
                 <FormField
                   control={form.control}
                   name="status"
@@ -334,15 +335,22 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
                     <FormItem>
                       <FormControl>
                         <Select
-                          onValueChange={field.onChange} defaultValue={field.value}
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
                         >
                           <SelectTrigger className="col-span-3">
                             <SelectValue placeholder="ステータスを選択" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem key="NOT_STARTED" value="NOT_STARTED">未着手</SelectItem>
-                            <SelectItem key="IN_PROGRESS" value="IN_PROGRESS">進行中</SelectItem>
-                            <SelectItem key="COMPLETED" value="COMPLETED">完了</SelectItem>
+                            <SelectItem key="NOT_STARTED" value="NOT_STARTED">
+                              未着手
+                            </SelectItem>
+                            <SelectItem key="IN_PROGRESS" value="IN_PROGRESS">
+                              進行中
+                            </SelectItem>
+                            <SelectItem key="COMPLETED" value="COMPLETED">
+                              完了
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </FormControl>
