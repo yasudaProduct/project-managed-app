@@ -88,7 +88,6 @@ interface AddTaskModalProps {
 export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newItem, setNewItem] = useState<WbsTask | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -113,7 +112,6 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
     setIsSubmitting(true);
     onAddItem(values);
     setIsSubmitting(false);
-    setNewItem(null);
     setIsOpen(false);
   }
 
@@ -191,7 +189,6 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="kijunStartDate">基準開始日</label>
                 <label htmlFor="kijunStartDate">基準開始日</label>
                 <FormField
                   control={form.control}

@@ -47,6 +47,7 @@ export interface WbsTask {
   assignee?: {
     id: string;
     name: string;
+    displayName: string;
   };
 }
 
@@ -275,7 +276,7 @@ export default function WbsManagementTable({
                     </SelectContent>
                   </Select>
                 ) : (
-                  item.assignee?.name || ""
+                  item.assignee?.displayName || ""
                 )}
               </TableCell>
               <TableCell>

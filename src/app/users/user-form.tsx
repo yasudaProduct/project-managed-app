@@ -27,6 +27,9 @@ const formSchema = z.object({
   email: z.string().email({
     message: "有効なメールアドレスを入力してください。",
   }),
+  displayName: z.string().min(1, {
+    message: "表示名は必須です。",
+  }),
 });
 
 type UserFormProps = {
@@ -34,6 +37,7 @@ type UserFormProps = {
     id: string;
     name: string;
     email: string;
+    displayName: string;
   };
 };
 
@@ -47,6 +51,7 @@ export function UserForm({ user }: UserFormProps) {
       id: "",
       name: "",
       email: "",
+      displayName: "",
     },
   });
 
@@ -63,7 +68,6 @@ export function UserForm({ user }: UserFormProps) {
       router.refresh();
     } catch (error) {
       console.error("Failed to save user:", error);
-      // エラーハンドリングをここに追加（例：エラーメッセージの表示）
     } finally {
       setIsSubmitting(false);
     }
@@ -112,6 +116,19 @@ export function UserForm({ user }: UserFormProps) {
                   placeholder="taro.yamada@example.com"
                   {...field}
                 />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="displayName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>表示名</FormLabel>
+              <FormControl>
+                <Input {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

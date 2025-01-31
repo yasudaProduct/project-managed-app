@@ -15,6 +15,7 @@ export type User = {
   id: string;
   email: string;
   name: string;
+  displayName: string;
 };
 
 export const columns: ColumnDef<User>[] = [
@@ -25,6 +26,10 @@ export const columns: ColumnDef<User>[] = [
   {
     accessorKey: "email",
     header: "メールアドレス",
+  },
+  {
+    accessorKey: "displayName",
+    header: "表示名",
   },
   {
     id: "actions",

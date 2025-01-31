@@ -40,6 +40,7 @@ export default async function WbsManagementPage({
         select: {
           id: true,
           name: true,
+          displayName: true,
         },
       },
     },
@@ -70,6 +71,7 @@ export default async function WbsManagementPage({
     status: task.status,
     assigneeId: task.assigneeId || "",
     assignee: task.assignee || undefined,
+    displayName: task.assignee?.displayName || "",
   }));
 
   return (
