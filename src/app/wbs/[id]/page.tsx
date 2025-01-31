@@ -26,8 +26,8 @@ export default async function WbsManagementPage({
     where: {
       id: wbs.projectId,
     },
-  })
-  if(!project) {
+  });
+  if (!project) {
     notFound();
   }
 
@@ -35,10 +35,42 @@ export default async function WbsManagementPage({
     where: {
       wbsId: wbs.id,
     },
+    include: {
+      assignee: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
     orderBy: {
       id: "asc",
     },
   });
+
+  const formattedTasks = tasks.map((task) => ({
+    ...task,
+    kijunStartDate: task.kijunStartDate
+      ? task.kijunStartDate.toISOString()
+      : "",
+    kijunEndDate: task.kijunEndDate ? task.kijunEndDate.toISOString() : "",
+    kijunKosu: task.kijunKosu || 0,
+    yoteiStartDate: task.yoteiStartDate
+      ? task.yoteiStartDate.toISOString()
+      : "",
+    yoteiEndDate: task.yoteiEndDate ? task.yoteiEndDate.toISOString() : "",
+    yoteiKosu: task.yoteiKosu || 0,
+    jissekiStartDate: task.jissekiStartDate
+      ? task.jissekiStartDate.toISOString()
+      : "",
+    jissekiEndDate: task.jissekiEndDate
+      ? task.jissekiEndDate.toISOString()
+      : "",
+    jissekiKosu: task.jissekiKosu || 0,
+    status: task.status,
+    assigneeId: task.assigneeId || "",
+    assignee: task.assignee || undefined,
+  }));
 
   return (
     <div className="container mx-auto py-10">
@@ -56,7 +88,7 @@ export default async function WbsManagementPage({
           </div>
         }
       >
-        <WbsManagementTable wbsId={wbs.id} wbsTasks={tasks} />
+        <WbsManagementTable wbsId={wbs.id} wbsTasks={formattedTasks} />
       </Suspense>
     </div>
   );

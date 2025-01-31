@@ -44,10 +44,10 @@ export interface WbsTask {
   jissekiKosu: number;
   status: TaskStatus;
   assigneeId: string;
-  // assignee?: {
-  //   id: string;
-  //   name: string;
-  // };
+  assignee?: {
+    id: string;
+    name: string;
+  };
 }
 
 interface WbsManagementTableProps {
@@ -275,7 +275,7 @@ export default function WbsManagementTable({
                     </SelectContent>
                   </Select>
                 ) : (
-                  item.assigneeId
+                  item.assignee?.name || ""
                 )}
               </TableCell>
               <TableCell>
@@ -366,7 +366,7 @@ export default function WbsManagementTable({
                     }
                   />
                 ) : (
-                  item.yoteiKosu
+                  item.yoteiKosu || 0
                 )}
               </TableCell>
 
@@ -415,7 +415,7 @@ export default function WbsManagementTable({
                     }
                   />
                 ) : (
-                  item.jissekiKosu
+                  item.jissekiKosu || 0
                 )}
               </TableCell>
               <TableCell>
