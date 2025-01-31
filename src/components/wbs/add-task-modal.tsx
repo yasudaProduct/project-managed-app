@@ -24,6 +24,9 @@ const formSchema = z.object({
   name: z.string().min(1, {
     message: "タスク名は必須です。",
   }),
+  assigneeId: z.string().min(1, {
+    message: "担当者は必須です。",
+  }),
   kijunStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "基準開始日は YYYY-MM-DD 形式で入力してください。",
   }),
@@ -60,9 +63,10 @@ const formSchema = z.object({
 interface AddTaskModalProps {
   onAddItem: (newTasks: WbsTask) => void;
   wbsId: number;
+  assigneeList: {id:string, name: string}[]
 }
 
-export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
+export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newItem, setNewItem] = useState<WbsTask | null>(null);
@@ -72,6 +76,7 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
     defaultValues: {
       id: "",
       name: "",
+      assigneeId: "",
       kijunStartDate: "",
       kijunEndDate: "",
       kijunKosu: 0,
@@ -133,6 +138,40 @@ export function AddTaskModal({ onAddItem }: AddTaskModalProps) {
                     <FormItem>
                       <FormControl>
                         <Input placeholder="機能A作成" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <label htmlFor="assigneeId">
+                  担当者
+                </label>
+                <FormField
+                  control={form.control}
+                  name="assigneeId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange} defaultValue={field.value}
+                        >
+                          <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="担当者を選択" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {assigneeList.length > 0 ? (
+                              assigneeList.map((user) => (
+                                <SelectItem key={user.id} value={user.id}>
+                                  {user.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="loading" disabled>
+                                読み込み中...
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

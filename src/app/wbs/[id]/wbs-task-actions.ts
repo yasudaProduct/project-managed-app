@@ -21,6 +21,7 @@ export async function createTask(
         jissekiEndDate: string;
         jissekiKosu: number;
         status: TaskStatus;
+        assigneeId: string;
     },
 ): Promise<{ success: boolean; task?: WbsTask; error?: string }> {
 
@@ -29,7 +30,7 @@ export async function createTask(
             id: taskData.id,
             wbsId: wbsId,
             name: taskData.name,
-            assigneeId: null,
+            assigneeId: taskData.assigneeId,
             kijunStartDate: new Date(taskData.kijunStartDate).toISOString(),
             kijunEndDate: new Date(taskData.kijunEndDate).toISOString(),
             kijunKosu: taskData.kijunKosu,
@@ -62,6 +63,7 @@ export async function updateTask(
         jissekiEndDate: string;
         jissekiKosu: number;
         status: TaskStatus;
+        assigneeId: string;
     },
 ): Promise<{ success: boolean; task?: WbsTask, error?: string }> {
     
@@ -87,6 +89,7 @@ export async function updateTask(
                 ...task,
                 id: taskData.id,
                 name: taskData.name,
+                assigneeId: taskData.assigneeId,
                 kijunStartDate: taskData.kijunStartDate ? new Date(taskData.kijunStartDate).toISOString() : undefined,
                 kijunEndDate: taskData.kijunEndDate ? new Date(taskData.kijunEndDate).toISOString() : undefined,
                 kijunKosu: taskData.kijunKosu,

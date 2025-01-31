@@ -18,6 +18,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatDateyyyymmdd } from "@/lib/utils";
 import { TaskStatus } from "@prisma/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { getUsers } from "@/app/users/user-actions";
 
 export interface WbsTask {
   id: string;
@@ -32,7 +33,7 @@ export interface WbsTask {
   jissekiEndDate: string;
   jissekiKosu: number;
   status: TaskStatus;
-  // assigneeId: string | null;
+  assigneeId: string;
   // assignee?: {
   //   id: string;
   //   name: string;
@@ -52,10 +53,25 @@ export default function WbsManagementTable({
   const [tasks, setData] = useState<WbsTask[]>(wbsTasks);
   const [editItem, setEditItem] = useState<WbsTask | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [assigneeList, setAssigneeList] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     setWbsIdState(wbsId);
     setData(wbsTasks);
+
+    // ユーザー情報を取得
+    const fetchUsers = async () => {
+      const result = await getUsers();
+      if (result) {
+        setAssigneeList(result.map((user: any) => ({
+          id: user.id,
+          name: user.name
+        })));
+      }
+    }
+
+    fetchUsers();
+
   }, [wbsId, wbsTasks]);
 
   const addItem = async (newTasks: WbsTask) => {
@@ -73,6 +89,7 @@ export default function WbsManagementTable({
         jissekiEndDate: newTasks.jissekiEndDate,
         jissekiKosu: newTasks.jissekiKosu,
         status: newTasks.status,
+        assigneeId: newTasks.assigneeId
       });
       if (result.success) {
         toast({
@@ -112,6 +129,7 @@ export default function WbsManagementTable({
           jissekiEndDate: editItem!.jissekiEndDate,
           jissekiKosu: editItem!.jissekiKosu,
           status: editItem!.status,
+          assigneeId: editItem!.assigneeId
         });
 
         if (result.success) {
@@ -167,7 +185,7 @@ export default function WbsManagementTable({
   return (
     <div className="container mx-auto p-4">
       <div className="mb-4 flex gap-2">
-        <AddTaskModal onAddItem={addItem} wbsId={wbsId} />
+        <AddTaskModal onAddItem={addItem} wbsId={wbsId} assigneeList={assigneeList} />
       </div>
 
       <Table>
@@ -175,6 +193,7 @@ export default function WbsManagementTable({
           <TableRow>
             <TableHead>WBSID</TableHead>
             <TableHead>タスク名</TableHead>
+            <TableHead>担当者</TableHead>
             <TableHead>基準開始日</TableHead>
             <TableHead>基準終了日</TableHead>
             <TableHead>基準工数</TableHead>
@@ -213,6 +232,35 @@ export default function WbsManagementTable({
                   />
                 ) : (
                   item.name
+                )}
+              </TableCell>
+              <TableCell>
+                {editingId === item.id && editItem ? (
+                  <Select
+                    defaultValue={item.assigneeId}
+                    onValueChange={(value) =>
+                      setEditItem({ ...editItem, assigneeId: value })
+                    }
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="担当者を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assigneeList.length > 0 ? (
+                        assigneeList.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="loading" disabled>
+                          読み込み中...
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  item.assigneeId
                 )}
               </TableCell>
               <TableCell>
