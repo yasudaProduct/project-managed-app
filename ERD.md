@@ -81,6 +81,24 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"task_period" {
+  Int id PK
+  String taskId FK
+  DateTime startDate
+  DateTime endDate
+  PeriodType type
+  DateTime createdAt
+  DateTime updatedAt
+}
+"task_kosu" {
+  Int id PK
+  String taskId FK
+  Int kosu
+  Int periodId FK
+  KosuType type
+  DateTime createdAt
+  DateTime updatedAt
+}
 "task_status_log" {
   Int id PK
   String taskId FK
@@ -98,6 +116,9 @@ erDiagram
 "wbs_task" }o--|| "wbs" : wbs
 "wbs_task" }o--o| "wbs_phase" : phase
 "wbs_task" }o--o| "users" : assignee
+"task_period" }o--|| "wbs_task" : task
+"task_kosu" }o--|| "wbs_task" : task
+"task_kosu" }o--|| "task_period" : period
 "task_status_log" }o--|| "wbs_task" : task
 "task_status_log" }o--o| "users" : changer
 ```
@@ -190,6 +211,28 @@ erDiagram
   - `jissekiEndDate`: 
   - `jissekiKosu`: 
   - `status`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `task_period`
+
+**Properties**
+  - `id`: 
+  - `taskId`: 
+  - `startDate`: 
+  - `endDate`: 
+  - `type`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `task_kosu`
+
+**Properties**
+  - `id`: 
+  - `taskId`: 
+  - `kosu`: 
+  - `periodId`: 
+  - `type`: 
   - `createdAt`: 
   - `updatedAt`: 
 
