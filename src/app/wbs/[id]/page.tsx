@@ -4,7 +4,7 @@ import { getWbsById } from "@/app/wbs/[id]/wbs-actions";
 import { Loader2 } from "lucide-react";
 import WbsManagementTable from "@/components/wbs/data-management-table";
 import prisma from "@/lib/prisma";
-import { formatDateyyyymmdd } from "@/lib/utils";
+import { formatDateyyyymmdd, getProjectStatusName } from "@/lib/utils";
 import { getWbsPhases } from "./wbs-phase-actions";
 import { getWbsAssignees } from "../assignee/assignee-actions";
 
@@ -96,7 +96,7 @@ export default async function WbsManagementPage({
       </div>
       <p className="text-sm text-gray-500">{project.description}</p>
       <p className="text-sm text-gray-500">
-        プロジェクト状況:{getProjectStatusInJapanese(project.status)}
+        プロジェクト状況:{getProjectStatusName(project.status)}
       </p>
       <p className="text-sm text-gray-500">
         プロジェクト期間:{formatDateyyyymmdd(project.startDate.toISOString())}~

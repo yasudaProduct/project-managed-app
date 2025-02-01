@@ -1,5 +1,7 @@
 export type TaskStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"
 
+export type ProjectStatus = "INACTIVE" | "ACTIVE" | "DONE" | "CANCELLED" | "PENDING"
+
 export type WbsPhase = {
     id: number
     wbsId: number

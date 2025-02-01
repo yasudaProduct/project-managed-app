@@ -19,7 +19,7 @@ import {
   updateTask,
 } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
-import { formatDateyyyymmdd } from "@/lib/utils";
+import { formatDateyyyymmdd, getTaskStatusName } from "@/lib/utils";
 import { TaskStatus } from "@prisma/client";
 import {
   Select,
@@ -89,8 +89,6 @@ export default function WbsManagementTable({
     // ユーザー情報を取得
     const fetchUsers = async () => {
       const result = await getWbsAssignees(wbsIdState);
-      console.log("⭐️⭐️⭐️");
-      console.log(result);
       if (result) {
         setAssigneeList(
           result.map((user: { assignee: { id: string; name: string } }) => ({
@@ -499,18 +497,18 @@ export default function WbsManagementTable({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem key="NOT_STARTED" value="NOT_STARTED">
-                        未着手
+                        {getTaskStatusName("NOT_STARTED")}
                       </SelectItem>
                       <SelectItem key="IN_PROGRESS" value="IN_PROGRESS">
-                        進行中
+                        {getTaskStatusName("IN_PROGRESS")}
                       </SelectItem>
                       <SelectItem key="COMPLETED" value="COMPLETED">
-                        完了
+                        {getTaskStatusName("COMPLETED")}
                       </SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
-                  item.status
+                  getTaskStatusName(item.status)
                 )}
               </TableCell>
 

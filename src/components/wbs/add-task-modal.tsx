@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { getTaskStatusName } from "@/lib/utils";
 
 const formSchema = z.object({
   id: z.string().min(1, {
@@ -388,13 +389,13 @@ export function AddTaskModal({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem key="NOT_STARTED" value="NOT_STARTED">
-                              未着手
+                              {getTaskStatusName("NOT_STARTED")}
                             </SelectItem>
                             <SelectItem key="IN_PROGRESS" value="IN_PROGRESS">
-                              進行中
+                              {getTaskStatusName("IN_PROGRESS")}
                             </SelectItem>
                             <SelectItem key="COMPLETED" value="COMPLETED">
-                              完了
+                              {getTaskStatusName("COMPLETED")}
                             </SelectItem>
                           </SelectContent>
                         </Select>
