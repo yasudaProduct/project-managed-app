@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { getUsers } from "@/app/users/user-actions";
+import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
 
 export interface WbsTask {
   id: string;
@@ -49,6 +50,12 @@ export interface WbsTask {
     name: string;
     displayName: string;
   };
+  phaseId: number;
+  phase?: {
+    id: number;
+    name: string;
+    seq: number;
+  };
 }
 
 interface WbsManagementTableProps {
@@ -67,7 +74,13 @@ export default function WbsManagementTable({
   const [assigneeList, setAssigneeList] = useState<
     { id: string; name: string }[]
   >([]);
-
+  const [phases, setPhases] = useState<
+    {
+      id: number;
+      name: string;
+      seq: number;
+    }[]
+  >([]);
   useEffect(() => {
     setWbsIdState(wbsId);
     setData(wbsTasks);
@@ -85,7 +98,16 @@ export default function WbsManagementTable({
       }
     };
 
+    // フェーズ情報を取得
+    const fetchPhases = async () => {
+      const result = await getWbsPhases(wbsIdState);
+      if (result) {
+        setPhases(result);
+      }
+    };
+
     fetchUsers();
+    fetchPhases();
   }, [wbsId, wbsTasks]);
 
   const addItem = async (newTasks: WbsTask) => {
@@ -104,6 +126,7 @@ export default function WbsManagementTable({
         jissekiKosu: newTasks.jissekiKosu,
         status: newTasks.status,
         assigneeId: newTasks.assigneeId,
+        phaseId: newTasks.phaseId,
       });
       if (result.success) {
         toast({
@@ -144,6 +167,7 @@ export default function WbsManagementTable({
         jissekiKosu: editItem!.jissekiKosu,
         status: editItem!.status,
         assigneeId: editItem!.assigneeId,
+        phaseId: editItem!.phaseId,
       });
 
       if (result.success) {
@@ -201,12 +225,14 @@ export default function WbsManagementTable({
           onAddItem={addItem}
           wbsId={wbsId}
           assigneeList={assigneeList}
+          phases={phases}
         />
       </div>
 
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>フェーズ名</TableHead>
             <TableHead>WBSID</TableHead>
             <TableHead>タスク名</TableHead>
             <TableHead>担当者</TableHead>
@@ -226,6 +252,38 @@ export default function WbsManagementTable({
         <TableBody>
           {tasks.map((item) => (
             <TableRow key={item.id}>
+              <TableCell>
+                {editingId === item.id && editItem ? (
+                  <Select
+                    defaultValue={item.phaseId.toString()}
+                    onValueChange={(value) =>
+                      setEditItem({ ...editItem, phaseId: Number(value) })
+                    }
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="フェーズを選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {phases.length > 0 ? (
+                        phases.map((phase) => (
+                          <SelectItem
+                            key={phase.id}
+                            value={phase.id.toString()}
+                          >
+                            {phase.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="loading" disabled>
+                          読み込み中...
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  item.phase?.name || ""
+                )}
+              </TableCell>
               <TableCell>
                 {editingId === item.id && editItem ? (
                   <Input

@@ -8,9 +8,9 @@ const tasks: WbsTask[] = []
 
 export async function createTask(
     wbsId: number,
-    taskData: { 
-        id: string; 
-        name: string; 
+    taskData: {
+        id: string;
+        name: string;
         kijunStartDate: string;
         kijunEndDate: string;
         kijunKosu: number;
@@ -22,6 +22,7 @@ export async function createTask(
         jissekiKosu: number;
         status: TaskStatus;
         assigneeId: string;
+        phaseId: number;
     },
 ): Promise<{ success: boolean; task?: WbsTask; error?: string }> {
 
@@ -41,6 +42,7 @@ export async function createTask(
             jissekiEndDate: new Date(taskData.jissekiEndDate).toISOString(),
             jissekiKosu: taskData.jissekiKosu,
             status: taskData.status,
+            phaseId: taskData.phaseId,
         }
     })
 
@@ -51,8 +53,8 @@ export async function createTask(
 export async function updateTask(
     taskId: string,
     taskData: {
-        id: string; 
-        name: string; 
+        id: string;
+        name: string;
         kijunStartDate: string;
         kijunEndDate: string;
         kijunKosu: number;
@@ -64,9 +66,10 @@ export async function updateTask(
         jissekiKosu: number;
         status: TaskStatus;
         assigneeId: string;
+        phaseId: number;
     },
 ): Promise<{ success: boolean; task?: WbsTask, error?: string }> {
-    
+
     const task = await prisma.wbsTask.findUnique({
         where: { id: taskId }
     })
@@ -78,7 +81,7 @@ export async function updateTask(
                 where: { id: taskData.id }
             })
 
-            if(task){
+            if (task) {
                 return { success: false, error: "タスクIDが重複しています" }
             }
         }
@@ -100,11 +103,12 @@ export async function updateTask(
                 jissekiEndDate: taskData.jissekiEndDate ? new Date(taskData.jissekiEndDate).toISOString() : undefined,
                 jissekiKosu: taskData.jissekiKosu,
                 status: taskData.status,
+                phaseId: taskData.phaseId,
             }
         })
         revalidatePath(`/wbs/${task.wbsId}`)
         return { success: true, task: updatedTask }
-    }else{
+    } else {
         return { success: false, error: "タスクが存在しません" }
     }
 }
@@ -121,7 +125,7 @@ export async function deleteTask(taskId: string): Promise<{ success: boolean, er
         })
         revalidatePath(`/wbs/${task.wbsId}`)
         return { success: true }
-    }else{
+    } else {
         return { success: false, error: "タスクが存在しません" }
     }
 }

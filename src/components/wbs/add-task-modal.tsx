@@ -77,15 +77,26 @@ const formSchema = z.object({
   status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] as const, {
     message: "有効なタスクステータスを選択してください。",
   }),
+  phaseId: z.preprocess(
+    (val) => Number(val),
+    z.number().min(0, {
+      message: "フェーズは必須です。",
+    })
+  ),
 });
 
 interface AddTaskModalProps {
   onAddItem: (newTasks: WbsTask) => void;
   wbsId: number;
   assigneeList: { id: string; name: string }[];
+  phases: { id: number; name: string; seq: number }[];
 }
 
-export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
+export function AddTaskModal({
+  onAddItem,
+  assigneeList,
+  phases,
+}: AddTaskModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -105,6 +116,7 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
       jissekiEndDate: "",
       jissekiKosu: 0,
       status: "NOT_STARTED",
+      phaseId: 0,
     },
   });
 
@@ -130,6 +142,42 @@ export function AddTaskModal({ onAddItem, assigneeList }: AddTaskModalProps) {
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="grid gap-1 py-4">
               <div className="grid grid-cols-2 items-center gap-2">
+                <label htmlFor="phaseId">フェーズID</label>
+                <FormField
+                  control={form.control}
+                  name="phaseId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value.toString()}
+                        >
+                          <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="フェーズを選択" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {phases.length > 0 ? (
+                              phases.map((phase) => (
+                                <SelectItem
+                                  key={phase.id}
+                                  value={phase.id.toString()}
+                                >
+                                  {phase.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="loading" disabled>
+                                読み込み中...
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <label htmlFor="wbsId">WBS ID</label>
                 <FormField
                   control={form.control}

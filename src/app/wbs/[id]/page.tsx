@@ -43,6 +43,13 @@ export default async function WbsManagementPage({
           displayName: true,
         },
       },
+      phase: {
+        select: {
+          id: true,
+          name: true,
+          seq: true,
+        },
+      },
     },
     orderBy: {
       id: "asc",
@@ -72,6 +79,12 @@ export default async function WbsManagementPage({
     assigneeId: task.assigneeId || "",
     assignee: task.assignee || undefined,
     displayName: task.assignee?.displayName || "",
+    phaseId: task.phaseId || 0,
+    phase: {
+      id: task.phase?.id || 0,
+      name: task.phase?.name || "",
+      seq: task.phase?.seq || 0,
+    },
   }));
 
   return (
