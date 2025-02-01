@@ -14,17 +14,16 @@ async function main() {
             update: {
                 name: user.name,
                 email: user.email,
-                displayName: user.name,
+                displayName: user.displayName,
             },
             create: {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                displayName: user.name,
+                displayName: user.displayName,
             },
         })
     }
-    console.log("users upserted");
 
     for (const phase of phases) {
         await prisma.phaseTemplate.upsert({
