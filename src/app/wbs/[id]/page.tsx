@@ -75,7 +75,7 @@ export default async function WbsManagementPage({
   }));
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-2">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">WBS: {wbs.name}</h1>
         <Link href={`/wbs/${wbs.id}/phase/new`}>
