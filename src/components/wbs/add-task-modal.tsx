@@ -9,7 +9,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { WbsTask } from "./data-management-table";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +27,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { getTaskStatusName } from "@/lib/utils";
+import { WbsTask } from "@/types/wbs";
 
 const formSchema = z.object({
   id: z.string().min(1, {
@@ -123,7 +123,48 @@ export function AddTaskModal({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-    onAddItem(values);
+    onAddItem({
+      id: values.id,
+      name: values.name,
+      periods: [
+        {
+          startDate: new Date(values.kijunStartDate),
+          endDate: new Date(values.kijunEndDate),
+          type: "KIJUN",
+          kosus: [
+            {
+              kosu: values.kijunKosu,
+              type: "NORMAL",
+            },
+          ],
+        },
+        {
+          startDate: new Date(values.yoteiStartDate),
+          endDate: new Date(values.yoteiEndDate),
+          type: "YOTEI",
+          kosus: [
+            {
+              kosu: values.yoteiKosu,
+              type: "NORMAL",
+            },
+          ],
+        },
+        {
+          startDate: new Date(values.jissekiStartDate),
+          endDate: new Date(values.jissekiEndDate),
+          type: "JISSEKI",
+          kosus: [
+            {
+              kosu: values.jissekiKosu,
+              type: "NORMAL",
+            },
+          ],
+        },
+      ],
+      status: values.status,
+      assigneeId: values.assigneeId,
+      phaseId: values.phaseId,
+    });
     setIsSubmitting(false);
     setIsOpen(false);
   }

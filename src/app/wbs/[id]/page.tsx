@@ -8,6 +8,7 @@ import { formatDateyyyymmdd, getProjectStatusName } from "@/lib/utils";
 import { getWbsPhases } from "./wbs-phase-actions";
 import { getWbsAssignees } from "../assignee/assignee-actions";
 import WbsSummaryCard from "@/components/wbs/wbs-summary-card";
+import { getTaskAll } from "./wbs-task-actions";
 
 export default async function WbsManagementPage({
   params,
@@ -30,61 +31,7 @@ export default async function WbsManagementPage({
     notFound();
   }
 
-  const tasks = await prisma.wbsTask.findMany({
-    where: {
-      wbsId: wbs.id,
-    },
-    include: {
-      assignee: {
-        select: {
-          id: true,
-          name: true,
-          displayName: true,
-        },
-      },
-      phase: {
-        select: {
-          id: true,
-          name: true,
-          seq: true,
-        },
-      },
-    },
-    orderBy: {
-      id: "asc",
-    },
-  });
-
-  const formattedTasks = tasks.map((task) => ({
-    ...task,
-    kijunStartDate: task.kijunStartDate
-      ? task.kijunStartDate.toISOString()
-      : "",
-    kijunEndDate: task.kijunEndDate ? task.kijunEndDate.toISOString() : "",
-    kijunKosu: task.kijunKosu || 0,
-    yoteiStartDate: task.yoteiStartDate
-      ? task.yoteiStartDate.toISOString()
-      : "",
-    yoteiEndDate: task.yoteiEndDate ? task.yoteiEndDate.toISOString() : "",
-    yoteiKosu: task.yoteiKosu || 0,
-    jissekiStartDate: task.jissekiStartDate
-      ? task.jissekiStartDate.toISOString()
-      : "",
-    jissekiEndDate: task.jissekiEndDate
-      ? task.jissekiEndDate.toISOString()
-      : "",
-    jissekiKosu: task.jissekiKosu || 0,
-    status: task.status,
-    assigneeId: task.assigneeId || "",
-    assignee: task.assignee || undefined,
-    displayName: task.assignee?.displayName || "",
-    phaseId: task.phaseId || 0,
-    phase: {
-      id: task.phase?.id || 0,
-      name: task.phase?.name || "",
-      seq: task.phase?.seq || 0,
-    },
-  }));
+  const tasks = await getTaskAll(wbs.id);
 
   const buffers = await getWbsBuffers(wbs.id);
 
@@ -126,7 +73,7 @@ export default async function WbsManagementPage({
           )
           .join(", ")}
       </p>
-      <WbsSummaryCard wbsId={wbs.id} wbsTasks={formattedTasks} />
+      <WbsSummaryCard wbsId={wbs.id} wbsTasks={tasks} />
       <Suspense
         fallback={
           <div className="flex justify-center">
@@ -134,7 +81,7 @@ export default async function WbsManagementPage({
           </div>
         }
       >
-        <WbsManagementTable wbsId={wbs.id} wbsTasks={formattedTasks} />
+        <WbsManagementTable wbsId={wbs.id} wbsTasks={tasks} />
       </Suspense>
     </div>
   );

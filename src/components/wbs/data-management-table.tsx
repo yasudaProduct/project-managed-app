@@ -33,33 +33,6 @@ import Link from "next/link";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
 import { WbsTask } from "@/types/wbs";
 
-// export interface WbsTask {
-//   id: string;
-//   name: string;
-//   kijunStartDate: string;
-//   kijunEndDate: string;
-//   kijunKosu: number;
-//   yoteiStartDate: string;
-//   yoteiEndDate: string;
-//   yoteiKosu: number;
-//   jissekiStartDate: string;
-//   jissekiEndDate: string;
-//   jissekiKosu: number;
-//   status: TaskStatus;
-//   assigneeId: string;
-//   assignee?: {
-//     id: string;
-//     name: string;
-//     displayName: string;
-//   };
-//   phaseId: number;
-//   phase?: {
-//     id: number;
-//     name: string;
-//     seq: number;
-//   };
-// }
-
 interface WbsManagementTableProps {
   wbsId: number;
   wbsTasks: WbsTask[];
@@ -117,15 +90,15 @@ export default function WbsManagementTable({
       const result = await createTask(wbsIdState, {
         id: newTasks.id,
         name: newTasks.name,
-        kijunStartDate: newTasks.kijunStartDate,
-        kijunEndDate: newTasks.kijunEndDate,
-        kijunKosu: newTasks.kijunKosu,
-        yoteiStartDate: newTasks.yoteiStartDate,
-        yoteiEndDate: newTasks.yoteiEndDate,
-        yoteiKosu: newTasks.yoteiKosu,
-        jissekiStartDate: newTasks.jissekiStartDate,
-        jissekiEndDate: newTasks.jissekiEndDate,
-        jissekiKosu: newTasks.jissekiKosu,
+        periods: newTasks.periods?.map((period) => ({
+          startDate: period.startDate.toISOString(),
+          endDate: period.endDate.toISOString(),
+          type: period.type,
+          kosus: period.kosus.map((kosu) => ({
+            kosu: kosu.kosu,
+            type: kosu.type,
+          })),
+        })),
         status: newTasks.status,
         assigneeId: newTasks.assigneeId,
         phaseId: newTasks.phaseId,
@@ -158,15 +131,15 @@ export default function WbsManagementTable({
       const result = await updateTask(id, {
         id: editItem!.id,
         name: editItem!.name,
-        kijunStartDate: editItem!.kijunStartDate,
-        kijunEndDate: editItem!.kijunEndDate,
-        kijunKosu: editItem!.kijunKosu,
-        yoteiStartDate: editItem!.yoteiStartDate,
-        yoteiEndDate: editItem!.yoteiEndDate,
-        yoteiKosu: editItem!.yoteiKosu,
-        jissekiStartDate: editItem!.jissekiStartDate,
-        jissekiEndDate: editItem!.jissekiEndDate,
-        jissekiKosu: editItem!.jissekiKosu,
+        periods: editItem!.periods?.map((period) => ({
+          startDate: period.startDate.toISOString(),
+          endDate: period.endDate.toISOString(),
+          type: period.type,
+          kosus: period.kosus.map((kosu) => ({
+            kosu: kosu.kosu,
+            type: kosu.type,
+          })),
+        })),
         status: editItem!.status,
         assigneeId: editItem!.assigneeId,
         phaseId: editItem!.phaseId,
@@ -263,7 +236,7 @@ export default function WbsManagementTable({
               <TableCell>
                 {editingId === item.id && editItem ? (
                   <Select
-                    defaultValue={item.phaseId.toString()}
+                    defaultValue={item.phaseId?.toString()}
                     onValueChange={(value) =>
                       setEditItem({ ...editItem, phaseId: Number(value) })
                     }
@@ -349,45 +322,98 @@ export default function WbsManagementTable({
                 {editingId === item.id && editItem ? (
                   <Input
                     type="date"
-                    value={editItem.kijunStartDate || item.kijunStartDate}
+                    value={
+                      editItem.periods
+                        ?.find((period) => period.type === "KIJUN")
+                        ?.startDate?.toISOString() ||
+                      item.periods
+                        ?.find((period) => period.type === "KIJUN")
+                        ?.startDate?.toISOString()
+                    }
                     onChange={(e) =>
                       setEditItem({
                         ...editItem,
-                        kijunStartDate: e.target.value,
+                        periods: editItem.periods?.map((period) =>
+                          period.type === "KIJUN"
+                            ? { ...period, startDate: new Date(e.target.value) }
+                            : period
+                        ),
                       })
                     }
                   />
                 ) : (
-                  formatDateyyyymmdd(item.kijunStartDate)
+                  formatDateyyyymmdd(
+                    item.periods
+                      ?.find((period) => period.type === "KIJUN")
+                      ?.startDate?.toISOString() || new Date().toISOString()
+                  )
                 )}
               </TableCell>
               <TableCell>
                 {editingId === item.id && editItem ? (
                   <Input
                     type="date"
-                    value={editItem.kijunEndDate || item.kijunEndDate}
+                    value={
+                      editItem.periods
+                        ?.find((period) => period.type === "KIJUN")
+                        ?.endDate?.toISOString() ||
+                      item.periods
+                        ?.find((period) => period.type === "KIJUN")
+                        ?.endDate?.toISOString()
+                    }
                     onChange={(e) =>
-                      setEditItem({ ...editItem, kijunEndDate: e.target.value })
+                      setEditItem({
+                        ...editItem,
+                        periods: editItem.periods?.map((period) =>
+                          period.type === "KIJUN"
+                            ? { ...period, endDate: new Date(e.target.value) }
+                            : period
+                        ),
+                      })
                     }
                   />
                 ) : (
-                  formatDateyyyymmdd(item.kijunEndDate)
+                  formatDateyyyymmdd(
+                    item.periods
+                      ?.find((period) => period.type === "KIJUN")
+                      ?.endDate?.toISOString() || new Date().toISOString()
+                  )
                 )}
               </TableCell>
               <TableCell>
                 {editingId === item.id && editItem ? (
                   <Input
                     type="number"
-                    value={editItem.kijunKosu || item.kijunKosu}
+                    value={
+                      editItem.periods
+                        ?.find((period) => period.type === "KIJUN")
+                        ?.kosus.find((kosu) => kosu.type === "NORMAL")?.kosu ||
+                      item.periods
+                        ?.find((period) => period.type === "KIJUN")
+                        ?.kosus.find((kosu) => kosu.type === "NORMAL")?.kosu
+                    }
                     onChange={(e) =>
                       setEditItem({
                         ...editItem,
-                        kijunKosu: Number(e.target.value),
+                        periods: editItem.periods?.map((period) =>
+                          period.type === "KIJUN"
+                            ? {
+                                ...period,
+                                kosus: period.kosus.map((kosu) =>
+                                  kosu.type === "NORMAL"
+                                    ? { ...kosu, kosu: Number(e.target.value) }
+                                    : kosu
+                                ),
+                              }
+                            : period
+                        ),
                       })
                     }
                   />
                 ) : (
-                  item.kijunKosu || 0
+                  item.periods
+                    ?.find((period) => period.type === "KIJUN")
+                    ?.kosus.find((kosu) => kosu.type === "NORMAL")?.kosu || 0
                 )}
               </TableCell>
 
@@ -395,45 +421,98 @@ export default function WbsManagementTable({
                 {editingId === item.id && editItem ? (
                   <Input
                     type="date"
-                    value={editItem.yoteiStartDate || item.yoteiStartDate}
+                    value={
+                      editItem.periods
+                        ?.find((period) => period.type === "YOTEI")
+                        ?.startDate?.toISOString() ||
+                      item.periods
+                        ?.find((period) => period.type === "YOTEI")
+                        ?.startDate?.toISOString()
+                    }
                     onChange={(e) =>
                       setEditItem({
                         ...editItem,
-                        yoteiStartDate: e.target.value,
+                        periods: editItem.periods?.map((period) =>
+                          period.type === "YOTEI"
+                            ? { ...period, startDate: new Date(e.target.value) }
+                            : period
+                        ),
                       })
                     }
                   />
                 ) : (
-                  formatDateyyyymmdd(item.yoteiStartDate)
+                  formatDateyyyymmdd(
+                    item.periods
+                      ?.find((period) => period.type === "YOTEI")
+                      ?.startDate?.toISOString() || new Date().toISOString()
+                  )
                 )}
               </TableCell>
               <TableCell>
                 {editingId === item.id && editItem ? (
                   <Input
                     type="date"
-                    value={editItem.yoteiEndDate || item.yoteiEndDate}
+                    value={
+                      editItem.periods
+                        ?.find((period) => period.type === "YOTEI")
+                        ?.endDate?.toISOString() ||
+                      item.periods
+                        ?.find((period) => period.type === "YOTEI")
+                        ?.endDate?.toISOString()
+                    }
                     onChange={(e) =>
-                      setEditItem({ ...editItem, yoteiEndDate: e.target.value })
+                      setEditItem({
+                        ...editItem,
+                        periods: editItem.periods?.map((period) =>
+                          period.type === "YOTEI"
+                            ? { ...period, endDate: new Date(e.target.value) }
+                            : period
+                        ),
+                      })
                     }
                   />
                 ) : (
-                  formatDateyyyymmdd(item.yoteiEndDate)
+                  formatDateyyyymmdd(
+                    item.periods
+                      ?.find((period) => period.type === "YOTEI")
+                      ?.endDate?.toISOString() || new Date().toISOString()
+                  )
                 )}
               </TableCell>
               <TableCell>
                 {editingId === item.id && editItem ? (
                   <Input
                     type="number"
-                    value={editItem.yoteiKosu || item.yoteiKosu}
+                    value={
+                      editItem.periods
+                        ?.find((period) => period.type === "YOTEI")
+                        ?.kosus.find((kosu) => kosu.type === "NORMAL")?.kosu ||
+                      item.periods
+                        ?.find((period) => period.type === "YOTEI")
+                        ?.kosus.find((kosu) => kosu.type === "NORMAL")?.kosu
+                    }
                     onChange={(e) =>
                       setEditItem({
                         ...editItem,
-                        yoteiKosu: Number(e.target.value),
+                        periods: editItem.periods?.map((period) =>
+                          period.type === "YOTEI"
+                            ? {
+                                ...period,
+                                kosus: period.kosus.map((kosu) =>
+                                  kosu.type === "NORMAL"
+                                    ? { ...kosu, kosu: Number(e.target.value) }
+                                    : kosu
+                                ),
+                              }
+                            : period
+                        ),
                       })
                     }
                   />
                 ) : (
-                  item.yoteiKosu || 0
+                  item.periods
+                    ?.find((period) => period.type === "YOTEI")
+                    ?.kosus.find((kosu) => kosu.type === "NORMAL")?.kosu || 0
                 )}
               </TableCell>
 
@@ -441,48 +520,98 @@ export default function WbsManagementTable({
                 {editingId === item.id && editItem ? (
                   <Input
                     type="date"
-                    value={editItem.jissekiStartDate || item.jissekiStartDate}
+                    value={
+                      editItem.periods
+                        ?.find((period) => period.type === "JISSEKI")
+                        ?.startDate?.toISOString() ||
+                      item.periods
+                        ?.find((period) => period.type === "JISSEKI")
+                        ?.startDate?.toISOString()
+                    }
                     onChange={(e) =>
                       setEditItem({
                         ...editItem,
-                        jissekiStartDate: e.target.value,
+                        periods: editItem.periods?.map((period) =>
+                          period.type === "JISSEKI"
+                            ? { ...period, startDate: new Date(e.target.value) }
+                            : period
+                        ),
                       })
                     }
                   />
                 ) : (
-                  formatDateyyyymmdd(item.jissekiStartDate)
+                  formatDateyyyymmdd(
+                    item.periods
+                      ?.find((period) => period.type === "JISSEKI")
+                      ?.startDate?.toISOString() || new Date().toISOString()
+                  )
                 )}
               </TableCell>
               <TableCell>
                 {editingId === item.id && editItem ? (
                   <Input
                     type="date"
-                    value={editItem.jissekiEndDate || item.jissekiEndDate}
+                    value={
+                      editItem.periods
+                        ?.find((period) => period.type === "JISSEKI")
+                        ?.endDate?.toISOString() ||
+                      item.periods
+                        ?.find((period) => period.type === "JISSEKI")
+                        ?.endDate?.toISOString()
+                    }
                     onChange={(e) =>
                       setEditItem({
                         ...editItem,
-                        jissekiEndDate: e.target.value,
+                        periods: editItem.periods?.map((period) =>
+                          period.type === "JISSEKI"
+                            ? { ...period, endDate: new Date(e.target.value) }
+                            : period
+                        ),
                       })
                     }
                   />
                 ) : (
-                  formatDateyyyymmdd(item.jissekiEndDate)
+                  formatDateyyyymmdd(
+                    item.periods
+                      ?.find((period) => period.type === "JISSEKI")
+                      ?.endDate?.toISOString() || new Date().toISOString()
+                  )
                 )}
               </TableCell>
               <TableCell>
                 {editingId === item.id && editItem ? (
                   <Input
                     type="number"
-                    value={editItem.jissekiKosu || item.jissekiKosu}
+                    value={
+                      editItem.periods
+                        ?.find((period) => period.type === "JISSEKI")
+                        ?.kosus.find((kosu) => kosu.type === "NORMAL")?.kosu ||
+                      item.periods
+                        ?.find((period) => period.type === "JISSEKI")
+                        ?.kosus.find((kosu) => kosu.type === "NORMAL")?.kosu
+                    }
                     onChange={(e) =>
                       setEditItem({
                         ...editItem,
-                        jissekiKosu: Number(e.target.value),
+                        periods: editItem.periods?.map((period) =>
+                          period.type === "JISSEKI"
+                            ? {
+                                ...period,
+                                kosus: period.kosus.map((kosu) =>
+                                  kosu.type === "NORMAL"
+                                    ? { ...kosu, kosu: Number(e.target.value) }
+                                    : kosu
+                                ),
+                              }
+                            : period
+                        ),
                       })
                     }
                   />
                 ) : (
-                  item.jissekiKosu || 0
+                  item.periods
+                    ?.find((period) => period.type === "JISSEKI")
+                    ?.kosus.find((kosu) => kosu.type === "NORMAL")?.kosu || 0
                 )}
               </TableCell>
               <TableCell>

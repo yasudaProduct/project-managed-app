@@ -48,6 +48,7 @@ model Wbs {
   phases    WbsPhase[]
   tasks     WbsTask[]
   assignees WbsAssignee[]
+  kosus     TaskKosu[]
   buffers   WbsBuffer[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
@@ -124,7 +125,6 @@ model WbsTask {
   assignee         Users?           @relation("TaskAssignee", fields: [assigneeId], references: [id])
   statusLogs       TaskStatusLog[]  @relation("TaskStatusLogs")
   periods          TaskPeriod[]     @relation("TaskPeriod")
-  kosus            TaskKosu[]       @relation("TaskKosu")
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -147,12 +147,12 @@ model TaskPeriod {
 
 model TaskKosu{
   id        Int        @id @default(autoincrement())
-  taskId    String
-  kosu      Int
+  wbsId     Int
   periodId  Int
+  kosu      Int
   type      KosuType
-  task      WbsTask    @relation("TaskKosu", fields: [taskId], references: [id])
   period    TaskPeriod @relation("TaskPeriodKosu", fields: [periodId], references: [id])
+  wbs       Wbs        @relation(fields: [wbsId], references: [id])
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 

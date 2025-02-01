@@ -1,20 +1,7 @@
 "use server"
 
 import prisma from '@/lib/prisma'
-import { Wbs } from '@/types/wbs'
 import { revalidatePath } from 'next/cache'
-
-// モックデータ
-const wbsList: Wbs[] = [
-    { id: 1, name: "要件定義", projectId: "1" },
-    { id: 2, name: "設計", projectId: "1" },
-    { id: 3, name: "開発", projectId: "2" },
-    { id: 4, name: "テスト", projectId: "2" },
-]
-
-export async function getWbsByProjectId(projectId: string): Promise<Wbs[]> {
-    return wbsList.filter(wbs => wbs.projectId === projectId)
-}
 
 export async function getWbsById(id: number) {
     const wbs = await prisma.wbs.findUnique({

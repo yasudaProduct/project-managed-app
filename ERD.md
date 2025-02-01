@@ -92,9 +92,9 @@ erDiagram
 }
 "task_kosu" {
   Int id PK
-  String taskId FK
-  Int kosu
+  Int wbsId FK
   Int periodId FK
+  Int kosu
   KosuType type
   DateTime createdAt
   DateTime updatedAt
@@ -117,8 +117,8 @@ erDiagram
 "wbs_task" }o--o| "wbs_phase" : phase
 "wbs_task" }o--o| "users" : assignee
 "task_period" }o--|| "wbs_task" : task
-"task_kosu" }o--|| "wbs_task" : task
 "task_kosu" }o--|| "task_period" : period
+"task_kosu" }o--|| "wbs" : wbs
 "task_status_log" }o--|| "wbs_task" : task
 "task_status_log" }o--o| "users" : changer
 ```
@@ -229,9 +229,9 @@ erDiagram
 
 **Properties**
   - `id`: 
-  - `taskId`: 
-  - `kosu`: 
+  - `wbsId`: 
   - `periodId`: 
+  - `kosu`: 
   - `type`: 
   - `createdAt`: 
   - `updatedAt`: 

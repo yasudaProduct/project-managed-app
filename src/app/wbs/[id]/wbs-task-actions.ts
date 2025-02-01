@@ -1,26 +1,52 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { TaskStatus, type WbsTask } from "@/types/wbs"
+import { KosuType, PeriodType, TaskPeriod, TaskStatus, type WbsTask } from "@/types/wbs"
 import prisma from "@/lib/prisma";
+import { TaskKosu as TaskKosuPrisma, TaskPeriod as TaskPeriodPrisma, Users as UserPrisma, WbsTask as WbsTaskPrisma, WbsPhase as WbsPhasePrisma } from "@prisma/client";
+
+export async function getTaskAll(wbsId: number) {
+    const tasks = await prisma.wbsTask.findMany({
+        where: {
+            wbsId: wbsId,
+        },
+        include: {
+            periods: {
+                include: {
+                    kosus: true,
+                },
+            },
+            assignee: true,
+            phase: true,
+        },
+        orderBy: {
+            phaseId: 'asc'
+        }
+    })
+
+    return tasks.map(
+        (task) => formatTask(task)
+    )
+
+}
 
 export async function createTask(
     wbsId: number,
     taskData: {
         id: string;
         name: string;
-        kijunStartDate: string;
-        kijunEndDate: string;
-        kijunKosu: number;
-        yoteiStartDate: string;
-        yoteiEndDate: string;
-        yoteiKosu: number;
-        jissekiStartDate: string;
-        jissekiEndDate: string;
-        jissekiKosu: number;
+        periods?: {
+            startDate?: string;
+            endDate?: string;
+            type: PeriodType;
+            kosus: {
+                kosu: number;
+                type: KosuType;
+            }[];
+        }[];
         status: TaskStatus;
-        assigneeId: string;
-        phaseId: number;
+        assigneeId?: string;
+        phaseId?: number;
     },
 ): Promise<{ success: boolean; task?: WbsTask; error?: string }> {
 
@@ -30,22 +56,43 @@ export async function createTask(
             wbsId: wbsId,
             name: taskData.name,
             assigneeId: taskData.assigneeId,
-            kijunStartDate: new Date(taskData.kijunStartDate).toISOString(),
-            kijunEndDate: new Date(taskData.kijunEndDate).toISOString(),
-            kijunKosu: taskData.kijunKosu,
-            yoteiStartDate: new Date(taskData.yoteiStartDate).toISOString(),
-            yoteiEndDate: new Date(taskData.yoteiEndDate).toISOString(),
-            yoteiKosu: taskData.yoteiKosu,
-            jissekiStartDate: new Date(taskData.jissekiStartDate).toISOString(),
-            jissekiEndDate: new Date(taskData.jissekiEndDate).toISOString(),
-            jissekiKosu: taskData.jissekiKosu,
             status: taskData.status,
             phaseId: taskData.phaseId,
         }
     })
 
+    // 期間を作成
+    if (taskData.periods) {
+        for (const period of taskData.periods) {
+            if (period.startDate && period.endDate) {
+                const newTaskPeriod = await prisma.taskPeriod.create({
+                    data: {
+                        taskId: newTask.id,
+                        startDate: new Date(period.startDate).toISOString(),
+                        endDate: new Date(period.endDate).toISOString(),
+                        type: period.type,
+                    }
+                })
+
+                // 工数を作成
+                if (period.kosus) {
+                    for (const kosu of period.kosus) {
+                        await prisma.taskKosu.create({
+                            data: {
+                                kosu: kosu.kosu,
+                                wbsId: wbsId,
+                                periodId: newTaskPeriod.id,
+                                type: kosu.type,
+                            }
+                        })
+                    }
+                }
+            }
+        }
+    }
+
     revalidatePath(`/wbs/${wbsId}`)
-    return { success: true, task: newTask }
+    return { success: true, task: formatTask(newTask) }
 }
 
 export async function updateTask(
@@ -53,18 +100,18 @@ export async function updateTask(
     taskData: {
         id: string;
         name: string;
-        kijunStartDate: string;
-        kijunEndDate: string;
-        kijunKosu: number;
-        yoteiStartDate: string;
-        yoteiEndDate: string;
-        yoteiKosu: number;
-        jissekiStartDate: string;
-        jissekiEndDate: string;
-        jissekiKosu: number;
+        periods?: {
+            startDate?: string;
+            endDate?: string;
+            type: PeriodType;
+            kosus: {
+                kosu: number;
+                type: KosuType;
+            }[];
+        }[];
         status: TaskStatus;
-        assigneeId: string;
-        phaseId: number;
+        assigneeId?: string;
+        phaseId?: number;
     },
 ): Promise<{ success: boolean; task?: WbsTask, error?: string }> {
 
@@ -91,21 +138,12 @@ export async function updateTask(
                 id: taskData.id,
                 name: taskData.name,
                 assigneeId: taskData.assigneeId,
-                kijunStartDate: taskData.kijunStartDate ? new Date(taskData.kijunStartDate).toISOString() : undefined,
-                kijunEndDate: taskData.kijunEndDate ? new Date(taskData.kijunEndDate).toISOString() : undefined,
-                kijunKosu: taskData.kijunKosu,
-                yoteiStartDate: taskData.yoteiStartDate ? new Date(taskData.yoteiStartDate).toISOString() : undefined,
-                yoteiEndDate: taskData.yoteiEndDate ? new Date(taskData.yoteiEndDate).toISOString() : undefined,
-                yoteiKosu: taskData.yoteiKosu,
-                jissekiStartDate: taskData.jissekiStartDate ? new Date(taskData.jissekiStartDate).toISOString() : undefined,
-                jissekiEndDate: taskData.jissekiEndDate ? new Date(taskData.jissekiEndDate).toISOString() : undefined,
-                jissekiKosu: taskData.jissekiKosu,
                 status: taskData.status,
                 phaseId: taskData.phaseId,
             }
         })
         revalidatePath(`/wbs/${task.wbsId}`)
-        return { success: true, task: updatedTask }
+        return { success: true, task: formatTask(updatedTask) }
     } else {
         return { success: false, error: "タスクが存在しません" }
     }
@@ -128,3 +166,28 @@ export async function deleteTask(taskId: string): Promise<{ success: boolean, er
     }
 }
 
+function formatTask(task: WbsTaskPrisma & { phase?: WbsPhasePrisma | null } & { assignee?: UserPrisma | null } & { periods?: (TaskPeriodPrisma & { kosus: TaskKosuPrisma[] })[] }): WbsTask {
+    return {
+        ...task,
+        assigneeId: task.assignee?.id ?? undefined,
+        assignee: task.assignee ? {
+            id: task.assignee.id,
+            name: task.assignee.name,
+            displayName: task.assignee.displayName,
+        } : undefined,
+        phaseId: task.phaseId ?? undefined,
+        phase: task.phase ? {
+            id: task.phase.id,
+            name: task.phase.name,
+            seq: task.phase.seq,
+        } : undefined,
+        periods: task.periods?.map((period) => ({
+            id: period.id,
+            taskId: period.taskId,
+            startDate: period.startDate,
+            endDate: period.endDate,
+            type: period.type,
+            kosus: period.kosus,
+        })) as TaskPeriod[],
+    }
+}

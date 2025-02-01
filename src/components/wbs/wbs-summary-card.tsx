@@ -22,9 +22,18 @@ export default function WbsSummaryCard({
     if (!acc[phaseName]) {
       acc[phaseName] = { kijunKosu: 0, yoteiKosu: 0, jissekiKosu: 0 };
     }
-    acc[phaseName].kijunKosu += task.kijunKosu || 0;
-    acc[phaseName].yoteiKosu += task.yoteiKosu || 0;
-    acc[phaseName].jissekiKosu += task.jissekiKosu || 0;
+    acc[phaseName].kijunKosu +=
+      task.periods
+        ?.find((period) => period.type === "KIJUN")
+        ?.kosus.reduce((sum, kosu) => sum + kosu.kosu, 0) || 0;
+    acc[phaseName].yoteiKosu +=
+      task.periods
+        ?.find((period) => period.type === "YOTEI")
+        ?.kosus.reduce((sum, kosu) => sum + kosu.kosu, 0) || 0;
+    acc[phaseName].jissekiKosu +=
+      task.periods
+        ?.find((period) => period.type === "JISSEKI")
+        ?.kosus.reduce((sum, kosu) => sum + kosu.kosu, 0) || 0;
     return acc;
   }, {} as Record<string, { kijunKosu: number; yoteiKosu: number; jissekiKosu: number }>);
 
