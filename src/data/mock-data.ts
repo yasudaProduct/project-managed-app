@@ -190,4 +190,13 @@ export const mockData = {
             status: "NOT_STARTED",
         },
     ],
+    wbsBuffer: [
+        {
+            id: 1,
+            wbsId: 1,
+            name: "リスク対策工数",
+            buffer: 50,
+            bufferType: "RISK",
+        },
+    ],
 };

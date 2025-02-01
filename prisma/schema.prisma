@@ -48,6 +48,7 @@ model Wbs {
   phases    WbsPhase[]
   tasks     WbsTask[]
   assignees WbsAssignee[]
+  buffers   WbsBuffer[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -67,14 +68,14 @@ model WbsAssignee {
 }
 
 model WbsPhase {
-  id        Int       @id @default(autoincrement())
-  wbsId     Int
-  seq       Int
-  name      String
-  wbs       Wbs       @relation(fields: [wbsId], references: [id])
-  tasks     WbsTask[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id         Int       @id @default(autoincrement())
+  wbsId      Int
+  seq        Int
+  name       String
+  wbs        Wbs       @relation(fields: [wbsId], references: [id])
+  tasks      WbsTask[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@map("wbs_phase")
 }
@@ -87,6 +88,19 @@ model PhaseTemplate {
   updatedAt DateTime   @updatedAt
 
   @@map("phase_template")
+}
+
+model WbsBuffer {
+  id         Int        @id @default(autoincrement())
+  wbsId      Int
+  name       String
+  buffer     Int
+  bufferType BufferType @default(OTHER)
+  wbs        Wbs        @relation(fields: [wbsId], references: [id])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@map("wbs_buffer")
 }
 
 model WbsTask {
@@ -141,4 +155,9 @@ enum ProjectStatus {
   DONE
   CANCELLED
   PENDING
+}
+
+enum BufferType {
+  RISK
+  OTHER
 }

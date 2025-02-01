@@ -2,7 +2,7 @@ import { mockData } from "../src/data/mock-data";
 import { phases } from "../src/data/phases";
 import { users } from "../src/data/users";
 import prisma from "../src/lib/prisma";
-import { ProjectStatus, TaskStatus } from "@prisma/client";
+import { ProjectStatus, TaskStatus, BufferType } from "@prisma/client";
 
 async function main() {
     console.log("seed start");
@@ -142,6 +142,25 @@ async function main() {
                 jissekiKosu: task.jissekiKosu,
                 status: task.status as TaskStatus,
 
+            },
+        })
+    }
+
+    for (const buffer of mockData.wbsBuffer) {
+        await prisma.wbsBuffer.upsert({
+            where: { id: buffer.id },
+            update: {
+                wbsId: buffer.wbsId,
+                name: buffer.name,
+                buffer: buffer.buffer,
+                bufferType: buffer.bufferType as BufferType,
+            },
+            create: {
+                id: buffer.id,
+                wbsId: buffer.wbsId,
+                name: buffer.name,
+                buffer: buffer.buffer,
+                bufferType: buffer.bufferType as BufferType,
             },
         })
     }

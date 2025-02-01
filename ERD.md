@@ -53,6 +53,15 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"wbs_buffer" {
+  Int id PK
+  Int wbsId FK
+  String name
+  Int buffer
+  BufferType bufferType
+  DateTime createdAt
+  DateTime updatedAt
+}
 "wbs_task" {
   String id PK
   Int wbsId FK
@@ -85,6 +94,7 @@ erDiagram
 "wbs_assignee" }o--|| "wbs" : wbs
 "wbs_assignee" }o--|| "users" : assignee
 "wbs_phase" }o--|| "wbs" : wbs
+"wbs_buffer" }o--|| "wbs" : wbs
 "wbs_task" }o--|| "wbs" : wbs
 "wbs_task" }o--o| "wbs_phase" : phase
 "wbs_task" }o--o| "users" : assignee
@@ -148,6 +158,17 @@ erDiagram
   - `id`: 
   - `name`: 
   - `order`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `wbs_buffer`
+
+**Properties**
+  - `id`: 
+  - `wbsId`: 
+  - `name`: 
+  - `buffer`: 
+  - `bufferType`: 
   - `createdAt`: 
   - `updatedAt`: 
 
