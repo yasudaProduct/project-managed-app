@@ -1,9 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getWbsById } from "@/app/wbs/[id]/wbs-actions";
-// import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import WbsManagementTable from "@/components/wbs/data-management-table";
 import prisma from "@/lib/prisma";
@@ -89,11 +86,8 @@ export default async function WbsManagementPage({
 
   return (
     <div className="container mx-auto py-2">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-2">
         <h1 className="text-3xl font-bold">WBS: {wbs.name}</h1>
-        <Link href={`/wbs/${wbs.id}/phase/new`}>
-          <Button>新規フェーズ追加</Button>
-        </Link>
       </div>
       <p>{project.status}</p>
       <Suspense

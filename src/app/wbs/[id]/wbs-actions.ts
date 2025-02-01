@@ -69,3 +69,25 @@ export async function createWbsPhase(wbsId: number, wbsPhaseData: { name: string
     });
     return { success: true, wbsPhase: newWbsPhase };
 }
+
+export async function createWbsAssignee(wbsId: number, assigneeId: string) {
+    const existingAssignee = await prisma.wbsAssignee.findFirst({
+        where: {
+            wbsId: Number(wbsId),
+            assigneeId: assigneeId,
+        },
+    });
+
+    if (existingAssignee) {
+        return { success: false, message: "この担当者はすでに追加されています。" };
+    }
+
+    const newAssignee = await prisma.wbsAssignee.create({
+        data: {
+            wbsId: Number(wbsId),
+            assigneeId: assigneeId,
+        },
+    });
+
+    return { success: true, assignee: newAssignee };
+}

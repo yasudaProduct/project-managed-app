@@ -30,7 +30,7 @@ model Users {
   updatedAt  DateTime        @updatedAt
   tasks      WbsTask[]       @relation("TaskAssignee")
   statusLogs TaskStatusLog[] @relation("StatusChanger")
-
+  assignees  WbsAssignee[]   @relation("WbsAssignee")
   @@map("users")
 }
 
@@ -41,10 +41,23 @@ model Wbs {
   project   Projects   @relation(fields: [projectId], references: [id])
   phases    WbsPhase[]
   tasks     WbsTask[]
+  assignees WbsAssignee[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
   @@map("wbs")
+}
+
+model WbsAssignee {
+  id        Int        @id @default(autoincrement())
+  wbsId     Int
+  assigneeId String
+  wbs       Wbs        @relation(fields: [wbsId], references: [id])
+  assignee  Users      @relation("WbsAssignee", fields: [assigneeId], references: [id])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("wbs_assignee")
 }
 
 model WbsPhase {

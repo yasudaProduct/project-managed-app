@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache"
 import { TaskStatus, type WbsTask } from "@/types/wbs"
 import prisma from "@/lib/prisma";
 
-const tasks: WbsTask[] = []
-
 export async function createTask(
     wbsId: number,
     taskData: {

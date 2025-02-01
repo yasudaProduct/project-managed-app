@@ -30,6 +30,7 @@ import {
 } from "../ui/select";
 import { getUsers } from "@/app/users/user-actions";
 import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
+import Link from "next/link";
 
 export interface WbsTask {
   id: string;
@@ -227,6 +228,12 @@ export default function WbsManagementTable({
           assigneeList={assigneeList}
           phases={phases}
         />
+        <Link href={`/wbs/${wbsId}/phase/new`}>
+          <Button>フェーズ追加</Button>
+        </Link>
+        <Link href={`/wbs/${wbsId}/assignee/new`}>
+          <Button>担当者追加</Button>
+        </Link>
       </div>
 
       <Table>
