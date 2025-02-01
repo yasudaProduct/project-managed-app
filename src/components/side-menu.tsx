@@ -11,8 +11,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "./ui/sheet";
+import { usePathname } from "next/navigation";
 
 export function SideMenu() {
+  const pathname = usePathname();
+
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -49,6 +52,28 @@ export function SideMenu() {
             <Trello className="h-4 w-4" />
             工程
           </Link>
+
+          {pathname.startsWith("/wbs/") && (
+            <>
+              <hr className="my-4" />
+              <SheetHeader>
+                <SheetTitle>WBS</SheetTitle>
+                <SheetDescription>WBS</SheetDescription>
+              </SheetHeader>
+              <Link href="#" className="text-lg flex items-center gap-2">
+                <Trello className="h-4 w-4" />
+                🚧工程別集計
+              </Link>
+              <Link href="#" className="text-lg flex items-center gap-2">
+                <Trello className="h-4 w-4" />
+                🚧月別集計
+              </Link>
+              <Link href="#" className="text-lg flex items-center gap-2">
+                <Trello className="h-4 w-4" />
+                🚧ガントチャート
+              </Link>
+            </>
+          )}
         </nav>
       </SheetContent>
     </Sheet>
