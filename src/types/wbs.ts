@@ -13,25 +13,30 @@ export type WbsPhase = {
 }
 
 export type WbsTask = {
-    id: string
-    wbsId: number
-    phaseId: number | null
-    name: string
-    assigneeId: string | null
+    id: string;
+    name: string;
+    kijunStartDate: string;
+    kijunEndDate: string;
+    kijunKosu: number;
+    yoteiStartDate: string;
+    yoteiEndDate: string;
+    yoteiKosu: number;
+    jissekiStartDate: string;
+    jissekiEndDate: string;
+    jissekiKosu: number;
+    status: TaskStatus;
+    assigneeId: string;
     assignee?: {
-        id: string
-        name: string
-    }
-    kijunStartDate: Date | null
-    kijunEndDate: Date | null
-    kijunKosu: number | null
-    yoteiStartDate: Date | null
-    yoteiEndDate: Date | null
-    yoteiKosu: number | null
-    jissekiStartDate: Date | null
-    jissekiEndDate: Date | null
-    jissekiKosu: number | null
-    status: TaskStatus
+        id: string;
+        name: string;
+        displayName: string;
+    };
+    phaseId: number;
+    phase?: {
+        id: number;
+        name: string;
+        seq: number;
+    };
     createdAt: Date
     updatedAt: Date
 }

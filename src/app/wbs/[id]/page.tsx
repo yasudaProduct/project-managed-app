@@ -7,6 +7,7 @@ import prisma from "@/lib/prisma";
 import { formatDateyyyymmdd, getProjectStatusName } from "@/lib/utils";
 import { getWbsPhases } from "./wbs-phase-actions";
 import { getWbsAssignees } from "../assignee/assignee-actions";
+import WbsSummaryCard from "@/components/wbs/wbs-summary-card";
 
 export default async function WbsManagementPage({
   params,
@@ -109,6 +110,7 @@ export default async function WbsManagementPage({
         担当者：
         {assignees.map((assignee) => assignee.assignee.displayName).join(", ")}
       </p>
+      <WbsSummaryCard wbsId={wbs.id} wbsTasks={formattedTasks} />
       <Suspense
         fallback={
           <div className="flex justify-center">

@@ -31,33 +31,34 @@ import {
 import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
 import Link from "next/link";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
+import { WbsTask } from "@/types/wbs";
 
-export interface WbsTask {
-  id: string;
-  name: string;
-  kijunStartDate: string;
-  kijunEndDate: string;
-  kijunKosu: number;
-  yoteiStartDate: string;
-  yoteiEndDate: string;
-  yoteiKosu: number;
-  jissekiStartDate: string;
-  jissekiEndDate: string;
-  jissekiKosu: number;
-  status: TaskStatus;
-  assigneeId: string;
-  assignee?: {
-    id: string;
-    name: string;
-    displayName: string;
-  };
-  phaseId: number;
-  phase?: {
-    id: number;
-    name: string;
-    seq: number;
-  };
-}
+// export interface WbsTask {
+//   id: string;
+//   name: string;
+//   kijunStartDate: string;
+//   kijunEndDate: string;
+//   kijunKosu: number;
+//   yoteiStartDate: string;
+//   yoteiEndDate: string;
+//   yoteiKosu: number;
+//   jissekiStartDate: string;
+//   jissekiEndDate: string;
+//   jissekiKosu: number;
+//   status: TaskStatus;
+//   assigneeId: string;
+//   assignee?: {
+//     id: string;
+//     name: string;
+//     displayName: string;
+//   };
+//   phaseId: number;
+//   phase?: {
+//     id: number;
+//     name: string;
+//     seq: number;
+//   };
+// }
 
 interface WbsManagementTableProps {
   wbsId: number;
