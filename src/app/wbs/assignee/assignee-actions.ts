@@ -1,3 +1,5 @@
+"use server"
+
 import prisma from "@/lib/prisma";
 
 export async function getUsers() {
@@ -8,4 +10,21 @@ export async function getUsers() {
             displayName: true,
         },
     });
-} 
+}
+
+export async function getWbsAssignees(wbsId: number) {
+    console.log("getWbsAssignees");
+    return await prisma.wbsAssignee.findMany({
+        where: {
+            wbsId: wbsId,
+        },
+        include: {
+            assignee: true,
+        },
+        orderBy: {
+            assignee: {
+                id: "asc",
+            },
+        },
+    });
+}

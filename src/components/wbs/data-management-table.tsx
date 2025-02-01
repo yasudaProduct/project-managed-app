@@ -28,9 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { getUsers } from "@/app/users/user-actions";
 import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
 import Link from "next/link";
+import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
 
 export interface WbsTask {
   id: string;
@@ -88,12 +88,14 @@ export default function WbsManagementTable({
 
     // ユーザー情報を取得
     const fetchUsers = async () => {
-      const result = await getUsers();
+      const result = await getWbsAssignees(wbsIdState);
+      console.log("⭐️⭐️⭐️");
+      console.log(result);
       if (result) {
         setAssigneeList(
-          result.map((user: { id: string; name: string }) => ({
-            id: user.id,
-            name: user.name,
+          result.map((user: { assignee: { id: string; name: string } }) => ({
+            id: user.assignee.id,
+            name: user.assignee.name,
           }))
         );
       }
