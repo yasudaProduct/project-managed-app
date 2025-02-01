@@ -91,3 +91,10 @@ export async function createWbsAssignee(wbsId: number, assigneeId: string) {
 
     return { success: true, assignee: newAssignee };
 }
+
+export async function getWbsBuffers(wbsId: number) {
+    const buffers = await prisma.wbsBuffer.findMany({
+        where: { wbsId: wbsId },
+    });
+    return buffers;
+}

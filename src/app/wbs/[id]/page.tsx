@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getWbsById } from "@/app/wbs/[id]/wbs-actions";
+import { getWbsBuffers, getWbsById } from "@/app/wbs/[id]/wbs-actions";
 import { Loader2 } from "lucide-react";
 import WbsManagementTable from "@/components/wbs/data-management-table";
 import prisma from "@/lib/prisma";
@@ -86,6 +86,8 @@ export default async function WbsManagementPage({
     },
   }));
 
+  const buffers = await getWbsBuffers(wbs.id);
+
   const phases = await getWbsPhases(wbs.id);
 
   const assignees = await getWbsAssignees(wbs.id);
@@ -109,6 +111,20 @@ export default async function WbsManagementPage({
       <p className="text-sm text-gray-500">
         担当者：
         {assignees.map((assignee) => assignee.assignee.displayName).join(", ")}
+      </p>
+      <p className="text-sm text-gray-500">
+        バッファ：
+        {buffers
+          .map(
+            (buffer) =>
+              buffer.bufferType +
+              ":" +
+              buffer.buffer +
+              "  (" +
+              buffer.name +
+              ")"
+          )
+          .join(", ")}
       </p>
       <WbsSummaryCard wbsId={wbs.id} wbsTasks={formattedTasks} />
       <Suspense
