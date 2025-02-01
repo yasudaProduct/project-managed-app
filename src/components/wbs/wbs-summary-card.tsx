@@ -28,6 +28,17 @@ export default function WbsSummaryCard({
     return acc;
   }, {} as Record<string, { kijunKosu: number; yoteiKosu: number; jissekiKosu: number }>);
 
+  // 各工数タイプの合計を計算
+  const totalKosu = Object.values(phaseAggregates).reduce(
+    (totals, kosu) => {
+      totals.kijunKosu += kosu.kijunKosu;
+      totals.yoteiKosu += kosu.yoteiKosu;
+      totals.jissekiKosu += kosu.jissekiKosu;
+      return totals;
+    },
+    { kijunKosu: 0, yoteiKosu: 0, jissekiKosu: 0 }
+  );
+
   return (
     <div className="my-4">
       <Accordion type="single" collapsible className="w-full">
@@ -36,38 +47,50 @@ export default function WbsSummaryCard({
           <AccordionContent>
             <Card>
               <CardContent>
-                <table className="min-w-full divide-y divide-gray-200">
+                <table className="max-w-full divide-y divide-gray-200">
                   <thead>
                     <tr>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">
-                        工程名
+                      <th className="px-4 py-2 text-left text-sm font-bold text-gray-500">
+                        工数
                       </th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">
-                        基準工数
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">
-                        予定工数
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">
-                        実績工数
+                      {Object.keys(phaseAggregates).map((phaseName) => (
+                        <th
+                          key={phaseName}
+                          className="px-4 py-2 text-left text-sm font-bold text-gray-500"
+                        >
+                          {phaseName}
+                        </th>
+                      ))}
+                      <th className="px-4 py-2 text-left text-sm font-bold text-gray-500">
+                        合計
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {Object.entries(phaseAggregates).map(
-                      ([phaseName, kosu]) => (
-                        <tr key={phaseName}>
-                          <td className="px-4 py-2 text-sm text-gray-500">
-                            {phaseName}
+                    {["基準工数", "予定工数", "実績工数"].map(
+                      (kosuType, index) => (
+                        <tr key={kosuType}>
+                          <td className="px-4 py-2 text-sm font-bold text-gray-500">
+                            {kosuType}
                           </td>
+                          {Object.values(phaseAggregates).map((kosu, idx) => (
+                            <td
+                              key={idx}
+                              className="px-4 py-2 text-sm text-gray-500"
+                            >
+                              {index === 0
+                                ? kosu.kijunKosu
+                                : index === 1
+                                ? kosu.yoteiKosu
+                                : kosu.jissekiKosu}
+                            </td>
+                          ))}
                           <td className="px-4 py-2 text-sm text-gray-500">
-                            {kosu.kijunKosu}
-                          </td>
-                          <td className="px-4 py-2 text-sm text-gray-500">
-                            {kosu.yoteiKosu}
-                          </td>
-                          <td className="px-4 py-2 text-sm text-gray-500">
-                            {kosu.jissekiKosu}
+                            {index === 0
+                              ? totalKosu.kijunKosu
+                              : index === 1
+                              ? totalKosu.yoteiKosu
+                              : totalKosu.jissekiKosu}
                           </td>
                         </tr>
                       )
