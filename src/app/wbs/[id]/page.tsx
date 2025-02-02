@@ -9,6 +9,7 @@ import { getWbsPhases } from "./wbs-phase-actions";
 import { getWbsAssignees } from "../assignee/assignee-actions";
 import WbsSummaryCard from "@/components/wbs/wbs-summary-card";
 import { getTaskAll } from "./wbs-task-actions";
+import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 
 export default async function WbsManagementPage({
   params,
@@ -40,49 +41,54 @@ export default async function WbsManagementPage({
   const assignees = await getWbsAssignees(wbs.id);
 
   return (
-    <div className="container mx-auto">
-      <div className="flex justify-between items-center mb-2">
-        <h1 className="text-3xl font-bold">WBS: {wbs.name}</h1>
+    <>
+      <div className="container mx-auto">
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-3xl font-bold">WBS: {wbs.name}</h1>
+        </div>
+        <p className="text-sm text-gray-500">{project.description}</p>
+        <p className="text-sm text-gray-500">
+          プロジェクト状況:{getProjectStatusName(project.status)}
+        </p>
+        <p className="text-sm text-gray-500">
+          プロジェクト期間:{formatDateyyyymmdd(project.startDate.toISOString())}
+          ~{formatDateyyyymmdd(project.endDate.toISOString())}
+        </p>
+        <p className="text-sm text-gray-500">
+          工程：{phases.map((phase) => phase.name).join(", ")}
+        </p>
+        <p className="text-sm text-gray-500">
+          担当者：
+          {assignees
+            .map((assignee) => assignee.assignee.displayName)
+            .join(", ")}
+        </p>
+        <p className="text-sm text-gray-500">
+          バッファ：
+          {buffers
+            .map(
+              (buffer) =>
+                buffer.bufferType +
+                ":" +
+                buffer.buffer +
+                "  (" +
+                buffer.name +
+                ")"
+            )
+            .join(", ")}
+        </p>
+        <WbsSummaryCard wbsId={wbs.id} wbsTasks={tasks} />
+        <Suspense
+          fallback={
+            <div className="flex justify-center">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          }
+        >
+          {/* <WbsManagementTable wbsId={wbs.id} wbsTasks={tasks} /> */}
+          <TaskTableViewPage />
+        </Suspense>
       </div>
-      <p className="text-sm text-gray-500">{project.description}</p>
-      <p className="text-sm text-gray-500">
-        プロジェクト状況:{getProjectStatusName(project.status)}
-      </p>
-      <p className="text-sm text-gray-500">
-        プロジェクト期間:{formatDateyyyymmdd(project.startDate.toISOString())}~
-        {formatDateyyyymmdd(project.endDate.toISOString())}
-      </p>
-      <p className="text-sm text-gray-500">
-        工程：{phases.map((phase) => phase.name).join(", ")}
-      </p>
-      <p className="text-sm text-gray-500">
-        担当者：
-        {assignees.map((assignee) => assignee.assignee.displayName).join(", ")}
-      </p>
-      <p className="text-sm text-gray-500">
-        バッファ：
-        {buffers
-          .map(
-            (buffer) =>
-              buffer.bufferType +
-              ":" +
-              buffer.buffer +
-              "  (" +
-              buffer.name +
-              ")"
-          )
-          .join(", ")}
-      </p>
-      <WbsSummaryCard wbsId={wbs.id} wbsTasks={tasks} />
-      <Suspense
-        fallback={
-          <div className="flex justify-center">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        }
-      >
-        <WbsManagementTable wbsId={wbs.id} wbsTasks={tasks} />
-      </Suspense>
-    </div>
+    </>
   );
 }
