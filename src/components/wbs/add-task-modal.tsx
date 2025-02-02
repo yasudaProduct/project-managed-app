@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
+import { LayoutList, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -173,7 +173,8 @@ export function AddTaskModal({
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button className="mb-4">
-          <Plus className="mr-2 h-4 w-4" /> タスク追加
+          <Plus className="h-4 w-4" />
+          <LayoutList className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="min-w-full">

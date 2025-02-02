@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Trash2 } from "lucide-react";
+import { CirclePlus, Pencil, Trash2, Trello, Users } from "lucide-react";
 import { AddTaskModal } from "./add-task-modal";
 import {
   createTask,
@@ -249,10 +249,16 @@ export default function WbsManagementTable({
           phases={phases}
         />
         <Link href={`/wbs/${wbsId}/phase/new`}>
-          <Button>フェーズ追加</Button>
+          <Button>
+            <CirclePlus className="h-4 w-4" />
+            <Trello className="h-4 w-4" />
+          </Button>
         </Link>
         <Link href={`/wbs/${wbsId}/assignee/new`}>
-          <Button>担当者追加</Button>
+          <Button>
+            <CirclePlus className="h-4 w-4" />
+            <Users className="h-4 w-4" />
+          </Button>
         </Link>
       </div>
 
