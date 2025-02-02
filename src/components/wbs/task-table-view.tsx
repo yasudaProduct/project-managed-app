@@ -35,6 +35,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TaskStatus } from "@/types/wbs";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "../ui/collapsible";
 
 const data: TaskTableViewPageProp[] = [
   {
@@ -381,6 +386,28 @@ export function TaskTableViewPage() {
                     </TableCell>
                   ))}
                 </TableRow>
+                // <Collapsible key={row.id}>
+                //   <CollapsibleTrigger>
+                //     <TableRow
+                //       key={row.id}
+                //       data-state={row.getIsSelected() && "selected"}
+                //     >
+                //       {row.getVisibleCells().map((cell) => (
+                //         <TableCell key={cell.id}>
+                //           {flexRender(
+                //             cell.column.columnDef.cell,
+                //             cell.getContext()
+                //           )}
+                //         </TableCell>
+                //       ))}
+                //     </TableRow>
+                //   </CollapsibleTrigger>
+                //   <CollapsibleContent>
+                //     <div className="flex flex-col gap-2">
+                //       <p>Hello</p>
+                //     </div>
+                //   </CollapsibleContent>
+                // </Collapsible>
               ))
             ) : (
               <TableRow>
