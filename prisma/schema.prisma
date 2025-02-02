@@ -137,7 +137,7 @@ model TaskPeriod {
   startDate DateTime
   endDate   DateTime
   type      PeriodType
-  task      WbsTask    @relation("TaskPeriod", fields: [taskId], references: [id])
+  task      WbsTask    @relation("TaskPeriod", fields: [taskId], references: [id], onDelete: Cascade)
   kosus     TaskKosu[] @relation("TaskPeriodKosu")
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
@@ -151,7 +151,7 @@ model TaskKosu{
   periodId  Int
   kosu      Int
   type      KosuType
-  period    TaskPeriod @relation("TaskPeriodKosu", fields: [periodId], references: [id])
+  period    TaskPeriod @relation("TaskPeriodKosu", fields: [periodId], references: [id], onDelete: Cascade)
   wbs       Wbs        @relation(fields: [wbsId], references: [id])
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
