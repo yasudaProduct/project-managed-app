@@ -176,7 +176,7 @@ export function AddTaskModal({
           <Plus className="mr-2 h-4 w-4" /> タスク追加
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="min-w-full">
         <DialogHeader>
           <DialogTitle>新規タスク追加</DialogTitle>
         </DialogHeader>

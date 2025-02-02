@@ -166,6 +166,38 @@ export async function deleteTask(taskId: string): Promise<{ success: boolean, er
     }
 }
 
+export async function getTaskStatusCount(wbsId: number) {
+
+    const statusCount = {
+        todo: 0,
+        inProgress: 0,
+        completed: 0,
+    }
+
+    statusCount.todo = await prisma.wbsTask.count({
+        where: {
+            wbsId: wbsId,
+            status: 'IN_PROGRESS',
+        }
+    })
+
+    statusCount.inProgress = await prisma.wbsTask.count({
+        where: {
+            wbsId: wbsId,
+            status: 'IN_PROGRESS',
+        }
+    })
+
+    statusCount.completed = await prisma.wbsTask.count({
+        where: {
+            wbsId: wbsId,
+            status: 'COMPLETED',
+        }
+    })
+
+    return statusCount;
+}
+
 function formatTask(task: WbsTaskPrisma & { phase?: WbsPhasePrisma | null } & { assignee?: UserPrisma | null } & { periods?: (TaskPeriodPrisma & { kosus: TaskKosuPrisma[] })[] }): WbsTask {
     return {
         ...task,

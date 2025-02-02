@@ -57,9 +57,23 @@ export function SideMenu() {
             <>
               <hr className="my-4" />
               <SheetHeader>
-                <SheetTitle>WBS</SheetTitle>
-                <SheetDescription>WBS</SheetDescription>
+                <SheetTitle>プロジェクト管理</SheetTitle>
+                <SheetDescription>プロジェクト管理</SheetDescription>
               </SheetHeader>
+              <Link
+                href={`/wbs/${pathname.split("/")[2]}/dashboard`}
+                className="text-lg flex items-center gap-2"
+              >
+                <Trello className="h-4 w-4" />
+                🚧ダッシュボード
+              </Link>
+              <Link
+                href={`/wbs/${pathname.split("/")[2]}`}
+                className="text-lg flex items-center gap-2"
+              >
+                <Trello className="h-4 w-4" />
+                🚧タスク
+              </Link>
               <Link href="#" className="text-lg flex items-center gap-2">
                 <Trello className="h-4 w-4" />
                 🚧工程別集計

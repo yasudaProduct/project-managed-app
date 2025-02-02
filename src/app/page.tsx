@@ -15,7 +15,7 @@ const projects: Projects[] = await prisma.projects.findMany();
 export default function Home() {
   return (
     <div className="flex min-h-screen bg-gray-100">
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-2">
         <h1 className="text-3xl ml-12 font-bold mb-6">プロジェクト一覧</h1>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
