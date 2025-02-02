@@ -9,6 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pencil, Trash2 } from "lucide-react";
@@ -166,6 +172,46 @@ export default function WbsManagementTable({
     } finally {
       setEditingId(null);
       setEditItem(null);
+    }
+  };
+
+  const updateItem = async (id: string, item: WbsTask) => {
+    try {
+      const result = await updateTask(id, {
+        id: item!.id,
+        name: item!.name,
+        periods: item!.periods?.map((period) => ({
+          startDate: period.startDate.toISOString(),
+          endDate: period.endDate.toISOString(),
+          type: period.type,
+          kosus: period.kosus.map((kosu) => ({
+            kosu: kosu.kosu,
+            type: kosu.type,
+          })),
+        })),
+        status: item!.status,
+        assigneeId: item!.assigneeId,
+        phaseId: item!.phaseId,
+      });
+
+      if (result.success) {
+        toast({
+          title: "タスクを更新しました",
+          description: "タスクが更新されました",
+        });
+      } else {
+        toast({
+          title: "タスクの更新に失敗しました",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "タスクの更新に失敗しました",
+        description: error instanceof Error ? error.message : "不明なエラー",
+        variant: "destructive",
+      });
     }
   };
 
@@ -644,24 +690,30 @@ export default function WbsManagementTable({
 
               {/* {ボタン} */}
               <TableCell>
-                {editingId === item.id ? (
-                  <>
-                    <Button onClick={() => saveEdit(item.id)}>保存</Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setEditingId(null)}
-                    >
-                      キャンセル
-                    </Button>
-                  </>
-                ) : (
-                  <Button variant="ghost" onClick={() => startEditing(item.id)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button variant="ghost" onClick={() => deleteItem(item.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger>
+                    <Button variant="ghost">...</Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {editingId === item.id ? (
+                      <>
+                        <DropdownMenuItem onClick={() => saveEdit(item.id)}>
+                          保存
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setEditingId(null)}>
+                          キャンセル
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <DropdownMenuItem onClick={() => startEditing(item.id)}>
+                        <Pencil className="h-4 w-4" /> 編集
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => deleteItem(item.id)}>
+                      <Trash2 className="h-4 w-4" /> 削除
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}
