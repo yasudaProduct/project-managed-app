@@ -1,8 +1,10 @@
 import prisma from "@/lib/prisma";
-import { IProjectRepository } from "@/models/project/iproject-repository";
+import { IProjectRepository } from "@/applications/iproject-repository";
 import { Project } from "@/models/project/project";
 import { ProjectStatus } from "@/models/project/project-status";
+import { injectable } from "inversify";
 
+@injectable()
 export class ProjectRepository implements IProjectRepository {
     async findById(id: string): Promise<Project | null> {
         const projectDb = await prisma.projects.findUnique({

@@ -59,8 +59,6 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  console.log("ProjectForm project:", project);
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: project
@@ -71,7 +69,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
         }
       : {
           name: "",
-          description: "",
+          description: undefined,
           startDate: "",
           endDate: "",
           status: ProjectStatus.INACTIVE,
