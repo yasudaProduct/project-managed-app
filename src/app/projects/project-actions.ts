@@ -22,7 +22,7 @@ export async function createProject(projectData: {
 
     const projectApplicationService = container.get<IProjectApplicationService>(SYMBOL.IProjectApplicationService);
 
-    const result = await projectApplicationService.createProject(
+    const { success, error, id } = await projectApplicationService.createProject(
         {
             name: projectData.name,
             description: projectData.description,
@@ -31,16 +31,16 @@ export async function createProject(projectData: {
         }
     );
 
-    if (!result.success) {
-        return result
+    if (!success) {
+        return { success: false, error: error }
     }
 
-    const project = await projectApplicationService.getProjectById(result.project.id);
+    const project = await projectApplicationService.getProjectById(id!);
 
     // プロジェクト一覧ページを再検証
     revalidatePath("/")
 
-    return { success: true, project: result.project }
+    return { success: true, project: project }
 }
 
 export async function updateProject(

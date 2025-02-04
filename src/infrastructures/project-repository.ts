@@ -1,11 +1,12 @@
 import prisma from "@/lib/prisma";
 import { IProjectRepository } from "@/applications/iproject-repository";
-import { Project } from "@/models/project/project";
-import { ProjectStatus } from "@/models/project/project-status";
+import { Project } from "@/domains/project/project";
+import { ProjectStatus } from "@/domains/project/project-status";
 import { injectable } from "inversify";
 
 @injectable()
 export class ProjectRepository implements IProjectRepository {
+
     async findById(id: string): Promise<Project | null> {
         const projectDb = await prisma.projects.findUnique({
             where: { id },
@@ -13,7 +14,7 @@ export class ProjectRepository implements IProjectRepository {
 
         if (!projectDb) return null;
 
-        return Project.create({
+        return Project.createFromDb({
             id: projectDb.id,
             name: projectDb.name,
             status: new ProjectStatus({ status: projectDb.status }),
@@ -22,13 +23,29 @@ export class ProjectRepository implements IProjectRepository {
             endDate: projectDb.endDate,
         });
     }
+
+    async findByName(name: string): Promise<Project | null> {
+        const projectDb = await prisma.projects.findFirst({
+            where: { name },
+        });
+        if (!projectDb) return null;
+        return Project.createFromDb({
+            id: projectDb.id,
+            name: projectDb.name,
+            status: new ProjectStatus({ status: projectDb.status }),
+            description: projectDb.description ?? undefined,
+            startDate: projectDb.startDate,
+            endDate: projectDb.endDate,
+        });
+    }
+
     async findAll(): Promise<Project[]> {
         const projectsDb = await prisma.projects.findMany({
             orderBy: {
                 createdAt: "desc",
             },
         });
-        return projectsDb.map(projectDb => Project.create({
+        return projectsDb.map(projectDb => Project.createFromDb({
             id: projectDb.id,
             name: projectDb.name,
             status: new ProjectStatus({ status: projectDb.status }),
@@ -37,29 +54,49 @@ export class ProjectRepository implements IProjectRepository {
             endDate: projectDb.endDate,
         }));
     }
-    async create(project: Project): Promise<void> {
-        await prisma.projects.create({
+
+    async create(project: Project): Promise<Project> {
+        const projectDb = await prisma.projects.create({
             data: {
                 name: project.name,
-                status: project.status.status,
+                status: project.getStatus(),
                 description: project.description ?? undefined,
                 startDate: project.startDate,
                 endDate: project.endDate,
             },
         });
+
+        return Project.createFromDb({
+            id: projectDb.id,
+            name: projectDb.name,
+            status: new ProjectStatus({ status: projectDb.status }),
+            description: projectDb.description ?? undefined,
+            startDate: projectDb.startDate,
+            endDate: projectDb.endDate,
+        });
     }
-    async update(project: Project): Promise<void> {
-        await prisma.projects.update({
+
+    async update(project: Project): Promise<Project> {
+        const projectDb = await prisma.projects.update({
             where: { id: project.id },
             data: {
                 name: project.name,
-                status: project.status.status,
+                status: project.getStatus(),
                 description: project.description ?? undefined,
                 startDate: project.startDate,
                 endDate: project.endDate,
             },
         });
+        return Project.createFromDb({
+            id: projectDb.id,
+            name: projectDb.name,
+            status: new ProjectStatus({ status: projectDb.status }),
+            description: projectDb.description ?? undefined,
+            startDate: projectDb.startDate,
+            endDate: projectDb.endDate,
+        });
     }
+
     async delete(id: string): Promise<void> {
         await prisma.projects.delete({
             where: { id },
