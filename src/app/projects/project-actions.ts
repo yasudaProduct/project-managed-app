@@ -44,52 +44,47 @@ export async function createProject(projectData: {
 }
 
 export async function updateProject(
-    id: string,
+    projectId: string,
     projectData: {
-        name: string
-        description: string
-        startDate: string
-        endDate: string
-        status: ProjectStatus
+        name?: string
+        description?: string
+        startDate?: string
+        endDate?: string
+        status?: ProjectStatus
     },
 ) {
 
-    await createProject(projectData);
+    const projectApplicationService = container.get<IProjectApplicationService>(SYMBOL.IProjectApplicationService);
 
-    // const project = await getProjectById(id);
-    // if (!project) {
-    //     return { success: false, error: "プロジェクトが存在しません。" }
-    // }
+    const { success, error, id } = await projectApplicationService.updateProject(
+        {
+            id: projectId,
+            name: projectData.name,
+            description: projectData.description,
+            startDate: projectData.startDate ? new Date(projectData.startDate) : undefined,
+            endDate: projectData.endDate ? new Date(projectData.endDate) : undefined,
+        }
+    );
 
+    if (!success) {
+        return { success: false, error: error }
+    }
 
-    // const check = await prisma.projects.findFirst({
-    //     select: {
-    //         id: true,
-    //         name: true,
-    //     },
-    //     where: {
-    //         name: projectData.name,
-    //     },
-    // })
-
-    // if (check && check.id != id) {
-    //     return { success: false, error: "同様のプロジェクト名が存在します。" }
-    // }
-
-    // const project = await prisma.projects.update({
-    //     where: { id: id },
-    //     data: {
-    //         name: projectData.name,
-    //         description: projectData.description,
-    //         startDate: new Date(projectData.startDate).toISOString(),
-    //         endDate: new Date(projectData.endDate).toISOString(),
-    //         status: projectData.status,
-    //     },
-    // })
+    const project = await projectApplicationService.getProjectById(id!);
 
     // プロジェクト一覧ページと詳細ページを再検証
     revalidatePath("/")
-    revalidatePath(`/projects/${project.id}`)
+    revalidatePath(`/projects/${project!.id}`)
 
     return { success: true, project: project }
+}
+
+export async function deleteProject(projectId: string) {
+    const projectApplicationService = container.get<IProjectApplicationService>(SYMBOL.IProjectApplicationService);
+    const { success, error, id } = await projectApplicationService.deleteProject(projectId);
+    if (!success) {
+        return { success: false, error: error }
+    }
+    revalidatePath("/")
+    return { success: true, id: id }
 }

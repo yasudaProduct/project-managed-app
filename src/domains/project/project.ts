@@ -2,11 +2,11 @@ import { ProjectStatus } from "./project-status";
 
 export class Project {
     public readonly id?: string;
-    public readonly name: string;
-    private readonly status: ProjectStatus;
-    public readonly description?: string;
-    public readonly startDate: Date;
-    public readonly endDate: Date;
+    public name: string;
+    private status: ProjectStatus;
+    public description?: string;
+    public startDate: Date;
+    public endDate: Date;
 
     private constructor(args: { id?: string; name: string; status?: ProjectStatus; description?: string; startDate: Date; endDate: Date }) {
         this.id = args.id;
@@ -35,6 +35,22 @@ export class Project {
 
     public getStatusName() {
         return this.status.Name();
+    }
+
+    public updateName(name: string) {
+        this.name = name;
+    }
+
+    public updateDescription(description: string) {
+        this.description = description;
+    }
+
+    public updateStartDate(startDate: Date) {
+        this.startDate = startDate;
+    }
+
+    public updateEndDate(endDate: Date) {
+        this.endDate = endDate;
     }
 
 }

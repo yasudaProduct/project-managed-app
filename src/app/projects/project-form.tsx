@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createProject, updateProject } from "./project-actions";
+import { createProject, deleteProject, updateProject } from "./project-actions";
 import { ProjectStatus } from "@prisma/client";
 import { formatDateyyyymmdd } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -122,6 +122,33 @@ export function ProjectForm({ project }: ProjectFormProps) {
     }
   }
 
+  const handleDelete = async () => {
+    setIsSubmitting(true);
+    try {
+      const result = await deleteProject(project!.id);
+      if (result.success) {
+        toast({
+          title: "プロジェクトを削除しました。",
+          variant: "destructive",
+        });
+        router.push("/");
+      } else {
+        toast({
+          title: "プロジェクトを削除できませんでした。",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "プロジェクトを削除できませんでした。",
+        description: "error: \n" + error,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -209,6 +236,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
             ? "プロジェクトを更新"
             : "プロジェクトを作成"}
         </Button>
+        {project && (
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={isSubmitting}
+            className="ml-2"
+          >
+            削除
+          </Button>
+        )}
       </form>
     </Form>
   );
