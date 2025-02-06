@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getWbsBuffers, getWbsById } from "@/app/wbs/[id]/wbs-actions";
-import { Loader2 } from "lucide-react";
+import { CalendarCheck, CirclePlus, Loader2, Trello, Users } from "lucide-react";
 import WbsManagementTable from "@/components/wbs/data-management-table";
 import prisma from "@/lib/prisma";
 import { formatDateyyyymmdd, getProjectStatusName } from "@/lib/utils";
@@ -10,6 +10,8 @@ import { getWbsAssignees } from "../assignee/assignee-actions";
 import WbsSummaryCard from "@/components/wbs/wbs-summary-card";
 import { getTaskAll } from "./wbs-task-actions";
 import { TaskTableViewPage } from "@/components/wbs/task-table-view";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function WbsManagementPage({
   params,
@@ -85,6 +87,23 @@ export default async function WbsManagementPage({
             </div>
           }
         >
+
+          <Link href={`/wbs/${wbs.id}/phase/new`}>
+            <Button className="bg-white text-black">
+              <CirclePlus className="h-4 w-4" />
+              <Trello className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href={`/wbs/${wbs.id}/assignee/new`}>
+            <Button className="bg-white text-black ml-2">
+              <CirclePlus className="h-4 w-4" />
+              <Users className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Button className="bg-white text-black ml-2">
+            <CirclePlus className="h-4 w-4" />
+            <CalendarCheck  className="h-4 w-4" />
+          </Button>
           {/* <WbsManagementTable wbsId={wbs.id} wbsTasks={tasks} /> */}
           <TaskTableViewPage />
         </Suspense>
