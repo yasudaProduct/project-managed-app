@@ -82,7 +82,10 @@ export function SideMenu() {
                 <Trello className="h-4 w-4" />
                 🚧月別集計
               </Link>
-              <Link href="#" className="text-lg flex items-center gap-2">
+              <Link
+                href={`/wbs/${pathname.split("/")[2]}/gantt`}
+                className="text-lg flex items-center gap-2"
+              >
                 <Trello className="h-4 w-4" />
                 🚧ガントチャート
               </Link>
