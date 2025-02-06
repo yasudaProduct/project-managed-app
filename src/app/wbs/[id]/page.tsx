@@ -12,6 +12,8 @@ import { getTaskAll } from "./wbs-task-actions";
 import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { TaskModal } from "@/components/wbs/task-modal";
+import { WbsTask } from "@/types/wbs";
 
 export default async function WbsManagementPage({
   params,
@@ -100,14 +102,22 @@ export default async function WbsManagementPage({
               <Users className="h-4 w-4" />
             </Button>
           </Link>
-          <Button className="bg-white text-black ml-2">
-            <CirclePlus className="h-4 w-4" />
-            <CalendarCheck  className="h-4 w-4" />
-          </Button>
+          <TaskModal wbsId={wbs.id} assigneeList={
+            assignees.map((a) => ({
+              id: a.assignee.id,
+              name: a.assignee.name
+            }))
+          }
+            phases={phases}>
+            <Button className="bg-white text-black ml-2">
+              <CirclePlus className="h-4 w-4" />
+              <CalendarCheck className="h-4 w-4" />
+            </Button>
+          </TaskModal>
           {/* <WbsManagementTable wbsId={wbs.id} wbsTasks={tasks} /> */}
           <TaskTableViewPage />
         </Suspense>
-      </div>
+      </div >
     </>
   );
 }

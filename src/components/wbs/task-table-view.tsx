@@ -34,12 +34,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TaskStatus } from "@/types/wbs";
+import { TaskStatus, WbsTask } from "@/types/wbs";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "../ui/collapsible";
+import { TaskModal } from "./task-modal";
 
 const data: TaskTableViewPageProp[] = [
   {
@@ -361,9 +362,9 @@ export function TaskTableViewPage() {
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   );
                 })}
