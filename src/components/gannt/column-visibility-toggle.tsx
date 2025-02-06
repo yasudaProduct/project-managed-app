@@ -3,7 +3,7 @@ import { Switch } from "@/components/ui/switch";
 
 export interface ColumnVisibility {
   wbsno: boolean;
-  tanto: boolean;
+  assignee: boolean;
   start: boolean;
   end: boolean;
   kosu: boolean;
@@ -31,11 +31,11 @@ export function ColumnVisibilityToggle({
       </div>
       <div className="flex items-center space-x-2">
         <Switch
-          id="column-tanto"
-          checked={columnVisibility.tanto}
-          onCheckedChange={() => onToggle("tanto")}
+          id="column-assignee"
+          checked={columnVisibility.assignee}
+          onCheckedChange={() => onToggle("assignee")}
         />
-        <Label htmlFor="column-tanto">担当</Label>
+        <Label htmlFor="column-assignee">担当</Label>
       </div>
       <div className="flex items-center space-x-2">
         <Switch

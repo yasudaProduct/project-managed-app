@@ -1,6 +1,6 @@
 "use client";
 
-import { Wbs } from "@/types/wbs";
+import { TaskStatus, Wbs } from "@/types/wbs";
 import { Gantt, Task, ViewMode } from "gantt-task-react";
 import "gantt-task-react/dist/index.css";
 import { Button } from "../ui/button";
@@ -9,18 +9,27 @@ import {
   ColumnVisibility,
   ColumnVisibilityToggle,
 } from "./column-visibility-toggle";
+import { getTaskStatusName } from "@/lib/utils";
 
 interface GanttComponentProps {
   tasks: Task[];
   wbs: Wbs;
 }
 
-export default function GanttComponent({ tasks, wbs }: GanttComponentProps) {
+declare module "gantt-task-react" {
+  interface Task {
+    assignee: string;
+    kosu: number;
+    status: TaskStatus;
+  }
+}
+
+export default function GanttComponent({ tasks }: GanttComponentProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
   const [isTalebeHide, setIsTalebeHide] = useState(true);
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
     wbsno: true,
-    tanto: true,
+    assignee: true,
     start: true,
     end: true,
     kosu: true,
@@ -32,7 +41,7 @@ export default function GanttComponent({ tasks, wbs }: GanttComponentProps) {
   };
 
   const columnWidths = {
-    task: "100px",
+    task: "5rem",
     wbsId: "61px",
     tanto: "42px",
     start: "5rem",
@@ -47,14 +56,14 @@ export default function GanttComponent({ tasks, wbs }: GanttComponentProps) {
     rowWidth: string;
     fontFamily: string;
     fontSize: string;
-  }> = ({ headerHeight }) => {
+  }> = ({ headerHeight, rowWidth, fontFamily, fontSize }) => {
     return (
       <div
         className="flex items-center gap-4 px-4 bg-gray-100 font-semibold text-sm text-gray-700"
-        style={{ height: headerHeight }}
+        style={{ height: headerHeight, width: rowWidth, fontFamily, fontSize }}
       >
         <div style={{ width: columnWidths.task }}>タスク名</div>
-        {/* {columnVisibility.wbsno && (
+        {columnVisibility.wbsno && (
           <div
             className="flex items-center justify-center h-full"
             style={{ width: columnWidths.wbsId }}
@@ -62,14 +71,15 @@ export default function GanttComponent({ tasks, wbs }: GanttComponentProps) {
             WBSNO
           </div>
         )}
-        {columnVisibility.tanto && (
+
+        {columnVisibility.assignee && (
           <div
             className="flex items-center justify-center h-full"
             style={{ width: columnWidths.tanto }}
           >
             担当
           </div>
-        )} */}
+        )}
         {columnVisibility.start && (
           <div
             className="flex items-center justify-center h-full"
@@ -86,7 +96,7 @@ export default function GanttComponent({ tasks, wbs }: GanttComponentProps) {
             終了日
           </div>
         )}
-        {/* {columnVisibility.kosu && (
+        {columnVisibility.kosu && (
           <div
             className="flex items-center justify-center h-full"
             style={{ width: columnWidths.kosu }}
@@ -101,26 +111,103 @@ export default function GanttComponent({ tasks, wbs }: GanttComponentProps) {
           >
             状況
           </div>
-        )} */}
+        )}
+      </div>
+    );
+  };
+
+  const TaskListTable: React.FC<{
+    rowHeight: number;
+    rowWidth: string;
+    fontFamily: string;
+    fontSize: string;
+    locale: string;
+    tasks: Task[];
+    selectedTaskId: string;
+    setSelectedTask: (taskId: string) => void;
+    onExpanderClick: (task: Task) => void;
+  }> = ({ tasks, rowHeight, fontSize, onExpanderClick }) => {
+    return (
+      <div className="text-xs">
+        {tasks.map((task) => (
+          <div
+            key={task.id}
+            className="flex items-center gap-4 px-4 border-b border-gray-200 text-sm"
+            style={{
+              height: rowHeight,
+              fontSize: fontSize,
+              backgroundColor: task.type === "project" ? "#f0f0f0" : "",
+            }}
+          >
+            {/* タスク名 */}
+            <div
+              className="truncate _nI1Xw"
+              style={{ width: columnWidths.task }}
+            >
+              {task.type === "project" ? (
+                <button
+                  className="_2QjE6"
+                  onClick={() => onExpanderClick(task)}
+                >
+                  {task.hideChildren ? "▶" : "▼"}
+                </button>
+              ) : (
+                <div className="ml-2">{task.name}</div>
+              )}
+            </div>
+
+            {/* WBSNO */}
+            {columnVisibility.wbsno &&
+              (task.type === "project" ? (
+                <div style={{ width: columnWidths.wbsId }}></div>
+              ) : (
+                <div style={{ width: columnWidths.wbsId }}>{task.id}</div>
+              ))}
+
+            {/* 担当 */}
+            {columnVisibility.assignee && (
+              <div style={{ width: columnWidths.tanto }}>{task.assignee}</div>
+            )}
+
+            {/* 開始日 */}
+            {columnVisibility.start && (
+              <div
+                className="flex flex-col items-center justify-center h-full border-l"
+                style={{ width: columnWidths.start }}
+              >
+                <div>{task.start?.toLocaleDateString("ja-JP")}</div>
+              </div>
+            )}
+
+            {/* 終了日 */}
+            {columnVisibility.end && (
+              <div
+                className="flex flex-col items-center justify-center h-full border-l"
+                style={{ width: columnWidths.end }}
+              >
+                <div>{task.end?.toLocaleDateString("ja-JP")}</div>
+              </div>
+            )}
+
+            {/* 工数 */}
+            {columnVisibility.kosu && (
+              <div style={{ width: columnWidths.kosu }}>{task.kosu}</div>
+            )}
+
+            {/* 状況 */}
+            {columnVisibility.status && (
+              <div style={{ width: columnWidths.status }}>
+                {getTaskStatusName(task.status)}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     );
   };
 
   return (
     <div className="container mx-auto">
-      <Gantt
-        tasks={tasks}
-        viewMode={viewMode}
-        viewDate={new Date()}
-        listCellWidth={isTalebeHide ? "100" : ""}
-        fontSize="10px"
-        rowHeight={45}
-        barCornerRadius={5}
-        barFill={95}
-        preStepsCount={100}
-        locale="ja-JP"
-        TaskListHeader={TaskListHeader}
-      />
       <div className="flex justify-center gap-2">
         <Button onClick={() => setViewMode(ViewMode.Month)}>月</Button>
         <Button onClick={() => setViewMode(ViewMode.Day)}>日</Button>
@@ -132,6 +219,20 @@ export default function GanttComponent({ tasks, wbs }: GanttComponentProps) {
       <ColumnVisibilityToggle
         columnVisibility={columnVisibility}
         onToggle={handleColumnVisibilityToggle}
+      />
+      <Gantt
+        tasks={tasks}
+        viewMode={viewMode}
+        viewDate={new Date()}
+        listCellWidth={isTalebeHide ? "100" : ""}
+        // fontSize="10px"
+        rowHeight={45}
+        barCornerRadius={5}
+        barFill={95}
+        preStepsCount={100}
+        locale="ja-JP"
+        TaskListHeader={TaskListHeader}
+        TaskListTable={TaskListTable}
       />
     </div>
   );
