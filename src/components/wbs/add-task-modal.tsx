@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { getTaskStatusName } from "@/lib/utils";
-import { WbsTask } from "@/types/wbs";
+import { Task } from "@/types/wbs";
 
 const formSchema = z.object({
   id: z.string().min(1, {
@@ -87,7 +87,7 @@ const formSchema = z.object({
 });
 
 interface AddTaskModalProps {
-  onAddItem: (newTasks: WbsTask) => void;
+  onAddItem: (newTasks: Task) => void;
   wbsId: number;
   assigneeList: { id: string; name: string }[];
   phases: { id: number; name: string; seq: number }[];

@@ -32,9 +32,17 @@ export type WbsTask = {
         name: string;
         seq: number;
     };
+    kijunStart?: Date
+    kijunEnd?: Date
+    kijunKosu?: number
+    yoteiStart?: Date
+    yoteiEnd?: Date
+    yoteiKosu?: number
+    jissekiStart?: Date
+    jissekiEnd?: Date
+    jissekiKosu?: number
     createdAt?: Date
     updatedAt?: Date
-    periods?: TaskPeriod[]
 }
 
 export type TaskPeriod = {

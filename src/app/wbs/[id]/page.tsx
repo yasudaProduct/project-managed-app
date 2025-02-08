@@ -118,8 +118,7 @@ export default async function WbsManagementPage({
               <CalendarCheck className="h-4 w-4" />
             </Button>
           </TaskModal>
-          {/* <WbsManagementTable wbsId={wbs.id} wbsTasks={tasks} /> */}
-          <TaskTableViewPage />
+          <TaskTableViewPage wbsTasks={tasks} />
         </Suspense>
       </div>
     </>

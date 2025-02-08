@@ -37,17 +37,17 @@ export class TaskApplicationService implements ITaskApplicationService {
                 name: task.phase.name,
                 seq: task.phase.seq,
             } : undefined,
-            periods: task.periods?.map(period => ({
-                id: period.id!,
-                startDate: period.startDate,
-                endDate: period.endDate,
-                type: period.type.type,
-                kosus: period.manHours.map(manHour => ({
-                    id: manHour.id!,
-                    kosu: manHour.kosu,
-                    type: manHour.type.type,
-                })),
-            })),
+            kijunStart: task.getKijunStart(),
+            kijunEnd: task.getKijunEnd(),
+            kijunKosu: task.getKijunKosus(),
+            yoteiStart: task.getYoteiStart(),
+            yoteiEnd: task.getYoteiEnd(),
+            yoteiKosu: task.getYoteiKosus(),
+            jissekiStart: task.getJissekiStart(),
+            jissekiEnd: task.getJissekiEnd(),
+            jissekiKosu: task.getJissekiKosus(),
+            createdAt: task.createdAt,
+            updatedAt: task.updatedAt,
         };
     }
 
@@ -70,17 +70,17 @@ export class TaskApplicationService implements ITaskApplicationService {
                 name: task.phase.name,
                 seq: task.phase.seq,
             } : undefined,
-            periods: task.periods?.map(period => ({
-                id: period.id!,
-                startDate: period.startDate,
-                endDate: period.endDate,
-                type: period.type.type,
-                kosus: period.manHours.map(manHour => ({
-                    id: manHour.id!,
-                    kosu: manHour.kosu,
-                    type: manHour.type.type,
-                })),
-            })),
+            kijunStart: task.getKijunStart(),
+            kijunEnd: task.getKijunEnd(),
+            kijunKosu: task.getKijunKosus(),
+            yoteiStart: task.getYoteiStart(),
+            yoteiEnd: task.getYoteiEnd(),
+            yoteiKosu: task.getYoteiKosus(),
+            jissekiStart: task.getJissekiStart(),
+            jissekiEnd: task.getJissekiEnd(),
+            jissekiKosu: task.getJissekiKosus(),
+            createdAt: task.createdAt,
+            updatedAt: task.updatedAt,
         }));
     }
 }

@@ -35,89 +35,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TaskStatus, WbsTask } from "@/types/wbs";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "../ui/collapsible";
-import { TaskModal } from "./task-modal";
 
-const data: TaskTableViewPageProp[] = [
-  {
-    id: "m5gr84i9",
-    taskName: "taskName",
-    kijunStart: "2025-01-01",
-    kijunEnd: "2025-01-01",
-    kijunKosu: 1,
-    yoteiStart: "2025-01-01",
-    yoteiEnd: "2025-01-01",
-    yoteiKosu: 1,
-    jissekiStart: "2025-01-01",
-    jissekiEnd: "2025-01-01",
-    jissekiKosu: 1,
-    status: "IN_PROGRESS",
-  },
-  {
-    id: "3u1reuv4",
-    taskName: "taskName",
-    kijunStart: "2025-01-01",
-    kijunEnd: "2025-01-01",
-    kijunKosu: 1,
-    yoteiStart: "2025-01-01",
-    yoteiEnd: "2025-01-01",
-    yoteiKosu: 1,
-    jissekiStart: "2025-01-01",
-    jissekiEnd: "2025-01-01",
-    jissekiKosu: 1,
-    status: "IN_PROGRESS",
-  },
-  {
-    id: "derv1ws0",
-    taskName: "taskName",
-    kijunStart: "2025-01-01",
-    kijunEnd: "2025-01-01",
-    kijunKosu: 1,
-    yoteiStart: "2025-01-01",
-    yoteiEnd: "2025-01-01",
-    yoteiKosu: 1,
-    jissekiStart: "2025-01-01",
-    jissekiEnd: "2025-01-01",
-    jissekiKosu: 1,
-    status: "IN_PROGRESS",
-  },
-  {
-    id: "5kma53ae",
-    taskName: "taskName",
-    kijunStart: "2025-01-01",
-    kijunEnd: "2025-01-01",
-    kijunKosu: 1,
-    yoteiStart: "2025-01-01",
-    yoteiEnd: "2025-01-01",
-    yoteiKosu: 1,
-    jissekiStart: "2025-01-01",
-    jissekiEnd: "2025-01-01",
-    jissekiKosu: 1,
-    status: "IN_PROGRESS",
-  },
-  {
-    id: "bhqecj4p",
-    taskName: "taskName",
-    kijunStart: "2025-01-01",
-    kijunEnd: "2025-01-01",
-    kijunKosu: 1,
-    yoteiStart: "2025-01-01",
-    yoteiEnd: "2025-01-01",
-    yoteiKosu: 1,
-    jissekiStart: "2025-01-01",
-    jissekiEnd: "2025-01-01",
-    jissekiKosu: 1,
-    status: "IN_PROGRESS",
-  },
-];
+export interface TaskTableViewPageProps {
+  wbsTasks: WbsTask[];
+}
 
 export type TaskTableViewPageProp = {
   id: string;
-  taskName: string;
+  name: string;
   kijunStart?: string;
   kijunEnd?: string;
   kijunKosu?: number;
@@ -127,8 +52,11 @@ export type TaskTableViewPageProp = {
   jissekiStart?: string;
   jissekiEnd?: string;
   jissekiKosu?: number;
-  //   status: "pending" | "processing" | "success" | "failed";
   status: TaskStatus;
+  assigneeId: string;
+  assignee: string;
+  phaseId: number;
+  phase: string;
 };
 
 export const columns: ColumnDef<TaskTableViewPageProp>[] = [
@@ -285,7 +213,9 @@ export const columns: ColumnDef<TaskTableViewPageProp>[] = [
   },
 ];
 
-export function TaskTableViewPage() {
+export function TaskTableViewPage({
+  wbsTasks,
+}: TaskTableViewPageProps): React.ReactNode {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -295,7 +225,27 @@ export function TaskTableViewPage() {
   const [rowSelection, setRowSelection] = React.useState({});
 
   const table = useReactTable({
-    data,
+    data:
+      wbsTasks.length > 0
+        ? wbsTasks.map((wbsTask) => ({
+            id: wbsTask.id,
+            name: wbsTask.name,
+            kijunStart: wbsTask.kijunStart?.toISOString(),
+            kijunEnd: wbsTask.kijunEnd?.toISOString(),
+            kijunKosu: wbsTask.kijunKosu,
+            yoteiStart: wbsTask.yoteiStart?.toISOString(),
+            yoteiEnd: wbsTask.yoteiEnd?.toISOString(),
+            yoteiKosu: wbsTask.yoteiKosu,
+            jissekiStart: wbsTask.jissekiStart?.toISOString(),
+            jissekiEnd: wbsTask.jissekiEnd?.toISOString(),
+            jissekiKosu: wbsTask.jissekiKosu,
+            status: wbsTask.status,
+            assigneeId: wbsTask.assigneeId ?? "",
+            assignee: wbsTask.assignee?.displayName ?? "",
+            phaseId: wbsTask.phaseId ?? 0,
+            phase: wbsTask.phase?.name ?? "",
+          }))
+        : [],
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -362,9 +312,9 @@ export function TaskTableViewPage() {
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   );
                 })}

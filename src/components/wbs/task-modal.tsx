@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import { ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { getTaskStatusName } from "@/lib/utils";
-import { WbsTask } from "@/types/wbs";
+import { Task } from "@/types/wbs";
 import { createTask } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
 
@@ -174,7 +174,7 @@ export function TaskModal({
     setIsOpen(false);
   }
 
-  const addItem = async (newTasks: WbsTask) => {
+  const addItem = async (newTasks: Task) => {
     try {
       const result = await createTask(wbsId, {
         id: newTasks.id,

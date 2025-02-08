@@ -21,6 +21,8 @@ declare module "gantt-task-react" {
     assignee: string;
     kosu: number;
     status: TaskStatus;
+    yoteiStart: Date | undefined;
+    yoteiEnd: Date | undefined;
   }
 }
 

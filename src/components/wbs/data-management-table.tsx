@@ -37,11 +37,11 @@ import {
 import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
 import Link from "next/link";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
-import { WbsTask } from "@/types/wbs";
+import { Task } from "@/types/wbs";
 
 interface WbsManagementTableProps {
   wbsId: number;
-  wbsTasks: WbsTask[];
+  wbsTasks: Task[];
 }
 
 export default function WbsManagementTable({
@@ -49,8 +49,8 @@ export default function WbsManagementTable({
   wbsTasks,
 }: WbsManagementTableProps) {
   const [wbsIdState, setWbsIdState] = useState(wbsId);
-  const [tasks, setData] = useState<WbsTask[]>(wbsTasks);
-  const [editItem, setEditItem] = useState<WbsTask | null>(null);
+  const [tasks, setData] = useState<Task[]>(wbsTasks);
+  const [editItem, setEditItem] = useState<Task | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [assigneeList, setAssigneeList] = useState<
     { id: string; name: string }[]
@@ -91,7 +91,7 @@ export default function WbsManagementTable({
     fetchPhases();
   }, [wbsId, wbsTasks]);
 
-  const addItem = async (newTasks: WbsTask) => {
+  const addItem = async (newTasks: Task) => {
     try {
       const result = await createTask(wbsIdState, {
         id: newTasks.id,
@@ -175,7 +175,7 @@ export default function WbsManagementTable({
     }
   };
 
-  const updateItem = async (id: string, item: WbsTask) => {
+  const updateItem = async (id: string, item: Task) => {
     try {
       const result = await updateTask(id, {
         id: item!.id,

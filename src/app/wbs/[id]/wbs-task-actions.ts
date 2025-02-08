@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { KosuType, PeriodType, TaskPeriod, TaskStatus, type WbsTask } from "@/types/wbs"
+import { KosuType, PeriodType, TaskStatus, WbsTask } from "@/types/wbs"
 import prisma from "@/lib/prisma";
 import { TaskKosu as TaskKosuPrisma, TaskPeriod as TaskPeriodPrisma, Users as UserPrisma, WbsTask as WbsTaskPrisma, WbsPhase as WbsPhasePrisma } from "@prisma/client";
 import { SYMBOL } from "@/types/symbol";
@@ -13,8 +13,7 @@ const taskApplicationService = container.get<ITaskApplicationService>(SYMBOL.ITa
 export async function getTaskAll(wbsId: number) {
 
     const tasks = await taskApplicationService.getTaskAll(wbsId);
-
-    return tasks
+    return tasks;
 
 }
 
@@ -201,13 +200,14 @@ function formatTask(task: WbsTaskPrisma & { phase?: WbsPhasePrisma | null } & { 
             name: task.phase.name,
             seq: task.phase.seq,
         } : undefined,
-        periods: task.periods?.map((period) => ({
-            id: period.id,
-            taskId: period.taskId,
-            startDate: period.startDate,
-            endDate: period.endDate,
-            type: period.type,
-            kosus: period.kosus,
-        })) as TaskPeriod[],
+        kijunStart: task.periods?.findLast(p => p.type === 'KIJUN')?.startDate,
+        kijunEnd: task.periods?.findLast(p => p.type === 'KIJUN')?.endDate,
+        kijunKosu: task.periods?.findLast(p => p.type === 'KIJUN')?.kosus.find(k => k.type === 'NORMAL')?.kosu,
+        yoteiStart: task.periods?.findLast(p => p.type === 'YOTEI')?.startDate,
+        yoteiEnd: task.periods?.findLast(p => p.type === 'YOTEI')?.endDate,
+        yoteiKosu: task.periods?.findLast(p => p.type === 'YOTEI')?.kosus.find(k => k.type === 'NORMAL')?.kosu,
+        jissekiStart: task.periods?.findLast(p => p.type === 'JISSEKI')?.startDate,
+        jissekiEnd: task.periods?.findLast(p => p.type === 'JISSEKI')?.endDate,
+        jissekiKosu: task.periods?.findLast(p => p.type === 'JISSEKI')?.kosus.find(k => k.type === 'NORMAL')?.kosu,
     }
 }

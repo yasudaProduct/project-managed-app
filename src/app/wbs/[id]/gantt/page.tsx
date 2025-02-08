@@ -6,19 +6,6 @@ import { notFound } from "next/navigation";
 import { getTaskAll } from "../wbs-task-actions";
 import { WbsTask } from "@/types/wbs";
 
-// const tasks: Task[] = [
-//   {
-//     start: new Date(2020, 1, 1),
-//     end: new Date(2020, 1, 2),
-//     name: "Idea",
-//     id: "Task 0",
-//     type: "task",
-//     progress: 45,
-//     isDisabled: true,
-//     styles: { progressColor: "#ffbb54", progressSelectedColor: "#ff9e0d" },
-//   },
-// ];
-
 export default async function GanttPage({
   params,
 }: {
@@ -37,10 +24,12 @@ export default async function GanttPage({
     type: "task",
     name: task.name,
     assignee: task.assignee?.name ?? "",
-    kosu: task.periods?.[0]?.kosus?.[0]?.kosu ?? 0,
+    kosu: task.yoteiKosu ?? 0,
     status: task.status,
-    start: task.periods?.[0]?.startDate ?? new Date(),
-    end: task.periods?.[0]?.endDate ?? new Date(),
+    start: task.yoteiStart ?? new Date(),
+    end: task.yoteiEnd ?? new Date(),
+    yoteiStart: task.yoteiStart ?? undefined,
+    yoteiEnd: task.yoteiEnd ?? undefined,
     progress: 0,
     project: wbs.name,
   }));
