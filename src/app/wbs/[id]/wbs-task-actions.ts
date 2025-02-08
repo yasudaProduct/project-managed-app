@@ -4,29 +4,17 @@ import { revalidatePath } from "next/cache"
 import { KosuType, PeriodType, TaskPeriod, TaskStatus, type WbsTask } from "@/types/wbs"
 import prisma from "@/lib/prisma";
 import { TaskKosu as TaskKosuPrisma, TaskPeriod as TaskPeriodPrisma, Users as UserPrisma, WbsTask as WbsTaskPrisma, WbsPhase as WbsPhasePrisma } from "@prisma/client";
+import { SYMBOL } from "@/types/symbol";
+import { container } from "@/lib/inversify.config"
+import { ITaskApplicationService } from "@/applications/task/task-application-service";
+
+const taskApplicationService = container.get<ITaskApplicationService>(SYMBOL.ITaskApplicationService);
 
 export async function getTaskAll(wbsId: number) {
-    const tasks = await prisma.wbsTask.findMany({
-        where: {
-            wbsId: wbsId,
-        },
-        include: {
-            periods: {
-                include: {
-                    kosus: true,
-                },
-            },
-            assignee: true,
-            phase: true,
-        },
-        orderBy: {
-            phaseId: 'asc'
-        }
-    })
 
-    return tasks.map(
-        (task) => formatTask(task)
-    )
+    const tasks = await taskApplicationService.getTaskAll(wbsId);
+
+    return tasks
 
 }
 

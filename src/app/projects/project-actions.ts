@@ -1,6 +1,6 @@
 "use server"
 
-import { IProjectApplicationService } from "@/applications/project-application-service"
+import { IProjectApplicationService } from "@/applications/projects/project-application-service"
 import prisma from "@/lib/prisma"
 import { SYMBOL } from "@/types/symbol"
 import { ProjectStatus } from "@prisma/client"

@@ -1,8 +1,13 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getWbsBuffers, getWbsById } from "@/app/wbs/[id]/wbs-actions";
-import { CalendarCheck, CirclePlus, Loader2, Trello, Users } from "lucide-react";
-import WbsManagementTable from "@/components/wbs/data-management-table";
+import {
+  CalendarCheck,
+  CirclePlus,
+  Loader2,
+  Trello,
+  Users,
+} from "lucide-react";
 import prisma from "@/lib/prisma";
 import { formatDateyyyymmdd, getProjectStatusName } from "@/lib/utils";
 import { getWbsPhases } from "./wbs-phase-actions";
@@ -13,7 +18,6 @@ import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TaskModal } from "@/components/wbs/task-modal";
-import { WbsTask } from "@/types/wbs";
 
 export default async function WbsManagementPage({
   params,
@@ -89,7 +93,6 @@ export default async function WbsManagementPage({
             </div>
           }
         >
-
           <Link href={`/wbs/${wbs.id}/phase/new`}>
             <Button className="bg-white text-black">
               <CirclePlus className="h-4 w-4" />
@@ -102,13 +105,14 @@ export default async function WbsManagementPage({
               <Users className="h-4 w-4" />
             </Button>
           </Link>
-          <TaskModal wbsId={wbs.id} assigneeList={
-            assignees.map((a) => ({
+          <TaskModal
+            wbsId={wbs.id}
+            assigneeList={assignees.map((a) => ({
               id: a.assignee.id,
-              name: a.assignee.name
-            }))
-          }
-            phases={phases}>
+              name: a.assignee.name,
+            }))}
+            phases={phases}
+          >
             <Button className="bg-white text-black ml-2">
               <CirclePlus className="h-4 w-4" />
               <CalendarCheck className="h-4 w-4" />
@@ -117,7 +121,7 @@ export default async function WbsManagementPage({
           {/* <WbsManagementTable wbsId={wbs.id} wbsTasks={tasks} /> */}
           <TaskTableViewPage />
         </Suspense>
-      </div >
+      </div>
     </>
   );
 }

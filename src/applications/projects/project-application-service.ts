@@ -1,4 +1,4 @@
-import type { IProjectRepository } from "@/applications/iproject-repository";
+import type { IProjectRepository } from "@/applications/projects/iproject-repository";
 import { Project } from "@/domains/project/project";
 import type { Project as ProjectType } from "@/types/project";
 import { SYMBOL } from "@/types/symbol";

@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { IProjectRepository } from "@/applications/iproject-repository";
+import { IProjectRepository } from "@/applications/projects/iproject-repository";
 import { Project } from "@/domains/project/project";
 import { ProjectStatus } from "@/domains/project/project-status";
 import { injectable } from "inversify";

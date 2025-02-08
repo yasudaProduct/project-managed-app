@@ -1,4 +1,4 @@
-import { Project } from "../domains/project/project";
+import { Project } from "../../domains/project/project";
 
 export interface IProjectRepository {
     findById(id: string): Promise<Project | null>;
