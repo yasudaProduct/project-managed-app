@@ -35,12 +35,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TaskStatus, WbsTask } from "@/types/wbs";
+import { formatDateyyyymmdd, getTaskStatusName } from "@/lib/utils";
 
 export interface TaskTableViewPageProps {
   wbsTasks: WbsTask[];
 }
 
-export type TaskTableViewPageProp = {
+export type TaskTableViewProp = {
   id: string;
   name: string;
   kijunStart?: string;
@@ -59,7 +60,7 @@ export type TaskTableViewPageProp = {
   phase: string;
 };
 
-export const columns: ColumnDef<TaskTableViewPageProp>[] = [
+export const columns: ColumnDef<TaskTableViewProp>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -98,24 +99,26 @@ export const columns: ColumnDef<TaskTableViewPageProp>[] = [
     cell: ({ row }) => <div className="capitalize">{row.getValue("id")}</div>,
   },
   {
-    accessorKey: "taskName",
+    accessorKey: "name",
     header: "タスク名",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("taskName")}</div>
-    ),
+    cell: ({ row }) => <div className="capitalize">{row.getValue("name")}</div>,
   },
   {
     accessorKey: "kijunStart",
     header: "基準開始日",
     cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("kijunStart")}</div>
+      <div className="capitalize">
+        {formatDateyyyymmdd(row.getValue("kijunStart"))}
+      </div>
     ),
   },
   {
     accessorKey: "kijunEnd",
     header: "基準終了日",
     cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("kijunEnd")}</div>
+      <div className="capitalize">
+        {formatDateyyyymmdd(row.getValue("kijunEnd"))}
+      </div>
     ),
   },
   {
@@ -129,14 +132,18 @@ export const columns: ColumnDef<TaskTableViewPageProp>[] = [
     accessorKey: "yoteiStart",
     header: "予定開始日",
     cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("yoteiStart")}</div>
+      <div className="capitalize">
+        {formatDateyyyymmdd(row.getValue("yoteiStart"))}
+      </div>
     ),
   },
   {
     accessorKey: "yoteiEnd",
     header: "予定終了日",
     cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("yoteiEnd")}</div>
+      <div className="capitalize">
+        {formatDateyyyymmdd(row.getValue("yoteiEnd"))}
+      </div>
     ),
   },
   {
@@ -150,21 +157,27 @@ export const columns: ColumnDef<TaskTableViewPageProp>[] = [
     accessorKey: "jissekiStart",
     header: "実績開始日",
     cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("jissekiStart")}</div>
+      <div className="capitalize">
+        {formatDateyyyymmdd(row.getValue("jissekiStart"))}
+      </div>
     ),
   },
   {
     accessorKey: "jissekiEnd",
     header: "実績終了日",
     cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("jissekiEnd")}</div>
+      <div className="capitalize">
+        {formatDateyyyymmdd(row.getValue("jissekiEnd"))}
+      </div>
     ),
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: "状況",
     cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("status")}</div>
+      <div className="capitalize">
+        {getTaskStatusName(row.getValue("status"))}
+      </div>
     ),
   },
   //   {

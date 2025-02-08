@@ -79,7 +79,31 @@ export class TaskRepository implements ITaskRepository {
             name: taskDb.name,
             wbsId: taskDb.wbsId,
             assigneeId: taskDb.assigneeId ?? undefined,
+            assignee: taskDb.assignee ? Assignee.createFromDb({
+                id: taskDb.assignee.id,
+                name: taskDb.assignee.name,
+                displayName: taskDb.assignee.displayName,
+            }) : undefined,
+            phaseId: taskDb.phaseId ?? undefined,
+            phase: taskDb.phase ? Phase.createFromDb({
+                id: taskDb.phase.id,
+                name: taskDb.phase.name,
+                seq: taskDb.phase.seq,
+            }) : undefined,
+            periods: taskDb.periods.map(period => Period.createFromDb({
+                id: period.id,
+                startDate: period.startDate,
+                endDate: period.endDate,
+                type: new PeriodType({ type: period.type }),
+                manHours: period.kosus.map(kosu => ManHour.createFromDb({
+                    id: kosu.id,
+                    kosu: kosu.kosu,
+                    type: new ManHourType({ type: kosu.type }),
+                })),
+            })),
             status: new TaskStatus({ status: taskDb.status }),
+            createdAt: taskDb.createdAt,
+            updatedAt: taskDb.updatedAt,
         }));
     }
 
