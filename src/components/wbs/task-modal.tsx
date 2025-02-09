@@ -3,7 +3,6 @@
 import { ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LayoutList, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,8 +28,8 @@ import {
   SelectValue,
 } from "../ui/select";
 import { getTaskStatusName } from "@/lib/utils";
-import { Task } from "@/types/wbs";
-import { createTask } from "@/app/wbs/[id]/wbs-task-actions";
+import { WbsTask } from "@/types/wbs";
+import { createTask, updateTask } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
@@ -92,6 +91,7 @@ const formSchema = z.object({
 
 interface TaskModalProps {
   wbsId: number;
+  task?: WbsTask;
   assigneeList: { id: string; name: string }[];
   phases: { id: number; name: string; seq: number }[];
   children: ReactNode;
@@ -99,6 +99,7 @@ interface TaskModalProps {
 
 export function TaskModal({
   wbsId,
+  task,
   assigneeList,
   phases,
   children,
@@ -124,79 +125,97 @@ export function TaskModal({
       status: "NOT_STARTED",
       phaseId: 0,
     },
+    ...(task && {
+      id: task.id,
+      name: task.name,
+      assigneeId: task.assigneeId,
+      kijunStartDate: task.kijunStart,
+      kijunEndDate: task.kijunEnd,
+      kijunKosu: task.kijunKosu,
+      yoteiStartDate: task.yoteiStart,
+      yoteiEndDate: task.yoteiEnd,
+      yoteiKosu: task.yoteiKosu,
+      jissekiStartDate: task.jissekiStart,
+      jissekiEndDate: task.jissekiEnd,
+      jissekiKosu: task.jissekiKosu,
+      status: task.status,
+      phaseId: task.phaseId,
+    }),
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
-    addItem({
-      id: values.id,
-      name: values.name,
-      periods: [
-        {
-          startDate: new Date(values.kijunStartDate),
-          endDate: new Date(values.kijunEndDate),
-          type: "KIJUN",
-          kosus: [
-            {
-              kosu: values.kijunKosu,
-              type: "NORMAL",
-            },
-          ],
-        },
-        {
-          startDate: new Date(values.yoteiStartDate),
-          endDate: new Date(values.yoteiEndDate),
-          type: "YOTEI",
-          kosus: [
-            {
-              kosu: values.yoteiKosu,
-              type: "NORMAL",
-            },
-          ],
-        },
-        {
-          startDate: new Date(values.jissekiStartDate),
-          endDate: new Date(values.jissekiEndDate),
-          type: "JISSEKI",
-          kosus: [
-            {
-              kosu: values.jissekiKosu,
-              type: "NORMAL",
-            },
-          ],
-        },
-      ],
-      status: values.status,
-      assigneeId: values.assigneeId,
-      phaseId: values.phaseId,
-    });
-    setIsSubmitting(false);
-    setIsOpen(false);
-  }
-
-  const addItem = async (newTasks: Task) => {
     try {
-      const result = await createTask(wbsId, {
-        id: newTasks.id,
-        name: newTasks.name,
-        periods: newTasks.periods?.map((period) => ({
-          startDate: period.startDate.toISOString(),
-          endDate: period.endDate.toISOString(),
-          type: period.type,
-          kosus: period.kosus.map((kosu) => ({
-            kosu: kosu.kosu,
-            type: kosu.type,
-          })),
-        })),
-        status: newTasks.status,
-        assigneeId: newTasks.assigneeId,
-        phaseId: newTasks.phaseId,
-      });
-      if (result.success) {
-        toast({
-          title: "タスクを追加しました",
-          description: "タスクが追加されました",
+      setIsSubmitting(true);
+      if (!task) {
+        const result = await createTask(wbsId, {
+          id: values.id,
+          name: values.name,
+          periods: [
+            // ここはservice側である
+            {
+              startDate: values.kijunStartDate,
+              endDate: values.kijunEndDate,
+              type: "KIJUN",
+              kosus: [{ kosu: values.kijunKosu, type: "NORMAL" }],
+            },
+            {
+              startDate: values.yoteiStartDate,
+              endDate: values.yoteiEndDate,
+              type: "YOTEI",
+              kosus: [{ kosu: values.yoteiKosu, type: "NORMAL" }],
+            },
+            {
+              startDate: values.jissekiStartDate,
+              endDate: values.jissekiEndDate,
+              type: "JISSEKI",
+              kosus: [{ kosu: values.jissekiKosu, type: "NORMAL" }],
+            },
+          ],
+          status: values.status,
+          assigneeId: values.assigneeId,
+          phaseId: values.phaseId,
         });
+        if (result.success) {
+          toast({
+            title: "タスクを追加しました",
+            description: "タスクが追加されました",
+          });
+        } else {
+          toast({
+            title: "タスクの追加に失敗しました",
+            description: result.error,
+            variant: "destructive",
+          });
+        }
+      } else {
+        const result = await updateTask(task.id, {
+          id: values.id,
+          name: values.name,
+          kijunStart: values.kijunStartDate,
+          kijunEnd: values.kijunEndDate,
+          kijunKosu: values.kijunKosu,
+          yoteiStart: values.yoteiStartDate,
+          yoteiEnd: values.yoteiEndDate,
+          yoteiKosu: values.yoteiKosu,
+          jissekiStart: values.jissekiStartDate,
+          jissekiEnd: values.jissekiEndDate,
+          jissekiKosu: values.jissekiKosu,
+          status: values.status,
+          assigneeId: values.assigneeId,
+          phaseId: values.phaseId,
+        });
+        if (result.success) {
+          toast({
+            title: "タスクを更新しました",
+            description: "タスクが更新されました",
+          });
+        } else {
+          toast({
+            title: "タスクの更新に失敗しました",
+            description: result.error,
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       toast({
@@ -204,8 +223,68 @@ export function TaskModal({
         description: error instanceof Error ? error.message : "不明なエラー",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
+      setIsOpen(false);
     }
-  };
+  }
+
+  // const addItem = async (newTasks: WbsTask) => {
+  //   try {
+  //     const result = await createTask(wbsId, {
+  //       id: newTasks.id,
+  //       name: newTasks.name,
+  //       periods: newTasks.periods?.map((period) => ({
+  //         startDate: period.startDate.toISOString(),
+  //         endDate: period.endDate.toISOString(),
+  //         type: period.type,
+  //         kosus: period.kosus.map((kosu) => ({
+  //           kosu: kosu.kosu,
+  //           type: kosu.type,
+  //         })),
+  //       })),
+  //       status: newTasks.status,
+  //       assigneeId: newTasks.assigneeId,
+  //       phaseId: newTasks.phaseId,
+  //     });
+  //     if (result.success) {
+  //       toast({
+  //         title: "タスクを追加しました",
+  //         description: "タスクが追加されました",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     toast({
+  //       title: "タスクの追加に失敗しました",
+  //       description: error instanceof Error ? error.message : "不明なエラー",
+  //       variant: "destructive",
+  //     });
+  //   }
+  // };
+
+  // const updateItem = async (taskId: string, updatedTask: WbsTask) => {
+  //   try {
+  //     const result = await updateTask(taskId, updatedTask);
+  //     if (result.success) {
+  //       toast({
+  //         title: "タスクを更新しました",
+  //         description: "タスクが更新されました",
+  //       });
+  //     } else {
+  //       toast({
+  //         title: "タスクの更新に失敗しました",
+  //         description: result.error,
+  //         variant: "destructive",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     toast({
+  //       title: "タスクの更新に失敗しました",
+  //       description: error instanceof Error ? error.message : "不明なエラー",
+  //       variant: "destructive",
+  //     });
+  //   }
+  // };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

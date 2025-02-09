@@ -8,7 +8,7 @@ export interface ITaskApplicationService {
     getTaskById(id: string): Promise<WbsTask | null>;
     getTaskAll(wbsId: number): Promise<WbsTask[]>;
     // createTask(args: { name: string; wbsId: number; assigneeId?: string; status: TaskStatus }): Promise<{ success: boolean; error?: string; id?: string }>;
-    // updateTask(args: { id: string; name?: string; assigneeId?: string; status?: TaskStatus }): Promise<{ success: boolean; error?: string; id?: string }>;
+    updateTask(args: { id: string; updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }>;
     // deleteTask(id: string): Promise<{ success: boolean; error?: string; id?: string }>;
 }
 
@@ -82,5 +82,33 @@ export class TaskApplicationService implements ITaskApplicationService {
             createdAt: task.createdAt,
             updatedAt: task.updatedAt,
         }));
+    }
+
+    public async updateTask(args: { id: string, updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }> {
+
+        const { id, updateTask } = args;
+
+        const task = await this.taskRepository.findById(id);
+        if (!task) {
+            return { success: false, error: "タスクが見つかりません" };
+        }
+
+        // 重複確認 ドメインサービス
+        // タスク名が重複しているか確認
+        // const tasks = await this.taskRepository.findAll(task.wbsId);
+        // if (tasks.some(t => t.name === updateTask.name)) {
+        //     return { success: false, error: "タスク名が重複しています" };
+        // }
+
+        task.updateName(updateTask.name);
+        if (updateTask.status) task.updateStatus(updateTask.status);
+        if (updateTask.assigneeId) task.updateAssigneeId(updateTask.assigneeId);
+        if (updateTask.phaseId) task.updatePhaseId(updateTask.phaseId);
+        if (updateTask.kijunStart) task.updateKijun(updateTask.kijunStart, updateTask.kijunEnd ?? updateTask.kijunStart, updateTask.kijunKosu ?? 0);
+
+
+        const result = await this.taskRepository.update(id, task);
+        return { success: true, id: result.id };
+
     }
 }

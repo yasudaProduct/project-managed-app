@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
+import { ArrowUpDown, ChevronDown, MoreHorizontal, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -199,7 +199,7 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {
-      const payment = row.original;
+      const task = row.original;
 
       return (
         <DropdownMenu>
@@ -210,15 +210,18 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(payment.id)}
-            >
-              Copy payment ID
-            </DropdownMenuItem>
+            <DropdownMenuLabel>操作</DropdownMenuLabel>
+            <DropdownMenuItem>👷コピー</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                console.log(task);
+              }}
+            >
+              <Pencil />
+              編集
+            </DropdownMenuItem>
+            <DropdownMenuItem>👷詳細</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -379,7 +382,7 @@ export function TaskTableViewPage({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  データがありません。
                 </TableCell>
               </TableRow>
             )}

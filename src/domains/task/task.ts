@@ -3,6 +3,9 @@ import { Phase } from "../phase/phase";
 import { TaskStatus } from "./project-status";
 import { Period } from "./period";
 import { TaskStatus as TaskStatusType } from "@/types/wbs";
+import { ManHour } from "./man-hour";
+import { ManHourType } from "./man-hour-type";
+import { PeriodType } from "./period-type";
 
 
 export class Task {
@@ -81,9 +84,37 @@ export class Task {
         this.assigneeId = assigneeId;
     }
 
-    public updateStatus(status: TaskStatus) {
-        this.status = status;
+    public updatePhaseId(phaseId: number) {
+        this.phaseId = phaseId;
     }
+
+    public updateStatus(status: TaskStatusType) {
+        this.status = new TaskStatus({ status });
+    }
+
+    public updateKijun(kijunStart: Date, kijunEnd: Date, kijunKosu: number) {
+        const period = this.periods?.findLast(
+            p => p.type.type === 'KIJUN'
+        );
+
+        if (period) {
+            period.startDate = kijunStart;
+            period.endDate = kijunEnd;
+
+            const manHour = period.manHours.findLast(
+                m => m.type.type === 'NORMAL'
+            );
+            if (manHour) {
+                manHour.kosu = kijunKosu;
+            } else {
+                period.manHours.push(ManHour.create({ type: new ManHourType({ type: 'NORMAL' }), kosu: kijunKosu }));
+            }
+
+        } else {
+            this.periods?.push(Period.create({ type: new PeriodType({ type: 'KIJUN' }), startDate: kijunStart, endDate: kijunStart, manHours: [] }));
+        }
+    }
+
 
     public getKijunStart(): Date | undefined {
         return this.periods?.findLast(

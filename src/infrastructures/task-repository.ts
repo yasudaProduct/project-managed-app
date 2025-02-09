@@ -125,7 +125,7 @@ export class TaskRepository implements ITaskRepository {
         });
     }
 
-    async update(task: Task): Promise<Task> {
+    async update(id: string, task: Task): Promise<Task> {
         const taskDb = await prisma.wbsTask.update({
             where: { id: task.id },
             data: {

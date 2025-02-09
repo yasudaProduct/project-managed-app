@@ -87,52 +87,40 @@ export async function updateTask(
     taskData: {
         id: string;
         name: string;
-        periods?: {
-            startDate?: string;
-            endDate?: string;
-            type: PeriodType;
-            kosus: {
-                kosu: number;
-                type: KosuType;
-            }[];
-        }[];
+        kijunStart?: string;
+        kijunEnd?: string;
+        kijunKosu?: number;
+        yoteiStart?: string;
+        yoteiEnd?: string;
+        yoteiKosu?: number;
+        jissekiStart?: string;
+        jissekiEnd?: string;
+        jissekiKosu?: number;
         status: TaskStatus;
         assigneeId?: string;
         phaseId?: number;
     },
 ): Promise<{ success: boolean; task?: WbsTask, error?: string }> {
 
-    const task = await prisma.wbsTask.findUnique({
-        where: { id: taskId }
-    })
-
-    if (task) {
-        if (taskId !== taskData.id) {
-            // 重複確認
-            const task = await prisma.wbsTask.findUnique({
-                where: { id: taskData.id }
-            })
-
-            if (task) {
-                return { success: false, error: "タスクIDが重複しています" }
-            }
+    const result = await taskApplicationService.updateTask({
+        id: taskId,
+        updateTask: {
+            ...taskData,
+            kijunStart: taskData.kijunStart ? new Date(taskData.kijunStart) : undefined,
+            kijunEnd: taskData.kijunEnd ? new Date(taskData.kijunEnd) : undefined,
+            yoteiStart: taskData.yoteiStart ? new Date(taskData.yoteiStart) : undefined,
+            yoteiEnd: taskData.yoteiEnd ? new Date(taskData.yoteiEnd) : undefined,
+            jissekiStart: taskData.jissekiStart ? new Date(taskData.jissekiStart) : undefined,
+            jissekiEnd: taskData.jissekiEnd ? new Date(taskData.jissekiEnd) : undefined,
         }
+    });
 
-        const updatedTask = await prisma.wbsTask.update({
-            where: { id: taskId },
-            data: {
-                ...task,
-                id: taskData.id,
-                name: taskData.name,
-                assigneeId: taskData.assigneeId,
-                status: taskData.status,
-                phaseId: taskData.phaseId,
-            }
-        })
-        revalidatePath(`/wbs/${task.wbsId}`)
-        return { success: true, task: formatTask(updatedTask) }
+    if (result.success) {
+        const task = await taskApplicationService.getTaskById(taskId);
+        // revalidatePath(`/wbs/${result.id}`)
+        return { success: true, task: task ?? undefined }
     } else {
-        return { success: false, error: "タスクが存在しません" }
+        return { success: false, error: result.error }
     }
 }
 
