@@ -7,10 +7,17 @@ import { ProjectStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { container } from "@/lib/inversify.config"
 
+const projectApplicationService = container.get<IProjectApplicationService>(SYMBOL.IProjectApplicationService);
+
 export async function getProjectById(id: string) {
     return await prisma.projects.findUnique({
         where: { id: id },
     })
+}
+
+export async function getProjectAll(){
+    
+    return await projectApplicationService.getProjectAll();
 }
 
 export async function createProject(projectData: {
@@ -19,8 +26,6 @@ export async function createProject(projectData: {
     startDate: string
     endDate: string
 }) {
-
-    const projectApplicationService = container.get<IProjectApplicationService>(SYMBOL.IProjectApplicationService);
 
     const { success, error, id } = await projectApplicationService.createProject(
         {
@@ -54,8 +59,6 @@ export async function updateProject(
     },
 ) {
 
-    const projectApplicationService = container.get<IProjectApplicationService>(SYMBOL.IProjectApplicationService);
-
     const { success, error, id } = await projectApplicationService.updateProject(
         {
             id: projectId,
@@ -80,7 +83,6 @@ export async function updateProject(
 }
 
 export async function deleteProject(projectId: string) {
-    const projectApplicationService = container.get<IProjectApplicationService>(SYMBOL.IProjectApplicationService);
     const { success, error, id } = await projectApplicationService.deleteProject(projectId);
     if (!success) {
         return { success: false, error: error }

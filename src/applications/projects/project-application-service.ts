@@ -7,6 +7,7 @@ import { inject, injectable } from "inversify";
 
 export interface IProjectApplicationService {
     getProjectById(id: string): Promise<ProjectType | null>;
+    getProjectAll(): Promise<ProjectType[] | null>;
     createProject(args: { name: string; description: string; startDate: Date; endDate: Date }): Promise<{ success: boolean; error?: string; id?: string }>;
     updateProject(args: { id: string; name?: string; description?: string; startDate?: Date; endDate?: Date }): Promise<{ success: boolean; error?: string; id?: string }>;
     deleteProject(id: string): Promise<{ success: boolean; error?: string; id?: string }>;
@@ -29,6 +30,23 @@ export class ProjectApplicationService implements IProjectApplicationService {
             startDate: project.startDate,
             endDate: project.endDate,
         };
+    }
+
+    public async getProjectAll(): Promise<ProjectType[] | null> {
+        const projects = await this.projectRepository.findAll();
+
+        // TODO ステータスで生きているものを絞り込んで返却する
+        return projects.map((project) => {
+            return{
+                id: project.id!,
+                name: project.name,
+                status: project.getStatus(),
+                description: project.description,
+                startDate: project.startDate,
+                endDate: project.endDate,
+            }
+        })
+        ;
     }
 
     public async createProject(args: { name: string; description: string; startDate: Date; endDate: Date }): Promise<{ success: boolean; error?: string; id?: string }> {
