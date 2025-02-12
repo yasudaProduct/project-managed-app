@@ -108,11 +108,6 @@ export default async function WbsManagementPage({
           </Link>
           <TaskModal
             wbsId={wbs.id}
-            assigneeList={assignees.map((a) => ({
-              id: a.assignee.id,
-              name: a.assignee.name,
-            }))}
-            phases={phases}
           >
             <Button className="bg-white text-black ml-2">
               <CirclePlus className="h-4 w-4" />

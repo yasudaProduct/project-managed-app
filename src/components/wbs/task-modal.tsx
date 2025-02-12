@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,6 +32,8 @@ import { WbsTask } from "@/types/wbs";
 import { createTask, updateTask } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
 import { DatePicker } from "../date-picker";
+import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
+import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
 
 const formSchema = z.object({
   id: z.string().min(1, {
@@ -93,20 +95,18 @@ const formSchema = z.object({
 interface TaskModalProps {
   wbsId: number;
   task?: WbsTask;
-  assigneeList: { id: string; name: string }[];
-  phases: { id: number; name: string; seq: number }[];
   children: ReactNode;
 }
 
 export function TaskModal({
   wbsId,
   task,
-  assigneeList,
-  phases,
   children,
 }: TaskModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [assignees, setAssignees] = useState<{ id: string; name: string }[]>();
+  const [phases, setPhases] = useState<{ id: number; name: string; seq: number }[]>();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -143,6 +143,31 @@ export function TaskModal({
       phaseId: task.phaseId,
     }),
   });
+
+  useEffect(() => {
+    const fetchDate = async () => {
+
+      // 担当者リストを取得
+      const assignees = (await getWbsAssignees(wbsId)).map((a) => {
+        return {
+          id: a.assignee.id,
+          name: a.assignee.displayName,
+        }
+      });
+      setAssignees(assignees);
+
+      // 工程リストを取得
+      const phases = (await getWbsPhases(wbsId)).map((p) => {
+        return {
+          id: p.id,
+          name: p.name,
+          seq: p.seq,
+        }
+      });
+      setPhases(phases);
+    }
+    fetchDate();
+  }, [])
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -319,20 +344,25 @@ export function TaskModal({
                             <SelectValue placeholder="フェーズを選択" />
                           </SelectTrigger>
                           <SelectContent>
-                            {phases.length > 0 ? (
-                              phases.map((phase) => (
-                                <SelectItem
-                                  key={phase.id}
-                                  value={phase.id.toString()}
-                                >
-                                  {phase.name}
+                            {phases ?
+                              phases.length > 0 ? (
+                                phases.map((phase) => (
+                                  <SelectItem
+                                    key={phase.id}
+                                    value={phase.id.toString()}
+                                  >
+                                    {phase.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="nothing" disabled>
+                                  工程を追加してください。
                                 </SelectItem>
-                              ))
-                            ) : (
+                              ) :
                               <SelectItem value="loading" disabled>
                                 読み込み中...
                               </SelectItem>
-                            )}
+                            }
                           </SelectContent>
                         </Select>
                       </FormControl>
@@ -381,17 +411,22 @@ export function TaskModal({
                             <SelectValue placeholder="担当者を選択" />
                           </SelectTrigger>
                           <SelectContent>
-                            {assigneeList.length > 0 ? (
-                              assigneeList.map((user) => (
-                                <SelectItem key={user.id} value={user.id}>
-                                  {user.name}
+                            {assignees ?
+                              assignees.length > 0 ? (
+                                assignees.map((user) => (
+                                  <SelectItem key={user.id} value={user.id}>
+                                    {user.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="nothing" disabled>
+                                  担当者を追加してください。
                                 </SelectItem>
-                              ))
-                            ) : (
+                              ) :
                               <SelectItem value="loading" disabled>
                                 読み込み中...
                               </SelectItem>
-                            )}
+                            }
                           </SelectContent>
                         </Select>
                       </FormControl>
