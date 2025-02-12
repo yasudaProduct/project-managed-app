@@ -4,6 +4,7 @@ import { Switch } from "@/components/ui/switch";
 export interface ColumnVisibility {
   wbsno: boolean;
   assignee: boolean;
+  yotei: boolean;
   start: boolean;
   end: boolean;
   kosu: boolean;
@@ -39,27 +40,11 @@ export function ColumnVisibilityToggle({
       </div>
       <div className="flex items-center space-x-2">
         <Switch
-          id="column-start"
-          checked={columnVisibility.start}
-          onCheckedChange={() => onToggle("start")}
+          id="column-yotei"
+          checked={columnVisibility.yotei}
+          onCheckedChange={() => onToggle("yotei")}
         />
-        <Label htmlFor="column-start">開始日</Label>
-      </div>
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="column-end"
-          checked={columnVisibility.end}
-          onCheckedChange={() => onToggle("end")}
-        />
-        <Label htmlFor="column-end">終了日</Label>
-      </div>
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="column-kosu"
-          checked={columnVisibility.kosu}
-          onCheckedChange={() => onToggle("kosu")}
-        />
-        <Label htmlFor="column-kosu">工数</Label>
+        <Label htmlFor="column-yotei">予定</Label>
       </div>
       <div className="flex items-center space-x-2">
         <Switch

@@ -10,6 +10,8 @@ import {
   ColumnVisibilityToggle,
 } from "./column-visibility-toggle";
 import { getTaskStatusName } from "@/lib/utils";
+import { Pencil, Trash2 } from "lucide-react";
+import EditDialog from "./edit-dialog";
 
 interface GanttComponentProps {
   tasks: Task[];
@@ -26,17 +28,21 @@ declare module "gantt-task-react" {
   }
 }
 
-export default function GanttComponent({ tasks }: GanttComponentProps) {
+export default function GanttComponent({
+  tasks: taskProp,
+}: GanttComponentProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
   const [isTalebeHide, setIsTalebeHide] = useState(true);
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
     wbsno: true,
     assignee: true,
+    yotei: true,
     start: true,
     end: true,
     kosu: true,
     status: true,
   });
+  const [tasks, setTasks] = useState<Task[]>(taskProp);
 
   const handleColumnVisibilityToggle = (column: keyof ColumnVisibility) => {
     setColumnVisibility((prev) => ({ ...prev, [column]: !prev[column] }));
@@ -82,7 +88,7 @@ export default function GanttComponent({ tasks }: GanttComponentProps) {
             担当
           </div>
         )}
-        {columnVisibility.start && (
+        {columnVisibility.yotei && (
           <div
             className="flex items-center justify-center h-full"
             style={{ width: columnWidths.start }}
@@ -90,7 +96,7 @@ export default function GanttComponent({ tasks }: GanttComponentProps) {
             開始日
           </div>
         )}
-        {columnVisibility.end && (
+        {columnVisibility.yotei && (
           <div
             className="flex items-center justify-center h-full"
             style={{ width: columnWidths.end }}
@@ -98,7 +104,7 @@ export default function GanttComponent({ tasks }: GanttComponentProps) {
             終了日
           </div>
         )}
-        {columnVisibility.kosu && (
+        {columnVisibility.yotei && (
           <div
             className="flex items-center justify-center h-full"
             style={{ width: columnWidths.kosu }}
@@ -148,7 +154,7 @@ export default function GanttComponent({ tasks }: GanttComponentProps) {
             >
               {task.type === "project" ? (
                 <button
-                  className="_2QjE6"
+                  className="flex flex-col items-center justify-center h-full border-l"
                   onClick={() => onExpanderClick(task)}
                 >
                   {task.hideChildren ? "▶" : "▼"}
@@ -163,16 +169,26 @@ export default function GanttComponent({ tasks }: GanttComponentProps) {
               (task.type === "project" ? (
                 <div style={{ width: columnWidths.wbsId }}></div>
               ) : (
-                <div style={{ width: columnWidths.wbsId }}>{task.id}</div>
+                <div
+                  className="flex flex-col items-center justify-center h-full border-l"
+                  style={{ width: columnWidths.wbsId }}
+                >
+                  {task.id}
+                </div>
               ))}
 
             {/* 担当 */}
             {columnVisibility.assignee && (
-              <div style={{ width: columnWidths.tanto }}>{task.assignee}</div>
+              <div
+                className="flex flex-col items-center justify-center h-full border-l"
+                style={{ width: columnWidths.tanto }}
+              >
+                {task.assignee}
+              </div>
             )}
 
             {/* 開始日 */}
-            {columnVisibility.start && (
+            {columnVisibility.yotei && (
               <div
                 className="flex flex-col items-center justify-center h-full border-l"
                 style={{ width: columnWidths.start }}
@@ -182,7 +198,7 @@ export default function GanttComponent({ tasks }: GanttComponentProps) {
             )}
 
             {/* 終了日 */}
-            {columnVisibility.end && (
+            {columnVisibility.yotei && (
               <div
                 className="flex flex-col items-center justify-center h-full border-l"
                 style={{ width: columnWidths.end }}
@@ -192,28 +208,99 @@ export default function GanttComponent({ tasks }: GanttComponentProps) {
             )}
 
             {/* 工数 */}
-            {columnVisibility.kosu && (
-              <div style={{ width: columnWidths.kosu }}>{task.kosu}</div>
+            {columnVisibility.yotei && (
+              <div
+                style={{ width: columnWidths.kosu }}
+                className="flex items-center justify-center h-full border-l"
+              >
+                {task.kosu}
+              </div>
             )}
 
             {/* 状況 */}
             {columnVisibility.status && (
-              <div style={{ width: columnWidths.status }}>
+              <div
+                style={{ width: columnWidths.status }}
+                className="flex items-center justify-center h-full border-l"
+              >
                 {getTaskStatusName(task.status)}
               </div>
             )}
+            <div style={{ width: columnWidths.status }}>
+              <button
+                onClick={() => handleTaskDelete(task)}
+                className="text-red-500"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+              <EditDialog task={task}>
+                <Pencil className="w-4 h-4" />
+              </EditDialog>
+            </div>
           </div>
         ))}
       </div>
     );
   };
 
+  const handleTaskChange = (task: Task) => {
+    console.log("On date change Id:" + task.id);
+    console.log(task);
+    // let newTasks = tasks.map((t) => (t.id === task.id ? task : t));
+    // if (task.project) {
+    //   const [start, end] = getStartEndDateForProject(newTasks, task.project);
+    //   const project =
+    //     newTasks[newTasks.findIndex((t) => t.id === task.project)];
+    //   if (
+    //     project.start.getTime() !== start.getTime() ||
+    //     project.end.getTime() !== end.getTime()
+    //   ) {
+    //     const changedProject = { ...project, start, end };
+    //     newTasks = newTasks.map((t) =>
+    //       t.id === task.project ? changedProject : t
+    //     );
+    //   }
+    // }
+    setTasks(tasks);
+  };
+
+  const handleTaskEdit = (task: Task) => {
+    console.log("On date change Id:" + task.id);
+    console.log(task);
+
+    // Display the edit dialog here
+    const newTaskName = prompt("Edit task name:", task.name);
+    if (newTaskName !== null) {
+      const newTask = { ...task, name: newTaskName };
+      setTasks(tasks.map((t) => (t.id === task.id ? newTask : t)));
+    }
+  };
+
+  const handleTaskDelete = (task: Task) => {
+    const conf = window.confirm(
+      `このタスクを本当に削除しますか？ \n\n ${task.name + " " + task.id}`
+    );
+    if (conf) {
+      setTasks(tasks.filter((t) => t.id !== task.id));
+    }
+    return conf;
+  };
+
+  const handleDblClick = (task: Task) => {
+    alert("On Double Click event Id:" + task.id);
+  };
+
   return (
     <div className="container mx-auto">
       <div className="flex justify-center gap-2">
+        <Button onClick={() => setViewMode(ViewMode.Year)}>年</Button>
         <Button onClick={() => setViewMode(ViewMode.Month)}>月</Button>
-        <Button onClick={() => setViewMode(ViewMode.Day)}>日</Button>
         <Button onClick={() => setViewMode(ViewMode.Week)}>週</Button>
+        <Button onClick={() => setViewMode(ViewMode.Day)}>日</Button>
+        <Button onClick={() => setViewMode(ViewMode.Hour)}>時</Button>
+        <Button onClick={() => setViewMode(ViewMode.QuarterDay)}>4時間</Button>
+        <Button onClick={() => setViewMode(ViewMode.HalfDay)}>8時間</Button>
+
         <Button onClick={() => setIsTalebeHide(!isTalebeHide)}>
           {isTalebeHide ? "表示" : "非表示"}
         </Button>
@@ -235,6 +322,9 @@ export default function GanttComponent({ tasks }: GanttComponentProps) {
         locale="ja-JP"
         TaskListHeader={TaskListHeader}
         TaskListTable={TaskListTable}
+        onDateChange={handleTaskChange}
+        onDelete={handleTaskDelete}
+        onDoubleClick={handleDblClick}
       />
     </div>
   );

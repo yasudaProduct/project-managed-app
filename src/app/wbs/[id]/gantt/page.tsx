@@ -23,7 +23,7 @@ export default async function GanttPage({
     id: task.id,
     type: "task",
     name: task.name,
-    assignee: task.assignee?.name ?? "",
+    assignee: task.assignee?.displayName ?? "-",
     kosu: task.yoteiKosu ?? 0,
     status: task.status,
     start: task.yoteiStart ?? new Date(),
