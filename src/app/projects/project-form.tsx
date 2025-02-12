@@ -30,6 +30,7 @@ import { toast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar";
+import { DatePicker } from "@/components/date-piker";
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -191,37 +192,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>開始日</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={
-                        "w-full pl-3 text-left font-normal "
-                        // !field.value && "text-muted-foreground"
-                      }
-                    >
-                      {field.value ? (
-                        field.value
-                      ) : (
-                        <span>日付を選択</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value ? new Date(field.value) : undefined}
-                    onSelect={(date) => {
-                      field.onChange(date ? formatDateyyyymmdd(date.toISOString()) : "")
-                    }}
-                    // locale={ja}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker field={field}></DatePicker>
               <FormMessage />
             </FormItem>
           )}
@@ -232,37 +203,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>終了予定日</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                  <Button
-                      variant={"outline"}
-                      className={
-                        "w-full pl-3 text-left font-normal "
-                        // !field.value && "text-muted-foreground"
-                      }
-                    >
-                      {field.value ? (
-                        field.value
-                      ) : (
-                        <span>日付を選択</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value ? new Date(field.value) : undefined}
-                    onSelect={(date) => {
-                      field.onChange(date ? formatDateyyyymmdd(date.toISOString()) : "")
-                    }}
-                    // locale={ja}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker field={field}></DatePicker>
               <FormMessage />
             </FormItem>
           )}
