@@ -59,7 +59,7 @@ export class ProjectApplicationService implements IProjectApplicationService {
 
         // プロジェクト名の重複チェック
         const check = await this.projectRepository.findByName(project.name);
-        if (check) {
+        if (check && !check.isEqual(project)) {
             return { success: false, error: "同様のプロジェクト名が存在します。" }
         }
 
