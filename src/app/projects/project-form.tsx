@@ -27,6 +27,9 @@ import { createProject, deleteProject, updateProject } from "./project-actions";
 import { ProjectStatus } from "@prisma/client";
 import { formatDateyyyymmdd } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar";
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -35,11 +38,11 @@ const formSchema = z.object({
   description: z.string().max(100, {
     message: "説明は100文字以下で入力してください。",
   }),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: "開始日は YYYY-MM-DD 形式で入力してください。",
+  startDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
+    message: "開始日は YYYY/MM/DD 形式で入力してください。",
   }),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: "終了予定日は YYYY-MM-DD 形式で入力してください。",
+  endDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
+    message: "終了予定日は YYYY/MM/DD 形式で入力してください。",
   }),
   status: z.nativeEnum(ProjectStatus),
 });
@@ -188,9 +191,37 @@ export function ProjectForm({ project }: ProjectFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>開始日</FormLabel>
-              <FormControl>
-                <Input type="date" {...field} />
-              </FormControl>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant={"outline"}
+                      className={
+                        "w-full pl-3 text-left font-normal "
+                        // !field.value && "text-muted-foreground"
+                      }
+                    >
+                      {field.value ? (
+                        field.value
+                      ) : (
+                        <span>日付を選択</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value ? new Date(field.value) : undefined}
+                    onSelect={(date) => {
+                      field.onChange(date ? formatDateyyyymmdd(date.toISOString()) : "")
+                    }}
+                    // locale={ja}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
               <FormMessage />
             </FormItem>
           )}
@@ -201,9 +232,37 @@ export function ProjectForm({ project }: ProjectFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>終了予定日</FormLabel>
-              <FormControl>
-                <Input type="date" {...field} />
-              </FormControl>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                  <Button
+                      variant={"outline"}
+                      className={
+                        "w-full pl-3 text-left font-normal "
+                        // !field.value && "text-muted-foreground"
+                      }
+                    >
+                      {field.value ? (
+                        field.value
+                      ) : (
+                        <span>日付を選択</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value ? new Date(field.value) : undefined}
+                    onSelect={(date) => {
+                      field.onChange(date ? formatDateyyyymmdd(date.toISOString()) : "")
+                    }}
+                    // locale={ja}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
               <FormMessage />
             </FormItem>
           )}
