@@ -18,6 +18,7 @@ import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TaskModal } from "@/components/wbs/task-modal";
+import { DialogContent } from "@/components/ui/dialog";
 
 export default async function WbsManagementPage({
   params,
@@ -59,8 +60,8 @@ export default async function WbsManagementPage({
           プロジェクト状況:{getProjectStatusName(project.status)}
         </p>
         <p className="text-sm text-gray-500">
-          プロジェクト期間:{project.startDate.toLocaleDateString('ja-JP')}
-          ~{project.endDate.toLocaleDateString('ja-JP')}
+          プロジェクト期間:{formatDateyyyymmdd(project.startDate.toISOString())}
+          ~{formatDateyyyymmdd(project.endDate.toISOString())}
         </p>
         <p className="text-sm text-gray-500">
           工程：{phases.map((phase) => phase.name).join(", ")}

@@ -30,7 +30,7 @@ import { toast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar";
-import { DatePicker } from "@/components/date-piker";
+import { DatePicker } from "@/components/date-picker";
 
 const formSchema = z.object({
   name: z.string().min(1, {

@@ -31,6 +31,7 @@ import { getTaskStatusName } from "@/lib/utils";
 import { WbsTask } from "@/types/wbs";
 import { createTask, updateTask } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
+import { DatePicker } from "../date-picker";
 
 const formSchema = z.object({
   id: z.string().min(1, {
@@ -42,11 +43,11 @@ const formSchema = z.object({
   assigneeId: z.string().min(1, {
     message: "担当者は必須です。",
   }),
-  kijunStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: "基準開始日は YYYY-MM-DD 形式で入力してください。",
+  kijunStartDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
+    message: "基準開始日は YYYY/MM/DD 形式で入力してください。",
   }),
-  kijunEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: "基準終了日は YYYY-MM-DD 形式で入力してください。",
+  kijunEndDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
+    message: "基準終了日は YYYY/MM/DD 形式で入力してください。",
   }),
   kijunKosu: z.preprocess(
     (val) => Number(val),
@@ -54,11 +55,11 @@ const formSchema = z.object({
       message: "工数は0以上の数値を入力してください。",
     })
   ),
-  yoteiStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: "予定開始日は YYYY-MM-DD 形式で入力してください。",
+  yoteiStartDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
+    message: "予定開始日は YYYY/MM/DD 形式で入力してください。",
   }),
-  yoteiEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: "予定基準終了日は YYYY-MM-DD 形式で入力してください。",
+  yoteiEndDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
+    message: "予定基準終了日は YYYY/MM/DD 形式で入力してください。",
   }),
   yoteiKosu: z.preprocess(
     (val) => Number(val),
@@ -404,9 +405,7 @@ export function TaskModal({
                   name="kijunStartDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
+                      <DatePicker field={field}></DatePicker>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -417,9 +416,7 @@ export function TaskModal({
                   name="kijunEndDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
+                      <DatePicker field={field}></DatePicker>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -449,9 +446,7 @@ export function TaskModal({
                   name="yoteiStartDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
+                      <DatePicker field={field}></DatePicker>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -462,9 +457,7 @@ export function TaskModal({
                   name="yoteiEndDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
+                      <DatePicker field={field}></DatePicker>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -494,9 +487,7 @@ export function TaskModal({
                   name="jissekiStartDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
+                      <DatePicker field={field}></DatePicker>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -507,9 +498,7 @@ export function TaskModal({
                   name="jissekiEndDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
+                      <DatePicker field={field}></DatePicker>
                       <FormMessage />
                     </FormItem>
                   )}
