@@ -25,11 +25,14 @@ declare module "gantt-task-react" {
     status: TaskStatus;
     yoteiStart: Date | undefined;
     yoteiEnd: Date | undefined;
+    yoteiKosu: number;
+    phaseId: number;
   }
 }
 
 export default function GanttComponent({
   tasks: taskProp,
+  wbs,
 }: GanttComponentProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
   const [isTalebeHide, setIsTalebeHide] = useState(true);
@@ -233,7 +236,7 @@ export default function GanttComponent({
               >
                 <Trash2 className="w-4 h-4" />
               </button>
-              <EditDialog task={task}>
+              <EditDialog task={task} wbsId={wbs.id}>
                 <button>
                   <Pencil className="w-4 h-4" />
                 </button>
