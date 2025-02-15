@@ -36,11 +36,9 @@ export default function EditDialog({ children, task }: EditDialogProps) {
     console.log(values);
   }
 
+  // 親コンポーネントや他のリスナーがこのイベントを受け取るのを防ぐ。
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    const arrowKeys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
-    if (arrowKeys.includes(event.key)) {
-      event.stopPropagation();
-    }
+    event.stopPropagation();
   };
 
   return (
@@ -60,10 +58,6 @@ export default function EditDialog({ children, task }: EditDialogProps) {
                       placeholder="タスク名"
                       {...field}
                       onKeyDown={handleKeyDown}
-                      onChange={(e) => {
-                        field.onChange(e);
-                        console.log(`Name changed to: ${e.target.value}`);
-                      }}
                     />
                   </FormControl>
                 </FormItem>
@@ -76,7 +70,11 @@ export default function EditDialog({ children, task }: EditDialogProps) {
                 <FormItem>
                   <FormLabel>担当</FormLabel>
                   <FormControl>
-                    <Input placeholder="担当者" {...field} />
+                    <Input
+                      placeholder="担当者"
+                      {...field}
+                      onKeyDown={handleKeyDown}
+                    />
                   </FormControl>
                 </FormItem>
               )}
