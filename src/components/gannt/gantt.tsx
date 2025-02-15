@@ -234,7 +234,9 @@ export default function GanttComponent({
                 <Trash2 className="w-4 h-4" />
               </button>
               <EditDialog task={task}>
-                <Pencil className="w-4 h-4" />
+                <button>
+                  <Pencil className="w-4 h-4" />
+                </button>
               </EditDialog>
             </div>
           </div>

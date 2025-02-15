@@ -1,13 +1,26 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../ui/form";
 import { Input } from "../ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "../ui/button";
 import { Task } from "gantt-task-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../ui/dialog";
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -42,9 +55,12 @@ export default function EditDialog({ children, task }: EditDialogProps) {
   };
 
   return (
-    <Popover modal={true}>
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent className="w-auto p-2" align="end">
+    <Dialog modal={true}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="w-auto p-2">
+        <DialogHeader>
+          <DialogTitle>タスク編集</DialogTitle>
+        </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -60,6 +76,7 @@ export default function EditDialog({ children, task }: EditDialogProps) {
                       onKeyDown={handleKeyDown}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -68,7 +85,7 @@ export default function EditDialog({ children, task }: EditDialogProps) {
               name="assignee"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>担当</FormLabel>
+                  <FormLabel>担当者</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="担当者"
@@ -76,13 +93,14 @@ export default function EditDialog({ children, task }: EditDialogProps) {
                       onKeyDown={handleKeyDown}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
             <Button type="submit">更新</Button>
           </form>
         </Form>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 }
