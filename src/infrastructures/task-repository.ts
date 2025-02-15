@@ -13,9 +13,10 @@ import { injectable } from "inversify";
 @injectable()
 export class TaskRepository implements ITaskRepository {
 
-    async findById(id: string): Promise<Task | null> {
+    async findById(wbsId: number, id: string): Promise<Task | null> {
+        console.log("repository: findById")
         const taskDb = await prisma.wbsTask.findUnique({
-            where: { id },
+            where: { id, wbsId },
             include: {
                 assignee: true,
                 phase: true,
@@ -125,7 +126,8 @@ export class TaskRepository implements ITaskRepository {
         });
     }
 
-    async update(id: string, task: Task): Promise<Task> {
+    async update(wbsId: number, id: string, task: Task): Promise<Task> {
+        console.log("repository: update")
         const taskDb = await prisma.wbsTask.update({
             where: { id: task.id },
             data: {

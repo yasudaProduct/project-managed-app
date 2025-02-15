@@ -98,15 +98,12 @@ interface TaskModalProps {
   children: ReactNode;
 }
 
-export function TaskModal({
-  wbsId,
-  task,
-  children,
-}: TaskModalProps) {
+export function TaskModal({ wbsId, task, children }: TaskModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [assignees, setAssignees] = useState<{ id: string; name: string }[]>();
-  const [phases, setPhases] = useState<{ id: number; name: string; seq: number }[]>();
+  const [phases, setPhases] =
+    useState<{ id: number; name: string; seq: number }[]>();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -146,13 +143,12 @@ export function TaskModal({
 
   useEffect(() => {
     const fetchDate = async () => {
-
       // 担当者リストを取得
       const assignees = (await getWbsAssignees(wbsId)).map((a) => {
         return {
           id: a.assignee.id,
           name: a.assignee.displayName,
-        }
+        };
       });
       setAssignees(assignees);
 
@@ -162,12 +158,12 @@ export function TaskModal({
           id: p.id,
           name: p.name,
           seq: p.seq,
-        }
+        };
       });
       setPhases(phases);
-    }
+    };
     fetchDate();
-  }, [])
+  }, []);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -214,7 +210,7 @@ export function TaskModal({
           });
         }
       } else {
-        const result = await updateTask(task.id, {
+        const result = await updateTask(wbsId, task.id, {
           id: values.id,
           name: values.name,
           kijunStart: values.kijunStartDate,
@@ -344,7 +340,7 @@ export function TaskModal({
                             <SelectValue placeholder="フェーズを選択" />
                           </SelectTrigger>
                           <SelectContent>
-                            {phases ?
+                            {phases ? (
                               phases.length > 0 ? (
                                 phases.map((phase) => (
                                   <SelectItem
@@ -358,11 +354,12 @@ export function TaskModal({
                                 <SelectItem value="nothing" disabled>
                                   工程を追加してください。
                                 </SelectItem>
-                              ) :
+                              )
+                            ) : (
                               <SelectItem value="loading" disabled>
                                 読み込み中...
                               </SelectItem>
-                            }
+                            )}
                           </SelectContent>
                         </Select>
                       </FormControl>
@@ -411,7 +408,7 @@ export function TaskModal({
                             <SelectValue placeholder="担当者を選択" />
                           </SelectTrigger>
                           <SelectContent>
-                            {assignees ?
+                            {assignees ? (
                               assignees.length > 0 ? (
                                 assignees.map((user) => (
                                   <SelectItem key={user.id} value={user.id}>
@@ -422,11 +419,12 @@ export function TaskModal({
                                 <SelectItem value="nothing" disabled>
                                   担当者を追加してください。
                                 </SelectItem>
-                              ) :
+                              )
+                            ) : (
                               <SelectItem value="loading" disabled>
                                 読み込み中...
                               </SelectItem>
-                            }
+                            )}
                           </SelectContent>
                         </Select>
                       </FormControl>

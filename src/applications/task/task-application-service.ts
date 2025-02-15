@@ -5,10 +5,10 @@ import { WbsTask } from "@/types/wbs";
 
 
 export interface ITaskApplicationService {
-    getTaskById(id: string): Promise<WbsTask | null>;
+    getTaskById(wbsId: number, id: string): Promise<WbsTask | null>;
     getTaskAll(wbsId: number): Promise<WbsTask[]>;
     // createTask(args: { name: string; wbsId: number; assigneeId?: string; status: TaskStatus }): Promise<{ success: boolean; error?: string; id?: string }>;
-    updateTask(args: { id: string; updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }>;
+    updateTask(args: { wbsId: number; id: string; updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }>;
     // deleteTask(id: string): Promise<{ success: boolean; error?: string; id?: string }>;
 }
 
@@ -18,8 +18,9 @@ export class TaskApplicationService implements ITaskApplicationService {
     constructor(@inject(SYMBOL.ITaskRepository) private readonly taskRepository: ITaskRepository) {
     }
 
-    public async getTaskById(id: string): Promise<WbsTask | null> {
-        const task = await this.taskRepository.findById(id);
+    public async getTaskById(wbsId: number, id: string): Promise<WbsTask | null> {
+        console.log("getTaskById")
+        const task = await this.taskRepository.findById(wbsId, id);
         if (!task) return null;
         return {
             id: task.id!,
@@ -84,11 +85,11 @@ export class TaskApplicationService implements ITaskApplicationService {
         }));
     }
 
-    public async updateTask(args: { id: string, updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }> {
+    public async updateTask(args: { wbsId: number, id: string, updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }> {
+        console.log("service: updateTask")
+        const { wbsId, id, updateTask } = args;
 
-        const { id, updateTask } = args;
-
-        const task = await this.taskRepository.findById(id);
+        const task = await this.taskRepository.findById(wbsId, id);
         if (!task) {
             return { success: false, error: "タスクが見つかりません" };
         }
@@ -107,7 +108,7 @@ export class TaskApplicationService implements ITaskApplicationService {
         if (updateTask.kijunStart) task.updateKijun(updateTask.kijunStart, updateTask.kijunEnd ?? updateTask.kijunStart, updateTask.kijunKosu ?? 0);
 
 
-        const result = await this.taskRepository.update(id, task);
+        const result = await this.taskRepository.update(wbsId, id, task);
         return { success: true, id: result.id };
 
     }

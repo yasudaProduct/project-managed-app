@@ -83,6 +83,7 @@ export async function createTask(
 }
 
 export async function updateTask(
+    wbsId: number,
     taskId: string,
     taskData: {
         id: string;
@@ -101,8 +102,10 @@ export async function updateTask(
         phaseId?: number;
     },
 ): Promise<{ success: boolean; task?: WbsTask, error?: string }> {
+    console.log("updateTask");
 
     const result = await taskApplicationService.updateTask({
+        wbsId: wbsId,
         id: taskId,
         updateTask: {
             ...taskData,
@@ -116,7 +119,7 @@ export async function updateTask(
     });
 
     if (result.success) {
-        const task = await taskApplicationService.getTaskById(taskId);
+        const task = await taskApplicationService.getTaskById(wbsId, taskId);
         return { success: true, task: task ?? undefined }
     } else {
         return { success: false, error: result.error }

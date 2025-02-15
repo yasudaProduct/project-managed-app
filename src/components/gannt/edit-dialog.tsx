@@ -86,7 +86,7 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsSubmitting(true);
-      const result = await updateTask(task.id, {
+      const result = await updateTask(wbsId, task.id, {
         id: values.wbsId,
         name: values.name,
         yoteiStart: values.yoteiStartDate,
