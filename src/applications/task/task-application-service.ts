@@ -2,6 +2,8 @@ import { SYMBOL } from "@/types/symbol";
 import { inject, injectable } from "inversify";
 import type { ITaskRepository } from "./itask-repository";
 import { WbsTask } from "@/types/wbs";
+import { Task } from "@/domains/task/task";
+import { TaskStatus } from "@/domains/task/project-status";
 
 
 export interface ITaskApplicationService {
@@ -89,7 +91,7 @@ export class TaskApplicationService implements ITaskApplicationService {
         console.log("service: updateTask")
         const { wbsId, id, updateTask } = args;
 
-        const task = await this.taskRepository.findById(wbsId, id);
+        const task: Task | null = await this.taskRepository.findById(wbsId, id);
         if (!task) {
             return { success: false, error: "タスクが見つかりません" };
         }
@@ -101,12 +103,14 @@ export class TaskApplicationService implements ITaskApplicationService {
         //     return { success: false, error: "タスク名が重複しています" };
         // }
 
-        task.updateName(updateTask.name);
-        if (updateTask.status) task.updateStatus(updateTask.status);
-        if (updateTask.assigneeId) task.updateAssigneeId(updateTask.assigneeId);
-        if (updateTask.phaseId) task.updatePhaseId(updateTask.phaseId);
+        task.update({
+            name: updateTask.name,
+            status: new TaskStatus({ status: updateTask.status }),
+            assigneeId: updateTask.assigneeId,
+            phaseId: updateTask.phaseId,
+        });
         if (updateTask.kijunStart) task.updateKijun(updateTask.kijunStart, updateTask.kijunEnd ?? updateTask.kijunStart, updateTask.kijunKosu ?? 0);
-
+        if (updateTask.yoteiStart) task.updateYotei({ startDate: updateTask.yoteiStart, endDate: updateTask.yoteiEnd ?? updateTask.yoteiStart, kosu: updateTask.yoteiKosu ?? 0 });
 
         const result = await this.taskRepository.update(wbsId, id, task);
         return { success: true, id: result.id };

@@ -128,14 +128,54 @@ export class TaskRepository implements ITaskRepository {
 
     async update(wbsId: number, id: string, task: Task): Promise<Task> {
         console.log("repository: update")
+
         const taskDb = await prisma.wbsTask.update({
-            where: { id: task.id },
+            where: { id: id, wbsId: wbsId },
             data: {
+                id: task.id,
                 name: task.name,
                 assigneeId: task.assigneeId ?? undefined,
+                phaseId: task.phaseId ?? undefined,
                 status: task.status.status,
             },
         });
+
+        console.log(task.periods)
+        task.periods?.map(async (period) => {
+            console.log(period)
+            // 期間更新
+            const periodDb = await prisma.taskPeriod.upsert({
+                where: {
+                    id: period.id,
+                },
+                update: {
+                    startDate: period.startDate,
+                    endDate: period.endDate,
+                },
+                create: {
+                    taskId: id,
+                    startDate: period.startDate,
+                    endDate: period.endDate,
+                    type: period.type.type,
+                },
+            })
+
+            // 工数更新
+            const periodId = periodDb.id;
+            period.manHours.map(async (manHour) => {
+                await prisma.taskKosu.upsert({
+                    where: { id: manHour.id },
+                    update: { kosu: manHour.kosu },
+                    create: {
+                        periodId: periodId,
+                        wbsId: wbsId,
+                        kosu: manHour.kosu,
+                        type: manHour.type.type,
+                    },
+                })
+            })
+        })
+
         return Task.createFromDb({
             id: taskDb.id,
             name: taskDb.name,

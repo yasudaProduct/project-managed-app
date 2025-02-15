@@ -72,24 +72,60 @@ export class Task {
         return new Task(args);
     }
 
+    public update(args: { name: string; assigneeId?: string; status: TaskStatus; phaseId?: number; periods?: Period[]; }) {
+
+        if (!args.name) {
+            throw new Error("タスク名は必須です");
+        }
+
+        if (!args.status) {
+            throw new Error("タスクステータスは必須です");
+        }
+
+        if (!args.assigneeId) {
+            throw new Error("担当者は必須です");
+        }
+
+        if (!args.phaseId) {
+            throw new Error("フェーズは必須です");
+        }
+
+        this.name = args.name;
+        this.assigneeId = args.assigneeId;
+        this.status = args.status;
+        this.phaseId = args.phaseId;
+        this.periods = args.periods;
+
+    }
+
+    public updateYotei(args: { startDate: Date; endDate: Date; kosu: number }) {
+
+        // 自身の期間モデルを取得
+        const period = this.periods?.findLast(
+            p => p.type.type === 'YOTEI'
+        );
+
+        // 期間モデルが存在する場合
+        if (period) {
+            period.startDate = args.startDate;
+            period.endDate = args.endDate;
+
+            // 工数モデルを取得
+            const manHour = period.manHours.findLast(
+                m => m.type.type === 'NORMAL'
+            );
+
+            // 工数モデルが存在する場合
+            if (manHour) {
+                manHour.kosu = args.kosu;
+            } else {
+                period.manHours.push(ManHour.create({ type: new ManHourType({ type: 'NORMAL' }), kosu: args.kosu }));
+            }
+        }
+    }
+
     public getStatus(): TaskStatusType {
         return this.status.getStatus();
-    }
-
-    public updateName(name: string) {
-        this.name = name;
-    }
-
-    public updateAssigneeId(assigneeId: string) {
-        this.assigneeId = assigneeId;
-    }
-
-    public updatePhaseId(phaseId: number) {
-        this.phaseId = phaseId;
-    }
-
-    public updateStatus(status: TaskStatusType) {
-        this.status = new TaskStatus({ status });
     }
 
     public updateKijun(kijunStart: Date, kijunEnd: Date, kijunKosu: number) {
