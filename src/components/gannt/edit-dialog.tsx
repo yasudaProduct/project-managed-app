@@ -23,6 +23,10 @@ import {
 } from "../ui/dialog";
 import { DatePicker } from "../date-picker";
 import SelectPhases, { SelectAssignee, SelectStatus } from "../form/select";
+import { formatDateyyyymmdd } from "@/lib/utils";
+import { updateTask } from "@/app/wbs/[id]/wbs-task-actions";
+import { toast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -40,9 +44,12 @@ const formSchema = z.object({
   yoteiEndDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
     message: "予定基準終了日は YYYY/MM/DD 形式で入力してください。",
   }),
-  yoteiKosu: z.number().min(1, {
-    message: "工数を入力して下さい",
-  }),
+  yoteiKosu: z.preprocess(
+    (val) => Number(val),
+    z.number().min(0, {
+      message: "工数は0以上の数値を入力してください。",
+    })
+  ),
   status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] as const, {
     message: "有効なタスクステータスを選択してください。",
   }),
@@ -61,22 +68,55 @@ type EditDialogProps = {
 };
 
 export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: task?.name,
       wbsId: task?.project,
       assigneeId: task?.assignee,
-      yoteiStartDate: new Date(task?.start).toISOString().split("T")[0],
-      yoteiEndDate: new Date(task?.end).toISOString().split("T")[0],
+      yoteiStartDate: formatDateyyyymmdd(task?.start?.toISOString()),
+      yoteiEndDate: formatDateyyyymmdd(task?.end?.toISOString()),
       yoteiKosu: task?.yoteiKosu,
       status: task?.status,
       phaseId: task?.phaseId,
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      setIsSubmitting(true);
+      const result = await updateTask(task.id, {
+        id: values.wbsId,
+        name: values.name,
+        yoteiStart: values.yoteiStartDate,
+        yoteiEnd: values.yoteiEndDate,
+        yoteiKosu: values.yoteiKosu,
+        status: values.status,
+        phaseId: values.phaseId,
+        assigneeId: values.assigneeId,
+      });
+      if (result.success) {
+        toast({
+          title: "タスクを更新しました",
+          description: "タスクが更新されました",
+        });
+      } else {
+        toast({
+          title: "タスクの更新に失敗しました",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "タスクの更新に失敗しました",
+        description: error instanceof Error ? error.message : "不明なエラー",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   // 親コンポーネントや他のリスナーがこのイベントを受け取るのを防ぐ。
@@ -115,6 +155,8 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
                 <DatePicker field={field} />
               ) : type === "number" ? (
                 <Input
+                  type="number"
+                  step="any"
                   placeholder={placeholder}
                   {...field}
                   onKeyDown={handleKeyDown}
@@ -237,7 +279,9 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
                 </FormItem>
               )}
             /> */}
-            <Button type="submit">更新</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "更新中..." : "更新"}
+            </Button>
           </form>
         </Form>
       </DialogContent>

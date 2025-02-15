@@ -26,9 +26,7 @@ type SelectAssigneeProp = {
 export default function SelectPhases({ field, wbsId }: SelectPhasesProp) {
   const [phases, setPhases] =
     useState<{ id: number; name: string; seq: number }[]>();
-
   useEffect(() => {
-    console.log("wbsId", wbsId);
     const fetchPhases = async () => {
       if (wbsId) {
         const phases = await getWbsPhases(wbsId);
@@ -39,6 +37,7 @@ export default function SelectPhases({ field, wbsId }: SelectPhasesProp) {
         // setPhases(phases);
       }
     };
+
     fetchPhases();
   }, []);
 

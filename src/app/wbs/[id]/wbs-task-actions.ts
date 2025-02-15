@@ -117,7 +117,6 @@ export async function updateTask(
 
     if (result.success) {
         const task = await taskApplicationService.getTaskById(taskId);
-        // revalidatePath(`/wbs/${result.id}`)
         return { success: true, task: task ?? undefined }
     } else {
         return { success: false, error: result.error }
