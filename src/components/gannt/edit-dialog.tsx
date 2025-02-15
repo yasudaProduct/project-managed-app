@@ -36,6 +36,13 @@ export default function EditDialog({ children, task }: EditDialogProps) {
     console.log(values);
   }
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const arrowKeys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+    if (arrowKeys.includes(event.key)) {
+      event.stopPropagation();
+    }
+  };
+
   return (
     <Popover modal={true}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
@@ -49,7 +56,15 @@ export default function EditDialog({ children, task }: EditDialogProps) {
                 <FormItem>
                   <FormLabel>タスク名</FormLabel>
                   <FormControl>
-                    <Input placeholder="タスク名" {...field} />
+                    <Input
+                      placeholder="タスク名"
+                      {...field}
+                      onKeyDown={handleKeyDown}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        console.log(`Name changed to: ${e.target.value}`);
+                      }}
+                    />
                   </FormControl>
                 </FormItem>
               )}
