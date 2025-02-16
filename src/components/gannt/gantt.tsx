@@ -10,7 +10,7 @@ import {
   ColumnVisibilityToggle,
 } from "./column-visibility-toggle";
 import { getTaskStatusName } from "@/lib/utils";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import EditDialog from "./edit-dialog";
 
 interface GanttComponentProps {
@@ -179,38 +179,45 @@ export default function GanttComponent({
             }}
           >
             {/* 工程 */}
-            {columnVisibility.phase && (
-              <div style={{ width: columnWidths.phase }}>{task.phase.name}</div>
-            )}
+            {columnVisibility.phase &&
+              (task.type === "project" ? (
+                <div style={{ width: columnWidths.phase }}>
+                  <button
+                    onClick={() => {
+                      onExpanderClick(task);
+                    }}
+                    className="mr-2"
+                  >
+                    {task.hideChildren ? (
+                      <ChevronRight className="w-2 h-2" />
+                    ) : (
+                      <ChevronDown className="w-2 h-2" />
+                    )}
+                  </button>
+                  {task.phase.name}
+                </div>
+              ) : (
+                <div className={"pl-4"} style={{ width: columnWidths.phase }}>
+                  {task.phase.name}
+                </div>
+              ))}
             {/* タスク名 */}
             <div
               className="truncate _nI1Xw flex flex-col items-center justify-center h-full border-l"
               style={{ width: columnWidths.task }}
             >
-              {task.type === "project" ? (
-                <button
-                  className="flex flex-col items-center justify-center h-full border-l"
-                  onClick={() => onExpanderClick(task)}
-                >
-                  {task.hideChildren ? "▶" : "▼"}
-                </button>
-              ) : (
-                <div className="ml-2">{task.name}</div>
-              )}
+              <div className="">{task.name}</div>
             </div>
 
             {/* WBSNO */}
-            {columnVisibility.wbsno &&
-              (task.type === "project" ? (
-                <div style={{ width: columnWidths.wbsId }}></div>
-              ) : (
-                <div
-                  className="flex flex-col items-center justify-center h-full border-l"
-                  style={{ width: columnWidths.wbsId }}
-                >
-                  {task.id}
-                </div>
-              ))}
+            {columnVisibility.wbsno && (
+              <div
+                className="flex flex-col items-center justify-center h-full border-l"
+                style={{ width: columnWidths.wbsId }}
+              >
+                {task.type === "project" ? "-" : task.id}
+              </div>
+            )}
 
             {/* 担当 */}
             {columnVisibility.assignee && (
@@ -228,7 +235,11 @@ export default function GanttComponent({
                 className="flex flex-col items-center justify-center h-full border-l"
                 style={{ width: columnWidths.start }}
               >
-                <div>{task.yoteiStart?.toLocaleDateString("ja-JP")}</div>
+                <div>
+                  {task.yoteiStart
+                    ? task.yoteiStart.toLocaleDateString("ja-JP")
+                    : "-"}
+                </div>
               </div>
             )}
 
@@ -238,7 +249,11 @@ export default function GanttComponent({
                 className="flex flex-col items-center justify-center h-full border-l"
                 style={{ width: columnWidths.end }}
               >
-                <div>{task.yoteiEnd?.toLocaleDateString("ja-JP")}</div>
+                <div>
+                  {task.yoteiEnd
+                    ? task.yoteiEnd.toLocaleDateString("ja-JP")
+                    : "-"}
+                </div>
               </div>
             )}
 
@@ -248,7 +263,7 @@ export default function GanttComponent({
                 style={{ width: columnWidths.kosu }}
                 className="flex items-center justify-center h-full border-l"
               >
-                {task.yoteiKosu}
+                {task.yoteiKosu === 0 ? "-" : task.yoteiKosu}
               </div>
             )}
 
@@ -261,21 +276,29 @@ export default function GanttComponent({
                 {getTaskStatusName(task.status)}
               </div>
             )}
+
+            {/* 操作 */}
             <div
               style={{ width: columnWidths.status }}
               className="flex items-center justify-center h-full border-l"
             >
-              <button
-                onClick={() => handleTaskDelete(task)}
-                className="text-red-500 mr-2"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-              <EditDialog task={task} wbsId={wbs.id}>
-                <button>
-                  <Pencil className="w-4 h-4" />
-                </button>
-              </EditDialog>
+              {task.type === "project" ? (
+                <></>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleTaskDelete(task)}
+                    className="text-red-500 mr-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <EditDialog task={task} wbsId={wbs.id}>
+                    <button>
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  </EditDialog>
+                </>
+              )}
             </div>
           </div>
         ))}
@@ -318,6 +341,10 @@ export default function GanttComponent({
     alert("On Double Click event Id:" + task.id);
   };
 
+  const handleExpanderClick = (task: Task) => {
+    setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
+  };
+
   return (
     <div className="container mx-auto">
       <div className="flex justify-center gap-2">
@@ -353,6 +380,7 @@ export default function GanttComponent({
         onDateChange={handleTaskChange}
         onDelete={handleTaskDelete}
         onDoubleClick={handleDblClick}
+        onExpanderClick={handleExpanderClick} // 反応しない
       />
     </div>
   );

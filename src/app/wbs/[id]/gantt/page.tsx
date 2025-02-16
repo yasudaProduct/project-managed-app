@@ -48,7 +48,6 @@ export default async function GanttPage({
 
   // GanttComponentで表示するためのタスクを作成する
   function formatGanttTasks(wbsTasks: WbsTask[]): Task[] {
-    console.log("formatGanttTasks: start");
     const ganttTasks: Task[] = [];
 
     // WbsTaskを変換
@@ -72,6 +71,7 @@ export default async function GanttPage({
         status: task.status,
         progress: 0,
         project: task.phase?.name ?? "-",
+        // ⇩GanttComponentで必須の可能性があるため、デフォルト値を設定
         start: new Date(),
         end: new Date(),
       });
@@ -85,9 +85,9 @@ export default async function GanttPage({
     // 工程を追加
     uniquePhases.forEach((phase) => {
       ganttTasks.push({
-        id: phase?.id?.toString() ?? "",
+        id: phase?.name ?? "-",
         type: "project",
-        name: phase?.name ?? "-",
+        name: "-",
         assignee: {
           id: "",
           name: "-",
@@ -102,12 +102,12 @@ export default async function GanttPage({
         yoteiKosu: 0,
         status: "NOT_STARTED",
         progress: 0,
-        project: phase?.name ?? "-",
+        hideChildren: false,
         start: new Date(),
         end: new Date(),
       });
     });
-    console.log("formatGanttTasks: end");
+
     ganttTasks.sort((a, b) => {
       if (a.phase.id !== b.phase.id) {
         return a.phase.seq - b.phase.seq; // 工程のseqでソート
