@@ -117,9 +117,11 @@ export async function updateTask(
             jissekiEnd: taskData.jissekiEnd ? new Date(taskData.jissekiEnd) : undefined,
         }
     });
+    console.log(result);
 
     if (result.success) {
         const task = await taskApplicationService.getTaskById(wbsId, taskId);
+        revalidatePath(`/wbs/${wbsId}/gannt`);
         return { success: true, task: task ?? undefined }
     } else {
         return { success: false, error: result.error }

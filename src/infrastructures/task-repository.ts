@@ -140,9 +140,12 @@ export class TaskRepository implements ITaskRepository {
             },
         });
 
+        console.log(task)
         console.log(task.periods)
         task.periods?.map(async (period) => {
+            console.log("task.periods?.map(async (period) => {")
             console.log(period)
+            console.log("taskId:" + id)
             // 期間更新
             const periodDb = await prisma.taskPeriod.upsert({
                 where: {
@@ -159,6 +162,7 @@ export class TaskRepository implements ITaskRepository {
                     type: period.type.type,
                 },
             })
+            console.log(periodDb)
 
             // 工数更新
             const periodId = periodDb.id;
@@ -177,11 +181,11 @@ export class TaskRepository implements ITaskRepository {
         })
 
         return Task.createFromDb({
-            id: taskDb.id,
-            name: taskDb.name,
-            wbsId: taskDb.wbsId,
-            assigneeId: taskDb.assigneeId ?? undefined,
-            status: new TaskStatus({ status: taskDb.status }),
+            id: task.id ?? taskDb.id,
+            name: task.name,
+            wbsId: task.wbsId,
+            assigneeId: task.assigneeId ?? undefined,
+            status: new TaskStatus({ status: task.status.status }),
         });
     }
 

@@ -69,11 +69,11 @@ const formSchema = z.object({
       message: "工数は0以上の数値を入力してください。",
     })
   ),
-  jissekiStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: "実績開始日は YYYY-MM-DD 形式で入力してください。",
+  jissekiStartDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
+    message: "実績開始日は YYYY/MM/DD 形式で入力してください。",
   }),
-  jissekiEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: "実績終了日は YYYY-MM-DD 形式で入力してください。",
+  jissekiEndDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
+    message: "実績終了日は YYYY/MM/DD 形式で入力してください。",
   }),
   jissekiKosu: z.preprocess(
     (val) => Number(val),

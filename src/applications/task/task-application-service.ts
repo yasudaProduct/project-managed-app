@@ -104,10 +104,11 @@ export class TaskApplicationService implements ITaskApplicationService {
         // }
 
         task.update({
+            id: updateTask.id,
             name: updateTask.name,
-            status: new TaskStatus({ status: updateTask.status }),
             assigneeId: updateTask.assigneeId,
             phaseId: updateTask.phaseId,
+            status: new TaskStatus({ status: updateTask.status }),
         });
         if (updateTask.kijunStart) task.updateKijun(updateTask.kijunStart, updateTask.kijunEnd ?? updateTask.kijunStart, updateTask.kijunKosu ?? 0);
         if (updateTask.yoteiStart) task.updateYotei({ startDate: updateTask.yoteiStart, endDate: updateTask.yoteiEnd ?? updateTask.yoteiStart, kosu: updateTask.yoteiKosu ?? 0 });

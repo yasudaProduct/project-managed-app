@@ -1,3 +1,5 @@
+"use client";
+
 import { ControllerRenderProps } from "react-hook-form";
 import {
   Select,
@@ -10,6 +12,7 @@ import { useEffect, useState } from "react";
 import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
 import { getTaskStatusName } from "@/lib/utils";
+import { getPhases } from "@/app/wbs/phase/phase-actions";
 
 type SelectPhasesProp = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,29 +20,44 @@ type SelectPhasesProp = {
   wbsId?: number;
 };
 
-type SelectAssigneeProp = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  field: ControllerRenderProps<any, string>;
-  wbsId?: number;
+type Phase = {
+  id: number;
+  name: string;
+  seq: number;
 };
 
+const phasesCache: Record<number | string, Phase[]> = {};
+
 export default function SelectPhases({ field, wbsId }: SelectPhasesProp) {
-  const [phases, setPhases] =
-    useState<{ id: number; name: string; seq: number }[]>();
+  const [phases, setPhases] = useState<Phase[] | undefined>(
+    wbsId && phasesCache[wbsId] ? phasesCache[wbsId] : undefined
+  );
+
   useEffect(() => {
+    const key = wbsId ?? "all";
+    if (phasesCache[key]) {
+      setPhases(phasesCache[key]);
+      return;
+    }
+
     const fetchPhases = async () => {
-      if (wbsId) {
-        const phases = await getWbsPhases(wbsId);
-        setPhases(phases);
+      if (key === "all") {
+        const phases = await getPhases();
+        setPhases(
+          phases.map((phase) => ({
+            id: phase.id,
+            name: phase.name,
+            seq: phase.order, // TODO フェーズテンプレートの方のorderをseqに変更する
+          }))
+        );
       } else {
-        // TODO wbsIdがない場合は、全てのフェーズを取得する
-        // const phases = await getPhases();
-        // setPhases(phases);
+        const phases = await getWbsPhases(key);
+        setPhases(phases);
       }
     };
 
     fetchPhases();
-  }, []);
+  }, [wbsId]);
 
   return (
     <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -69,6 +87,12 @@ export default function SelectPhases({ field, wbsId }: SelectPhasesProp) {
   );
 }
 
+type SelectAssigneeProp = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  field: ControllerRenderProps<any, string>;
+  wbsId?: number;
+};
+
 export function SelectAssignee({ field, wbsId }: SelectAssigneeProp) {
   const [assignees, setAssignees] = useState<{ id: string; name: string }[]>();
 
@@ -92,7 +116,10 @@ export function SelectAssignee({ field, wbsId }: SelectAssigneeProp) {
   }, []);
 
   return (
-    <Select onValueChange={field.onChange} defaultValue={field.value}>
+    <Select
+      onValueChange={field.onChange}
+      defaultValue={field.value.toString()}
+    >
       <SelectTrigger className="col-span-3">
         <SelectValue placeholder="担当者" />
       </SelectTrigger>

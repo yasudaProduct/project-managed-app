@@ -20,6 +20,8 @@ interface GanttComponentProps {
 
 declare module "gantt-task-react" {
   interface Task {
+    // id: string;
+    // name: string;
     assignee: string;
     kosu: number;
     status: TaskStatus;

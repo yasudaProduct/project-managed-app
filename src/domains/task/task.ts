@@ -9,7 +9,7 @@ import { PeriodType } from "./period-type";
 
 
 export class Task {
-    public readonly id?: string;
+    public id?: string;
     public wbsId: number;
     public name: string;
     public status: TaskStatus;
@@ -72,7 +72,11 @@ export class Task {
         return new Task(args);
     }
 
-    public update(args: { name: string; assigneeId?: string; status: TaskStatus; phaseId?: number; periods?: Period[]; }) {
+    public update(args: { id: string, name: string; assigneeId?: string; status: TaskStatus; phaseId?: number; periods?: Period[]; }) {
+
+        if (!args.id) {
+            throw new Error("タスクIDは必須です");
+        }
 
         if (!args.name) {
             throw new Error("タスク名は必須です");
@@ -90,12 +94,11 @@ export class Task {
             throw new Error("フェーズは必須です");
         }
 
+        this.id = args.id;
         this.name = args.name;
         this.assigneeId = args.assigneeId;
         this.status = args.status;
         this.phaseId = args.phaseId;
-        this.periods = args.periods;
-
     }
 
     public updateYotei(args: { startDate: Date; endDate: Date; kosu: number }) {
@@ -104,9 +107,10 @@ export class Task {
         const period = this.periods?.findLast(
             p => p.type.type === 'YOTEI'
         );
+        console.log(period);
 
-        // 期間モデルが存在する場合
         if (period) {
+            // 期間モデルが存在する場合
             period.startDate = args.startDate;
             period.endDate = args.endDate;
 
@@ -121,6 +125,11 @@ export class Task {
             } else {
                 period.manHours.push(ManHour.create({ type: new ManHourType({ type: 'NORMAL' }), kosu: args.kosu }));
             }
+        } else {
+            // 期間モデルが存在しない場合
+            const manHour = ManHour.create({ type: new ManHourType({ type: 'NORMAL' }), kosu: args.kosu });
+            this.periods?.push(Period.create({ type: new PeriodType({ type: 'YOTEI' }), startDate: args.startDate, endDate: args.endDate, manHours: [manHour] }));
+            console.log(this.periods);
         }
     }
 

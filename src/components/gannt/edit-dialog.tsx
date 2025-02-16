@@ -73,10 +73,14 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: task?.name,
-      wbsId: task?.project,
+      wbsId: task?.id,
       assigneeId: task?.assignee,
-      yoteiStartDate: formatDateyyyymmdd(task?.start?.toISOString()),
-      yoteiEndDate: formatDateyyyymmdd(task?.end?.toISOString()),
+      yoteiStartDate: task?.yoteiStart
+        ? formatDateyyyymmdd(task?.yoteiStart?.toISOString())
+        : "",
+      yoteiEndDate: task?.yoteiEnd
+        ? formatDateyyyymmdd(task?.yoteiEnd?.toISOString())
+        : "",
       yoteiKosu: task?.yoteiKosu,
       status: task?.status,
       phaseId: task?.phaseId,
@@ -96,6 +100,7 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
         phaseId: values.phaseId,
         assigneeId: values.assigneeId,
       });
+      console.log(result);
       if (result.success) {
         toast({
           title: "タスクを更新しました",
