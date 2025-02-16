@@ -38,13 +38,13 @@ const formSchema = z.object({
   assigneeId: z.string().min(1, {
     message: "担当者を入力して下さい",
   }),
-  yoteiStartDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
+  start: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
     message: "予定開始日は YYYY/MM/DD 形式で入力してください。",
   }),
-  yoteiEndDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
+  end: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
     message: "予定基準終了日は YYYY/MM/DD 形式で入力してください。",
   }),
-  yoteiKosu: z.preprocess(
+  kosu: z.preprocess(
     (val) => Number(val),
     z.number().min(0, {
       message: "工数は0以上の数値を入力してください。",
@@ -75,13 +75,11 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
       name: task?.name,
       wbsId: task?.id,
       assigneeId: task?.assignee.id,
-      yoteiStartDate: task?.yoteiStart
-        ? formatDateyyyymmdd(task?.yoteiStart?.toISOString())
+      start: task?.yoteiStart
+        ? formatDateyyyymmdd(task?.start?.toISOString())
         : "",
-      yoteiEndDate: task?.yoteiEnd
-        ? formatDateyyyymmdd(task?.yoteiEnd?.toISOString())
-        : "",
-      yoteiKosu: task?.yoteiKosu,
+      end: task?.yoteiEnd ? formatDateyyyymmdd(task?.end?.toISOString()) : "",
+      kosu: task?.yoteiKosu,
       status: task?.status,
       phaseId: task?.phase.id,
     },
@@ -93,9 +91,9 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
       const result = await updateTask(wbsId, task.id, {
         id: values.wbsId,
         name: values.name,
-        yoteiStart: values.yoteiStartDate,
-        yoteiEnd: values.yoteiEndDate,
-        yoteiKosu: values.yoteiKosu,
+        yoteiStart: values.start,
+        yoteiEnd: values.end,
+        yoteiKosu: values.kosu,
         status: values.status,
         phaseId: values.phaseId,
         assigneeId: values.assigneeId,
@@ -220,14 +218,14 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
             />
             <FromItem
               label="予定開始日"
-              name="yoteiStartDate"
+              name="start"
               placeholder="YYYY/MM/DD"
               control={form.control}
               type="date"
             />
             <FromItem
               label="予定終了日"
-              name="yoteiEndDate"
+              name="end"
               placeholder="YYYY/MM/DD"
               control={form.control}
               type="date"

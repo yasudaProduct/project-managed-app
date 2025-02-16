@@ -20,31 +20,6 @@ export default async function GanttPage({
   const wbsTasks: WbsTask[] = await getTaskAll(wbs.id);
 
   const tasks: Task[] = formatGanttTasks(wbsTasks);
-  // const tasks: Task[] = wbsTasks.map((task) => {
-  //   return {
-  //     id: task.id,
-  //     type: "task",
-  //     name: task.name,
-  //     assignee: {
-  //       id: task.assignee?.id ?? "",
-  //       name: task.assignee?.displayName ?? "-",
-  //     },
-  //     phase: {
-  //       id: task.phase?.id ?? 0,
-  //       name: task.phase?.name ?? "-",
-  //       seq: task.phase?.seq ?? 0,
-  //     },
-  //     yoteiStart: task.yoteiStart ?? undefined,
-  //     yoteiEnd: task.yoteiEnd ?? undefined,
-  //     yoteiKosu: task.yoteiKosu ?? 0,
-  //     status: task.status,
-  //     progress: 0,
-  //     project: wbs.name,
-  //     // ⇩GanttComponentで必須の可能性があるため、デフォルト値を設定
-  //     start: new Date(),
-  //     end: new Date(),
-  //   };
-  // });
 
   // GanttComponentで表示するためのタスクを作成する
   function formatGanttTasks(wbsTasks: WbsTask[]): Task[] {
@@ -65,15 +40,15 @@ export default async function GanttPage({
           name: task.phase?.name ?? "-",
           seq: task.phase?.seq ?? 0,
         },
-        yoteiStart: task.yoteiStart ?? undefined,
+        yoteiStart: task.yoteiStart ?? undefined, //TODO Gantt内ではstart,endを扱うので、yoteiStart,yoteiEndは不要？
         yoteiEnd: task.yoteiEnd ?? undefined,
         yoteiKosu: task.yoteiKosu ?? 0,
         status: task.status,
         progress: 0,
         project: task.phase?.name ?? "-",
-        // ⇩GanttComponentで必須の可能性があるため、デフォルト値を設定
-        start: new Date(),
-        end: new Date(),
+        // GanttComponent表示用 必須のためデフォルト値を設定
+        start: task.yoteiStart ?? new Date(),
+        end: task.yoteiEnd ?? new Date(),
       });
     });
 

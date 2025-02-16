@@ -236,8 +236,8 @@ export default function GanttComponent({
                 style={{ width: columnWidths.start }}
               >
                 <div>
-                  {task.yoteiStart
-                    ? task.yoteiStart.toLocaleDateString("ja-JP")
+                  {task.yoteiStart // undefinedの場合、表示させたくないためyoteiをチェック
+                    ? task.start.toLocaleDateString("ja-JP")
                     : "-"}
                 </div>
               </div>
@@ -250,8 +250,8 @@ export default function GanttComponent({
                 style={{ width: columnWidths.end }}
               >
                 <div>
-                  {task.yoteiEnd
-                    ? task.yoteiEnd.toLocaleDateString("ja-JP")
+                  {task.yoteiEnd // undefinedの場合、表示させたくないためyoteiをチェック
+                    ? task.end.toLocaleDateString("ja-JP")
                     : "-"}
                 </div>
               </div>
@@ -263,7 +263,7 @@ export default function GanttComponent({
                 style={{ width: columnWidths.kosu }}
                 className="flex items-center justify-center h-full border-l"
               >
-                {task.yoteiKosu === 0 ? "-" : task.yoteiKosu}
+                {task.type === "task" ? task.yoteiKosu : "-"}
               </div>
             )}
 
@@ -308,24 +308,42 @@ export default function GanttComponent({
 
   const handleTaskChange = (task: Task) => {
     console.log("On date change Id:" + task.id);
-    console.log(task);
-    // let newTasks = tasks.map((t) => (t.id === task.id ? task : t));
-    // if (task.project) {
-    //   const [start, end] = getStartEndDateForProject(newTasks, task.project);
-    //   const project =
-    //     newTasks[newTasks.findIndex((t) => t.id === task.project)];
-    //   if (
-    //     project.start.getTime() !== start.getTime() ||
-    //     project.end.getTime() !== end.getTime()
-    //   ) {
-    //     const changedProject = { ...project, start, end };
-    //     newTasks = newTasks.map((t) =>
-    //       t.id === task.project ? changedProject : t
-    //     );
-    //   }
-    // }
+    let newTasks = tasks.map((t) => (t.id === task.id ? task : t));
+
+    // プロジェクトの開始日と終了日の再計算;
+    if (task.project) {
+      const [start, end] = getStartEndDateForProject(newTasks, task.project);
+      const project =
+        newTasks[newTasks.findIndex((t) => t.id === task.project)];
+      if (
+        project.start.getTime() !== start.getTime() ||
+        project.end.getTime() !== end.getTime()
+      ) {
+        const changedProject = { ...project, start, end };
+        newTasks = newTasks.map((t) =>
+          t.id === task.project ? changedProject : t
+        );
+      }
+    }
     setTasks(tasks);
   };
+
+  function getStartEndDateForProject(tasks: Task[], projectId: string) {
+    const projectTasks = tasks.filter((t) => t.project === projectId);
+    let start = projectTasks[0].start;
+    let end = projectTasks[0].end;
+
+    for (let i = 0; i < projectTasks.length; i++) {
+      const task = projectTasks[i];
+      if (start.getTime() > task.start.getTime()) {
+        start = task.start;
+      }
+      if (end.getTime() < task.end.getTime()) {
+        end = task.end;
+      }
+    }
+    return [start, end];
+  }
 
   const handleTaskDelete = (task: Task) => {
     const conf = window.confirm(
@@ -347,7 +365,7 @@ export default function GanttComponent({
 
   return (
     <div className="container mx-auto">
-      <div className="flex justify-center gap-2">
+      <div className="flex justify-end gap-2 mb-2">
         <Button onClick={() => setViewMode(ViewMode.Year)}>年</Button>
         <Button onClick={() => setViewMode(ViewMode.Month)}>月</Button>
         <Button onClick={() => setViewMode(ViewMode.Week)}>週</Button>
@@ -357,13 +375,13 @@ export default function GanttComponent({
         <Button onClick={() => setViewMode(ViewMode.HalfDay)}>8時間</Button>
 
         <Button onClick={() => setIsTalebeHide(!isTalebeHide)}>
-          {isTalebeHide ? "表示" : "非表示"}
+          {isTalebeHide ? "非表示" : "表示"}
         </Button>
+        <ColumnVisibilityToggle
+          columnVisibility={columnVisibility}
+          onToggle={handleColumnVisibilityToggle}
+        />
       </div>
-      <ColumnVisibilityToggle
-        columnVisibility={columnVisibility}
-        onToggle={handleColumnVisibilityToggle}
-      />
       <Gantt
         tasks={tasks}
         viewMode={viewMode}
