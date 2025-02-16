@@ -190,12 +190,15 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
   return (
     <Dialog modal={true}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="w-auto p-2">
+      <DialogContent className="w-full p-2">
         <DialogHeader>
           <DialogTitle>タスク編集</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4 flex flex-col"
+          >
             <FromItem
               label="タスク名"
               name="name"

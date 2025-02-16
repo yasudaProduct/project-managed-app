@@ -68,6 +68,7 @@ export default function GanttComponent({
     progress: "20px",
     kosu: "3rem",
     status: "3rem",
+    operation: "3rem",
   };
 
   const TaskListHeader: React.FC<{
@@ -89,7 +90,12 @@ export default function GanttComponent({
             工程
           </div>
         )}
-        <div style={{ width: columnWidths.task }}>タスク名</div>
+        <div
+          className="flex items-center justify-center h-full"
+          style={{ width: columnWidths.task }}
+        >
+          タスク名
+        </div>
         {columnVisibility.wbsno && (
           <div
             className="flex items-center justify-center h-full"
@@ -139,6 +145,12 @@ export default function GanttComponent({
             状況
           </div>
         )}
+        <div
+          className="flex items-center justify-center h-full"
+          style={{ width: columnWidths.operation }}
+        >
+          操作
+        </div>
       </div>
     );
   };
@@ -172,7 +184,7 @@ export default function GanttComponent({
             )}
             {/* タスク名 */}
             <div
-              className="truncate _nI1Xw"
+              className="truncate _nI1Xw flex flex-col items-center justify-center h-full border-l"
               style={{ width: columnWidths.task }}
             >
               {task.type === "project" ? (
@@ -249,10 +261,13 @@ export default function GanttComponent({
                 {getTaskStatusName(task.status)}
               </div>
             )}
-            <div style={{ width: columnWidths.status }}>
+            <div
+              style={{ width: columnWidths.status }}
+              className="flex items-center justify-center h-full border-l"
+            >
               <button
                 onClick={() => handleTaskDelete(task)}
-                className="text-red-500"
+                className="text-red-500 mr-2"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
