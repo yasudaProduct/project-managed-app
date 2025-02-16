@@ -60,7 +60,10 @@ export default function SelectPhases({ field, wbsId }: SelectPhasesProp) {
   }, [wbsId]);
 
   return (
-    <Select onValueChange={field.onChange} defaultValue={field.value}>
+    <Select
+      onValueChange={field.onChange}
+      defaultValue={field.value.toString()}
+    >
       <SelectTrigger className="col-span-3">
         <SelectValue placeholder="フェーズ" />
       </SelectTrigger>
