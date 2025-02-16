@@ -19,30 +19,110 @@ export default async function GanttPage({
 
   const wbsTasks: WbsTask[] = await getTaskAll(wbs.id);
 
-  const tasks: Task[] = wbsTasks.map((task) => ({
-    id: task.id,
-    type: "task",
-    name: task.name,
-    assignee: {
-      id: task.assignee?.id ?? "",
-      name: task.assignee?.displayName ?? "-",
-    },
-    phase: {
-      id: task.phase?.id ?? 0,
-      name: task.phase?.name ?? "-",
-      seq: task.phase?.seq ?? 0,
-    },
-    yoteiStart: task.yoteiStart ?? undefined,
-    yoteiEnd: task.yoteiEnd ?? undefined,
-    yoteiKosu: task.yoteiKosu ?? 0,
-    status: task.status,
-    progress: 0,
-    project: wbs.name,
-    // ⇩GanttComponentで必須の可能性があるため、デフォルト値を設定
-    start: new Date(),
-    end: new Date(),
-  }));
-  console.log(tasks);
+  const tasks: Task[] = formatGanttTasks(wbsTasks);
+  // const tasks: Task[] = wbsTasks.map((task) => {
+  //   return {
+  //     id: task.id,
+  //     type: "task",
+  //     name: task.name,
+  //     assignee: {
+  //       id: task.assignee?.id ?? "",
+  //       name: task.assignee?.displayName ?? "-",
+  //     },
+  //     phase: {
+  //       id: task.phase?.id ?? 0,
+  //       name: task.phase?.name ?? "-",
+  //       seq: task.phase?.seq ?? 0,
+  //     },
+  //     yoteiStart: task.yoteiStart ?? undefined,
+  //     yoteiEnd: task.yoteiEnd ?? undefined,
+  //     yoteiKosu: task.yoteiKosu ?? 0,
+  //     status: task.status,
+  //     progress: 0,
+  //     project: wbs.name,
+  //     // ⇩GanttComponentで必須の可能性があるため、デフォルト値を設定
+  //     start: new Date(),
+  //     end: new Date(),
+  //   };
+  // });
+
+  // GanttComponentで表示するためのタスクを作成する
+  function formatGanttTasks(wbsTasks: WbsTask[]): Task[] {
+    console.log("formatGanttTasks: start");
+    const ganttTasks: Task[] = [];
+
+    // WbsTaskを変換
+    wbsTasks.forEach((task) => {
+      ganttTasks.push({
+        id: task.id,
+        type: "task",
+        name: task.name,
+        assignee: {
+          id: task.assignee?.id ?? "",
+          name: task.assignee?.displayName ?? "-",
+        },
+        phase: {
+          id: task.phase?.id ?? 0,
+          name: task.phase?.name ?? "-",
+          seq: task.phase?.seq ?? 0,
+        },
+        yoteiStart: task.yoteiStart ?? undefined,
+        yoteiEnd: task.yoteiEnd ?? undefined,
+        yoteiKosu: task.yoteiKosu ?? 0,
+        status: task.status,
+        progress: 0,
+        project: task.phase?.name ?? "-",
+        start: new Date(),
+        end: new Date(),
+      });
+    });
+
+    // 工程を抽出
+    const uniquePhases = Array.from(
+      new Map(wbsTasks.map((task) => [task.phase?.id, task.phase])).values()
+    );
+
+    // 工程を追加
+    uniquePhases.forEach((phase) => {
+      ganttTasks.push({
+        id: phase?.id?.toString() ?? "",
+        type: "project",
+        name: phase?.name ?? "-",
+        assignee: {
+          id: "",
+          name: "-",
+        },
+        phase: {
+          id: phase?.id ?? 0,
+          name: phase?.name ?? "-",
+          seq: phase?.seq ?? 0,
+        },
+        yoteiStart: new Date(),
+        yoteiEnd: new Date(),
+        yoteiKosu: 0,
+        status: "NOT_STARTED",
+        progress: 0,
+        project: phase?.name ?? "-",
+        start: new Date(),
+        end: new Date(),
+      });
+    });
+    console.log("formatGanttTasks: end");
+    ganttTasks.sort((a, b) => {
+      if (a.phase.id !== b.phase.id) {
+        return a.phase.seq - b.phase.seq; // 工程のseqでソート
+      }
+      if (a.type === "project" && b.type === "task") {
+        return -1; // 工程が先頭に来るようにソート
+      }
+      if (a.type === "task" && b.type === "project") {
+        return 1; // タスクが末尾に来るようにソート
+      }
+      return a.id.localeCompare(b.id); // タスクのidでソート
+    });
+
+    return ganttTasks;
+  }
 
   return (
     <div className="container mx-auto">
