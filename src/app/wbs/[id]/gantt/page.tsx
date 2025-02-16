@@ -27,11 +27,15 @@ export default async function GanttPage({
       id: task.assignee?.id ?? "",
       name: task.assignee?.displayName ?? "-",
     },
-    status: task.status,
+    phase: {
+      id: task.phase?.id ?? 0,
+      name: task.phase?.name ?? "-",
+      seq: task.phase?.seq ?? 0,
+    },
     yoteiStart: task.yoteiStart ?? undefined,
     yoteiEnd: task.yoteiEnd ?? undefined,
     yoteiKosu: task.yoteiKosu ?? 0,
-    phaseId: task.phaseId ?? 0,
+    status: task.status,
     progress: 0,
     project: wbs.name,
     // ⇩GanttComponentで必須の可能性があるため、デフォルト値を設定

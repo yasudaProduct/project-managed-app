@@ -2,6 +2,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
 export interface ColumnVisibility {
+  phase: boolean;
   wbsno: boolean;
   assignee: boolean;
   yotei: boolean;
@@ -22,6 +23,14 @@ export function ColumnVisibilityToggle({
 }: ColumnVisibilityToggleProps) {
   return (
     <div className="flex flex-wrap gap-4 mb-4">
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="column-phase"
+          checked={columnVisibility.phase}
+          onCheckedChange={() => onToggle("phase")}
+        />
+        <Label htmlFor="column-phase">工程</Label>
+      </div>
       <div className="flex items-center space-x-2">
         <Switch
           id="column-wbsno"

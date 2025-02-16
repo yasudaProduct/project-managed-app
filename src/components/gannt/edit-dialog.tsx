@@ -83,7 +83,7 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
         : "",
       yoteiKosu: task?.yoteiKosu,
       status: task?.status,
-      phaseId: task?.phaseId,
+      phaseId: task?.phase.id,
     },
   });
 
@@ -100,7 +100,7 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
         phaseId: values.phaseId,
         assigneeId: values.assigneeId,
       });
-      console.log(result);
+
       if (result.success) {
         toast({
           title: "タスクを更新しました",

@@ -24,11 +24,15 @@ declare module "gantt-task-react" {
       id: string;
       name: string;
     };
-    status: TaskStatus;
+    phase: {
+      id: number;
+      name: string;
+      seq: number;
+    };
     yoteiStart: Date | undefined;
     yoteiEnd: Date | undefined;
     yoteiKosu: number;
-    phaseId: number;
+    status: TaskStatus;
   }
 }
 
@@ -39,6 +43,7 @@ export default function GanttComponent({
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
   const [isTalebeHide, setIsTalebeHide] = useState(true);
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
+    phase: true,
     wbsno: true,
     assignee: true,
     yotei: true,
@@ -54,6 +59,7 @@ export default function GanttComponent({
   };
 
   const columnWidths = {
+    phase: "5rem",
     task: "5rem",
     wbsId: "61px",
     tanto: "42px",
@@ -75,6 +81,14 @@ export default function GanttComponent({
         className="flex items-center gap-4 px-4 bg-gray-100 font-semibold text-sm text-gray-700"
         style={{ height: headerHeight, width: rowWidth, fontFamily, fontSize }}
       >
+        {columnVisibility.phase && (
+          <div
+            className="flex items-center justify-center h-full"
+            style={{ width: columnWidths.phase }}
+          >
+            工程
+          </div>
+        )}
         <div style={{ width: columnWidths.task }}>タスク名</div>
         {columnVisibility.wbsno && (
           <div
@@ -152,6 +166,10 @@ export default function GanttComponent({
               backgroundColor: task.type === "project" ? "#f0f0f0" : "",
             }}
           >
+            {/* 工程 */}
+            {columnVisibility.phase && (
+              <div style={{ width: columnWidths.phase }}>{task.phase.name}</div>
+            )}
             {/* タスク名 */}
             <div
               className="truncate _nI1Xw"
