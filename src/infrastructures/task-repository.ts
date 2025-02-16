@@ -140,16 +140,11 @@ export class TaskRepository implements ITaskRepository {
             },
         });
 
-        console.log(task)
-        console.log(task.periods)
-        task.periods?.map(async (period) => {
-            console.log("task.periods?.map(async (period) => {")
-            console.log(period)
-            console.log("taskId:" + id)
+        task.periods?.forEach(async (period) => {
             // 期間更新
             const periodDb = await prisma.taskPeriod.upsert({
                 where: {
-                    id: period.id,
+                    id: period.id ?? 0, // undefinedの場合,エラーになるので0を設定
                 },
                 update: {
                     startDate: period.startDate,
@@ -162,13 +157,12 @@ export class TaskRepository implements ITaskRepository {
                     type: period.type.type,
                 },
             })
-            console.log(periodDb)
 
             // 工数更新
             const periodId = periodDb.id;
-            period.manHours.map(async (manHour) => {
+            period.manHours.forEach(async (manHour) => {
                 await prisma.taskKosu.upsert({
-                    where: { id: manHour.id },
+                    where: { id: manHour.id ?? 0 }, // undefinedの場合,エラーになるので0を設定
                     update: { kosu: manHour.kosu },
                     create: {
                         periodId: periodId,
