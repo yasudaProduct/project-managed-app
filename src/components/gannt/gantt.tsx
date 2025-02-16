@@ -20,9 +20,10 @@ interface GanttComponentProps {
 
 declare module "gantt-task-react" {
   interface Task {
-    // id: string;
-    // name: string;
-    assignee: string;
+    assignee: {
+      id: string;
+      name: string;
+    };
     kosu: number;
     status: TaskStatus;
     yoteiStart: Date | undefined;
@@ -188,7 +189,7 @@ export default function GanttComponent({
                 className="flex flex-col items-center justify-center h-full border-l"
                 style={{ width: columnWidths.tanto }}
               >
-                {task.assignee}
+                {task.assignee.name}
               </div>
             )}
 

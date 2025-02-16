@@ -74,7 +74,7 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
     defaultValues: {
       name: task?.name,
       wbsId: task?.id,
-      assigneeId: task?.assignee,
+      assigneeId: task?.assignee.id,
       yoteiStartDate: task?.yoteiStart
         ? formatDateyyyymmdd(task?.yoteiStart?.toISOString())
         : "",
