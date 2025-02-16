@@ -24,7 +24,6 @@ declare module "gantt-task-react" {
       id: string;
       name: string;
     };
-    kosu: number;
     status: TaskStatus;
     yoteiStart: Date | undefined;
     yoteiEnd: Date | undefined;
@@ -199,7 +198,7 @@ export default function GanttComponent({
                 className="flex flex-col items-center justify-center h-full border-l"
                 style={{ width: columnWidths.start }}
               >
-                <div>{task.start?.toLocaleDateString("ja-JP")}</div>
+                <div>{task.yoteiStart?.toLocaleDateString("ja-JP")}</div>
               </div>
             )}
 
@@ -209,7 +208,7 @@ export default function GanttComponent({
                 className="flex flex-col items-center justify-center h-full border-l"
                 style={{ width: columnWidths.end }}
               >
-                <div>{task.end?.toLocaleDateString("ja-JP")}</div>
+                <div>{task.yoteiEnd?.toLocaleDateString("ja-JP")}</div>
               </div>
             )}
 
@@ -219,7 +218,7 @@ export default function GanttComponent({
                 style={{ width: columnWidths.kosu }}
                 className="flex items-center justify-center h-full border-l"
               >
-                {task.kosu}
+                {task.yoteiKosu}
               </div>
             )}
 
@@ -270,18 +269,6 @@ export default function GanttComponent({
     //   }
     // }
     setTasks(tasks);
-  };
-
-  const handleTaskEdit = (task: Task) => {
-    console.log("On date change Id:" + task.id);
-    console.log(task);
-
-    // Display the edit dialog here
-    const newTaskName = prompt("Edit task name:", task.name);
-    if (newTaskName !== null) {
-      const newTask = { ...task, name: newTaskName };
-      setTasks(tasks.map((t) => (t.id === task.id ? newTask : t)));
-    }
   };
 
   const handleTaskDelete = (task: Task) => {

@@ -28,16 +28,17 @@ export default async function GanttPage({
       name: task.assignee?.displayName ?? "-",
     },
     status: task.status,
-    start: task.yoteiStart ?? new Date(),
-    end: task.yoteiEnd ?? new Date(),
-    kosu: task.yoteiKosu ?? 0,
     yoteiStart: task.yoteiStart ?? undefined,
     yoteiEnd: task.yoteiEnd ?? undefined,
     yoteiKosu: task.yoteiKosu ?? 0,
     phaseId: task.phaseId ?? 0,
     progress: 0,
     project: wbs.name,
+    // ⇩GanttComponentで必須の可能性があるため、デフォルト値を設定
+    start: new Date(),
+    end: new Date(),
   }));
+  console.log(tasks);
 
   return (
     <div className="container mx-auto">
