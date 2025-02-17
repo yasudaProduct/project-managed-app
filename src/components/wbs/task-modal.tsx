@@ -45,18 +45,6 @@ const formSchema = z.object({
   assigneeId: z.string().min(1, {
     message: "担当者は必須です。",
   }),
-  kijunStartDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
-    message: "基準開始日は YYYY/MM/DD 形式で入力してください。",
-  }),
-  kijunEndDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
-    message: "基準終了日は YYYY/MM/DD 形式で入力してください。",
-  }),
-  kijunKosu: z.preprocess(
-    (val) => Number(val),
-    z.number().min(0, {
-      message: "工数は0以上の数値を入力してください。",
-    })
-  ),
   yoteiStartDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
     message: "予定開始日は YYYY/MM/DD 形式で入力してください。",
   }),
@@ -64,18 +52,6 @@ const formSchema = z.object({
     message: "予定基準終了日は YYYY/MM/DD 形式で入力してください。",
   }),
   yoteiKosu: z.preprocess(
-    (val) => Number(val),
-    z.number().min(0, {
-      message: "工数は0以上の数値を入力してください。",
-    })
-  ),
-  jissekiStartDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
-    message: "実績開始日は YYYY/MM/DD 形式で入力してください。",
-  }),
-  jissekiEndDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
-    message: "実績終了日は YYYY/MM/DD 形式で入力してください。",
-  }),
-  jissekiKosu: z.preprocess(
     (val) => Number(val),
     z.number().min(0, {
       message: "工数は0以上の数値を入力してください。",
@@ -103,7 +79,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [assignees, setAssignees] = useState<{ id: string; name: string }[]>();
   const [phases, setPhases] =
-    useState<{ id: number; name: string; seq: number }[]>();
+    useState<{ id: number; name: string; code: string; seq: number }[]>();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -111,15 +87,9 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
       id: "",
       name: "",
       assigneeId: "",
-      kijunStartDate: "",
-      kijunEndDate: "",
-      kijunKosu: 0,
       yoteiStartDate: "",
       yoteiEndDate: "",
       yoteiKosu: 0,
-      jissekiStartDate: "",
-      jissekiEndDate: "",
-      jissekiKosu: 0,
       status: "NOT_STARTED",
       phaseId: 0,
     },
@@ -127,15 +97,9 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
       id: task.id,
       name: task.name,
       assigneeId: task.assigneeId,
-      kijunStartDate: task.kijunStart,
-      kijunEndDate: task.kijunEnd,
-      kijunKosu: task.kijunKosu,
       yoteiStartDate: task.yoteiStart,
       yoteiEndDate: task.yoteiEnd,
       yoteiKosu: task.yoteiKosu,
-      jissekiStartDate: task.jissekiStart,
-      jissekiEndDate: task.jissekiEnd,
-      jissekiKosu: task.jissekiKosu,
       status: task.status,
       phaseId: task.phaseId,
     }),
@@ -157,6 +121,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
         return {
           id: p.id,
           name: p.name,
+          code: p.code,
           seq: p.seq,
         };
       });
@@ -173,24 +138,12 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
           id: values.id,
           name: values.name,
           periods: [
-            // ここはservice側である
-            {
-              startDate: values.kijunStartDate,
-              endDate: values.kijunEndDate,
-              type: "KIJUN",
-              kosus: [{ kosu: values.kijunKosu, type: "NORMAL" }],
-            },
+            // ここはservice側で作成する
             {
               startDate: values.yoteiStartDate,
               endDate: values.yoteiEndDate,
               type: "YOTEI",
               kosus: [{ kosu: values.yoteiKosu, type: "NORMAL" }],
-            },
-            {
-              startDate: values.jissekiStartDate,
-              endDate: values.jissekiEndDate,
-              type: "JISSEKI",
-              kosus: [{ kosu: values.jissekiKosu, type: "NORMAL" }],
             },
           ],
           status: values.status,
@@ -213,15 +166,9 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
         const result = await updateTask(wbsId, task.id, {
           id: values.id,
           name: values.name,
-          kijunStart: values.kijunStartDate,
-          kijunEnd: values.kijunEndDate,
-          kijunKosu: values.kijunKosu,
           yoteiStart: values.yoteiStartDate,
           yoteiEnd: values.yoteiEndDate,
           yoteiKosu: values.yoteiKosu,
-          jissekiStart: values.jissekiStartDate,
-          jissekiEnd: values.jissekiEndDate,
-          jissekiKosu: values.jissekiKosu,
           status: values.status,
           assigneeId: values.assigneeId,
           phaseId: values.phaseId,
@@ -251,72 +198,9 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
     }
   }
 
-  // const addItem = async (newTasks: WbsTask) => {
-  //   try {
-  //     const result = await createTask(wbsId, {
-  //       id: newTasks.id,
-  //       name: newTasks.name,
-  //       periods: newTasks.periods?.map((period) => ({
-  //         startDate: period.startDate.toISOString(),
-  //         endDate: period.endDate.toISOString(),
-  //         type: period.type,
-  //         kosus: period.kosus.map((kosu) => ({
-  //           kosu: kosu.kosu,
-  //           type: kosu.type,
-  //         })),
-  //       })),
-  //       status: newTasks.status,
-  //       assigneeId: newTasks.assigneeId,
-  //       phaseId: newTasks.phaseId,
-  //     });
-  //     if (result.success) {
-  //       toast({
-  //         title: "タスクを追加しました",
-  //         description: "タスクが追加されました",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     toast({
-  //       title: "タスクの追加に失敗しました",
-  //       description: error instanceof Error ? error.message : "不明なエラー",
-  //       variant: "destructive",
-  //     });
-  //   }
-  // };
-
-  // const updateItem = async (taskId: string, updatedTask: WbsTask) => {
-  //   try {
-  //     const result = await updateTask(taskId, updatedTask);
-  //     if (result.success) {
-  //       toast({
-  //         title: "タスクを更新しました",
-  //         description: "タスクが更新されました",
-  //       });
-  //     } else {
-  //       toast({
-  //         title: "タスクの更新に失敗しました",
-  //         description: result.error,
-  //         variant: "destructive",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     toast({
-  //       title: "タスクの更新に失敗しました",
-  //       description: error instanceof Error ? error.message : "不明なエラー",
-  //       variant: "destructive",
-  //     });
-  //   }
-  // };
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {/* <Button className="mb-4">
-          <Plus className="h-4 w-4" />
-          <LayoutList className="h-4 w-4" />
-        </Button> */}
-        {children}
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="min-w-full">
         <DialogHeader>
           <DialogTitle>新規タスク追加</DialogTitle>
@@ -380,7 +264,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="name">名前</label>
+                <label htmlFor="name">タスク名</label>
                 <FormField
                   control={form.control}
                   name="name"
@@ -432,47 +316,6 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="kijunStartDate">基準開始日</label>
-                <FormField
-                  control={form.control}
-                  name="kijunStartDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <DatePicker field={field}></DatePicker>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <label htmlFor="kijunEndDate">基準終了日</label>
-                <FormField
-                  control={form.control}
-                  name="kijunEndDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <DatePicker field={field}></DatePicker>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <label htmlFor="kijunKosu">基準工数</label>
-                <FormField
-                  control={form.control}
-                  name="kijunKosu"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          step="any"
-                          placeholder="工数"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <label htmlFor="yoteiStartDate">予定開始日</label>
                 <FormField
                   control={form.control}
@@ -499,47 +342,6 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
                 <FormField
                   control={form.control}
                   name="yoteiKosu"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          step="any"
-                          placeholder="工数"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <label htmlFor="jissekiStartDate">実績開始日</label>
-                <FormField
-                  control={form.control}
-                  name="jissekiStartDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <DatePicker field={field}></DatePicker>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <label htmlFor="jissekiEndDate">実績終了日</label>
-                <FormField
-                  control={form.control}
-                  name="jissekiEndDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <DatePicker field={field}></DatePicker>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <label htmlFor="jissekiKosu">実績工数</label>
-                <FormField
-                  control={form.control}
-                  name="jissekiKosu"
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
