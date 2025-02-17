@@ -41,15 +41,17 @@ erDiagram
 "wbs_phase" {
   Int id PK
   Int wbsId FK
-  Int seq
   String name
+  String code UK
+  Int seq
   DateTime createdAt
   DateTime updatedAt
 }
 "phase_template" {
   Int id PK
   String name UK
-  Int order
+  String code UK
+  Int seq
   DateTime createdAt
   DateTime updatedAt
 }
@@ -68,15 +70,6 @@ erDiagram
   Int phaseId FK "nullable"
   String name
   String assigneeId FK "nullable"
-  DateTime kijunStartDate "nullable"
-  DateTime kijunEndDate "nullable"
-  Int kijunKosu "nullable"
-  DateTime yoteiStartDate "nullable"
-  DateTime yoteiEndDate "nullable"
-  Int yoteiKosu "nullable"
-  DateTime jissekiStartDate "nullable"
-  DateTime jissekiEndDate "nullable"
-  Int jissekiKosu "nullable"
   TaskStatus status
   DateTime createdAt
   DateTime updatedAt
@@ -168,8 +161,9 @@ erDiagram
 **Properties**
   - `id`: 
   - `wbsId`: 
-  - `seq`: 
   - `name`: 
+  - `code`: 
+  - `seq`: 
   - `createdAt`: 
   - `updatedAt`: 
 
@@ -178,7 +172,8 @@ erDiagram
 **Properties**
   - `id`: 
   - `name`: 
-  - `order`: 
+  - `code`: 
+  - `seq`: 
   - `createdAt`: 
   - `updatedAt`: 
 
@@ -201,15 +196,6 @@ erDiagram
   - `phaseId`: 
   - `name`: 
   - `assigneeId`: 
-  - `kijunStartDate`: 
-  - `kijunEndDate`: 
-  - `kijunKosu`: 
-  - `yoteiStartDate`: 
-  - `yoteiEndDate`: 
-  - `yoteiKosu`: 
-  - `jissekiStartDate`: 
-  - `jissekiEndDate`: 
-  - `jissekiKosu`: 
   - `status`: 
   - `createdAt`: 
   - `updatedAt`: 

@@ -30,12 +30,14 @@ async function main() {
             where: { id: phase.id },
             update: {
                 name: phase.name,
-                order: phase.seq,
+                code: phase.code,
+                seq: phase.seq,
             },
             create: {
                 id: phase.id,
                 name: phase.name,
-                order: phase.seq,
+                code: phase.code,
+                seq: phase.seq,
             },
         })
     }
@@ -79,14 +81,16 @@ async function main() {
         await prisma.wbsPhase.upsert({
             where: { id: phase.id },
             update: {
-                name: phase.name,
                 wbsId: phase.wbsId,
+                name: phase.name,
+                code: phase.code,
                 seq: phase.seq,
             },
             create: {
                 id: phase.id,
-                name: phase.name,
                 wbsId: phase.wbsId,
+                name: phase.name,
+                code: phase.code,
                 seq: phase.seq,
             },
         })
@@ -114,15 +118,6 @@ async function main() {
                 phaseId: task.phaseId,
                 name: task.name,
                 assigneeId: task.assigneeId,
-                kijunStartDate: task.kijunStartDate,
-                kijunEndDate: task.kijunEndDate,
-                kijunKosu: task.kijunKosu,
-                yoteiStartDate: task.yoteiStartDate,
-                yoteiEndDate: task.yoteiEndDate,
-                yoteiKosu: task.yoteiKosu,
-                jissekiStartDate: task.jissekiStartDate,
-                jissekiEndDate: task.jissekiEndDate,
-                jissekiKosu: task.jissekiKosu,
                 status: task.status as TaskStatus,
             },
             create: {
@@ -131,15 +126,6 @@ async function main() {
                 phaseId: task.phaseId,
                 name: task.name,
                 assigneeId: task.assigneeId,
-                kijunStartDate: task.kijunStartDate,
-                kijunEndDate: task.kijunEndDate,
-                kijunKosu: task.kijunKosu,
-                yoteiStartDate: task.yoteiStartDate,
-                yoteiEndDate: task.yoteiEndDate,
-                yoteiKosu: task.yoteiKosu,
-                jissekiStartDate: task.jissekiStartDate,
-                jissekiEndDate: task.jissekiEndDate,
-                jissekiKosu: task.jissekiKosu,
                 status: task.status as TaskStatus,
 
             },

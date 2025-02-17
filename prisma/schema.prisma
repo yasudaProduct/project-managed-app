@@ -71,8 +71,9 @@ model WbsAssignee {
 model WbsPhase {
   id         Int       @id @default(autoincrement())
   wbsId      Int
-  seq        Int
   name       String
+  code       String    @unique
+  seq        Int
   wbs        Wbs       @relation(fields: [wbsId], references: [id])
   tasks      WbsTask[]
   createdAt  DateTime  @default(now())
@@ -84,7 +85,8 @@ model WbsPhase {
 model PhaseTemplate {
   id        Int        @id @default(autoincrement())
   name      String     @unique
-  order     Int        @default(0)
+  code      String     @unique
+  seq       Int        @default(0)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -110,15 +112,6 @@ model WbsTask {
   phaseId          Int?
   name             String
   assigneeId       String?
-  kijunStartDate   DateTime?
-  kijunEndDate     DateTime?
-  kijunKosu        Int?
-  yoteiStartDate   DateTime?
-  yoteiEndDate     DateTime?
-  yoteiKosu        Int?
-  jissekiStartDate DateTime?
-  jissekiEndDate   DateTime?
-  jissekiKosu      Int?
   status           TaskStatus       @default(NOT_STARTED)
   wbs              Wbs              @relation(fields: [wbsId], references: [id])
   phase            WbsPhase?        @relation(fields: [phaseId], references: [id])
