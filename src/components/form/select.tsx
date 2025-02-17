@@ -47,7 +47,7 @@ export default function SelectPhases({ field, wbsId }: SelectPhasesProp) {
           phases.map((phase) => ({
             id: phase.id,
             name: phase.name,
-            seq: phase.order, // TODO フェーズテンプレートの方のorderをseqに変更する
+            seq: phase.seq,
           }))
         );
       } else {

@@ -34,7 +34,7 @@ export async function updateWbs(id: number, wbsData: { name: string }) {
     return { success: true, wbs: wbs }
 }
 
-export async function createWbsPhase(wbsId: number, wbsPhaseData: { name: string; seq: number }) {
+export async function createWbsPhase(wbsId: number, wbsPhaseData: { name: string; code: string; seq: number; }) {
 
     const cheack = await prisma.wbsPhase.findFirst({
         where: {
@@ -51,6 +51,7 @@ export async function createWbsPhase(wbsId: number, wbsPhaseData: { name: string
         data: {
             wbsId,
             name: wbsPhaseData.name,
+            code: wbsPhaseData.code,
             seq: wbsPhaseData.seq,
         },
     });

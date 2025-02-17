@@ -33,6 +33,9 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: "フェーズ名は2文字以上で入力してください。",
   }),
+  code: z.string().min(1, {
+    message: "コードは必須です。",
+  }),
   seq: z.number().min(1, {
     message: "順序は1以上の数値を入力してください。",
   }),
@@ -55,6 +58,7 @@ export function NewWbsPhaseForm({ wbsId }: NewWbsPhaseFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      code: "",
       seq: 1,
       templateId: "",
     },
@@ -112,17 +116,22 @@ export function NewWbsPhaseForm({ wbsId }: NewWbsPhaseFormProps) {
                   onValueChange={(value) => {
                     setSelectedTemplateId(value);
                     if (value !== "new") {
+                      // テンプレートを選択した場合、フェーズ名、コード、順序を設定
                       const selectedTemplate = templates.find(
                         (template) => template.id === Number(value)
                       );
                       if (selectedTemplate) {
                         form.setValue("name", selectedTemplate.name);
-                        form.setValue("seq", selectedTemplate.order);
+                        form.setValue("seq", selectedTemplate.seq);
+                        form.setValue("code", selectedTemplate.code);
                       }
                     } else {
+                      // 新規フェーズ作成の場合、フェーズ名、コード、順序をクリア
                       form.setValue("name", "");
                       form.setValue("seq", 1);
+                      form.setValue("code", "");
                     }
+                    // フィールドの値が変更されたことを通知します。
                     field.onChange(value);
                   }}
                   defaultValue={field.value}
@@ -179,6 +188,31 @@ export function NewWbsPhaseForm({ wbsId }: NewWbsPhaseFormProps) {
               </FormControl>
               <FormDescription>
                 WBSフェーズの名前を入力してください。
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="code"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>コード</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="D1"
+                  {...(selectedTemplateId !== "new" ? field : {})}
+                  disabled={selectedTemplateId !== "new"}
+                  required={selectedTemplateId === "new"}
+                  onChange={(e) => {
+                    form.setValue("code", e.target.value);
+                    field.onChange(e.target.value);
+                  }}
+                />
+              </FormControl>
+              <FormDescription>
+                WBSフェーズのコードを入力してください。
               </FormDescription>
               <FormMessage />
             </FormItem>
