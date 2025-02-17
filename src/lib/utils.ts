@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const formatDateyyyymmdd = (dateString: string) => {
+export const formatDateyyyymmdd = (dateString: string): string | undefined => {
   if (!dateString) return undefined;
   const date = new Date(dateString);
   const year = date.getFullYear();

@@ -308,6 +308,7 @@ export default function GanttComponent({
 
   const handleTaskChange = (task: Task) => {
     console.log("On date change Id:" + task.id);
+    console.log(task);
     let newTasks = tasks.map((t) => (t.id === task.id ? task : t));
 
     // プロジェクトの開始日と終了日の再計算;

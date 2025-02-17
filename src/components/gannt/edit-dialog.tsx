@@ -26,7 +26,7 @@ import SelectPhases, { SelectAssignee, SelectStatus } from "../form/select";
 import { formatDateyyyymmdd } from "@/lib/utils";
 import { updateTask } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -75,15 +75,22 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
       name: task?.name,
       wbsId: task?.id,
       assigneeId: task?.assignee.id,
-      start: task?.yoteiStart
-        ? formatDateyyyymmdd(task?.start?.toISOString())
-        : "",
+      start: formatDateyyyymmdd(task?.start?.toISOString()),
       end: task?.yoteiEnd ? formatDateyyyymmdd(task?.end?.toISOString()) : "",
       kosu: task?.yoteiKosu,
       status: task?.status,
       phaseId: task?.phase.id,
     },
   });
+
+  useEffect(() => {
+    // ganttで日付が変更された時にformに再セット
+    const start = formatDateyyyymmdd(task.start.toISOString());
+    const end = formatDateyyyymmdd(task.end.toISOString());
+
+    form.setValue("start", start ? start : "");
+    form.setValue("end", end ? end : "");
+  }, [task, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
