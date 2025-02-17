@@ -44,6 +44,7 @@ export class TaskRepository implements ITaskRepository {
             phase: taskDb.phase ? Phase.createFromDb({
                 id: taskDb.phase.id,
                 name: taskDb.phase.name,
+                code: taskDb.phase.code,
                 seq: taskDb.phase.seq,
             }) : undefined,
             periods: taskDb.periods.map(period => Period.createFromDb({
@@ -89,6 +90,7 @@ export class TaskRepository implements ITaskRepository {
             phase: taskDb.phase ? Phase.createFromDb({
                 id: taskDb.phase.id,
                 name: taskDb.phase.name,
+                code: taskDb.phase.code,
                 seq: taskDb.phase.seq,
             }) : undefined,
             periods: taskDb.periods.map(period => Period.createFromDb({

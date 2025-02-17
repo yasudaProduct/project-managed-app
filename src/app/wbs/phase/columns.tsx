@@ -14,7 +14,8 @@ import Link from "next/link";
 export type Phase = {
   id: number;
   name: string;
-  order: number;
+  code: string;
+  seq: number;
 };
 
 export const columns: ColumnDef<Phase>[] = [
@@ -23,7 +24,11 @@ export const columns: ColumnDef<Phase>[] = [
     header: "名前",
   },
   {
-    accessorKey: "order",
+    accessorKey: "code",
+    header: "コード",
+  },
+  {
+    accessorKey: "seq",
     header: "順番",
   },
   {

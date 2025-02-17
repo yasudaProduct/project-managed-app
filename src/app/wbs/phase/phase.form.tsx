@@ -22,7 +22,10 @@ const formSchema = z.object({
   name: z.string().min(1, {
     message: "名前は必須です。",
   }),
-  order: z
+  code: z.string().min(1, {
+    message: "コードは必須です。",
+  }),
+  seq: z
     .number()
     .min(1, {
       message: "順番は必須です。",
@@ -36,7 +39,8 @@ type PhaseFormProps = {
   phase?: {
     id: number;
     name: string;
-    order: number;
+    code: string;
+    seq: number;
   };
 };
 
@@ -48,7 +52,8 @@ export function PhaseForm({ phase }: PhaseFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: phase || {
       name: "",
-      order: 0,
+      code: "",
+      seq: 0,
     },
   });
 
@@ -116,7 +121,20 @@ export function PhaseForm({ phase }: PhaseFormProps) {
         />
         <FormField
           control={form.control}
-          name="order"
+          name="code"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>コード</FormLabel>
+              <FormControl>
+                <Input placeholder="コード" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="seq"
           render={({ field }) => (
             <FormItem>
               <FormLabel>順番</FormLabel>
