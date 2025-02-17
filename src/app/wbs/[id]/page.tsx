@@ -18,7 +18,6 @@ import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TaskModal } from "@/components/wbs/task-modal";
-import { DialogContent } from "@/components/ui/dialog";
 
 export default async function WbsManagementPage({
   params,
@@ -106,9 +105,7 @@ export default async function WbsManagementPage({
               <Users className="h-4 w-4" />
             </Button>
           </Link>
-          <TaskModal
-            wbsId={wbs.id}
-          >
+          <TaskModal wbsId={wbs.id}>
             <Button className="bg-white text-black ml-2">
               <CirclePlus className="h-4 w-4" />
               <CalendarCheck className="h-4 w-4" />

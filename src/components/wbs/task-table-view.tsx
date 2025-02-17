@@ -13,7 +13,14 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal, Pencil } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+  Pencil,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -181,7 +188,6 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
               }}
             >
               <Pencil />
-              編集
             </DropdownMenuItem>
             <DropdownMenuItem>👷詳細</DropdownMenuItem>
           </DropdownMenuContent>
@@ -244,14 +250,6 @@ export function TaskTableViewPage({
   return (
     <div className="w-full">
       <div className="flex items-center py-4">
-        {/* <Input
-          placeholder="Filter emails..."
-          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("email")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        /> */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
@@ -315,28 +313,6 @@ export function TaskTableViewPage({
                     </TableCell>
                   ))}
                 </TableRow>
-                // <Collapsible key={row.id}>
-                //   <CollapsibleTrigger>
-                //     <TableRow
-                //       key={row.id}
-                //       data-state={row.getIsSelected() && "selected"}
-                //     >
-                //       {row.getVisibleCells().map((cell) => (
-                //         <TableCell key={cell.id}>
-                //           {flexRender(
-                //             cell.column.columnDef.cell,
-                //             cell.getContext()
-                //           )}
-                //         </TableCell>
-                //       ))}
-                //     </TableRow>
-                //   </CollapsibleTrigger>
-                //   <CollapsibleContent>
-                //     <div className="flex flex-col gap-2">
-                //       <p>Hello</p>
-                //     </div>
-                //   </CollapsibleContent>
-                // </Collapsible>
               ))
             ) : (
               <TableRow>
@@ -363,7 +339,7 @@ export function TaskTableViewPage({
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            Previous
+            <ChevronLeft />
           </Button>
           <Button
             variant="outline"
@@ -371,7 +347,7 @@ export function TaskTableViewPage({
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Next
+            <ChevronRight />
           </Button>
         </div>
       </div>
