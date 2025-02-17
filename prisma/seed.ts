@@ -150,6 +150,25 @@ async function main() {
             },
         })
     }
+
+    for (const workRecord of mockData.workRecords) {
+        await prisma.workRecord.upsert({
+            where: { id: workRecord.id },
+            update: {
+                userId: workRecord.userId,
+                taskId: workRecord.taskId,
+                date: new Date(workRecord.date),
+                hours_worked: workRecord.hours_worked,
+            },
+            create: {
+                userId: workRecord.userId,
+                taskId: workRecord.taskId,
+                date: new Date(workRecord.date),
+                hours_worked: workRecord.hours_worked,
+            },
+        })
+    }
+
 }
 
 main()

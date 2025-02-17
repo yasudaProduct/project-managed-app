@@ -101,6 +101,15 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"work_records" {
+  Int id PK
+  String userId FK
+  String taskId FK "nullable"
+  DateTime date
+  Int hours_worked
+  DateTime createdAt
+  DateTime updatedAt
+}
 "wbs" }o--|| "projects" : project
 "wbs_assignee" }o--|| "wbs" : wbs
 "wbs_assignee" }o--|| "users" : assignee
@@ -114,6 +123,8 @@ erDiagram
 "task_kosu" }o--|| "wbs" : wbs
 "task_status_log" }o--|| "wbs_task" : task
 "task_status_log" }o--o| "users" : changer
+"work_records" }o--|| "users" : user
+"work_records" }o--o| "wbs_task" : task
 ```
 
 ### `projects`
@@ -230,5 +241,16 @@ erDiagram
   - `status`: 
   - `changedAt`: 
   - `changedBy`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `work_records`
+
+**Properties**
+  - `id`: 
+  - `userId`: 
+  - `taskId`: 
+  - `date`: 
+  - `hours_worked`: 
   - `createdAt`: 
   - `updatedAt`: 

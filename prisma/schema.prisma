@@ -37,6 +37,7 @@ model Users {
   tasks      WbsTask[]       @relation("TaskAssignee")
   statusLogs TaskStatusLog[] @relation("StatusChanger")
   assignees  WbsAssignee[]   @relation("WbsAssignee")
+  workRecords WorkRecord[]
   @@map("users")
 }
 
@@ -120,7 +121,7 @@ model WbsTask {
   periods          TaskPeriod[]     @relation("TaskPeriod")
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
-
+  workRecords      WorkRecord[]
   @@map("wbs_task")
 }
 
@@ -164,6 +165,20 @@ model TaskStatusLog {
   updatedAt DateTime   @updatedAt
 
   @@map("task_status_log")
+}
+
+model WorkRecord {
+  id                Int        @id @default(autoincrement())
+  userId            String
+  taskId            String?
+  date              DateTime
+  hours_worked      Int
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  user              Users      @relation(fields: [userId], references: [id])
+  task              WbsTask?   @relation(fields: [taskId], references: [id])
+
+  @@map("work_records")
 }
 
 enum TaskStatus {
