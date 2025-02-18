@@ -108,10 +108,10 @@ export class TaskApplicationService implements ITaskApplicationService {
         console.log("service: createTask")
         const { name, wbsId, phaseId, yoteiStartDate, yoteiEndDate, yoteiKosu, assigneeId, status } = args;
 
-        //TODO ファクトリーでIDを生成する
+        //TODO ファクトリーでtaskを生成する
         const task = Task.create(
             {
-                id: await this.taskFactory.createTaskId(wbsId, "ENG"),
+                id: await this.taskFactory.createTaskId(wbsId, phaseId),
                 wbsId,
                 name,
                 phaseId,

@@ -1,5 +1,6 @@
 import { ITaskRepository } from "@/applications/task/itask-repository";
 import { Phase } from "@/domains/phase/phase";
+import { PhaseCode } from "@/domains/phase/phase-code";
 import { Assignee } from "@/domains/task/assignee";
 import { ManHour } from "@/domains/task/man-hour";
 import { ManHourType } from "@/domains/task/man-hour-type";
@@ -45,7 +46,7 @@ export class TaskRepository implements ITaskRepository {
             phase: taskDb.phase ? Phase.createFromDb({
                 id: taskDb.phase.id,
                 name: taskDb.phase.name,
-                code: taskDb.phase.code,
+                code: new PhaseCode(taskDb.phase.code),
                 seq: taskDb.phase.seq,
             }) : undefined,
             periods: taskDb.periods.map(period => Period.createFromDb({
@@ -91,7 +92,7 @@ export class TaskRepository implements ITaskRepository {
             phase: taskDb.phase ? Phase.createFromDb({
                 id: taskDb.phase.id,
                 name: taskDb.phase.name,
-                code: taskDb.phase.code,
+                code: new PhaseCode(taskDb.phase.code),
                 seq: taskDb.phase.seq,
             }) : undefined,
             periods: taskDb.periods.map(period => Period.createFromDb({
