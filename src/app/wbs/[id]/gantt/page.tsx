@@ -32,7 +32,7 @@ export default async function GanttPage({
     // WbsTaskを変換
     wbsTasks.forEach((task) => {
       ganttTasks.push({
-        id: task.id,
+        id: task.id!,
         type: "task",
         name: task.name,
         assignee: {

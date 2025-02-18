@@ -8,6 +8,7 @@ import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/period-type";
 import { ManHour } from "@/domains/task/man-hour";
 import { ManHourType } from "@/domains/task/man-hour-type";
+import type { ITaskFactory } from "@/domains/task/interfases/task-factory";
 
 
 export interface ITaskApplicationService {
@@ -21,7 +22,10 @@ export interface ITaskApplicationService {
 @injectable()
 export class TaskApplicationService implements ITaskApplicationService {
 
-    constructor(@inject(SYMBOL.ITaskRepository) private readonly taskRepository: ITaskRepository) {
+    constructor(
+        @inject(SYMBOL.ITaskRepository) private readonly taskRepository: ITaskRepository,
+        @inject(SYMBOL.ITaskFactory) private readonly taskFactory: ITaskFactory
+    ) {
     }
 
     public async getTaskById(wbsId: number, id: string): Promise<WbsTask | null> {
@@ -29,7 +33,7 @@ export class TaskApplicationService implements ITaskApplicationService {
         const task = await this.taskRepository.findById(wbsId, id);
         if (!task) return null;
         return {
-            id: task.id!,
+            id: task.id!.value(),
             name: task.name,
             status: task.getStatus(),
             assigneeId: task.assigneeId ?? undefined,
@@ -62,7 +66,7 @@ export class TaskApplicationService implements ITaskApplicationService {
         const tasks = await this.taskRepository.findAll(wbsId);
 
         return tasks.map(task => ({
-            id: task.id!,
+            id: task.id!.value(),
             name: task.name,
             status: task.getStatus(),
             assigneeId: task.assigneeId ?? undefined,
@@ -91,13 +95,23 @@ export class TaskApplicationService implements ITaskApplicationService {
         }));
     }
 
-    public async createTask(args: { name: string; wbsId: number; phaseId: number; yoteiStartDate: Date; yoteiEndDate: Date; yoteiKosu: number; assigneeId?: string; status: TaskStatus }): Promise<{ success: boolean; error?: string; id?: string }> {
+    public async createTask(args: {
+        name: string;
+        wbsId: number;
+        phaseId: number;
+        yoteiStartDate: Date;
+        yoteiEndDate: Date;
+        yoteiKosu: number;
+        assigneeId?: string;
+        status: TaskStatus
+    }): Promise<{ success: boolean; error?: string; id?: string }> {
         console.log("service: createTask")
         const { name, wbsId, phaseId, yoteiStartDate, yoteiEndDate, yoteiKosu, assigneeId, status } = args;
 
         //TODO ファクトリーでIDを生成する
         const task = Task.create(
             {
+                id: await this.taskFactory.createTaskId(wbsId, "ENG"),
                 wbsId,
                 name,
                 phaseId,
@@ -121,7 +135,7 @@ export class TaskApplicationService implements ITaskApplicationService {
         );
 
         const result = await this.taskRepository.create(task);
-        return { success: true, id: result.id };
+        return { success: true, id: result.id!.value() };
     }
 
     public async updateTask(args: { wbsId: number, id: string, updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }> {
@@ -151,7 +165,7 @@ export class TaskApplicationService implements ITaskApplicationService {
         if (updateTask.yoteiStart) task.updateYotei({ startDate: updateTask.yoteiStart, endDate: updateTask.yoteiEnd ?? updateTask.yoteiStart, kosu: updateTask.yoteiKosu ?? 0 });
 
         const result = await this.taskRepository.update(wbsId, id, task);
-        return { success: true, id: result.id };
+        return { success: true, id: result.id!.value() };
 
     }
 }

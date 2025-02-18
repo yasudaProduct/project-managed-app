@@ -7,6 +7,7 @@ import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/period-type";
 import { TaskStatus } from "@/domains/task/project-status";
 import { Task } from "@/domains/task/task";
+import { TaskId } from "@/domains/task/task-id";
 import prisma from "@/lib/prisma";
 import { injectable } from "inversify";
 
@@ -30,7 +31,7 @@ export class TaskRepository implements ITaskRepository {
 
         if (!taskDb) return null;
         return Task.createFromDb({
-            id: taskDb.id,
+            id: new TaskId(taskDb.id),
             wbsId: taskDb.wbsId,
             name: taskDb.name,
             status: new TaskStatus({ status: taskDb.status }),
@@ -77,7 +78,7 @@ export class TaskRepository implements ITaskRepository {
             }
         });
         return tasksDb.map(taskDb => Task.createFromDb({
-            id: taskDb.id,
+            id: new TaskId(taskDb.id),
             name: taskDb.name,
             wbsId: taskDb.wbsId,
             assigneeId: taskDb.assigneeId ?? undefined,
@@ -111,11 +112,14 @@ export class TaskRepository implements ITaskRepository {
     }
 
     async create(task: Task): Promise<Task> {
+        console.log("repository: create")
         const taskDb = await prisma.wbsTask.create({
             data: {
+                id: task.id!.value(),
                 name: task.name,
                 wbsId: task.wbsId,
                 assigneeId: task.assigneeId ?? undefined,
+                phaseId: task.phaseId ?? undefined,
                 status: task.status.status,
             },
         });
@@ -142,8 +146,9 @@ export class TaskRepository implements ITaskRepository {
             });
         });
 
+        console.log(taskDb.id)
         return Task.createFromDb({
-            id: taskDb.id,
+            id: new TaskId(taskDb.id),
             name: taskDb.name,
             wbsId: taskDb.wbsId,
             assigneeId: taskDb.assigneeId ?? undefined,
@@ -157,7 +162,7 @@ export class TaskRepository implements ITaskRepository {
         const taskDb = await prisma.wbsTask.update({
             where: { id: id, wbsId: wbsId },
             data: {
-                id: task.id,
+                id: task.id!.value(),
                 name: task.name,
                 assigneeId: task.assigneeId ?? undefined,
                 phaseId: task.phaseId ?? undefined,
@@ -200,7 +205,7 @@ export class TaskRepository implements ITaskRepository {
         })
 
         return Task.createFromDb({
-            id: task.id ?? taskDb.id,
+            id: new TaskId(taskDb.id),
             name: task.name,
             wbsId: task.wbsId,
             assigneeId: task.assigneeId ?? undefined,

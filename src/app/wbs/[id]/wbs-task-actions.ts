@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache"
 import { KosuType, PeriodType, TaskStatus, WbsTask } from "@/types/wbs"
 import prisma from "@/lib/prisma";
-import { TaskKosu as TaskKosuPrisma, TaskPeriod as TaskPeriodPrisma, Users as UserPrisma, WbsTask as WbsTaskPrisma, WbsPhase as WbsPhasePrisma } from "@prisma/client";
 import { SYMBOL } from "@/types/symbol";
 import { container } from "@/lib/inversify.config"
 import { ITaskApplicationService } from "@/applications/task/task-application-service";
+import { TaskStatus as TaskStatusDomain } from "@/domains/task/project-status";
 
 const taskApplicationService = container.get<ITaskApplicationService>(SYMBOL.ITaskApplicationService);
 
@@ -37,49 +37,66 @@ export async function createTask(
     },
 ): Promise<{ success: boolean; task?: WbsTask; error?: string }> {
 
-    const newTask = await prisma.wbsTask.create({
-        data: {
-            // id: taskData.id,
-            wbsId: wbsId,
-            name: taskData.name,
-            assigneeId: taskData.assigneeId,
-            status: taskData.status,
-            phaseId: taskData.phaseId,
-        }
-    })
+    const result = await taskApplicationService.createTask({
+        name: taskData.name,
+        wbsId: wbsId,
+        assigneeId: taskData.assigneeId,
+        phaseId: taskData.phaseId!,
+        status: new TaskStatusDomain({ status: taskData.status }),
+        yoteiStartDate: new Date(taskData.periods![0].startDate!),
+        yoteiEndDate: new Date(taskData.periods![0].endDate!),
+        yoteiKosu: taskData.periods?.[0].kosus.find(k => k.type === 'NORMAL')?.kosu ?? 0,
+    });
 
-    // 期間を作成
-    if (taskData.periods) {
-        for (const period of taskData.periods) {
-            if (period.startDate && period.endDate) {
-                const newTaskPeriod = await prisma.taskPeriod.create({
-                    data: {
-                        taskId: newTask.id,
-                        startDate: new Date(period.startDate).toISOString(),
-                        endDate: new Date(period.endDate).toISOString(),
-                        type: period.type,
-                    }
-                })
-
-                // 工数を作成
-                if (period.kosus) {
-                    for (const kosu of period.kosus) {
-                        await prisma.taskKosu.create({
-                            data: {
-                                kosu: kosu.kosu,
-                                wbsId: wbsId,
-                                periodId: newTaskPeriod.id,
-                                type: kosu.type,
-                            }
-                        })
-                    }
-                }
-            }
-        }
+    if (result.success) {
+        const task = await taskApplicationService.getTaskById(wbsId, result.id!);
+        return { success: true, task: task ?? undefined }
+    } else {
+        return { success: false, error: result.error }
     }
+    // const newTask = await prisma.wbsTask.create({
+    //     data: {
+    //         // id: taskData.id,
+    //         wbsId: wbsId,
+    //         name: taskData.name,
+    //         assigneeId: taskData.assigneeId,
+    //         status: taskData.status,
+    //         phaseId: taskData.phaseId,
+    //     }
+    // })
 
-    revalidatePath(`/wbs/${wbsId}`)
-    return { success: true, task: formatTask(newTask) }
+    // // 期間を作成
+    // if (taskData.periods) {
+    //     for (const period of taskData.periods) {
+    //         if (period.startDate && period.endDate) {
+    //             const newTaskPeriod = await prisma.taskPeriod.create({
+    //                 data: {
+    //                     taskId: newTask.id,
+    //                     startDate: new Date(period.startDate).toISOString(),
+    //                     endDate: new Date(period.endDate).toISOString(),
+    //                     type: period.type,
+    //                 }
+    //             })
+
+    //             // 工数を作成
+    //             if (period.kosus) {
+    //                 for (const kosu of period.kosus) {
+    //                     await prisma.taskKosu.create({
+    //                         data: {
+    //                             kosu: kosu.kosu,
+    //                             wbsId: wbsId,
+    //                             periodId: newTaskPeriod.id,
+    //                             type: kosu.type,
+    //                         }
+    //                     })
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+
+    // revalidatePath(`/wbs/${wbsId}`)
+    // return { success: true, task: formatTask(newTask) }
 }
 
 export async function updateTask(
@@ -166,29 +183,25 @@ export async function getTaskStatusCount(wbsId: number) {
     return statusCount;
 }
 
-function formatTask(task: WbsTaskPrisma & { phase?: WbsPhasePrisma | null } & { assignee?: UserPrisma | null } & { periods?: (TaskPeriodPrisma & { kosus: TaskKosuPrisma[] })[] }): WbsTask {
-    return {
-        ...task,
-        assigneeId: task.assignee?.id ?? undefined,
-        assignee: task.assignee ? {
-            id: task.assignee.id,
-            name: task.assignee.name,
-            displayName: task.assignee.displayName,
-        } : undefined,
-        phaseId: task.phaseId ?? undefined,
-        phase: task.phase ? {
-            id: task.phase.id,
-            name: task.phase.name,
-            seq: task.phase.seq,
-        } : undefined,
-        kijunStart: task.periods?.findLast(p => p.type === 'KIJUN')?.startDate,
-        kijunEnd: task.periods?.findLast(p => p.type === 'KIJUN')?.endDate,
-        kijunKosu: task.periods?.findLast(p => p.type === 'KIJUN')?.kosus.find(k => k.type === 'NORMAL')?.kosu,
-        yoteiStart: task.periods?.findLast(p => p.type === 'YOTEI')?.startDate,
-        yoteiEnd: task.periods?.findLast(p => p.type === 'YOTEI')?.endDate,
-        yoteiKosu: task.periods?.findLast(p => p.type === 'YOTEI')?.kosus.find(k => k.type === 'NORMAL')?.kosu,
-        jissekiStart: task.periods?.findLast(p => p.type === 'JISSEKI')?.startDate,
-        jissekiEnd: task.periods?.findLast(p => p.type === 'JISSEKI')?.endDate,
-        jissekiKosu: task.periods?.findLast(p => p.type === 'JISSEKI')?.kosus.find(k => k.type === 'NORMAL')?.kosu,
-    }
-}
+// function formatTask(task: WbsTaskPrisma & { phase?: WbsPhasePrisma | null } & { assignee?: UserPrisma | null } & { periods?: (TaskPeriodPrisma & { kosus: TaskKosuPrisma[] })[] }): WbsTask {
+// function formatTask(task: Task): WbsTask {
+//     return {
+//         id: task.id!.value(),
+//         name: task.name,
+//         status: task.status.getStatus(),
+//         assigneeId: task.assigneeId ?? undefined,
+//         assignee: task.assignee ? {
+//             id: task.assignee.id!,
+//             name: task.assignee.name,
+//             displayName: task.assignee.displayName,
+//         } : undefined,
+//         phaseId: task.phaseId ?? undefined,
+//         phase: task.phase ? {
+//             id: task.phase.id!,
+//             name: task.phase.name,
+//             seq: task.phase.seq,
+//         } : undefined,
+//         createdAt: task.createdAt,
+//         updatedAt: task.updatedAt,
+//     }
+// }

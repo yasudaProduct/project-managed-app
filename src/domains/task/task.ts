@@ -6,10 +6,11 @@ import { TaskStatus as TaskStatusType } from "@/types/wbs";
 import { ManHour } from "./man-hour";
 import { ManHourType } from "./man-hour-type";
 import { PeriodType } from "./period-type";
+import { TaskId } from "./task-id";
 
 
 export class Task {
-    public id?: string;
+    public id?: TaskId;
     public wbsId: number;
     public name: string;
     public status: TaskStatus;
@@ -22,7 +23,7 @@ export class Task {
     public readonly updatedAt?: Date;
 
     private constructor(args: {
-        id?: string;
+        id?: TaskId;
         wbsId: number;
         name: string;
         assigneeId?: string;
@@ -52,6 +53,7 @@ export class Task {
     }
 
     public static create(args: {
+        id: TaskId;
         wbsId: number;
         name: string;
         phaseId?: number;
@@ -64,7 +66,7 @@ export class Task {
 
     public static createFromDb(args:
         {
-            id: string;
+            id: TaskId;
             wbsId: number;
             name: string;
             status: TaskStatus;
