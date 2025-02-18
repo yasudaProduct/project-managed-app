@@ -36,9 +36,9 @@ import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
 import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
 
 const formSchema = z.object({
-  id: z.string().min(1, {
-    message: "WBS IDは必須です。",
-  }),
+  // id: z.string().min(1, {
+  //   message: "WBS IDは必須です。",
+  // }),
   name: z.string().min(1, {
     message: "タスク名は必須です。",
   }),
@@ -84,7 +84,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      id: "",
+      // id: "",
       name: "",
       assigneeId: "",
       yoteiStartDate: "",
@@ -94,7 +94,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
       phaseId: 0,
     },
     ...(task && {
-      id: task.id,
+      // id: task.id,
       name: task.name,
       assigneeId: task.assigneeId,
       yoteiStartDate: task.yoteiStart,
@@ -135,7 +135,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
       setIsSubmitting(true);
       if (!task) {
         const result = await createTask(wbsId, {
-          id: values.id,
+          // id: values.id,
           name: values.name,
           periods: [
             // ここはservice側で作成する
@@ -164,7 +164,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
         }
       } else {
         const result = await updateTask(wbsId, task.id, {
-          id: values.id,
+          // id: values.id,
           name: values.name,
           yoteiStart: values.yoteiStartDate,
           yoteiEnd: values.yoteiEndDate,
@@ -209,7 +209,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="grid gap-1 py-4">
               <div className="grid grid-cols-2 items-center gap-2">
-                <label htmlFor="phaseId">フェーズID</label>
+                <label htmlFor="phaseId">工程</label>
                 <FormField
                   control={form.control}
                   name="phaseId"
@@ -221,7 +221,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
                           defaultValue={field.value.toString()}
                         >
                           <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="フェーズを選択" />
+                            <SelectValue placeholder="工程を選択" />
                           </SelectTrigger>
                           <SelectContent>
                             {phases ? (
@@ -251,7 +251,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
                     </FormItem>
                   )}
                 />
-                <label htmlFor="wbsId">WBS ID</label>
+                {/* <label htmlFor="wbsId">WBS ID</label>
                 <FormField
                   control={form.control}
                   name="id"
@@ -263,7 +263,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                /> */}
                 <label htmlFor="name">タスク名</label>
                 <FormField
                   control={form.control}

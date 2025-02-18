@@ -4,13 +4,17 @@ import type { ITaskRepository } from "./itask-repository";
 import { WbsTask } from "@/types/wbs";
 import { Task } from "@/domains/task/task";
 import { TaskStatus } from "@/domains/task/project-status";
+import { Period } from "@/domains/task/period";
+import { PeriodType } from "@/domains/task/period-type";
+import { ManHour } from "@/domains/task/man-hour";
+import { ManHourType } from "@/domains/task/man-hour-type";
 
 
 export interface ITaskApplicationService {
     getTaskById(wbsId: number, id: string): Promise<WbsTask | null>;
     getTaskAll(wbsId: number): Promise<WbsTask[]>;
-    // createTask(args: { name: string; wbsId: number; assigneeId?: string; status: TaskStatus }): Promise<{ success: boolean; error?: string; id?: string }>;
-    updateTask(args: { wbsId: number; id: string; updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }>;
+    createTask(args: { name: string; wbsId: number; phaseId: number; yoteiStartDate: Date; yoteiEndDate: Date; yoteiKosu: number; assigneeId?: string; status: TaskStatus }): Promise<{ success: boolean; error?: string; id?: string }>;
+    updateTask(args: { wbsId: number; id: string, updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }>;
     // deleteTask(id: string): Promise<{ success: boolean; error?: string; id?: string }>;
 }
 
@@ -87,6 +91,39 @@ export class TaskApplicationService implements ITaskApplicationService {
         }));
     }
 
+    public async createTask(args: { name: string; wbsId: number; phaseId: number; yoteiStartDate: Date; yoteiEndDate: Date; yoteiKosu: number; assigneeId?: string; status: TaskStatus }): Promise<{ success: boolean; error?: string; id?: string }> {
+        console.log("service: createTask")
+        const { name, wbsId, phaseId, yoteiStartDate, yoteiEndDate, yoteiKosu, assigneeId, status } = args;
+
+        //TODO ファクトリーでIDを生成する
+        const task = Task.create(
+            {
+                wbsId,
+                name,
+                phaseId,
+                assigneeId,
+                status,
+                periods: [
+                    Period.create({
+                        startDate: yoteiStartDate,
+                        endDate: yoteiEndDate,
+                        type: new PeriodType({ type: "YOTEI" }),
+                        manHours: [
+                            ManHour.create({
+                                kosu: yoteiKosu,
+                                type: new ManHourType({ type: "NORMAL" }),
+                            })
+                        ]
+                    })
+                ]
+
+            }
+        );
+
+        const result = await this.taskRepository.create(task);
+        return { success: true, id: result.id };
+    }
+
     public async updateTask(args: { wbsId: number, id: string, updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }> {
         console.log("service: updateTask")
         const { wbsId, id, updateTask } = args;
@@ -104,7 +141,7 @@ export class TaskApplicationService implements ITaskApplicationService {
         // }
 
         task.update({
-            id: updateTask.id,
+            // id: updateTask.id,
             name: updateTask.name,
             assigneeId: updateTask.assigneeId,
             phaseId: updateTask.phaseId,

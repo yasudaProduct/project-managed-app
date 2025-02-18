@@ -17,7 +17,7 @@ export type WbsPhase = {
 }
 
 export type WbsTask = {
-    id: string;
+    id?: string;
     name: string;
     status: TaskStatus;
     assigneeId?: string;

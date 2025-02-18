@@ -51,7 +51,14 @@ export class Task {
         return this.id === task.id;
     }
 
-    public static create(args: { wbsId: number; name: string; assigneeId?: string; status: TaskStatus; phaseId?: number; phase?: Phase; assignee?: Assignee; periods?: Period[]; }): Task {
+    public static create(args: {
+        wbsId: number;
+        name: string;
+        phaseId?: number;
+        assigneeId?: string;
+        status: TaskStatus;
+        periods?: Period[];
+    }): Task {
         return new Task(args);
     }
 
@@ -72,11 +79,7 @@ export class Task {
         return new Task(args);
     }
 
-    public update(args: { id: string, name: string; assigneeId?: string; status: TaskStatus; phaseId?: number; periods?: Period[]; }) {
-
-        if (!args.id) {
-            throw new Error("タスクIDは必須です");
-        }
+    public update(args: { name: string; assigneeId?: string; status: TaskStatus; phaseId?: number; periods?: Period[]; }) {
 
         if (!args.name) {
             throw new Error("タスク名は必須です");
@@ -94,7 +97,6 @@ export class Task {
             throw new Error("フェーズは必須です");
         }
 
-        this.id = args.id;
         this.name = args.name;
         this.assigneeId = args.assigneeId;
         this.status = args.status;

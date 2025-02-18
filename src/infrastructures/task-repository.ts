@@ -119,6 +119,29 @@ export class TaskRepository implements ITaskRepository {
                 status: task.status.status,
             },
         });
+
+        task.periods?.forEach(async (period) => {
+            const periodDb = await prisma.taskPeriod.create({
+                data: {
+                    taskId: taskDb.id,
+                    startDate: period.startDate,
+                    endDate: period.endDate,
+                    type: period.type.type,
+                },
+            });
+
+            period.manHours.forEach(async (manHour) => {
+                await prisma.taskKosu.create({
+                    data: {
+                        periodId: periodDb.id,
+                        kosu: manHour.kosu,
+                        type: manHour.type.type,
+                        wbsId: task.wbsId,
+                    },
+                });
+            });
+        });
+
         return Task.createFromDb({
             id: taskDb.id,
             name: taskDb.name,

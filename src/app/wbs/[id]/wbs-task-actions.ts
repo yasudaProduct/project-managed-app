@@ -20,7 +20,7 @@ export async function getTaskAll(wbsId: number) {
 export async function createTask(
     wbsId: number,
     taskData: {
-        id: string;
+        // id: string;
         name: string;
         periods?: {
             startDate?: string;
@@ -39,7 +39,7 @@ export async function createTask(
 
     const newTask = await prisma.wbsTask.create({
         data: {
-            id: taskData.id,
+            // id: taskData.id,
             wbsId: wbsId,
             name: taskData.name,
             assigneeId: taskData.assigneeId,
@@ -86,17 +86,11 @@ export async function updateTask(
     wbsId: number,
     taskId: string,
     taskData: {
-        id: string;
+        // id: string;
         name: string;
-        kijunStart?: string;
-        kijunEnd?: string;
-        kijunKosu?: number;
         yoteiStart?: string;
         yoteiEnd?: string;
         yoteiKosu?: number;
-        jissekiStart?: string;
-        jissekiEnd?: string;
-        jissekiKosu?: number;
         status: TaskStatus;
         assigneeId?: string;
         phaseId?: number;
@@ -109,15 +103,10 @@ export async function updateTask(
         id: taskId,
         updateTask: {
             ...taskData,
-            kijunStart: taskData.kijunStart ? new Date(taskData.kijunStart) : undefined,
-            kijunEnd: taskData.kijunEnd ? new Date(taskData.kijunEnd) : undefined,
             yoteiStart: taskData.yoteiStart ? new Date(taskData.yoteiStart) : undefined,
             yoteiEnd: taskData.yoteiEnd ? new Date(taskData.yoteiEnd) : undefined,
-            jissekiStart: taskData.jissekiStart ? new Date(taskData.jissekiStart) : undefined,
-            jissekiEnd: taskData.jissekiEnd ? new Date(taskData.jissekiEnd) : undefined,
         }
     });
-    console.log(result);
 
     if (result.success) {
         const task = await taskApplicationService.getTaskById(wbsId, taskId);

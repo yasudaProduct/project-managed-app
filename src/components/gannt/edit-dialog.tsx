@@ -96,7 +96,7 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
     try {
       setIsSubmitting(true);
       const result = await updateTask(wbsId, task.id, {
-        id: values.wbsId,
+        // id: values.wbsId,
         name: values.name,
         yoteiStart: values.start,
         yoteiEnd: values.end,
