@@ -151,6 +151,23 @@ async function main() {
         })
     }
 
+    for (const milestone of mockData.milestone) {
+        await prisma.milestone.upsert({
+            where: { id: milestone.id },
+            update: {
+                wbsId: milestone.wbsId,
+                name: milestone.name,
+                date: new Date(milestone.date),
+            },
+            create: {
+                id: milestone.id,
+                wbsId: milestone.wbsId,
+                name: milestone.name,
+                date: new Date(milestone.date),
+            },
+        })
+    }
+
     for (const workRecord of mockData.workRecords) {
         await prisma.workRecord.upsert({
             where: { id: workRecord.id },

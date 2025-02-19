@@ -186,4 +186,25 @@ export const mockData = {
             hours_worked: 5,
         },
     ],
+
+    milestone: [
+        {
+            id: 1,
+            wbsId: 1,
+            name: "キックオフ",
+            date: "2025-01-01",
+        },
+        {
+            id: 2,
+            wbsId: 1,
+            name: "定例会",
+            date: "2025-02-18",
+        },
+        {
+            id: 3,
+            wbsId: 1,
+            name: "リリース",
+            date: "2025-03-20",
+        },
+    ],
 };
