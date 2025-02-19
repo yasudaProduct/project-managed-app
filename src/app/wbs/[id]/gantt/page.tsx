@@ -106,7 +106,7 @@ export default async function GanttPage({
   return (
     <div className="container mx-auto">
       <div className="flex justify-between items-center mb-2">
-        <h1 className="text-3xl font-bold">WBS: {wbs.name}</h1>
+        <h1 className="text-xl font-bold">ガントチャート: {wbs.name}</h1>
       </div>
       <div className="flex justify-start">
         <Link href={`/wbs/${wbs.id}/phase/new`}>

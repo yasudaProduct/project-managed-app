@@ -51,11 +51,43 @@ export default function GanttComponent({
     end: true,
     kosu: true,
     status: true,
+    operation: true,
+    all: true,
   });
   const [tasks, setTasks] = useState<Task[]>(taskProp);
 
   const handleColumnVisibilityToggle = (column: keyof ColumnVisibility) => {
-    setColumnVisibility((prev) => ({ ...prev, [column]: !prev[column] }));
+    if (column === "all" && columnVisibility.all) {
+      setColumnVisibility((prev) => ({
+        ...prev,
+        phase: false,
+        wbsno: false,
+        assignee: false,
+        yotei: false,
+        start: false,
+        end: false,
+        kosu: false,
+        status: false,
+        operation: false,
+        all: false,
+      }));
+    } else if (column === "all" && !columnVisibility.all) {
+      setColumnVisibility((prev) => ({
+        ...prev,
+        phase: true,
+        wbsno: true,
+        assignee: true,
+        yotei: true,
+        start: true,
+        end: true,
+        kosu: true,
+        status: true,
+        operation: true,
+        all: true,
+      }));
+    } else {
+      setColumnVisibility((prev) => ({ ...prev, [column]: !prev[column] }));
+    }
   };
 
   const columnWidths = {
@@ -145,12 +177,14 @@ export default function GanttComponent({
             状況
           </div>
         )}
-        <div
-          className="flex items-center justify-center h-full"
-          style={{ width: columnWidths.operation }}
-        >
-          操作
-        </div>
+        {columnVisibility.operation && (
+          <div
+            className="flex items-center justify-center h-full"
+            style={{ width: columnWidths.operation }}
+          >
+            操作
+          </div>
+        )}
       </div>
     );
   };
@@ -278,28 +312,30 @@ export default function GanttComponent({
             )}
 
             {/* 操作 */}
-            <div
-              style={{ width: columnWidths.status }}
-              className="flex items-center justify-center h-full border-l"
-            >
-              {task.type === "project" ? (
-                <></>
-              ) : (
-                <>
-                  <button
-                    onClick={() => handleTaskDelete(task)}
-                    className="text-red-500 mr-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  <EditDialog task={task} wbsId={wbs.id}>
-                    <button>
-                      <Pencil className="w-4 h-4" />
+            {columnVisibility.operation && (
+              <div
+                style={{ width: columnWidths.status }}
+                className="flex items-center justify-center h-full border-l"
+              >
+                {task.type === "project" ? (
+                  <></>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleTaskDelete(task)}
+                      className="text-red-500 mr-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
-                  </EditDialog>
-                </>
-              )}
-            </div>
+                    <EditDialog task={task} wbsId={wbs.id}>
+                      <button>
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    </EditDialog>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -366,18 +402,32 @@ export default function GanttComponent({
 
   return (
     <div className="container mx-auto">
-      <div className="flex justify-end gap-2 mb-2">
-        <Button onClick={() => setViewMode(ViewMode.Year)}>年</Button>
-        <Button onClick={() => setViewMode(ViewMode.Month)}>月</Button>
-        <Button onClick={() => setViewMode(ViewMode.Week)}>週</Button>
-        <Button onClick={() => setViewMode(ViewMode.Day)}>日</Button>
-        <Button onClick={() => setViewMode(ViewMode.Hour)}>時</Button>
-        <Button onClick={() => setViewMode(ViewMode.QuarterDay)}>4時間</Button>
-        <Button onClick={() => setViewMode(ViewMode.HalfDay)}>8時間</Button>
-
-        <Button onClick={() => setIsTalebeHide(!isTalebeHide)}>
-          {isTalebeHide ? "非表示" : "表示"}
+      <div className="flex justify-start gap-2 mb-2 mt-2">
+        <Button variant="outline" onClick={() => setViewMode(ViewMode.Year)}>
+          年
         </Button>
+        <Button variant="outline" onClick={() => setViewMode(ViewMode.Month)}>
+          月
+        </Button>
+        <Button variant="outline" onClick={() => setViewMode(ViewMode.Week)}>
+          週
+        </Button>
+        <Button variant="outline" onClick={() => setViewMode(ViewMode.Day)}>
+          日
+        </Button>
+        <Button variant="outline" onClick={() => setViewMode(ViewMode.Hour)}>
+          時
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => setViewMode(ViewMode.QuarterDay)}
+        >
+          4時間
+        </Button>
+        <Button variant="outline" onClick={() => setViewMode(ViewMode.HalfDay)}>
+          8時間
+        </Button>
+
         <ColumnVisibilityToggle
           columnVisibility={columnVisibility}
           onToggle={handleColumnVisibilityToggle}

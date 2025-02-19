@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { columns } from "@/app/work-recods/columns";
+import { columns } from "@/app/work-records/columns";
 import { getWorkRecords } from "./work-recods-acton";
 
 export default async function WorkRecordsPage() {
