@@ -51,6 +51,7 @@ model Wbs {
   assignees WbsAssignee[]
   kosus     TaskKosu[]
   buffers   WbsBuffer[]
+  milestones Milestone[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -165,6 +166,18 @@ model TaskStatusLog {
   updatedAt DateTime   @updatedAt
 
   @@map("task_status_log")
+}
+
+model Milestone {
+  id        Int        @id @default(autoincrement())
+  wbsId     Int
+  name      String
+  date      DateTime
+  wbs       Wbs        @relation(fields: [wbsId], references: [id])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("milestone")
 }
 
 model WorkRecord {

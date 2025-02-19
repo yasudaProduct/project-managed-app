@@ -101,6 +101,14 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"milestone" {
+  Int id PK
+  Int wbsId FK
+  String name
+  DateTime date
+  DateTime createdAt
+  DateTime updatedAt
+}
 "work_records" {
   Int id PK
   String userId FK
@@ -123,6 +131,7 @@ erDiagram
 "task_kosu" }o--|| "wbs" : wbs
 "task_status_log" }o--|| "wbs_task" : task
 "task_status_log" }o--o| "users" : changer
+"milestone" }o--|| "wbs" : wbs
 "work_records" }o--|| "users" : user
 "work_records" }o--o| "wbs_task" : task
 ```
@@ -241,6 +250,16 @@ erDiagram
   - `status`: 
   - `changedAt`: 
   - `changedBy`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `milestone`
+
+**Properties**
+  - `id`: 
+  - `wbsId`: 
+  - `name`: 
+  - `date`: 
   - `createdAt`: 
   - `updatedAt`: 
 
