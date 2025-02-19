@@ -403,28 +403,59 @@ export default function GanttComponent({
   return (
     <div className="container mx-auto">
       <div className="flex justify-start gap-2 mb-2 mt-2">
-        <Button variant="outline" onClick={() => setViewMode(ViewMode.Year)}>
+        <Button
+          variant="outline"
+          onClick={() => setViewMode(ViewMode.Year)}
+          className={viewMode === ViewMode.Year ? "bg-gray-500 text-white" : ""}
+        >
           年
         </Button>
-        <Button variant="outline" onClick={() => setViewMode(ViewMode.Month)}>
+        <Button
+          variant="outline"
+          onClick={() => setViewMode(ViewMode.Month)}
+          className={
+            viewMode === ViewMode.Month ? "bg-gray-500 text-white" : ""
+          }
+        >
           月
         </Button>
-        <Button variant="outline" onClick={() => setViewMode(ViewMode.Week)}>
+        <Button
+          variant="outline"
+          onClick={() => setViewMode(ViewMode.Week)}
+          className={viewMode === ViewMode.Week ? "bg-gray-500 text-white" : ""}
+        >
           週
         </Button>
-        <Button variant="outline" onClick={() => setViewMode(ViewMode.Day)}>
+        <Button
+          variant="outline"
+          onClick={() => setViewMode(ViewMode.Day)}
+          className={viewMode === ViewMode.Day ? "bg-gray-500 text-white" : ""}
+        >
           日
         </Button>
-        <Button variant="outline" onClick={() => setViewMode(ViewMode.Hour)}>
+        <Button
+          variant="outline"
+          onClick={() => setViewMode(ViewMode.Hour)}
+          className={viewMode === ViewMode.Hour ? "bg-gray-500 text-white" : ""}
+        >
           時
         </Button>
         <Button
           variant="outline"
           onClick={() => setViewMode(ViewMode.QuarterDay)}
+          className={
+            viewMode === ViewMode.QuarterDay ? "bg-gray-500 text-white" : ""
+          }
         >
           4時間
         </Button>
-        <Button variant="outline" onClick={() => setViewMode(ViewMode.HalfDay)}>
+        <Button
+          variant="outline"
+          onClick={() => setViewMode(ViewMode.HalfDay)}
+          className={
+            viewMode === ViewMode.HalfDay ? "bg-gray-500 text-white" : ""
+          }
+        >
           8時間
         </Button>
 
