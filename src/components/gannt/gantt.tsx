@@ -4,7 +4,7 @@ import { TaskStatus, Wbs } from "@/types/wbs";
 import { Gantt, Task, ViewMode } from "gantt-task-react";
 import "gantt-task-react/dist/index.css";
 import { Button } from "../ui/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ColumnVisibility,
   ColumnVisibilityToggle,
@@ -12,6 +12,14 @@ import {
 import { getTaskStatusName } from "@/lib/utils";
 import { Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import EditDialog from "./edit-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Label } from "../ui/label";
 
 interface GanttComponentProps {
   tasks: Task[];
@@ -41,7 +49,7 @@ export default function GanttComponent({
   wbs,
 }: GanttComponentProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
-  const [isTalebeHide, setIsTalebeHide] = useState(true);
+  // const [isTalebeHide, setIsTalebeHide] = useState(true);
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
     phase: true,
     wbsno: true,
@@ -55,6 +63,30 @@ export default function GanttComponent({
     all: true,
   });
   const [tasks, setTasks] = useState<Task[]>(taskProp);
+  const [selectedAssignee, setSelectedAssignee] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+
+  useEffect(() => {
+    if (selectedAssignee === "all") {
+      setTasks(taskProp);
+    } else {
+      setTasks(
+        taskProp.filter(
+          (t) => t.assignee.name === selectedAssignee || t.type === "project"
+        )
+      );
+    }
+
+    if (selectedStatus === "all") {
+      setTasks(taskProp);
+    } else {
+      setTasks(
+        taskProp.filter(
+          (t) => t.status === selectedStatus || t.type === "project"
+        )
+      );
+    }
+  }, [selectedAssignee, selectedStatus]);
 
   const handleColumnVisibilityToggle = (column: keyof ColumnVisibility) => {
     if (column === "all" && columnVisibility.all) {
@@ -464,13 +496,62 @@ export default function GanttComponent({
           onToggle={handleColumnVisibilityToggle}
         />
       </div>
+      <div className="flex justify-start gap-2 mb-2 mt-2">
+        <div className="flex items-center gap-2">
+          <Label>状況</Label>
+          <Select
+            value={selectedStatus}
+            onValueChange={(value) => setSelectedStatus(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="状況を選択" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem key="all" value="all">
+                全て
+              </SelectItem>
+              {Array.from(new Set(taskProp.map((t) => t.status))).map(
+                (status) => (
+                  <SelectItem key={status} value={status}>
+                    {getTaskStatusName(status as TaskStatus)}
+                  </SelectItem>
+                )
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label>担当</Label>
+          <Select
+            value={selectedAssignee}
+            onValueChange={(value) => setSelectedAssignee(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="担当を選択" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem key="all" value="all">
+                全て
+              </SelectItem>
+              {Array.from(new Set(taskProp.map((t) => t.assignee.name))).map(
+                (assigneeName) => (
+                  <SelectItem key={assigneeName} value={assigneeName}>
+                    {assigneeName}
+                  </SelectItem>
+                )
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <Gantt
         tasks={tasks}
         viewMode={viewMode}
         viewDate={new Date()}
-        listCellWidth={isTalebeHide ? "100" : ""}
+        // listCellWidth={isTalebeHide ? "100" : ""}
+        listCellWidth={"100"}
         // fontSize="10px"
-        rowHeight={45}
+        rowHeight={40}
         barCornerRadius={5}
         barFill={95}
         preStepsCount={100}
