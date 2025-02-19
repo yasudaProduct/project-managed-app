@@ -29,6 +29,9 @@ export default async function GanttPage({
   function formatGanttTasks(wbsTasks: WbsTask[]): Task[] {
     const ganttTasks: Task[] = [];
 
+    const startDates: Record<number, Date> = {};
+    const endDates: Record<number, Date> = {};
+
     // WbsTaskを変換
     wbsTasks.forEach((task) => {
       ganttTasks.push({
@@ -54,6 +57,28 @@ export default async function GanttPage({
         start: task.yoteiStart ?? new Date(),
         end: task.yoteiEnd ?? new Date(),
       });
+
+      const phaseId = task.phase?.id ?? 0;
+
+      if (phaseId && task.yoteiStart) {
+        if (startDates[phaseId] === undefined) {
+          startDates[phaseId] = task.yoteiStart;
+        } else {
+          if (task.yoteiStart < startDates[phaseId]) {
+            startDates[phaseId] = task.yoteiStart;
+          }
+        }
+      }
+
+      if (phaseId && task.yoteiEnd) {
+        if (endDates[phaseId] === undefined) {
+          endDates[phaseId] = task.yoteiEnd;
+        } else {
+          if (task.yoteiEnd > endDates[phaseId]) {
+            endDates[phaseId] = task.yoteiEnd;
+          }
+        }
+      }
     });
 
     // 工程を抽出
@@ -76,14 +101,14 @@ export default async function GanttPage({
           name: phase?.name ?? "-",
           seq: phase?.seq ?? 0,
         },
-        yoteiStart: new Date(),
-        yoteiEnd: new Date(),
+        yoteiStart: phase && startDates[phase.id],
+        yoteiEnd: phase && endDates[phase.id],
         yoteiKosu: 0,
         status: "NOT_STARTED",
         progress: 0,
         hideChildren: false,
-        start: new Date(),
-        end: new Date(),
+        start: (phase && startDates[phase.id]) ?? new Date(),
+        end: (phase && endDates[phase.id]) ?? new Date(),
       });
     });
 
