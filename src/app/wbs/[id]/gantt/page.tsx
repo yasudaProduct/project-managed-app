@@ -4,11 +4,12 @@ import GanttComponent from "@/components/gannt/gantt";
 import { Task } from "gantt-task-react";
 import { notFound } from "next/navigation";
 import { getTaskAll } from "../wbs-task-actions";
-import { WbsTask } from "@/types/wbs";
+import { Milestone, WbsTask } from "@/types/wbs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CalendarCheck, CirclePlus, Trello, Users } from "lucide-react";
 import { TaskModal } from "@/components/wbs/task-modal";
+import { getMilestones } from "../milistone/action";
 
 export default async function GanttPage({
   params,
@@ -22,6 +23,8 @@ export default async function GanttPage({
   }
 
   const wbsTasks: WbsTask[] = await getTaskAll(wbs.id);
+
+  const milestones: Milestone[] = await getMilestones(wbs.id);
 
   const tasks: Task[] = formatGanttTasks(wbsTasks);
 
@@ -104,7 +107,7 @@ export default async function GanttPage({
         yoteiStart: phase && startDates[phase.id],
         yoteiEnd: phase && endDates[phase.id],
         yoteiKosu: 0,
-        status: "NOT_STARTED",
+        status: "NOT_STARTED", //TODO 工程の全タスクが完了してたら完了にする
         progress: 0,
         hideChildren: false,
         start: (phase && startDates[phase.id]) ?? new Date(),
@@ -112,7 +115,42 @@ export default async function GanttPage({
       });
     });
 
+    milestones.forEach((milestone) => {
+      ganttTasks.push({
+        id: milestone.name,
+        type: "milestone",
+        name: milestone.name,
+        assignee: {
+          id: "",
+          name: "-",
+        },
+        phase: {
+          id: 0,
+          name: "M",
+          seq: 0,
+        },
+        yoteiStart: milestone.date,
+        yoteiEnd: milestone.date,
+        yoteiKosu: 0,
+        status: "NOT_STARTED",
+        progress: 0,
+        start: milestone.date,
+        end: milestone.date,
+      });
+    });
+
     ganttTasks.sort((a, b) => {
+      if (a.type === "milestone" && b.type === "task") {
+        return -1; // タスクが先頭に来るようにソート
+      }
+      if (a.type === "task" && b.type === "milestone") {
+        return 1; // タスクが末尾に来るようにソート
+      }
+      if (a.type === "milestone" && b.type === "milestone") {
+        // マイルストーンの日付でソート
+        return a.yoteiStart!.getTime() - b.yoteiStart!.getTime();
+      }
+
       if (a.phase.id !== b.phase.id) {
         return a.phase.seq - b.phase.seq; // 工程のseqでソート
       }

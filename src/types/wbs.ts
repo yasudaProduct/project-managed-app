@@ -67,3 +67,8 @@ export type Wbs = {
     projectId: string
 }
 
+export type Milestone = {
+    id: number
+    name: string
+    date: Date
+}
