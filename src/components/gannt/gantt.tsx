@@ -49,7 +49,6 @@ export default function GanttComponent({
   wbs,
 }: GanttComponentProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
-  // const [isTalebeHide, setIsTalebeHide] = useState(true);
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
     phase: true,
     wbsno: true,
@@ -67,26 +66,19 @@ export default function GanttComponent({
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   useEffect(() => {
-    if (selectedAssignee === "all") {
-      setTasks(taskProp);
-    } else {
-      setTasks(
-        taskProp.filter(
-          (t) => t.assignee.name === selectedAssignee || t.type === "project"
-        )
-      );
-    }
+    const filteredTasks = taskProp.filter((task) => {
+      if (task.type === "project") {
+        return true;
+      }
 
-    if (selectedStatus === "all") {
-      setTasks(taskProp);
-    } else {
-      setTasks(
-        taskProp.filter(
-          (t) => t.status === selectedStatus || t.type === "project"
-        )
+      return (
+        (selectedStatus === "all" || task.status === selectedStatus) &&
+        (selectedAssignee === "all" || task.assignee.name === selectedAssignee)
       );
-    }
-  }, [selectedAssignee, selectedStatus]);
+    });
+
+    setTasks(filteredTasks);
+  }, [taskProp, selectedStatus, selectedAssignee]);
 
   const handleColumnVisibilityToggle = (column: keyof ColumnVisibility) => {
     if (column === "all" && columnVisibility.all) {
@@ -377,42 +369,42 @@ export default function GanttComponent({
   const handleTaskChange = (task: Task) => {
     console.log("On date change Id:" + task.id);
     console.log(task);
-    let newTasks = tasks.map((t) => (t.id === task.id ? task : t));
+    const newTasks = tasks.map((t) => (t.id === task.id ? task : t));
 
     // プロジェクトの開始日と終了日の再計算;
-    if (task.project) {
-      const [start, end] = getStartEndDateForProject(newTasks, task.project);
-      const project =
-        newTasks[newTasks.findIndex((t) => t.id === task.project)];
-      if (
-        project.start.getTime() !== start.getTime() ||
-        project.end.getTime() !== end.getTime()
-      ) {
-        const changedProject = { ...project, start, end };
-        newTasks = newTasks.map((t) =>
-          t.id === task.project ? changedProject : t
-        );
-      }
-    }
-    setTasks(tasks);
+    // if (task.project) {
+    //   const [start, end] = getStartEndDateForProject(newTasks, task.project);
+    //   const project =
+    //     newTasks[newTasks.findIndex((t) => t.id === task.project)];
+    //   if (
+    //     project.start.getTime() !== start.getTime() ||
+    //     project.end.getTime() !== end.getTime()
+    //   ) {
+    //     const changedProject = { ...project, start, end };
+    //     newTasks = newTasks.map((t) =>
+    //       t.id === task.project ? changedProject : t
+    //     );
+    //   }
+    // }
+    setTasks(newTasks);
   };
 
-  function getStartEndDateForProject(tasks: Task[], projectId: string) {
-    const projectTasks = tasks.filter((t) => t.project === projectId);
-    let start = projectTasks[0].start;
-    let end = projectTasks[0].end;
+  // function getStartEndDateForProject(tasks: Task[], projectId: string) {
+  //   const projectTasks = tasks.filter((t) => t.project === projectId);
+  //   let start = projectTasks[0].start;
+  //   let end = projectTasks[0].end;
 
-    for (let i = 0; i < projectTasks.length; i++) {
-      const task = projectTasks[i];
-      if (start.getTime() > task.start.getTime()) {
-        start = task.start;
-      }
-      if (end.getTime() < task.end.getTime()) {
-        end = task.end;
-      }
-    }
-    return [start, end];
-  }
+  //   for (let i = 0; i < projectTasks.length; i++) {
+  //     const task = projectTasks[i];
+  //     if (start.getTime() > task.start.getTime()) {
+  //       start = task.start;
+  //     }
+  //     if (end.getTime() < task.end.getTime()) {
+  //       end = task.end;
+  //     }
+  //   }
+  //   return [start, end];
+  // }
 
   const handleTaskDelete = (task: Task) => {
     const conf = window.confirm(
