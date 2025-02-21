@@ -1,6 +1,7 @@
 "use server"
 
 import prisma from '@/lib/prisma'
+import { Assignee } from '@/types/wbs'
 import { revalidatePath } from 'next/cache'
 
 export async function getWbsById(id: number) {
@@ -85,4 +86,14 @@ export async function getWbsBuffers(wbsId: number) {
         where: { wbsId: wbsId },
     });
     return buffers;
+}
+
+export async function getAssignees(wbsId: number): Promise<Assignee[]> {
+    const assignees = await prisma.wbsAssignee.findMany({
+        where: { wbsId: wbsId },
+        include: {
+            assignee: true,
+        },
+    });
+    return assignees.map((assignee) => assignee.assignee);
 }

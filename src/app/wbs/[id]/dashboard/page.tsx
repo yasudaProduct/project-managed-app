@@ -1,7 +1,13 @@
 import { notFound } from "next/navigation";
-import { getWbsById } from "@/app/wbs/[id]/wbs-actions";
+import { getAssignees, getWbsById } from "@/app/wbs/[id]/wbs-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getTaskStatusCount } from "../wbs-task-actions";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { Assignee } from "@/types/wbs";
 
 export default async function DashboardPage({
   params,
@@ -16,48 +22,59 @@ export default async function DashboardPage({
   }
 
   const taskStatusCoount = await getTaskStatusCount(Number(id));
+  const assignees: Assignee[] = await getAssignees(Number(id));
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto h-dvh py-10">
       <h1 className="text-3xl font-bold mb-6">ダッシュボード - {wbs.name}</h1>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>タスク進捗</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-500">
-              未着手：{taskStatusCoount.todo}
-            </p>
-            <p className="text-sm text-gray-500">
-              着手中：{taskStatusCoount.inProgress}
-            </p>
-            <p className="text-sm text-gray-500">
-              完了：{taskStatusCoount.completed}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>担当者</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-500">
-              担当者を表示するコンポーネント
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>工程</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-500">
-              工程を表示するコンポーネント
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="max-w-full rounded-lg border md:min-w-[450px]"
+      >
+        <ResizablePanel defaultSize={50}>
+          <div className="flex items-center justify-center">
+            <Card className="w-full rounded-sm p-2 border-none">
+              <CardHeader>
+                <CardTitle>タスク</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-500">
+                  未着手：{taskStatusCoount.todo}
+                </p>
+                <p className="text-sm text-gray-500">
+                  着手中：{taskStatusCoount.inProgress}
+                </p>
+                <p className="text-sm text-gray-500">
+                  完了：{taskStatusCoount.completed}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel defaultSize={50}>
+          <ResizablePanelGroup direction="vertical">
+            <ResizablePanel defaultSize={25}>
+              <div className="flex h-full items-center justify-center p-6">
+                <div className="flex flex-col">
+                  <span className="font-semibold">担当者</span>
+                  <div className="flex flex-col">
+                    {assignees.map((assignee) => (
+                      <span key={assignee.id}>{assignee.name}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={75}>
+              <div className="flex h-full items-center justify-center p-6">
+                <span className="font-semibold">Three</span>
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }

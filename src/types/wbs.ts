@@ -72,3 +72,9 @@ export type Milestone = {
     name: string
     date: Date
 }
+
+export type Assignee = {
+    id: string
+    name: string
+    displayName: string
+}
