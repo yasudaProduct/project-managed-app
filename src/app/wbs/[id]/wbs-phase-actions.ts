@@ -45,6 +45,7 @@ export async function updateWbsPhase(id: number, phaseData: { name?: string; cod
 }
 
 export async function deleteWbsPhase(id: number): Promise<{ success: boolean; error?: string }> {
+    //TODO フェーズが担当しているタスクはフェーズIDをnullにする
     await prisma.wbsPhase.delete({ where: { id } });
     return { success: true }
 }

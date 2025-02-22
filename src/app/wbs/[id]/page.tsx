@@ -110,6 +110,11 @@ export default async function WbsManagementPage({
               <Users className="h-4 w-4" />
             </Button>
           </Link>
+          <Link href={`/wbs/${wbs.id}/assignee`}>
+            <Button className="bg-white text-black ml-2">
+              <Users className="h-4 w-4" />
+            </Button>
+          </Link>
           <TaskModal wbsId={wbs.id}>
             <Button className="bg-white text-black ml-2">
               <CirclePlus className="h-4 w-4" />
