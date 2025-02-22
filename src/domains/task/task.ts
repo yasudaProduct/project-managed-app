@@ -7,6 +7,7 @@ import { ManHour } from "./man-hour";
 import { ManHourType } from "./man-hour-type";
 import { PeriodType } from "./period-type";
 import { TaskId } from "./task-id";
+import { WorkRecord } from "../work-records/work-recoed";
 
 
 export class Task {
@@ -19,6 +20,7 @@ export class Task {
     public assigneeId?: string;
     public assignee?: Assignee;
     public periods?: Period[];
+    public workRecords?: WorkRecord[];
     public readonly createdAt?: Date;
     public readonly updatedAt?: Date;
 
@@ -32,6 +34,7 @@ export class Task {
         phase?: Phase;
         assignee?: Assignee;
         periods?: Period[];
+        workRecords?: WorkRecord[];
         createdAt?: Date;
         updatedAt?: Date;
     }) {
@@ -44,6 +47,7 @@ export class Task {
         this.phase = args.phase;
         this.assignee = args.assignee;
         this.periods = args.periods;
+        this.workRecords = args.workRecords;
         this.createdAt = args.createdAt;
         this.updatedAt = args.updatedAt;
     }
@@ -75,6 +79,7 @@ export class Task {
             phaseId?: number;
             phase?: Phase;
             periods?: Period[];
+            workRecords?: WorkRecord[];
             createdAt?: Date;
             updatedAt?: Date;
         }): Task {
@@ -206,22 +211,18 @@ export class Task {
     }
 
     public getJissekiStart(): Date | undefined {
-        return this.periods?.findLast(
-            p => p.type.type === 'JISSEKI'
+        return this.workRecords?.findLast(
+            w => w.startDate
         )?.startDate;
     }
 
     public getJissekiEnd(): Date | undefined {
-        return this.periods?.findLast(
-            p => p.type.type === 'JISSEKI'
+        return this.workRecords?.findLast(
+            w => w.endDate
         )?.endDate;
     }
 
     public getJissekiKosus(): number | undefined {
-        return this.periods?.findLast(
-            p => p.type.type === 'JISSEKI'
-        )?.manHours.findLast(
-            k => k.type.type === 'NORMAL'
-        )?.kosu;
+        return this.workRecords?.reduce((acc, workRecord) => acc + (workRecord.manHours ?? 0), 0);
     }
 }

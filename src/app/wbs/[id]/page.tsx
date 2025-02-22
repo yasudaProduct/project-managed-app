@@ -18,6 +18,7 @@ import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TaskModal } from "@/components/wbs/task-modal";
+import { WbsTask } from "@/types/wbs";
 
 export default async function WbsManagementPage({
   params,
@@ -40,7 +41,7 @@ export default async function WbsManagementPage({
     notFound();
   }
 
-  const tasks = await getTaskAll(wbs.id);
+  const tasks: WbsTask[] = await getTaskAll(wbs.id);
 
   const buffers = await getWbsBuffers(wbs.id);
 

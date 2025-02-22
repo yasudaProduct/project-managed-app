@@ -9,6 +9,7 @@ import { PeriodType } from "@/domains/task/period-type";
 import { TaskStatus } from "@/domains/task/project-status";
 import { Task } from "@/domains/task/task";
 import { TaskId } from "@/domains/task/task-id";
+import { WorkRecord } from "@/domains/work-records/work-recoed";
 import prisma from "@/lib/prisma";
 import { injectable } from "inversify";
 
@@ -78,6 +79,14 @@ export class TaskRepository implements ITaskRepository {
                 },
             }
         });
+
+        const workRecordsDb = await prisma.workRecord.findMany({
+            where: {
+                taskId: {
+                    in: tasksDb.map(task => task.id),
+                },
+            },
+        });
         return tasksDb.map(taskDb => Task.createFromDb({
             id: new TaskId(taskDb.id),
             name: taskDb.name,
@@ -106,6 +115,18 @@ export class TaskRepository implements ITaskRepository {
                     type: new ManHourType({ type: kosu.type }),
                 })),
             })),
+            workRecords:
+                workRecordsDb
+                    .filter(workRecordDb => workRecordDb.taskId === taskDb.id)
+                    .map(workRecordDb =>
+                        WorkRecord.createFromDb({
+                            id: workRecordDb.id,
+                            taskId: new TaskId(workRecordDb.taskId!),
+                            startDate: workRecordDb.date,
+                            endDate: workRecordDb.date,
+                            manHours: workRecordDb.hours_worked,
+                        })
+                    ),
             status: new TaskStatus({ status: taskDb.status }),
             createdAt: taskDb.createdAt,
             updatedAt: taskDb.updatedAt,
@@ -219,4 +240,4 @@ export class TaskRepository implements ITaskRepository {
             where: { id },
         });
     }
-}   
+}

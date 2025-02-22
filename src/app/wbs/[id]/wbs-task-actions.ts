@@ -10,7 +10,7 @@ import { TaskStatus as TaskStatusDomain } from "@/domains/task/project-status";
 
 const taskApplicationService = container.get<ITaskApplicationService>(SYMBOL.ITaskApplicationService);
 
-export async function getTaskAll(wbsId: number) {
+export async function getTaskAll(wbsId: number): Promise<WbsTask[]> {
 
     const tasks = await taskApplicationService.getTaskAll(wbsId);
     return tasks;

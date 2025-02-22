@@ -185,6 +185,13 @@ export const mockData = {
             date: "2025-01-02",
             hours_worked: 5,
         },
+        {
+            id: 8,
+            userId: "dummy02",
+            taskId: "D1-0005",
+            date: "2025-01-03",
+            hours_worked: 5,
+        },
     ],
 
     milestone: [

@@ -163,6 +163,13 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
     ),
   },
   {
+    accessorKey: "jissekiKosu",
+    header: "実績工数",
+    cell: ({ row }) => (
+      <div className="capitalize">{row.getValue("jissekiKosu")}</div>
+    ),
+  },
+  {
     accessorKey: "status",
     header: "状況",
     cell: ({ row }) => (
