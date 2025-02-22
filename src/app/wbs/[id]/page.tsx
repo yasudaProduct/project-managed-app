@@ -99,6 +99,11 @@ export default async function WbsManagementPage({
               <Trello className="h-4 w-4" />
             </Button>
           </Link>
+          <Link href={`/wbs/${wbs.id}/phase`}>
+            <Button className="bg-white text-black ml-2">
+              <Trello className="h-4 w-4" />
+            </Button>
+          </Link>
           <Link href={`/wbs/${wbs.id}/assignee/new`}>
             <Button className="bg-white text-black ml-2">
               <CirclePlus className="h-4 w-4" />

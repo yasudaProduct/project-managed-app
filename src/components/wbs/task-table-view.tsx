@@ -88,6 +88,13 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
     cell: ({ row }) => <div className="capitalize">{row.getValue("name")}</div>,
   },
   {
+    accessorKey: "assignee",
+    header: "担当者",
+    cell: ({ row }) => (
+      <div className="capitalize">{row.getValue("assignee")}</div>
+    ),
+  },
+  {
     accessorKey: "kijunStart",
     header: "基準開始日",
     cell: ({ row }) => (
@@ -212,7 +219,7 @@ export function TaskTableViewPage({
     data:
       wbsTasks.length > 0
         ? wbsTasks.map((wbsTask) => ({
-            id: wbsTask.id,
+            id: wbsTask.id ?? "",
             name: wbsTask.name,
             kijunStart: wbsTask.kijunStart?.toISOString(),
             kijunEnd: wbsTask.kijunEnd?.toISOString(),
@@ -230,7 +237,7 @@ export function TaskTableViewPage({
             phase: wbsTask.phase?.name ?? "",
           }))
         : [],
-    columns,
+    columns: columns as ColumnDef<TaskTableViewProp>[],
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),

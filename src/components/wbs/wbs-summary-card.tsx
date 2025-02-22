@@ -39,6 +39,18 @@ export default function WbsSummaryCard({
     { kijunKosu: 0, yoteiKosu: 0, jissekiKosu: 0 }
   );
 
+  // 担当者ごとの集計
+  const assigneeAggregates = wbsTasks.reduce((acc, task) => {
+    const assigneeName = task.assignee?.displayName || "-";
+    if (!acc[assigneeName]) {
+      acc[assigneeName] = { kijunKosu: 0, yoteiKosu: 0, jissekiKosu: 0 };
+    }
+    acc[assigneeName].kijunKosu += task.kijunKosu ?? 0;
+    acc[assigneeName].yoteiKosu += task.yoteiKosu ?? 0;
+    acc[assigneeName].jissekiKosu += task.jissekiKosu ?? 0;
+    return acc;
+  }, {} as Record<string, { kijunKosu: number; yoteiKosu: number; jissekiKosu: number }>);
+
   return (
     <div className="my-4">
       <Accordion type="single" collapsible className="w-full">
@@ -85,6 +97,67 @@ export default function WbsSummaryCard({
                                 : kosu.jissekiKosu}
                             </td>
                           ))}
+                          <td className="px-4 py-2 text-sm text-gray-500">
+                            {index === 0
+                              ? totalKosu.kijunKosu
+                              : index === 1
+                              ? totalKosu.yoteiKosu
+                              : totalKosu.jissekiKosu}
+                          </td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="item-2">
+          <AccordionTrigger>担当者別集計</AccordionTrigger>
+          <AccordionContent>
+            <Card>
+              <CardContent>
+                <table className="max-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 text-left text-sm font-bold text-gray-500">
+                        工程
+                      </th>
+                      {Object.keys(phaseAggregates).map((phaseName) => (
+                        <th
+                          key={phaseName}
+                          className="px-4 py-2 text-left text-sm font-bold text-gray-500"
+                        >
+                          {phaseName}
+                        </th>
+                      ))}
+                      <th className="px-4 py-2 text-left text-sm font-bold text-gray-500">
+                        合計
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {Object.keys(assigneeAggregates).map(
+                      (assigneeName, index) => (
+                        <tr key={assigneeName}>
+                          <td className="px-4 py-2 text-sm font-bold text-gray-500">
+                            {assigneeName}
+                          </td>
+                          {Object.values(assigneeAggregates).map(
+                            (kosu, idx) => (
+                              <td
+                                key={idx}
+                                className="px-4 py-2 text-sm text-gray-500"
+                              >
+                                {index === 0
+                                  ? kosu.kijunKosu
+                                  : index === 1
+                                  ? kosu.yoteiKosu
+                                  : kosu.jissekiKosu}
+                              </td>
+                            )
+                          )}
                           <td className="px-4 py-2 text-sm text-gray-500">
                             {index === 0
                               ? totalKosu.kijunKosu

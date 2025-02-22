@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { createPhase, updatePhase } from "@/app/wbs/phase/phase-actions";
 import { toast } from "@/hooks/use-toast";
+import { updateWbsPhase } from "../[id]/wbs-phase-actions";
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -42,9 +43,10 @@ type PhaseFormProps = {
     code: string;
     seq: number;
   };
+  wbsId?: number;
 };
 
-export function PhaseForm({ phase }: PhaseFormProps) {
+export function PhaseForm({ phase, wbsId }: PhaseFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -60,35 +62,58 @@ export function PhaseForm({ phase }: PhaseFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      if (phase) {
-        const result = await updatePhase(phase.id, values);
-        if (result.success) {
-          toast({
-            title: "更新しました。",
-            description: "工程を更新しました。",
-          });
-          router.push(`/wbs/phase`);
+      if (!wbsId) {
+        // 工程テンプレート
+        if (phase) {
+          // 更新
+          const result = await updatePhase(phase.id, values);
+          if (result.success) {
+            toast({
+              title: "更新しました。",
+              description: "工程を更新しました。",
+            });
+            router.push(`/wbs/phase`);
+          } else {
+            toast({
+              title: "エラーが発生しました。",
+              description: result.error,
+              variant: "destructive",
+            });
+          }
         } else {
-          toast({
-            title: "エラーが発生しました。",
-            description: result.error,
-            variant: "destructive",
-          });
+          // 新規
+          const result = await createPhase(values);
+          if (result.success) {
+            toast({
+              title: "作成しました。",
+              description: "工程を作成しました。",
+            });
+            router.push("/wbs/phase");
+          } else {
+            toast({
+              title: "エラーが発生しました。",
+              description: result.error,
+              variant: "destructive",
+            });
+          }
         }
       } else {
-        const result = await createPhase(values);
-        if (result.success) {
-          toast({
-            title: "作成しました。",
-            description: "工程を作成しました。",
-          });
-          router.push("/wbs/phase");
-        } else {
-          toast({
-            title: "エラーが発生しました。",
-            description: result.error,
-            variant: "destructive",
-          });
+        // WBS工程
+        if (phase) {
+          // 更新
+          const result = await updateWbsPhase(phase.id, values);
+          if (result.success) {
+            toast({
+              title: "更新しました。",
+              description: "工程を更新しました。",
+            });
+          } else {
+            toast({
+              title: "エラーが発生しました。",
+              description: result.error,
+              variant: "destructive",
+            });
+          }
         }
       }
       router.refresh();
