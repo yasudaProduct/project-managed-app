@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,6 +18,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { PhaseForm } from "../../phase/phase.form";
+import { toast } from "@/hooks/use-toast";
+import { deleteWbsPhase } from "../wbs-phase-actions";
 
 export type WbsPhase = {
   id: number;
@@ -45,6 +47,28 @@ export const columns: ColumnDef<WbsPhase>[] = [
     cell: ({ row }) => {
       const wbsPhase = row.original;
 
+      const handleDelete = async (id: number) => {
+        const result = await deleteWbsPhase(id);
+        try {
+          if (result.success) {
+            toast({ title: "削除しました。" });
+          } else {
+            toast({
+              title: "エラーが発生しました。",
+              description: result.error,
+              variant: "destructive",
+            });
+          }
+        } catch (error) {
+          toast({
+            title: "エラーが発生しました。",
+            description:
+              error instanceof Error ? error.message : "不明なエラー",
+            variant: "destructive",
+          });
+        }
+      };
+
       return (
         <>
           <Dialog modal={true}>
@@ -62,6 +86,13 @@ export const columns: ColumnDef<WbsPhase>[] = [
                     編集
                   </DropdownMenuItem>
                 </DialogTrigger>
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => handleDelete(wbsPhase.id)}
+                >
+                  <Trash className="h-4 w-4" />
+                  削除
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <DialogContent>

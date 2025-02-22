@@ -43,3 +43,8 @@ export async function updateWbsPhase(id: number, phaseData: { name?: string; cod
     })
     return { success: true, phase: updatedPhase }
 }
+
+export async function deleteWbsPhase(id: number): Promise<{ success: boolean; error?: string }> {
+    await prisma.wbsPhase.delete({ where: { id } });
+    return { success: true }
+}
