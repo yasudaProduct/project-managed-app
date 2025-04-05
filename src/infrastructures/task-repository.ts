@@ -33,7 +33,7 @@ export class TaskRepository implements ITaskRepository {
 
         if (!taskDb) return null;
         return Task.createFromDb({
-            id: new TaskId(taskDb.id),
+            id: TaskId.reconstruct(taskDb.id),
             wbsId: taskDb.wbsId,
             name: taskDb.name,
             status: new TaskStatus({ status: taskDb.status }),
@@ -88,7 +88,7 @@ export class TaskRepository implements ITaskRepository {
             },
         });
         return tasksDb.map(taskDb => Task.createFromDb({
-            id: new TaskId(taskDb.id),
+            id: TaskId.reconstruct(taskDb.id),
             name: taskDb.name,
             wbsId: taskDb.wbsId,
             assigneeId: taskDb.assigneeId ?? undefined,
@@ -121,7 +121,7 @@ export class TaskRepository implements ITaskRepository {
                     .map(workRecordDb =>
                         WorkRecord.createFromDb({
                             id: workRecordDb.id,
-                            taskId: new TaskId(workRecordDb.taskId!),
+                            taskId: TaskId.reconstruct(workRecordDb.taskId!),
                             startDate: workRecordDb.date,
                             endDate: workRecordDb.date,
                             manHours: workRecordDb.hours_worked,
@@ -135,9 +135,11 @@ export class TaskRepository implements ITaskRepository {
 
     async create(task: Task): Promise<Task> {
         console.log("repository: create")
+        console.log("task.id", task.id?.getValue())
+        console.log("task.wbsId", task.wbsId)
         const taskDb = await prisma.wbsTask.create({
             data: {
-                id: task.id!.value(),
+                id: task.id?.getValue(),
                 name: task.name,
                 wbsId: task.wbsId,
                 assigneeId: task.assigneeId ?? undefined,
@@ -145,6 +147,8 @@ export class TaskRepository implements ITaskRepository {
                 status: task.status.status,
             },
         });
+
+        console.log("taskDb", taskDb)
 
         task.periods?.forEach(async (period) => {
             const periodDb = await prisma.taskPeriod.create({
@@ -170,7 +174,7 @@ export class TaskRepository implements ITaskRepository {
 
         console.log(taskDb.id)
         return Task.createFromDb({
-            id: new TaskId(taskDb.id),
+            id: TaskId.reconstruct(taskDb.id),
             name: taskDb.name,
             wbsId: taskDb.wbsId,
             assigneeId: taskDb.assigneeId ?? undefined,
@@ -184,7 +188,7 @@ export class TaskRepository implements ITaskRepository {
         const taskDb = await prisma.wbsTask.update({
             where: { id: id, wbsId: wbsId },
             data: {
-                id: task.id!.value(),
+                id: task.id!.getValue(),
                 name: task.name,
                 assigneeId: task.assigneeId ?? undefined,
                 phaseId: task.phaseId ?? undefined,
@@ -227,7 +231,7 @@ export class TaskRepository implements ITaskRepository {
         })
 
         return Task.createFromDb({
-            id: new TaskId(taskDb.id),
+            id: TaskId.reconstruct(taskDb.id),
             name: task.name,
             wbsId: task.wbsId,
             assigneeId: task.assigneeId ?? undefined,

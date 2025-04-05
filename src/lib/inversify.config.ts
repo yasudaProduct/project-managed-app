@@ -4,7 +4,7 @@ import { IPhaseRepository } from "@/applications/task/iphase-repository";
 import { ITaskRepository } from "@/applications/task/itask-repository";
 import { ITaskApplicationService, TaskApplicationService } from "@/applications/task/task-application-service";
 import { TaskFactory } from "@/applications/task/task-factory";
-import { ITaskFactory } from "@/domains/task/interfases/task-factory";
+import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 import { PhaseRepository } from "@/infrastructures/phase-repository";
 import { ProjectRepository } from "@/infrastructures/project-repository";
 import { TaskRepository } from "@/infrastructures/task-repository";

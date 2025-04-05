@@ -368,50 +368,40 @@ export default function GanttComponent({
 
   const handleTaskChange = (task: Task) => {
     console.log("On date change Id:" + task.id);
-    console.log(task);
-    const newTasks = tasks.map((t) => (t.id === task.id ? task : t));
 
-    // プロジェクトの開始日と終了日の再計算;
-    // if (task.project) {
-    //   const [start, end] = getStartEndDateForProject(newTasks, task.project);
-    //   const project =
-    //     newTasks[newTasks.findIndex((t) => t.id === task.project)];
-    //   if (
-    //     project.start.getTime() !== start.getTime() ||
-    //     project.end.getTime() !== end.getTime()
-    //   ) {
-    //     const changedProject = { ...project, start, end };
-    //     newTasks = newTasks.map((t) =>
-    //       t.id === task.project ? changedProject : t
-    //     );
-    //   }
-    // }
-    setTasks(newTasks);
+    // taskPropから直接新しい配列を作成
+    const newTasks = taskProp.map((t) => (t.id === task.id ? task : t));
+
+    // フィルタリングを適用して状態を更新
+    const filteredTasks = newTasks.filter((t) => {
+      if (t.type === "project") {
+        return true;
+      }
+      return (
+        (selectedStatus === "all" || t.status === selectedStatus) &&
+        (selectedAssignee === "all" || t.assignee.name === selectedAssignee)
+      );
+    });
+
+    setTasks(filteredTasks);
   };
-
-  // function getStartEndDateForProject(tasks: Task[], projectId: string) {
-  //   const projectTasks = tasks.filter((t) => t.project === projectId);
-  //   let start = projectTasks[0].start;
-  //   let end = projectTasks[0].end;
-
-  //   for (let i = 0; i < projectTasks.length; i++) {
-  //     const task = projectTasks[i];
-  //     if (start.getTime() > task.start.getTime()) {
-  //       start = task.start;
-  //     }
-  //     if (end.getTime() < task.end.getTime()) {
-  //       end = task.end;
-  //     }
-  //   }
-  //   return [start, end];
-  // }
 
   const handleTaskDelete = (task: Task) => {
     const conf = window.confirm(
       `このタスクを本当に削除しますか？ \n\n ${task.name + " " + task.id}`
     );
     if (conf) {
-      setTasks(tasks.filter((t) => t.id !== task.id));
+      const newTasks = taskProp.filter((t) => t.id !== task.id);
+      const filteredTasks = newTasks.filter((t) => {
+        if (t.type === "project") {
+          return true;
+        }
+        return (
+          (selectedStatus === "all" || t.status === selectedStatus) &&
+          (selectedAssignee === "all" || t.assignee.name === selectedAssignee)
+        );
+      });
+      setTasks(filteredTasks);
     }
     return conf;
   };
@@ -421,7 +411,19 @@ export default function GanttComponent({
   };
 
   const handleExpanderClick = (task: Task) => {
-    setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
+    const newTasks = taskProp.map((t) =>
+      t.id === task.id ? { ...t, hideChildren: !t.hideChildren } : t
+    );
+    const filteredTasks = newTasks.filter((t) => {
+      if (t.type === "project") {
+        return true;
+      }
+      return (
+        (selectedStatus === "all" || t.status === selectedStatus) &&
+        (selectedAssignee === "all" || t.assignee.name === selectedAssignee)
+      );
+    });
+    setTasks(filteredTasks);
   };
 
   return (

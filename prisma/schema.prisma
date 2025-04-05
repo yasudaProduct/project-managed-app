@@ -123,6 +123,8 @@ model WbsTask {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   workRecords      WorkRecord[]
+
+  @@unique(fields: [id,wbsId])
   @@map("wbs_task")
 }
 

@@ -23,16 +23,6 @@ export async function getWbsById(id: number) {
 
 export async function createWbs(projectId: string, wbsData: { name: string }) {
 
-    const cheack = await prisma.wbs.findFirst({
-        where: {
-            projectId: projectId,
-            name: wbsData.name,
-        },
-    })
-    if (cheack) {
-        return { success: false, error: "同じ名前のWBSが存在します" }
-    }
-
     const newWbs = await prisma.wbs.create({
         data: {
             projectId,

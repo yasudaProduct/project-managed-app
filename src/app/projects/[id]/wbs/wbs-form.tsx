@@ -69,7 +69,6 @@ export function WbsForm({ projectId, wbs }: WbsFormProps) {
         } else {
           toast({
             title: "WBSを作成できませんでした",
-            description: result.error,
             variant: "destructive",
           });
         }

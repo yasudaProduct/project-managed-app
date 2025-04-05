@@ -1,4 +1,4 @@
-import { ITaskFactory } from "@/domains/task/interfases/task-factory";
+import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 import { TaskId } from "@/domains/task/task-id";
 import { inject, injectable } from "inversify";
 import type { ITaskRepository } from "./itask-repository";
@@ -23,16 +23,15 @@ export class TaskFactory implements ITaskFactory {
         // 最新のタスクIDを取得
         // TODO wbsPhaseのIDを条件に最大値を取得する
         const lastTask = (await this.taskRepository.findAll(wbsId)).findLast(
-            (task) => task.id?.value().startsWith(wbsPhase.code.value())
+            (task) => task.id?.getValue().startsWith(wbsPhase.code.value())
         );
 
         let nextNumber = 1;
         if (lastTask) {
-            const lastNumber = parseInt(lastTask.id!.value().split("-")[1] ?? "0", 10);
+            const lastNumber = parseInt(lastTask.id!.getValue().split("-")[1] ?? "0", 10);
             nextNumber = lastNumber + 1;
         }
 
-        const newTaskId = `${wbsPhase.code.value()}-${String(nextNumber).padStart(4, "0")}`;
-        return new TaskId(newTaskId);
+        return TaskId.create(wbsPhase.code.value(), nextNumber);
     }
 }
