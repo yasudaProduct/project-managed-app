@@ -18,6 +18,9 @@ export class Project {
     }
 
     public isEqual(project: Project) {
+        if (this.id === undefined || project.id === undefined) {
+            return false;
+        }
         return this.id === project.id;
     }
 

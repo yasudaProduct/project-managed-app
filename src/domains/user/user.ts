@@ -10,6 +10,9 @@ export class User {
     }
 
     public isEqual(user: User) {
+        if (this.id === undefined || user.id === undefined) {
+            return false;
+        }
         return this.id === user.id;
     }
 

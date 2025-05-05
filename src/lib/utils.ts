@@ -8,6 +8,8 @@ export function cn(...inputs: ClassValue[]) {
 
 export const formatDateyyyymmdd = (dateString: string): string | undefined => {
   if (!dateString) return undefined;
+  if (isNaN(Date.parse(dateString))) return undefined;
+
   const date = new Date(dateString);
   const year = date.getFullYear();
   const month = (`0${date.getMonth() + 1}`).slice(-2);
