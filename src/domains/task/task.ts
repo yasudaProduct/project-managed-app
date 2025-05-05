@@ -165,7 +165,8 @@ export class Task {
             }
 
         } else {
-            this.periods?.push(Period.create({ type: new PeriodType({ type: 'KIJUN' }), startDate: kijunStart, endDate: kijunStart, manHours: [] }));
+            const manHour = ManHour.create({ type: new ManHourType({ type: 'NORMAL' }), kosu: kijunKosu });
+            this.periods?.push(Period.create({ type: new PeriodType({ type: 'KIJUN' }), startDate: kijunStart, endDate: kijunEnd, manHours: [manHour] }));
         }
     }
 
