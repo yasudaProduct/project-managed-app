@@ -5,9 +5,10 @@ import { getProjectById } from "@/app/projects/project-actions";
 export default async function NewWbsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const project = await getProjectById(params.id);
+  const { id } = await params;
+  const project = await getProjectById(id);
   if (!project) {
     notFound();
   }
@@ -15,7 +16,7 @@ export default async function NewWbsPage({
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6">新規WBS作成 - {project.name}</h1>
-      <WbsForm projectId={params.id} />
+      <WbsForm projectId={id} />
     </div>
   );
 }

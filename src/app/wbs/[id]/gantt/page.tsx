@@ -14,7 +14,7 @@ import { getMilestones } from "../milistone/action";
 export default async function GanttPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
   const wbs = await getWbsById(parseInt(id));

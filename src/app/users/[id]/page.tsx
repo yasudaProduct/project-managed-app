@@ -4,8 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getUserById } from "@/app/users/user-actions";
 
-export default async function UserPage({ params }: { params: { id: string } }) {
-  const user = await getUserById(params.id);
+export default async function UserPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const user = await getUserById(id);
 
   if (!user) {
     notFound();

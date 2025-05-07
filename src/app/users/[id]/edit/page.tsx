@@ -5,9 +5,10 @@ import { getUserById } from "@/app/users/user-actions";
 export default async function EditUserPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const user = await getUserById(params.id);
+  const { id } = await params;
+  const user = await getUserById(id);
 
   if (!user) {
     notFound();

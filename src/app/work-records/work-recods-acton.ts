@@ -37,7 +37,7 @@ export async function getWorkRecords() {
 export async function getWorkRecordById(id: string) {
     return await prisma.workRecord.findUnique({
         where: {
-            id: id,
+            id: parseInt(id),
         },
     });
 }
