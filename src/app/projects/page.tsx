@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { getProjectAll } from "./project-actions";
 import { columns } from "./columns";
-import { formatDateyyyymmdd } from "@/lib/utils";
+import { formatDateyyyymmdd, getProjectStatusName } from "@/lib/utils";
 
 export default async function ProjectsPage() {
   const projects = await getProjectAll();
@@ -20,16 +20,19 @@ export default async function ProjectsPage() {
           <Button>新規プロジェクト作成</Button>
         </Link>
       </div>
-      <DataTable columns={columns} data={projects.map((project)=>{
-        return {
-          id: project.id,
-          name: project.name,
-          description: project.description,
-          startDate: formatDateyyyymmdd(project.startDate.toString())!,
-          endDate: formatDateyyyymmdd(project.endDate.toString())!,
-          status: project.status,
-        }
-      })} />
+      <DataTable
+        columns={columns}
+        data={projects.map((project) => {
+          return {
+            id: project.id,
+            name: project.name,
+            description: project.description,
+            startDate: formatDateyyyymmdd(project.startDate.toString())!,
+            endDate: formatDateyyyymmdd(project.endDate.toString())!,
+            status: getProjectStatusName(project.status),
+          };
+        })}
+      />
     </div>
   );
 }
