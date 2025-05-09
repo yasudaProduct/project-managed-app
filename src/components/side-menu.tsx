@@ -15,6 +15,13 @@ import { usePathname } from "next/navigation";
 
 export function SideMenu() {
   const pathname = usePathname();
+  const wbsId = getWbsIdFromPath(pathname);
+
+  function getWbsIdFromPath(pathname: string): string | null {
+    // /wbs/123, /wbs/123/xxx などにマッチ
+    const match = pathname.match(/^\/wbs\/([^\/]+)/);
+    return match ? match[1] : null;
+  }
 
   return (
     <Sheet>
@@ -60,7 +67,7 @@ export function SideMenu() {
             作業実績
           </Link>
 
-          {pathname.startsWith("/wbs/") && (
+          {wbsId && (
             <>
               <hr className="my-4" />
               <SheetHeader>
@@ -68,14 +75,14 @@ export function SideMenu() {
                 <SheetDescription>プロジェクト管理</SheetDescription>
               </SheetHeader>
               <Link
-                href={`/wbs/${pathname.split("/")[2]}/dashboard`}
+                href={`/wbs/${wbsId}/dashboard`}
                 className="text-lg flex items-center gap-2"
               >
                 <Trello className="h-4 w-4" />
                 🚧ダッシュボード
               </Link>
               <Link
-                href={`/wbs/${pathname.split("/")[2]}`}
+                href={`/wbs/${wbsId}`}
                 className="text-lg flex items-center gap-2"
               >
                 <Trello className="h-4 w-4" />
@@ -90,7 +97,7 @@ export function SideMenu() {
                 🚧月別集計
               </Link>
               <Link
-                href={`/wbs/${pathname.split("/")[2]}/gantt`}
+                href={`/wbs/${wbsId}/gantt`}
                 className="text-lg flex items-center gap-2"
               >
                 <Trello className="h-4 w-4" />
