@@ -19,7 +19,7 @@ export class TaskRepository implements ITaskRepository {
     async findById(id: number): Promise<Task | null> {
         console.log("repository: findById")
         const taskDb = await prisma.wbsTask.findUnique({
-            where: { id },
+            where: { id: Number(id) },
             include: {
                 assignee: true,
                 phase: true,

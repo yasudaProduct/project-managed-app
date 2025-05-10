@@ -164,7 +164,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
         }
       } else {
         const result = await updateTask(wbsId, {
-          id: task.id,
+          id: Number(task.id),
           name: values.name,
           yoteiStart: values.yoteiStartDate,
           yoteiEnd: values.yoteiEndDate,
