@@ -42,7 +42,7 @@ export default async function GanttPage({
     // WbsTaskを変換
     wbsTasks.forEach((task) => {
       ganttTasks.push({
-        id: task.id,
+        id: task.id.toString(),
         taskNo: task.taskNo!,
         type: "task",
         name: task.name,
@@ -97,7 +97,7 @@ export default async function GanttPage({
     // 工程を追加
     uniquePhases.forEach((phase) => {
       ganttTasks.push({
-        id: phase?.id ?? 0,
+        id: "project-" + phase!.id.toString(),
         taskNo: phase?.name ?? "-",
         type: "project",
         name: "-",
@@ -123,7 +123,7 @@ export default async function GanttPage({
 
     milestones.forEach((milestone) => {
       ganttTasks.push({
-        id: milestone.id,
+        id: "milestone-" + milestone.id.toString(),
         taskNo: milestone.name,
         type: "milestone",
         name: milestone.name,
