@@ -18,7 +18,7 @@ export type User = {
   displayName: string;
 };
 
-export const columns: ColumnDef<User>[] = [
+export const columns: ColumnDef<User & { link?: string }>[] = [
   {
     accessorKey: "name",
     header: "名前",

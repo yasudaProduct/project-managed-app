@@ -17,7 +17,7 @@ export type Wbs = {
   name: string;
 };
 
-export const columns: ColumnDef<Wbs>[] = [
+export const columns: ColumnDef<Wbs & { link?: string }>[] = [
   {
     accessorKey: "name",
     header: "WBS名",

@@ -15,7 +15,13 @@ export default async function UsersPage() {
           <Button>新規ユーザー作成</Button>
         </Link>
       </div>
-      <DataTable columns={columns} data={users} />
+      <DataTable
+        columns={columns}
+        data={users?.map((user) => ({
+          ...user,
+          link: `/users/${user.id}`,
+        }))}
+      />
     </div>
   );
 }

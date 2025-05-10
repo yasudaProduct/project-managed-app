@@ -28,7 +28,15 @@ export default async function WbsPage({
           <Button>新規WBS作成</Button>
         </Link>
       </div>
-      <DataTable columns={columns} data={wbsList} />
+      <DataTable
+        columns={columns}
+        data={
+          wbsList?.map((wbs) => ({
+            ...wbs,
+            link: `/projects/${projectId}/wbs/${wbs.id}`,
+          })) ?? []
+        }
+      />
     </div>
   );
 }

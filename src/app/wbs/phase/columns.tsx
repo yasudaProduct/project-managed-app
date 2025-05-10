@@ -18,7 +18,7 @@ export type Phase = {
   seq: number;
 };
 
-export const columns: ColumnDef<Phase>[] = [
+export const columns: ColumnDef<Phase & { link?: string }>[] = [
   {
     accessorKey: "name",
     header: "名前",

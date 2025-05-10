@@ -30,6 +30,7 @@ export default async function ProjectsPage() {
             startDate: formatDateyyyymmdd(project.startDate.toString())!,
             endDate: formatDateyyyymmdd(project.endDate.toString())!,
             status: getProjectStatusName(project.status),
+            link: `/projects/${project.id}`,
           };
         })}
       />

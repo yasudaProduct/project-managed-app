@@ -20,7 +20,15 @@ export default async function WbsAssigneePage({
           <Button>新規担当者作成</Button>
         </Link>
       </div>
-      <DataTable columns={columns} data={assignees} />
+      <DataTable
+        columns={columns}
+        data={
+          assignees?.map((assignee) => ({
+            ...assignee,
+            link: `/wbs/${id}/assignee/${assignee.id}`,
+          })) ?? []
+        }
+      />
     </div>
   );
 }

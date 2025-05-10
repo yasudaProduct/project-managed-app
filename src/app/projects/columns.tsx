@@ -20,7 +20,7 @@ export type Project = {
   status: string;
 };
 
-export const columns: ColumnDef<Project>[] = [
+export const columns: ColumnDef<Project & { link?: string }>[] = [
   {
     accessorKey: "name",
     header: "名前",

@@ -163,8 +163,8 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
           });
         }
       } else {
-        const result = await updateTask(wbsId, task.taskNo!, {
-          // id: values.id,
+        const result = await updateTask(wbsId, {
+          id: task.id,
           name: values.name,
           yoteiStart: values.yoteiStartDate,
           yoteiEnd: values.yoteiEndDate,

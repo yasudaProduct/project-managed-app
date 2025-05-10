@@ -77,7 +77,7 @@ export async function updateTask(
     wbsId: number,
     taskData: {
         id: number;
-        taskNo: string;
+        taskNo?: string;
         name: string;
         yoteiStart?: string;
         yoteiEnd?: string;

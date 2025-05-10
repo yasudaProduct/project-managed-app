@@ -15,7 +15,13 @@ export default async function WorkRecordsPage() {
           <Button>新規作業実績入力</Button>
         </Link>
       </div>
-      <DataTable columns={columns} data={workRecords} />
+      <DataTable
+        columns={columns}
+        data={workRecords?.map((workRecord) => ({
+          ...workRecord,
+          link: `/work-records/${workRecord.id}`,
+        }))}
+      />
     </div>
   );
 }

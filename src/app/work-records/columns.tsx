@@ -21,7 +21,7 @@ export type WorkRecord = {
   hours_worked: number;
 };
 
-export const columns: ColumnDef<WorkRecord>[] = [
+export const columns: ColumnDef<WorkRecord & { link?: string }>[] = [
   {
     accessorKey: "userId",
     header: "ユーザーID",

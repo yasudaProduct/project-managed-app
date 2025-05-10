@@ -15,7 +15,15 @@ export default async function PhasePage() {
           <Button>新規工程作成</Button>
         </Link>
       </div>
-      <DataTable columns={columns} data={phases} />
+      <DataTable
+        columns={columns}
+        data={
+          phases?.map((phase) => ({
+            ...phase,
+            link: `/wbs/phase/${phase.id}`,
+          })) ?? []
+        }
+      />
     </div>
   );
 }
