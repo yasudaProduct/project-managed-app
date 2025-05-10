@@ -26,10 +26,14 @@ export default async function GanttPage({
 
   const milestones: Milestone[] = await getMilestones(wbs.id);
 
-  const tasks: Task[] = formatGanttTasks(wbsTasks);
+  const tasks: Task[] | null = formatGanttTasks(wbsTasks);
 
   // GanttComponentで表示するためのタスクを作成する
-  function formatGanttTasks(wbsTasks: WbsTask[]): Task[] {
+  function formatGanttTasks(wbsTasks: WbsTask[]): Task[] | null {
+    if (wbsTasks.length === 0) {
+      return null;
+    }
+
     const ganttTasks: Task[] = [];
 
     const startDates: Record<number, Date> = {};
@@ -191,7 +195,13 @@ export default async function GanttPage({
           </Button>
         </TaskModal>
       </div>
-      <GanttComponent tasks={tasks} wbs={wbs} />
+      {tasks && tasks.length > 0 ? (
+        <GanttComponent tasks={tasks} wbs={wbs} />
+      ) : (
+        <div className="w-full h-full flex justify-center items-center">
+          <div className="text-center text-gray-500">タスクがありません</div>
+        </div>
+      )}
     </div>
   );
 }
