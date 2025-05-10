@@ -29,7 +29,7 @@ export function SideMenu() {
         <Button
           variant="outline"
           size="icon"
-          className="fixed top-4 left-4 z-40"
+          className="fixed top-4 left-4 z-40 bg-blue-100"
         >
           <Menu className="h-4 w-4" />
         </Button>
