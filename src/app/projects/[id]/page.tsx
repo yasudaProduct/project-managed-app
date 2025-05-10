@@ -57,16 +57,20 @@ export default async function ProjectPage({
             </div>
             <h3 className="text-lg font-semibold">WBS</h3>
             <ul>
-              {wbsList.map((wbs) => (
-                <li key={wbs.id}>
-                  <Link
-                    href={`/wbs/${wbs.id}`}
-                    className="text-blue-500 hover:underline"
-                  >
-                    {wbs.name}
-                  </Link>
-                </li>
-              ))}
+              {wbsList && wbsList.length > 0 ? (
+                wbsList.map((wbs) => (
+                  <li key={wbs.id}>
+                    <Link
+                      href={`/wbs/${wbs.id}`}
+                      className="text-blue-500 hover:underline"
+                    >
+                      {wbs.name}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li>WBSがありません</li>
+              )}
             </ul>
             <Link href={`/projects/${project.id}/wbs`}>
               <Button variant="link">WBS一覧を見る</Button>

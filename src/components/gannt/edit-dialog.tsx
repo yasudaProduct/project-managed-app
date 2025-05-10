@@ -73,7 +73,7 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: task?.name,
-      wbsId: task?.id,
+      wbsId: task?.taskNo,
       assigneeId: task?.assignee.id,
       start: formatDateyyyymmdd(task?.start?.toISOString()),
       end: task?.yoteiEnd ? formatDateyyyymmdd(task?.end?.toISOString()) : "",
@@ -95,8 +95,9 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsSubmitting(true);
-      const result = await updateTask(wbsId, task.id, {
-        // id: values.wbsId,
+      const result = await updateTask(wbsId, {
+        id: task.id,
+        taskNo: task.taskNo,
         name: values.name,
         yoteiStart: values.start,
         yoteiEnd: values.end,

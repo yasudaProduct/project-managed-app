@@ -228,7 +228,7 @@ export default function GanttComponent({
       <div className="text-xs">
         {tasks.map((task) => (
           <div
-            key={task.id}
+            key={task.taskNo}
             className="flex items-center gap-4 px-4 border-b border-gray-200 text-sm"
             style={{
               height: rowHeight,
@@ -273,7 +273,7 @@ export default function GanttComponent({
                 className="flex flex-col items-center justify-center h-full border-l"
                 style={{ width: columnWidths.wbsId }}
               >
-                {task.type === "project" ? "-" : task.id}
+                {task.type === "project" ? "-" : task.taskNo}
               </div>
             )}
 
@@ -367,10 +367,10 @@ export default function GanttComponent({
   };
 
   const handleTaskChange = (task: Task) => {
-    console.log("On date change Id:" + task.id);
+    console.log("On date change Id:" + task.taskNo);
 
     // taskPropから直接新しい配列を作成
-    const newTasks = taskProp.map((t) => (t.id === task.id ? task : t));
+    const newTasks = taskProp.map((t) => (t.taskNo === task.taskNo ? task : t));
 
     // フィルタリングを適用して状態を更新
     const filteredTasks = newTasks.filter((t) => {
@@ -388,10 +388,10 @@ export default function GanttComponent({
 
   const handleTaskDelete = (task: Task) => {
     const conf = window.confirm(
-      `このタスクを本当に削除しますか？ \n\n ${task.name + " " + task.id}`
+      `このタスクを本当に削除しますか？ \n\n ${task.name + " " + task.taskNo}`
     );
     if (conf) {
-      const newTasks = taskProp.filter((t) => t.id !== task.id);
+      const newTasks = taskProp.filter((t) => t.taskNo !== task.taskNo);
       const filteredTasks = newTasks.filter((t) => {
         if (t.type === "project") {
           return true;
@@ -407,12 +407,12 @@ export default function GanttComponent({
   };
 
   const handleDblClick = (task: Task) => {
-    alert("On Double Click event Id:" + task.id);
+    alert("On Double Click event Id:" + task.taskNo);
   };
 
   const handleExpanderClick = (task: Task) => {
     const newTasks = taskProp.map((t) =>
-      t.id === task.id ? { ...t, hideChildren: !t.hideChildren } : t
+      t.taskNo === task.taskNo ? { ...t, hideChildren: !t.hideChildren } : t
     );
     const filteredTasks = newTasks.filter((t) => {
       if (t.type === "project") {

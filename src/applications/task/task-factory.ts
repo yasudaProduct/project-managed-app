@@ -23,12 +23,12 @@ export class TaskFactory implements ITaskFactory {
         // 最新のタスクIDを取得
         // TODO wbsPhaseのIDを条件に最大値を取得する
         const lastTask = (await this.taskRepository.findAll(wbsId)).findLast(
-            (task) => task.id?.getValue().startsWith(wbsPhase.code.value())
+            (task) => task.taskNo?.getValue().startsWith(wbsPhase.code.value())
         );
 
         let nextNumber = 1;
         if (lastTask) {
-            const lastNumber = parseInt(lastTask.id!.getValue().split("-")[1] ?? "0", 10);
+            const lastNumber = parseInt(lastTask.taskNo!.getValue().split("-")[1] ?? "0", 10);
             nextNumber = lastNumber + 1;
         }
 

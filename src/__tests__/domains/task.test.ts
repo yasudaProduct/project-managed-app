@@ -11,7 +11,8 @@ import { ManHourType } from "@/domains/task/value-object/man-hour-type";
 import { WorkRecord } from "@/domains/work-records/work-recoed";
 
 describe('Task', () => {
-  const taskId = TaskId.reconstruct('D1-0001');
+  const taskNo = TaskId.reconstruct('D1-0001');
+  const taskId = 1;
   const wbsId = 1;
   const name = 'テストタスク';
   const status = new TaskStatus({ status: 'NOT_STARTED' });
@@ -23,14 +24,14 @@ describe('Task', () => {
   describe('create', () => {
     it('ID、WBS ID、名前、ステータスからタスクを作成できること', () => {
       const task = Task.create({
-        id: taskId,
+        taskNo: taskNo,
         wbsId,
         name,
         status
       });
 
       expect(task).toBeInstanceOf(Task);
-      expect(task.id).toBe(taskId);
+      expect(task.taskNo).toBe(taskNo);
       expect(task.wbsId).toBe(wbsId);
       expect(task.name).toBe(name);
       expect(task.status).toBe(status);
@@ -49,7 +50,7 @@ describe('Task', () => {
       ];
 
       const task = Task.create({
-        id: taskId,
+        taskNo: taskNo,
         wbsId,
         name,
         status,
@@ -98,7 +99,7 @@ describe('Task', () => {
       const workRecords = [
         WorkRecord.createFromDb({
           id: 1,
-          taskId,
+          taskId: taskId,
           startDate,
           endDate,
           manHours: 6
@@ -110,6 +111,7 @@ describe('Task', () => {
 
       const task = Task.createFromDb({
         id: taskId,
+        taskNo: taskNo,
         wbsId,
         name,
         status,
@@ -124,7 +126,7 @@ describe('Task', () => {
       });
 
       expect(task).toBeInstanceOf(Task);
-      expect(task.id).toBe(taskId);
+      expect(task.taskNo).toBe(taskNo);
       expect(task.wbsId).toBe(wbsId);
       expect(task.name).toBe(name);
       expect(task.status).toBe(status);
@@ -142,14 +144,14 @@ describe('Task', () => {
   describe('isEqual', () => {
     it('同じIDのタスクは等しいと判定されること', () => {
       const task1 = Task.create({
-        id: taskId,
+        taskNo: taskNo,
         wbsId,
         name,
         status
       });
 
       const task2 = Task.create({
-        id: taskId,
+        taskNo: taskNo,
         wbsId: 2,
         name: '異なる名前',
         status: new TaskStatus({ status: 'IN_PROGRESS' })
@@ -160,14 +162,14 @@ describe('Task', () => {
 
     it('異なるIDのタスクは等しくないと判定されること', () => {
       const task1 = Task.create({
-        id: taskId,
+        taskNo: taskNo,
         wbsId,
         name,
         status
       });
 
       const task2 = Task.create({
-        id: TaskId.reconstruct('D1-0002'),
+        taskNo: TaskId.reconstruct('D1-0002'),
         wbsId,
         name,
         status
@@ -180,7 +182,7 @@ describe('Task', () => {
   describe('getStatus', () => {
     it('ステータス値を取得できること', () => {
       const task = Task.create({
-        id: taskId,
+        taskNo: taskNo,
         wbsId,
         name,
         status: new TaskStatus({ status: 'IN_PROGRESS' })
@@ -199,7 +201,7 @@ describe('Task', () => {
     beforeEach(() => {
       // テスト用のタスク作成
       task = Task.create({
-        id: taskId,
+        taskNo: taskNo,
         wbsId,
         name,
         status,

@@ -47,7 +47,7 @@ describe('TaskApplicationService', () => {
       // モックの返り値を設定
       const taskId = TaskId.reconstruct('D1-0001');
       const mockTask = Task.create({
-        id: taskId,
+        taskNo: taskId,
         wbsId: wbsId,
         name: 'テストタスク',
         phaseId: 1,
@@ -74,6 +74,7 @@ describe('TaskApplicationService', () => {
         displayName: 'テストユーザー1'
       });
       Object.defineProperty(mockTask, 'assignee', { value: assignee });
+      Object.defineProperty(mockTask, 'id', { value: 1 });
 
       const phase = Phase.create({
         name: '設計フェーズ',
@@ -85,12 +86,12 @@ describe('TaskApplicationService', () => {
       taskRepository.findById.mockResolvedValue(mockTask);
 
       // テスト対象メソッド実行
-      const result = await taskApplicationService.getTaskById(wbsId, 'D1-0001');
+      const result = await taskApplicationService.getTaskById(mockTask.id!);
 
       // 検証
-      expect(taskRepository.findById).toHaveBeenCalledWith(wbsId, 'D1-0001');
+      expect(taskRepository.findById).toHaveBeenCalledWith(mockTask.id!);
       expect(result).not.toBeNull();
-      expect(result?.id).toBe('D1-0001');
+      expect(result?.taskNo).toBe('D1-0001');
       expect(result?.name).toBe('テストタスク');
       expect(result?.status).toBe('NOT_STARTED');
       expect(result?.assigneeId).toBe('user1');
@@ -106,9 +107,9 @@ describe('TaskApplicationService', () => {
       // モックが null を返すように設定
       taskRepository.findById.mockResolvedValue(null);
 
-      const result = await taskApplicationService.getTaskById(wbsId, 'not-exist');
+      const result = await taskApplicationService.getTaskById(1);
 
-      expect(taskRepository.findById).toHaveBeenCalledWith(wbsId, 'not-exist');
+      expect(taskRepository.findById).toHaveBeenCalledWith(1);
       expect(result).toBeNull();
     });
   });
@@ -117,7 +118,7 @@ describe('TaskApplicationService', () => {
     it('すべてのタスクを取得できること', async () => {
       // モックの返り値を設定
       const task1 = Task.create({
-        id: TaskId.reconstruct('D1-0001'),
+        taskNo: TaskId.reconstruct('D1-0001'),
         wbsId: wbsId,
         name: 'タスク1',
         phaseId: 1,
@@ -137,7 +138,7 @@ describe('TaskApplicationService', () => {
       });
 
       const task2 = Task.create({
-        id: TaskId.reconstruct('D1-0002'),
+        taskNo: TaskId.reconstruct('D1-0002'),
         wbsId: wbsId,
         name: 'タスク2',
         phaseId: 2,
@@ -165,8 +166,8 @@ describe('TaskApplicationService', () => {
       expect(taskRepository.findAll).toHaveBeenCalledWith(wbsId);
       expect(results).not.toBeNull();
       expect(results?.length).toBe(2);
-      expect(results?.[0].id).toBe('D1-0001');
-      expect(results?.[1].id).toBe('D1-0002');
+      expect(results?.[0].taskNo).toBe('D1-0001');
+      expect(results?.[1].taskNo).toBe('D1-0002');
       expect(results?.[0].status).toBe('NOT_STARTED');
       expect(results?.[1].status).toBe('IN_PROGRESS');
     });
@@ -233,7 +234,7 @@ describe('TaskApplicationService', () => {
       // 既存のタスクをモック
       const taskId = TaskId.reconstruct('D1-0001');
       const existingTask = Task.create({
-        id: taskId,
+        taskNo: taskId,
         wbsId: wbsId,
         name: '更新前タスク',
         phaseId: 1,
@@ -253,11 +254,11 @@ describe('TaskApplicationService', () => {
           })
         ]
       });
-
+      Object.defineProperty(existingTask, 'id', { value: 1 });
       taskRepository.findById.mockResolvedValue(existingTask);
 
       // updateのモック
-      taskRepository.update.mockImplementation((wbsId, id, task) => {
+      taskRepository.update.mockImplementation((wbsId, task) => {
         return Promise.resolve(task);
       });
 
@@ -267,9 +268,9 @@ describe('TaskApplicationService', () => {
       // テスト対象メソッド実行
       const result = await taskApplicationService.updateTask({
         wbsId: wbsId,
-        id: 'D1-0001',
         updateTask: {
-          id: 'D1-0001',
+          id: 1,
+          taskNo: 'D1-0001',
           name: '更新後タスク',
           phaseId: 2,
           assigneeId: 'user2',
@@ -281,12 +282,12 @@ describe('TaskApplicationService', () => {
       });
 
       // 検証
-      expect(taskRepository.findById).toHaveBeenCalledWith(wbsId, 'D1-0001');
+      expect(taskRepository.findById).toHaveBeenCalledWith(1);
       expect(taskRepository.update).toHaveBeenCalled();
       expect(result.success).toBe(true);
 
       // updateに渡されたTaskオブジェクトを検証
-      const updatedTask = taskRepository.update.mock.calls[0][2];
+      const updatedTask = taskRepository.update.mock.calls[0][1];
       expect(updatedTask.name).toBe('更新後タスク');
       expect(updatedTask.phaseId).toBe(2);
       expect(updatedTask.assigneeId).toBe('user2');
@@ -302,14 +303,15 @@ describe('TaskApplicationService', () => {
 
       const result = await taskApplicationService.updateTask({
         wbsId: wbsId,
-        id: 'not-exist',
         updateTask: {
+          id: 1,
+          taskNo: 'not-exist',
           name: '存在しないタスク',
           status: 'NOT_STARTED'
         }
       });
 
-      expect(taskRepository.findById).toHaveBeenCalledWith(wbsId, 'not-exist');
+      expect(taskRepository.findById).toHaveBeenCalledWith(1);
       expect(taskRepository.update).not.toHaveBeenCalled();
       expect(result.success).toBe(false);
       expect(result.error).toBe('タスクが見つかりません');

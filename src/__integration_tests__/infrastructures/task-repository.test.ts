@@ -60,7 +60,7 @@ describe('TaskRepository Integration Tests', () => {
 
       // 作成されたタスクを検証
       expect(createdTask).toBeTruthy();
-      expect(createdTask.id?.getValue()).toBe(testTaskId);
+      expect(createdTask.taskNo?.getValue()).toBe(testTaskId);
       expect(createdTask.name).toBe('結合テスト用タスク');
       expect(createdTask.wbsId).toBe(testIds.wbsId);
       expect(createdTask.phaseId).toBe(testIds.phaseId);
@@ -73,7 +73,7 @@ describe('TaskRepository Integration Tests', () => {
 
       // 取得したタスクを検証
       expect(task).not.toBeNull();
-      expect(task?.id?.getValue()).toBe(testTaskId);
+      expect(task?.taskNo?.getValue()).toBe(testTaskId);
       expect(task?.name).toBe('結合テスト用タスク');
       expect(task?.wbsId).toBe(testIds.wbsId);
       expect(task?.phaseId).toBe(testIds.phaseId);
@@ -121,12 +121,12 @@ describe('TaskRepository Integration Tests', () => {
       expect(tasks.length).toBeGreaterThanOrEqual(2);
 
       // 最初に作成したタスクが含まれていることを確認
-      const originalTask = tasks.find(t => t.id?.getValue() === testTaskId);
+      const originalTask = tasks.find(t => t.taskNo?.getValue() === testTaskId);
       expect(originalTask).toBeTruthy();
       expect(originalTask?.name).toBe('結合テスト用タスク');
 
       // 追加したタスクが含まれていることを確認
-      const newTask = tasks.find(t => t.id?.getValue() === additionalTaskId.getValue());
+      const newTask = tasks.find(t => t.taskNo?.getValue() === additionalTaskId.getValue());
       expect(newTask).toBeTruthy();
       expect(newTask?.name).toBe('追加タスク');
       expect(newTask?.status.getStatus()).toBe('IN_PROGRESS');

@@ -70,14 +70,14 @@ describe('TaskFactory', () => {
 
       // 既存のタスクをモック（D10-0001, D10-0002が存在する）
       const task1 = Task.create({
-        id: TaskId.reconstruct('D10-0001'),
+        taskNo: TaskId.reconstruct('D10-0001'),
         wbsId: wbsId,
         name: 'タスク1',
         status: new TaskStatus({ status: 'NOT_STARTED' }),
       });
 
       const task2 = Task.create({
-        id: TaskId.reconstruct('D10-0002'),
+        taskNo: TaskId.reconstruct('D10-0002'),
         wbsId: wbsId,
         name: 'タスク2',
         status: new TaskStatus({ status: 'NOT_STARTED' }),
@@ -104,14 +104,14 @@ describe('TaskFactory', () => {
 
       // 既存のタスクは設計フェーズのみ
       const task1 = Task.create({
-        id: TaskId.reconstruct('D10-0001'),
+        taskNo: TaskId.reconstruct('D10-0001'),
         wbsId: wbsId,
         name: '設計タスク1',
         status: new TaskStatus({ status: 'COMPLETED' }),
       });
 
       const task2 = Task.create({
-        id: TaskId.reconstruct('D10-0002'),
+        taskNo: TaskId.reconstruct('D10-0002'),
         wbsId: wbsId,
         name: '設計タスク2',
         status: new TaskStatus({ status: 'COMPLETED' }),
@@ -148,14 +148,14 @@ describe('TaskFactory', () => {
 
       // タスクDESIGN-1とDESIGN-3が存在する（DESIGN-2は欠番）
       const task1 = Task.create({
-        id: TaskId.reconstruct('D1-0001'),
+        taskNo: TaskId.reconstruct('D1-0001'),
         wbsId: wbsId,
         name: 'タスク1',
         status: new TaskStatus({ status: 'COMPLETED' }),
       });
 
       const task3 = Task.create({
-        id: TaskId.reconstruct('D1-0003'),
+        taskNo: TaskId.reconstruct('D1-0003'),
         wbsId: wbsId,
         name: 'タスク3',
         status: new TaskStatus({ status: 'NOT_STARTED' }),

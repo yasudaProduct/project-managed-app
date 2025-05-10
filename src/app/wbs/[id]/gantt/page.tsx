@@ -42,7 +42,8 @@ export default async function GanttPage({
     // WbsTaskを変換
     wbsTasks.forEach((task) => {
       ganttTasks.push({
-        id: task.id!,
+        id: task.id,
+        taskNo: task.taskNo!,
         type: "task",
         name: task.name,
         assignee: {
@@ -96,7 +97,8 @@ export default async function GanttPage({
     // 工程を追加
     uniquePhases.forEach((phase) => {
       ganttTasks.push({
-        id: phase?.name ?? "-",
+        id: phase?.id ?? 0,
+        taskNo: phase?.name ?? "-",
         type: "project",
         name: "-",
         assignee: {
@@ -121,7 +123,8 @@ export default async function GanttPage({
 
     milestones.forEach((milestone) => {
       ganttTasks.push({
-        id: milestone.name,
+        id: milestone.id,
+        taskNo: milestone.name,
         type: "milestone",
         name: milestone.name,
         assignee: {
@@ -164,7 +167,7 @@ export default async function GanttPage({
       if (a.type === "task" && b.type === "project") {
         return 1; // タスクが末尾に来るようにソート
       }
-      return a.id.localeCompare(b.id); // タスクのidでソート
+      return a.taskNo.localeCompare(b.taskNo); // タスクのidでソート
     });
 
     return ganttTasks;

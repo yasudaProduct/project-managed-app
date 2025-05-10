@@ -63,7 +63,7 @@ export async function createTask(
         });
 
         if (result.success) {
-            const task = await taskApplicationService.getTaskById(wbsId, taskId.getValue());
+            const task = await taskApplicationService.getTaskById(result.id!);
             return { success: true, task: task ?? undefined }
         } else {
             return { success: false, error: result.error }
@@ -75,9 +75,9 @@ export async function createTask(
 
 export async function updateTask(
     wbsId: number,
-    taskId: string,
     taskData: {
-        // id: string;
+        id: number;
+        taskNo: string;
         name: string;
         yoteiStart?: string;
         yoteiEnd?: string;
@@ -91,7 +91,6 @@ export async function updateTask(
 
     const result = await taskApplicationService.updateTask({
         wbsId: wbsId,
-        id: taskId,
         updateTask: {
             ...taskData,
             yoteiStart: taskData.yoteiStart ? new Date(taskData.yoteiStart) : undefined,
@@ -100,7 +99,7 @@ export async function updateTask(
     });
 
     if (result.success) {
-        const task = await taskApplicationService.getTaskById(wbsId, taskId);
+        const task = await taskApplicationService.getTaskById(taskData.id);
         revalidatePath(`/wbs/${wbsId}/gannt`);
         return { success: true, task: task ?? undefined }
     } else {
@@ -108,7 +107,7 @@ export async function updateTask(
     }
 }
 
-export async function deleteTask(taskId: string): Promise<{ success: boolean, error?: string }> {
+export async function deleteTask(taskId: number): Promise<{ success: boolean, error?: string }> {
 
     const task = await prisma.wbsTask.findUnique({
         where: { id: taskId }

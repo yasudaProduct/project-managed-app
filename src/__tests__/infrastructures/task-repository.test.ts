@@ -38,7 +38,8 @@ describe('TaskRepository', () => {
   let taskRepository: TaskRepository;
   const prismaMock = prisma as jest.Mocked<typeof prisma>;
   const wbsId = 1;
-  const taskId = 'D1-0001';
+  const taskId = 1;
+  const taskNo = 'D1-0001';
   const startDate = new Date('2025-05-01');
   const endDate = new Date('2025-05-31');
 
@@ -62,6 +63,7 @@ describe('TaskRepository', () => {
       // モックの設定
       const mockTaskData = {
         id: taskId,
+        taskNo: taskNo,
         wbsId: wbsId,
         name: 'テストタスク',
         status: 'NOT_STARTED' as const,
@@ -82,7 +84,7 @@ describe('TaskRepository', () => {
         periods: [
           {
             id: 1,
-            taskId: taskId,
+            taskId: taskNo,
             startDate,
             endDate,
             type: 'YOTEI' as const,
@@ -104,11 +106,11 @@ describe('TaskRepository', () => {
       (prismaMock.wbsTask.findUnique as jest.Mock).mockResolvedValue(mockTaskData);
 
       // メソッド実行
-      const task = await taskRepository.findById(wbsId, taskId);
+      const task = await taskRepository.findById(wbsId, taskNo);
 
       // 検証
       expect(prismaMock.wbsTask.findUnique).toHaveBeenCalledWith({
-        where: { id: taskId, wbsId },
+        where: { taskNo, wbsId },
         include: {
           assignee: true,
           phase: true,
@@ -120,7 +122,7 @@ describe('TaskRepository', () => {
         }
       });
       expect(task).not.toBeNull();
-      expect(task?.id?.getValue()).toBe(taskId);
+      expect(task?.taskNo?.getValue()).toBe(taskNo);
       expect(task?.name).toBe('テストタスク');
       expect(task?.status.getStatus()).toBe('NOT_STARTED');
       expect(task?.assigneeId).toBe('user1');
@@ -140,7 +142,7 @@ describe('TaskRepository', () => {
       const task = await taskRepository.findById(wbsId, 'not-exist');
 
       expect(prismaMock.wbsTask.findUnique).toHaveBeenCalledWith({
-        where: { id: 'not-exist', wbsId },
+        where: { taskNo: 'not-exist', wbsId },
         include: expect.anything()
       });
       expect(task).toBeNull();
@@ -152,7 +154,8 @@ describe('TaskRepository', () => {
       // タスクデータのモック
       const mockTasksData = [
         {
-          id: 'D1-0001',
+          id: 1,
+          taskNo: 'D1-0001',
           wbsId: wbsId,
           name: 'タスク1',
           status: 'NOT_STARTED' as const,
@@ -173,7 +176,7 @@ describe('TaskRepository', () => {
           periods: [
             {
               id: 1,
-              taskId: 'D1-0001',
+              taskId: 1,
               startDate,
               endDate,
               type: 'YOTEI' as const,
@@ -192,7 +195,8 @@ describe('TaskRepository', () => {
           updatedAt: new Date()
         },
         {
-          id: 'D2-0001',
+          id: 2,
+          taskNo: 'D2-0001',
           wbsId: wbsId,
           name: 'タスク2',
           status: 'IN_PROGRESS' as const,
@@ -213,7 +217,7 @@ describe('TaskRepository', () => {
           periods: [
             {
               id: 2,
-              taskId: 'D2-0001',
+              taskId: 2,
               startDate: new Date('2025-06-01'),
               endDate: new Date('2025-06-30'),
               type: 'YOTEI' as const,
@@ -236,13 +240,13 @@ describe('TaskRepository', () => {
       const mockWorkRecordsData = [
         {
           id: 1,
-          taskId: 'D1-0001',
+          taskId: 1,
           date: new Date('2025-05-10'),
           hours_worked: 5
         },
         {
           id: 2,
-          taskId: 'D2-0001',
+          taskId: 2,
           date: new Date('2025-06-15'),
           hours_worked: 8
         }
@@ -262,13 +266,13 @@ describe('TaskRepository', () => {
       expect(prismaMock.workRecord.findMany).toHaveBeenCalledWith({
         where: {
           taskId: {
-            in: ['D1-0001', 'D2-0001']
+            in: [1, 2]
           }
         }
       });
       expect(tasks.length).toBe(2);
-      expect(tasks[0].id?.getValue()).toBe('D1-0001');
-      expect(tasks[1].id?.getValue()).toBe('D2-0001');
+      expect(tasks[0].taskNo?.getValue()).toBe('D1-0001');
+      expect(tasks[1].taskNo?.getValue()).toBe('D2-0001');
       expect(tasks[0].status.getStatus()).toBe('NOT_STARTED');
       expect(tasks[1].status.getStatus()).toBe('IN_PROGRESS');
       expect(tasks[0].workRecords?.length).toBe(1);
@@ -290,9 +294,9 @@ describe('TaskRepository', () => {
   describe('create', () => {
     it('タスクを新規作成できること', async () => {
       // 作成するタスクを準備
-      const taskId = TaskId.reconstruct('D1-0001');
+      const taskNo = TaskId.reconstruct('D1-0001');
       const newTask = Task.create({
-        id: taskId,
+        taskNo: taskNo,
         wbsId: wbsId,
         name: '新規タスク',
         phaseId: 1,
@@ -315,7 +319,8 @@ describe('TaskRepository', () => {
 
       // createのモック
       const mockCreatedTask = {
-        id: 'D1-0001',
+        id: 1,
+        taskNo: taskNo.getValue(),
         wbsId: wbsId,
         name: '新規タスク',
         phaseId: 1,
@@ -327,7 +332,7 @@ describe('TaskRepository', () => {
 
       const mockCreatedPeriod = {
         id: 1,
-        taskId: 'D1-0001',
+        taskId: 1,
         startDate,
         endDate,
         type: 'YOTEI' as const
@@ -351,7 +356,7 @@ describe('TaskRepository', () => {
       // 検証
       expect(prismaMock.wbsTask.create).toHaveBeenCalledWith({
         data: {
-          id: 'D1-0001',
+          taskNo: 'D1-0001',
           name: '新規タスク',
           wbsId: wbsId,
           phaseId: 1,
@@ -361,7 +366,7 @@ describe('TaskRepository', () => {
       });
       expect(prismaMock.taskPeriod.create).toHaveBeenCalledWith({
         data: {
-          taskId: 'D1-0001',
+          taskId: 1,
           startDate,
           endDate,
           type: 'YOTEI',
@@ -375,7 +380,7 @@ describe('TaskRepository', () => {
           wbsId: wbsId,
         }
       });
-      expect(createdTask.id?.getValue()).toBe('D1-0001');
+      expect(createdTask.taskNo?.getValue()).toBe('D1-0001');
       expect(createdTask.name).toBe('新規タスク');
       expect(createdTask.status.getStatus()).toBe('NOT_STARTED');
     });
@@ -384,9 +389,9 @@ describe('TaskRepository', () => {
   describe('update', () => {
     it('タスク情報を更新できること', async () => {
       // 更新するタスクを準備
-      const taskId = TaskId.reconstruct('D1-0001');
+      const taskNo = TaskId.reconstruct('D1-0001');
       const task = Task.create({
-        id: taskId,
+        taskNo: taskNo,
         wbsId: wbsId,
         name: '更新後タスク',
         phaseId: 2,
@@ -408,10 +413,12 @@ describe('TaskRepository', () => {
           })
         ]
       });
+      Object.defineProperty(task, 'id', { value: 1 });
 
       // updateのモック
       const mockUpdatedTask = {
-        id: 'D1-0001',
+        id: 1,
+        taskNo: 'D1-0001',
         wbsId: wbsId,
         name: '更新後タスク',
         phaseId: 2,
@@ -423,7 +430,7 @@ describe('TaskRepository', () => {
 
       const mockUpsertedPeriod = {
         id: 1,
-        taskId: 'D1-0001',
+        taskId: 1,
         startDate: new Date('2025-06-01'),
         endDate: new Date('2025-06-30'),
         type: 'YOTEI' as const
@@ -442,13 +449,12 @@ describe('TaskRepository', () => {
       (prismaMock.taskKosu.upsert as jest.Mock).mockResolvedValue(mockUpsertedKosu);
 
       // メソッド実行
-      const updatedTask = await taskRepository.update(wbsId, 'D1-0001', task);
+      const updatedTask = await taskRepository.update(wbsId, task);
 
       // 検証
       expect(prismaMock.wbsTask.update).toHaveBeenCalledWith({
-        where: { id: 'D1-0001', wbsId },
+        where: { id: 1, wbsId },
         data: {
-          id: 'D1-0001',
           name: '更新後タスク',
           phaseId: 2,
           assigneeId: 'user2',
@@ -462,7 +468,7 @@ describe('TaskRepository', () => {
           endDate: new Date('2025-06-30'),
         },
         create: {
-          taskId: 'D1-0001',
+          taskId: 1,
           startDate: new Date('2025-06-01'),
           endDate: new Date('2025-06-30'),
           type: 'YOTEI',
@@ -478,7 +484,7 @@ describe('TaskRepository', () => {
           type: 'NORMAL',
         }
       });
-      expect(updatedTask.id?.getValue()).toBe('D1-0001');
+      expect(updatedTask.taskNo?.getValue()).toBe('D1-0001');
       expect(updatedTask.name).toBe('更新後タスク');
       expect(updatedTask.status.getStatus()).toBe('IN_PROGRESS');
     });
@@ -488,10 +494,10 @@ describe('TaskRepository', () => {
     it('タスクを削除できること', async () => {
       (prismaMock.wbsTask.delete as jest.Mock).mockResolvedValue({});
 
-      await taskRepository.delete('D1-0001');
+      await taskRepository.delete(1);
 
       expect(prismaMock.wbsTask.delete).toHaveBeenCalledWith({
-        where: { id: 'D1-0001' }
+        where: { id: 1 }
       });
     });
   });

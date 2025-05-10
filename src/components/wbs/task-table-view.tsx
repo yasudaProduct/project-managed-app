@@ -226,7 +226,7 @@ export function TaskTableViewPage({
     data:
       wbsTasks.length > 0
         ? wbsTasks.map((wbsTask) => ({
-            id: wbsTask.id ?? "",
+            id: wbsTask.taskNo ?? "",
             name: wbsTask.name,
             kijunStart: wbsTask.kijunStart?.toISOString(),
             kijunEnd: wbsTask.kijunEnd?.toISOString(),

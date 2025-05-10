@@ -122,12 +122,12 @@ async function main() {
             },
             create: {
                 id: task.id,
+                taskNo: task.taskNo,
                 wbsId: task.wbsId,
                 phaseId: task.phaseId,
                 name: task.name,
                 assigneeId: task.assigneeId,
                 status: task.status as TaskStatus,
-
             },
         })
     }

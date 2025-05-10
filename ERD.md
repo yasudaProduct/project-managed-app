@@ -65,7 +65,8 @@ erDiagram
   DateTime updatedAt
 }
 "wbs_task" {
-  String id PK
+  Int id PK
+  String taskNo
   Int wbsId FK
   Int phaseId FK "nullable"
   String name
@@ -76,7 +77,7 @@ erDiagram
 }
 "task_period" {
   Int id PK
-  String taskId FK
+  Int taskId FK
   DateTime startDate
   DateTime endDate
   PeriodType type
@@ -94,7 +95,7 @@ erDiagram
 }
 "task_status_log" {
   Int id PK
-  String taskId FK
+  Int taskId FK
   TaskStatus status
   DateTime changedAt
   String changedBy FK "nullable"
@@ -112,7 +113,7 @@ erDiagram
 "work_records" {
   Int id PK
   String userId FK
-  String taskId FK "nullable"
+  Int taskId FK "nullable"
   DateTime date
   Int hours_worked
   DateTime createdAt
@@ -212,6 +213,7 @@ erDiagram
 
 **Properties**
   - `id`: 
+  - `taskNo`: 
   - `wbsId`: 
   - `phaseId`: 
   - `name`: 

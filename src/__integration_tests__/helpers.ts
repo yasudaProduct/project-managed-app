@@ -16,12 +16,12 @@ export const testIds = {
   projectId: '',
   wbsId: 0,
   phaseId: 0,
-  taskId: '',
+  taskId: 0,
   reset() {
     this.projectId = '';
     this.wbsId = 0;
     this.phaseId = 0;
-    this.taskId = '';
+    this.taskId = 0;
   }
 };
 
@@ -48,7 +48,7 @@ export function createTestPhase(wbsId: number, overrides = {}) {
 export function createTestTask(wbsId: number, phaseId: number, overrides = {}) {
   const taskId = TaskId.reconstruct(`TEST-${Date.now() % 1000}`);
   return Task.create({
-    id: taskId,
+    taskNo: taskId,
     wbsId,
     name: `テストタスク-${Date.now()}`,
     phaseId,

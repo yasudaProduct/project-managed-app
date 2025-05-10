@@ -23,10 +23,10 @@ export interface CreateTaskCommand {
 }
 
 export interface ITaskApplicationService {
-    getTaskById(wbsId: number, id: string): Promise<WbsTask | null>;
+    getTaskById(id: number): Promise<WbsTask | null>;
     getTaskAll(wbsId: number): Promise<WbsTask[]>;
-    createTask(command: CreateTaskCommand): Promise<{ success: boolean; id?: string; error?: string }>;
-    updateTask(args: { wbsId: number; id: string, updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }>;
+    createTask(command: CreateTaskCommand): Promise<{ success: boolean; id?: number; error?: string }>;
+    updateTask(args: { wbsId: number; updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }>;
     // deleteTask(id: string): Promise<{ success: boolean; error?: string; id?: string }>;
 }
 
@@ -39,12 +39,13 @@ export class TaskApplicationService implements ITaskApplicationService {
     ) {
     }
 
-    public async getTaskById(wbsId: number, id: string): Promise<WbsTask | null> {
+    public async getTaskById(id: number): Promise<WbsTask | null> {
         console.log("getTaskById")
-        const task = await this.taskRepository.findById(wbsId, id);
+        const task = await this.taskRepository.findById(id);
         if (!task) return null;
         return {
-            id: task.id!.getValue(),
+            id: task.id!,
+            taskNo: task.taskNo!.getValue(),
             name: task.name,
             status: task.getStatus(),
             assigneeId: task.assigneeId ?? undefined,
@@ -77,7 +78,8 @@ export class TaskApplicationService implements ITaskApplicationService {
         const tasks = await this.taskRepository.findAll(wbsId);
 
         return tasks.map(task => ({
-            id: task.id!.getValue(),
+            id: task.id!,
+            taskNo: task.taskNo!.getValue(),
             name: task.name,
             status: task.getStatus(),
             assigneeId: task.assigneeId ?? undefined,
@@ -106,14 +108,14 @@ export class TaskApplicationService implements ITaskApplicationService {
         }));
     }
 
-    public async createTask(command: CreateTaskCommand): Promise<{ success: boolean; id?: string; error?: string }> {
+    public async createTask(command: CreateTaskCommand): Promise<{ success: boolean; id?: number; error?: string }> {
         console.log("service: createTask")
         const { name, wbsId, phaseId, yoteiStartDate, yoteiEndDate, yoteiKosu, assigneeId, status } = command;
 
         //TODO ファクトリーでtaskを生成する
         const task = Task.create(
             {
-                id: await this.taskFactory.createTaskId(wbsId, phaseId),
+                taskNo: await this.taskFactory.createTaskId(wbsId, phaseId),
                 wbsId,
                 name,
                 phaseId,
@@ -137,14 +139,14 @@ export class TaskApplicationService implements ITaskApplicationService {
         );
 
         const result = await this.taskRepository.create(task);
-        return { success: true, id: result.id!.getValue() };
+        return { success: true, id: result.id };
     }
 
-    public async updateTask(args: { wbsId: number, id: string, updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }> {
+    public async updateTask(args: { wbsId: number, updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }> {
         console.log("service: updateTask")
-        const { wbsId, id, updateTask } = args;
+        const { wbsId, updateTask } = args;
 
-        const task: Task | null = await this.taskRepository.findById(wbsId, id);
+        const task: Task | null = await this.taskRepository.findById(updateTask.id);
         if (!task) {
             return { success: false, error: "タスクが見つかりません" };
         }
@@ -166,8 +168,8 @@ export class TaskApplicationService implements ITaskApplicationService {
         if (updateTask.kijunStart) task.updateKijun(updateTask.kijunStart, updateTask.kijunEnd ?? updateTask.kijunStart, updateTask.kijunKosu ?? 0);
         if (updateTask.yoteiStart) task.updateYotei({ startDate: updateTask.yoteiStart, endDate: updateTask.yoteiEnd ?? updateTask.yoteiStart, kosu: updateTask.yoteiKosu ?? 0 });
 
-        const result = await this.taskRepository.update(wbsId, id, task);
-        return { success: true, id: result.id!.getValue() };
+        const result = await this.taskRepository.update(wbsId, task);
+        return { success: true, id: result.taskNo!.getValue() };
 
     }
 }

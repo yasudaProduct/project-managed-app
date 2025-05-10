@@ -110,7 +110,8 @@ model WbsBuffer {
 }
 
 model WbsTask {
-  id               String           @id @default(uuid())
+  id               Int              @id @default(autoincrement())
+  taskNo           String           
   wbsId            Int
   phaseId          Int?
   name             String
@@ -125,13 +126,13 @@ model WbsTask {
   updatedAt        DateTime         @updatedAt
   workRecords      WorkRecord[]
 
-  @@unique(fields: [id,wbsId])
+  @@unique(fields: [taskNo,wbsId])
   @@map("wbs_task")
 }
 
 model TaskPeriod {
   id        Int        @id @default(autoincrement())
-  taskId    String
+  taskId    Int
   startDate DateTime
   endDate   DateTime
   type      PeriodType
@@ -159,7 +160,7 @@ model TaskKosu{
 
 model TaskStatusLog {
   id        Int        @id @default(autoincrement())
-  taskId    String
+  taskId    Int
   status    TaskStatus
   changedAt DateTime
   changedBy String?
@@ -186,7 +187,7 @@ model Milestone {
 model WorkRecord {
   id                Int        @id @default(autoincrement())
   userId            String
-  taskId            String?
+  taskId            Int?
   date              DateTime
   hours_worked      Int
   createdAt         DateTime   @default(now())

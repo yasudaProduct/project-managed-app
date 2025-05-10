@@ -11,7 +11,8 @@ import { WorkRecord } from "../work-records/work-recoed";
 
 
 export class Task {
-    public id?: TaskId;
+    public id?: number;
+    public taskNo: TaskId;
     public wbsId: number;
     public name: string;
     public status: TaskStatus;
@@ -25,7 +26,8 @@ export class Task {
     public readonly updatedAt?: Date;
 
     private constructor(args: {
-        id?: TaskId;
+        id?: number;
+        taskNo: TaskId;
         wbsId: number;
         name: string;
         assigneeId?: string;
@@ -39,6 +41,7 @@ export class Task {
         updatedAt?: Date;
     }) {
         this.id = args.id;
+        this.taskNo = args.taskNo;
         this.wbsId = args.wbsId;
         this.name = args.name;
         this.assigneeId = args.assigneeId;
@@ -53,11 +56,11 @@ export class Task {
     }
 
     public isEqual(task: Task) {
-        return this.id === task.id;
+        return this.taskNo === task.taskNo;
     }
 
     public static create(args: {
-        id: TaskId;
+        taskNo: TaskId;
         wbsId: number;
         name: string;
         phaseId?: number;
@@ -70,7 +73,8 @@ export class Task {
 
     public static createFromDb(args:
         {
-            id: TaskId;
+            id: number;
+            taskNo: TaskId;
             wbsId: number;
             name: string;
             status: TaskStatus;
