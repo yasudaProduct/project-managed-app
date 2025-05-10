@@ -1,12 +1,12 @@
 import { Assignee } from "./assignee";
 import { Phase } from "../phase/phase";
-import { TaskStatus } from "./project-status";
+import { TaskStatus } from "./value-object/project-status";
 import { Period } from "./period";
 import { TaskStatus as TaskStatusType } from "@/types/wbs";
 import { ManHour } from "./man-hour";
-import { ManHourType } from "./man-hour-type";
-import { PeriodType } from "./period-type";
-import { TaskId } from "./task-id";
+import { ManHourType } from "./value-object/man-hour-type";
+import { PeriodType } from "./value-object/period-type";
+import { TaskId } from "./value-object/task-id";
 import { WorkRecord } from "../work-records/work-recoed";
 
 

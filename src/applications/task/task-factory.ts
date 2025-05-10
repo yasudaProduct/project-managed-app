@@ -1,5 +1,5 @@
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
-import { TaskId } from "@/domains/task/task-id";
+import { TaskId } from "@/domains/task/value-object/task-id";
 import { inject, injectable } from "inversify";
 import type { ITaskRepository } from "./itask-repository";
 import { SYMBOL } from "@/types/symbol";

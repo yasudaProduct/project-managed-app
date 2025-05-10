@@ -1,12 +1,12 @@
 // filepath: /Users/yuta/Develop/project-managed-app/src/__tests__/infrastructures/task-repository.test.ts
 import { TaskRepository } from "@/infrastructures/task-repository";
 import { Task } from "@/domains/task/task";
-import { TaskId } from "@/domains/task/task-id";
-import { TaskStatus } from "@/domains/task/project-status";
+import { TaskId } from "@/domains/task/value-object/task-id";
+import { TaskStatus } from "@/domains/task/value-object/project-status";
 import { Period } from "@/domains/task/period";
-import { PeriodType } from "@/domains/task/period-type";
+import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";
-import { ManHourType } from "@/domains/task/man-hour-type";
+import { ManHourType } from "@/domains/task/value-object/man-hour-type";
 import prisma from "@/lib/prisma";
 
 // Prismaクライアントのモック化
@@ -47,7 +47,7 @@ describe('TaskRepository', () => {
   beforeAll(() => {
     console.log = jest.fn();
   });
-  
+
   afterAll(() => {
     console.log = originalConsoleLog;
   });
@@ -100,7 +100,7 @@ describe('TaskRepository', () => {
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      
+
       (prismaMock.wbsTask.findUnique as jest.Mock).mockResolvedValue(mockTaskData);
 
       // メソッド実行
@@ -232,7 +232,7 @@ describe('TaskRepository', () => {
           updatedAt: new Date()
         }
       ];
-      
+
       const mockWorkRecordsData = [
         {
           id: 1,
@@ -247,7 +247,7 @@ describe('TaskRepository', () => {
           hours_worked: 8
         }
       ];
-      
+
       (prismaMock.wbsTask.findMany as jest.Mock).mockResolvedValue(mockTasksData);
       (prismaMock.workRecord.findMany as jest.Mock).mockResolvedValue(mockWorkRecordsData);
 
@@ -324,7 +324,7 @@ describe('TaskRepository', () => {
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      
+
       const mockCreatedPeriod = {
         id: 1,
         taskId: 'D1-0001',
@@ -332,7 +332,7 @@ describe('TaskRepository', () => {
         endDate,
         type: 'YOTEI' as const
       };
-      
+
       const mockCreatedKosu = {
         id: 1,
         periodId: 1,
@@ -340,7 +340,7 @@ describe('TaskRepository', () => {
         kosu: 10,
         type: 'NORMAL' as const
       };
-      
+
       (prismaMock.wbsTask.create as jest.Mock).mockResolvedValue(mockCreatedTask);
       (prismaMock.taskPeriod.create as jest.Mock).mockResolvedValue(mockCreatedPeriod);
       (prismaMock.taskKosu.create as jest.Mock).mockResolvedValue(mockCreatedKosu);
@@ -420,7 +420,7 @@ describe('TaskRepository', () => {
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      
+
       const mockUpsertedPeriod = {
         id: 1,
         taskId: 'D1-0001',
@@ -428,7 +428,7 @@ describe('TaskRepository', () => {
         endDate: new Date('2025-06-30'),
         type: 'YOTEI' as const
       };
-      
+
       const mockUpsertedKosu = {
         id: 1,
         periodId: 1,
@@ -436,7 +436,7 @@ describe('TaskRepository', () => {
         kosu: 20,
         type: 'NORMAL' as const
       };
-      
+
       (prismaMock.wbsTask.update as jest.Mock).mockResolvedValue(mockUpdatedTask);
       (prismaMock.taskPeriod.upsert as jest.Mock).mockResolvedValue(mockUpsertedPeriod);
       (prismaMock.taskKosu.upsert as jest.Mock).mockResolvedValue(mockUpsertedKosu);

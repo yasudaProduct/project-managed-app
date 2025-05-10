@@ -1,4 +1,4 @@
-import { TaskId } from "../task/task-id";
+import { TaskId } from "../task/value-object/task-id";
 
 export class WorkRecord {
     public readonly id?: number;

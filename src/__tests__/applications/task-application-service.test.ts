@@ -2,16 +2,16 @@
 import { ITaskRepository } from "@/applications/task/itask-repository";
 import { TaskApplicationService } from "@/applications/task/task-application-service";
 import { Task } from "@/domains/task/task";
-import { TaskId } from "@/domains/task/task-id";
-import { TaskStatus } from "@/domains/task/project-status";
+import { TaskId } from "@/domains/task/value-object/task-id";
+import { TaskStatus } from "@/domains/task/value-object/project-status";
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 import { Period } from "@/domains/task/period";
-import { PeriodType } from "@/domains/task/period-type";
+import { PeriodType } from "@/domains/task/value-object/period-type";
 import { Assignee } from "@/domains/task/assignee";
 import { Phase } from "@/domains/phase/phase";
 import { PhaseCode } from "@/domains/phase/phase-code";
 import { ManHour } from "@/domains/task/man-hour";
-import { ManHourType } from "@/domains/task/man-hour-type";
+import { ManHourType } from "@/domains/task/value-object/man-hour-type";
 
 // Jestのモック機能を使用してリポジトリをモック化
 jest.mock("@/applications/task/itask-repository");
@@ -81,7 +81,7 @@ describe('TaskApplicationService', () => {
         seq: 1
       });
       Object.defineProperty(mockTask, 'phase', { value: phase });
-      
+
       taskRepository.findById.mockResolvedValue(mockTask);
 
       // テスト対象メソッド実行
@@ -107,7 +107,7 @@ describe('TaskApplicationService', () => {
       taskRepository.findById.mockResolvedValue(null);
 
       const result = await taskApplicationService.getTaskById(wbsId, 'not-exist');
-      
+
       expect(taskRepository.findById).toHaveBeenCalledWith(wbsId, 'not-exist');
       expect(result).toBeNull();
     });
@@ -173,9 +173,9 @@ describe('TaskApplicationService', () => {
 
     it('タスクが存在しない場合は空の配列を返すこと', async () => {
       taskRepository.findAll.mockResolvedValue([]);
-      
+
       const results = await taskApplicationService.getTaskAll(wbsId);
-      
+
       expect(taskRepository.findAll).toHaveBeenCalledWith(wbsId);
       expect(results).toEqual([]);
     });
@@ -186,7 +186,7 @@ describe('TaskApplicationService', () => {
       // createTaskIdのモック
       const mockTaskId = TaskId.reconstruct('D1-0001');
       taskFactory.createTaskId.mockResolvedValue(mockTaskId);
-      
+
       // createのモック
       taskRepository.create.mockImplementation((task) => {
         // IDが設定された新しいタスクを返す
@@ -195,7 +195,7 @@ describe('TaskApplicationService', () => {
 
       const yoteiStartDate = new Date('2025-05-01');
       const yoteiEndDate = new Date('2025-05-31');
-      
+
       // テスト対象メソッド実行
       const result = await taskApplicationService.createTask({
         id: 'D1-0001',
@@ -213,7 +213,7 @@ describe('TaskApplicationService', () => {
       expect(taskFactory.createTaskId).toHaveBeenCalledWith(wbsId, 1);
       expect(taskRepository.create).toHaveBeenCalled();
       expect(result.success).toBe(true);
-      
+
       // createに渡されたタスクオブジェクトを検証
       const createdTask = taskRepository.create.mock.calls[0][0];
       expect(createdTask.name).toBe('新規タスク');
@@ -253,9 +253,9 @@ describe('TaskApplicationService', () => {
           })
         ]
       });
-      
+
       taskRepository.findById.mockResolvedValue(existingTask);
-      
+
       // updateのモック
       taskRepository.update.mockImplementation((wbsId, id, task) => {
         return Promise.resolve(task);
@@ -284,7 +284,7 @@ describe('TaskApplicationService', () => {
       expect(taskRepository.findById).toHaveBeenCalledWith(wbsId, 'D1-0001');
       expect(taskRepository.update).toHaveBeenCalled();
       expect(result.success).toBe(true);
-      
+
       // updateに渡されたTaskオブジェクトを検証
       const updatedTask = taskRepository.update.mock.calls[0][2];
       expect(updatedTask.name).toBe('更新後タスク');

@@ -1,7 +1,7 @@
 import { Period } from "@/domains/task/period";
-import { PeriodType } from "@/domains/task/period-type";
+import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";
-import { ManHourType } from "@/domains/task/man-hour-type";
+import { ManHourType } from "@/domains/task/value-object/man-hour-type";
 
 describe('Period', () => {
   const startDate = new Date('2025-01-01');
@@ -11,7 +11,7 @@ describe('Period', () => {
   const manHours = [
     ManHour.create({ kosu: 8, type: manHourType })
   ];
-  
+
   describe('create', () => {
     it('開始日、終了日、種別、工数から期間を作成できること', () => {
       const period = Period.create({
@@ -20,7 +20,7 @@ describe('Period', () => {
         type: periodType,
         manHours
       });
-      
+
       expect(period).toBeInstanceOf(Period);
       expect(period.id).toBeUndefined();
       expect(period.startDate).toBe(startDate);
@@ -30,7 +30,7 @@ describe('Period', () => {
       expect(period.manHours.length).toBe(1);
     });
   });
-  
+
   describe('createFromDb', () => {
     it('ID、開始日、終了日、種別、工数から期間を作成できること', () => {
       const period = Period.createFromDb({
@@ -40,7 +40,7 @@ describe('Period', () => {
         type: periodType,
         manHours
       });
-      
+
       expect(period).toBeInstanceOf(Period);
       expect(period.id).toBe(1);
       expect(period.startDate).toBe(startDate);
@@ -49,7 +49,7 @@ describe('Period', () => {
       expect(period.manHours).toBe(manHours);
     });
   });
-  
+
   describe('isEqual', () => {
     it('同じIDの期間は等しいと判定されること', () => {
       const period1 = Period.createFromDb({
@@ -59,7 +59,7 @@ describe('Period', () => {
         type: periodType,
         manHours
       });
-      
+
       const period2 = Period.createFromDb({
         id: 1,
         startDate: new Date('2025-02-01'),
@@ -67,10 +67,10 @@ describe('Period', () => {
         type: new PeriodType({ type: 'KIJUN' }),
         manHours: [ManHour.create({ kosu: 16, type: new ManHourType({ type: 'NORMAL' }) })]
       });
-      
+
       expect(period1.isEqual(period2)).toBe(true);
     });
-    
+
     it('異なるIDの期間は等しくないと判定されること', () => {
       const period1 = Period.createFromDb({
         id: 1,
@@ -79,7 +79,7 @@ describe('Period', () => {
         type: periodType,
         manHours
       });
-      
+
       const period2 = Period.createFromDb({
         id: 2,
         startDate,
@@ -87,7 +87,7 @@ describe('Period', () => {
         type: periodType,
         manHours
       });
-      
+
       expect(period1.isEqual(period2)).toBe(false);
     });
   });

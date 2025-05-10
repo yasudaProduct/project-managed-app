@@ -4,17 +4,23 @@ import { IPhaseRepository } from "@/applications/task/iphase-repository";
 import { ITaskRepository } from "@/applications/task/itask-repository";
 import { ITaskApplicationService, TaskApplicationService } from "@/applications/task/task-application-service";
 import { TaskFactory } from "@/applications/task/task-factory";
+import { IWbsRepository } from "@/applications/wbs/iwbs-repository";
+import { IWbsApplicationService, WbsApplicationService } from "@/applications/wbs/wbs-application-service";
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 import { PhaseRepository } from "@/infrastructures/phase-repository";
 import { ProjectRepository } from "@/infrastructures/project-repository";
 import { TaskRepository } from "@/infrastructures/task-repository";
+import { WbsRepository } from "@/infrastructures/wbs-repository";
 import { SYMBOL } from "@/types/symbol";
 import { Container } from "inversify";
 
 
 const container: Container = new Container();
-container.bind<IProjectRepository>(SYMBOL.IProjectRepository).to(ProjectRepository).inSingletonScope();
 container.bind<IProjectApplicationService>(SYMBOL.IProjectApplicationService).to(ProjectApplicationService).inSingletonScope();
+container.bind<IProjectRepository>(SYMBOL.IProjectRepository).to(ProjectRepository).inSingletonScope();
+
+container.bind<IWbsApplicationService>(SYMBOL.IWbsApplicationService).to(WbsApplicationService).inSingletonScope();
+container.bind<IWbsRepository>(SYMBOL.IWbsRepository).to(WbsRepository).inSingletonScope();
 
 container.bind<IPhaseRepository>(SYMBOL.IPhaseRepository).to(PhaseRepository).inSingletonScope();
 

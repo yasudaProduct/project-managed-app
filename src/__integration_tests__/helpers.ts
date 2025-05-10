@@ -4,12 +4,12 @@ import { Project } from '@/domains/project/project';
 import { Phase } from '@/domains/phase/phase';
 import { PhaseCode } from '@/domains/phase/phase-code';
 import { Task } from '@/domains/task/task';
-import { TaskStatus } from '@/domains/task/project-status';
-import { TaskId } from '@/domains/task/task-id';
+import { TaskStatus } from '@/domains/task/value-object/project-status';
+import { TaskId } from '@/domains/task/value-object/task-id';
 import { Period } from '@/domains/task/period';
-import { PeriodType } from '@/domains/task/period-type';
+import { PeriodType } from '@/domains/task/value-object/period-type';
 import { ManHour } from '@/domains/task/man-hour';
-import { ManHourType } from '@/domains/task/man-hour-type';
+import { ManHourType } from '@/domains/task/value-object/man-hour-type';
 
 // テスト中に作成されるリソースのIDを保持するオブジェクト
 export const testIds = {
@@ -73,8 +73,8 @@ export function createTestTask(wbsId: number, phaseId: number, overrides = {}) {
 
 // テストデータ準備用の関数
 export async function seedTestProject(prisma: PrismaClient) {
-    console.log('⭐️⭐️ テストデータの準備を開始します ⭐️⭐️');
-  
+  console.log('⭐️⭐️ テストデータの準備を開始します ⭐️⭐️');
+
   // プロジェクト作成
   const projectData = await prisma.projects.create({
     data: {
@@ -85,9 +85,9 @@ export async function seedTestProject(prisma: PrismaClient) {
       endDate: new Date('2025-12-31'),
     }
   });
-  
+
   testIds.projectId = projectData.id;
-  
+
   // WBS作成
   const wbsData = await prisma.wbs.create({
     data: {
@@ -95,9 +95,9 @@ export async function seedTestProject(prisma: PrismaClient) {
       projectId: projectData.id,
     }
   });
-  
+
   testIds.wbsId = wbsData.id;
-  
+
   // フェーズ作成
   const phaseData = await prisma.wbsPhase.create({
     data: {
@@ -107,27 +107,27 @@ export async function seedTestProject(prisma: PrismaClient) {
       wbsId: wbsData.id,
     }
   });
-  
+
   testIds.phaseId = phaseData.id;
-  
+
   return { projectData, wbsData, phaseData };
 }
 
 // テスト後のクリーンアップ用の関数
 export async function cleanupTestData(prisma: PrismaClient) {
   if (testIds.taskId) {
-    await prisma.wbsTask.delete({ where: { id: testIds.taskId } }).catch(() => {});
+    await prisma.wbsTask.delete({ where: { id: testIds.taskId } }).catch(() => { });
   }
   if (testIds.phaseId) {
-    await prisma.wbsPhase.delete({ where: { id: testIds.phaseId } }).catch(() => {});
+    await prisma.wbsPhase.delete({ where: { id: testIds.phaseId } }).catch(() => { });
   }
   if (testIds.wbsId) {
-    await prisma.wbs.delete({ where: { id: testIds.wbsId } }).catch(() => {});
+    await prisma.wbs.delete({ where: { id: testIds.wbsId } }).catch(() => { });
   }
   if (testIds.projectId) {
-    await prisma.projects.delete({ where: { id: testIds.projectId } }).catch(() => {});
+    await prisma.projects.delete({ where: { id: testIds.projectId } }).catch(() => { });
   }
-  
+
   testIds.reset();
 }
 

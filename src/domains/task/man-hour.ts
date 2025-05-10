@@ -1,4 +1,4 @@
-import { ManHourType } from "./man-hour-type";
+import { ManHourType } from "./value-object/man-hour-type";
 
 export class ManHour {
     public readonly id?: number;

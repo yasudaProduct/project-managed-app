@@ -1,5 +1,5 @@
 import { ManHour } from "./man-hour";
-import { PeriodType } from "./period-type";
+import { PeriodType } from "./value-object/period-type";
 
 export class Period {
     public readonly id?: number;

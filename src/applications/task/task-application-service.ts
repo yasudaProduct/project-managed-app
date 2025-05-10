@@ -3,11 +3,11 @@ import { inject, injectable } from "inversify";
 import type { ITaskRepository } from "./itask-repository";
 import { WbsTask } from "@/types/wbs";
 import { Task } from "@/domains/task/task";
-import { TaskStatus } from "@/domains/task/project-status";
+import { TaskStatus } from "@/domains/task/value-object/project-status";
 import { Period } from "@/domains/task/period";
-import { PeriodType } from "@/domains/task/period-type";
+import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";
-import { ManHourType } from "@/domains/task/man-hour-type";
+import { ManHourType } from "@/domains/task/value-object/man-hour-type";
 import type { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 
 export interface CreateTaskCommand {

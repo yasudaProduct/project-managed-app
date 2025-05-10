@@ -5,8 +5,8 @@ import { IPhaseRepository } from "@/applications/task/iphase-repository";
 import { Phase } from "@/domains/phase/phase";
 import { PhaseCode } from "@/domains/phase/phase-code";
 import { Task } from "@/domains/task/task";
-import { TaskId } from "@/domains/task/task-id";
-import { TaskStatus } from "@/domains/task/project-status";
+import { TaskId } from "@/domains/task/value-object/task-id";
+import { TaskStatus } from "@/domains/task/value-object/project-status";
 
 // モックの設定
 jest.mock("@/applications/task/itask-repository");
@@ -43,15 +43,15 @@ describe('TaskFactory', () => {
         code: new PhaseCode('D1'),
         seq: 1
       });
-      
+
       phaseRepository.findById.mockResolvedValue(mockPhase);
-      
+
       // タスクが存在しない場合（初めてのタスク）
       taskRepository.findAll.mockResolvedValue([]);
-      
+
       // テスト対象メソッド実行
       const taskId = await taskFactory.createTaskId(wbsId, 1);
-      
+
       // 検証
       expect(phaseRepository.findById).toHaveBeenCalledWith(1);
       expect(taskRepository.findAll).toHaveBeenCalledWith(wbsId);
@@ -65,9 +65,9 @@ describe('TaskFactory', () => {
         code: new PhaseCode('D10'),
         seq: 1
       });
-      
+
       phaseRepository.findById.mockResolvedValue(mockPhase);
-      
+
       // 既存のタスクをモック（D10-0001, D10-0002が存在する）
       const task1 = Task.create({
         id: TaskId.reconstruct('D10-0001'),
@@ -82,12 +82,12 @@ describe('TaskFactory', () => {
         name: 'タスク2',
         status: new TaskStatus({ status: 'NOT_STARTED' }),
       });
-      
+
       taskRepository.findAll.mockResolvedValue([task1, task2]);
-      
+
       // テスト対象メソッド実行
       const taskId = await taskFactory.createTaskId(wbsId, 1);
-      
+
       // 検証 - D10-0003が生成されるべき
       expect(taskId.getValue()).toBe('D10-0003');
     });
@@ -99,9 +99,9 @@ describe('TaskFactory', () => {
         code: new PhaseCode('E1'),
         seq: 2
       });
-      
+
       phaseRepository.findById.mockResolvedValue(mockPhase);
-      
+
       // 既存のタスクは設計フェーズのみ
       const task1 = Task.create({
         id: TaskId.reconstruct('D10-0001'),
@@ -116,12 +116,12 @@ describe('TaskFactory', () => {
         name: '設計タスク2',
         status: new TaskStatus({ status: 'COMPLETED' }),
       });
-      
+
       taskRepository.findAll.mockResolvedValue([task1, task2]);
-      
+
       // テスト対象メソッド実行（開発フェーズのタスクID生成）
       const taskId = await taskFactory.createTaskId(wbsId, 2);
-      
+
       // 検証 - DEV-1が生成されるべき
       expect(taskId.getValue()).toBe('E1-0001');
     });
@@ -129,10 +129,10 @@ describe('TaskFactory', () => {
     it('指定されたフェーズが存在しない場合はエラーを投げること', async () => {
       // フェーズが存在しないケース
       phaseRepository.findById.mockResolvedValue(null);
-      
+
       // テスト対象メソッド実行 - エラーが発生することを検証
       await expect(taskFactory.createTaskId(wbsId, 999)).rejects.toThrow('Phase not found');
-      
+
       expect(phaseRepository.findById).toHaveBeenCalledWith(999);
     });
 
@@ -143,9 +143,9 @@ describe('TaskFactory', () => {
         code: new PhaseCode('D1'),
         seq: 1
       });
-      
+
       phaseRepository.findById.mockResolvedValue(mockPhase);
-      
+
       // タスクDESIGN-1とDESIGN-3が存在する（DESIGN-2は欠番）
       const task1 = Task.create({
         id: TaskId.reconstruct('D1-0001'),
@@ -160,12 +160,12 @@ describe('TaskFactory', () => {
         name: 'タスク3',
         status: new TaskStatus({ status: 'NOT_STARTED' }),
       });
-      
+
       taskRepository.findAll.mockResolvedValue([task1, task3]);
-      
+
       // テスト対象メソッド実行
       const taskId = await taskFactory.createTaskId(wbsId, 1);
-      
+
       // 検証 - 最大値の3の次の4が生成されるべき
       expect(taskId.getValue()).toBe('D1-0004');
     });

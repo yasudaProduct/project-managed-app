@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 import { SYMBOL } from "@/types/symbol";
 import { container } from "@/lib/inversify.config"
 import { ITaskApplicationService } from "@/applications/task/task-application-service";
-import { TaskStatus as TaskStatusDomain } from "@/domains/task/project-status";
+import { TaskStatus as TaskStatusDomain } from "@/domains/task/value-object/project-status";
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 
 const taskApplicationService = container.get<ITaskApplicationService>(SYMBOL.ITaskApplicationService);
