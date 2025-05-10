@@ -201,7 +201,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="min-w-full">
+      <DialogContent className="min-w-[800px]">
         <DialogHeader>
           <DialogTitle>新規タスク追加</DialogTitle>
         </DialogHeader>
