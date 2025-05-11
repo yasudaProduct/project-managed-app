@@ -66,6 +66,13 @@ export function SideMenu() {
             <Calendar className="h-4 w-4" />
             作業実績
           </Link>
+          <Link
+            href="/schedule-generator"
+            className="text-lg flex items-center gap-2"
+          >
+            <Calendar className="h-4 w-4" />
+            予定自動作成
+          </Link>
 
           {wbsId && (
             <>
