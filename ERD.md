@@ -35,6 +35,7 @@ erDiagram
   Int id PK
   Int wbsId FK
   String assigneeId FK
+  Float rate
   DateTime createdAt
   DateTime updatedAt
 }
@@ -119,6 +120,18 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"user_schedule" {
+  Int id PK
+  String userId FK
+  DateTime date
+  DateTime startTime
+  DateTime endTime
+  String title
+  String type
+  String note "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "wbs" }o--|| "projects" : project
 "wbs_assignee" }o--|| "wbs" : wbs
 "wbs_assignee" }o--|| "users" : assignee
@@ -135,6 +148,7 @@ erDiagram
 "milestone" }o--|| "wbs" : wbs
 "work_records" }o--|| "users" : user
 "work_records" }o--o| "wbs_task" : task
+"user_schedule" }o--|| "users" : user
 ```
 
 ### `projects`
@@ -174,6 +188,7 @@ erDiagram
   - `id`: 
   - `wbsId`: 
   - `assigneeId`: 
+  - `rate`: 
   - `createdAt`: 
   - `updatedAt`: 
 
@@ -273,5 +288,19 @@ erDiagram
   - `taskId`: 
   - `date`: 
   - `hours_worked`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `user_schedule`
+
+**Properties**
+  - `id`: 
+  - `userId`: 
+  - `date`: 
+  - `startTime`: 
+  - `endTime`: 
+  - `title`: 
+  - `type`: 
+  - `note`: 
   - `createdAt`: 
   - `updatedAt`: 

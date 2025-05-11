@@ -39,6 +39,7 @@ model Users {
   statusLogs TaskStatusLog[] @relation("StatusChanger")
   assignees  WbsAssignee[]   @relation("WbsAssignee")
   workRecords WorkRecord[]
+  schedules  UserSchedule[]
   @@map("users")
 }
 
@@ -63,6 +64,7 @@ model WbsAssignee {
   id        Int        @id @default(autoincrement())
   wbsId     Int
   assigneeId String
+  rate      Float      @default(1.0) // 参画率（0.01〜1.0）
   wbs       Wbs        @relation(fields: [wbsId], references: [id])
   assignee  Users      @relation("WbsAssignee", fields: [assigneeId], references: [id])
   createdAt DateTime   @default(now())
@@ -196,6 +198,23 @@ model WorkRecord {
   task              WbsTask?   @relation(fields: [taskId], references: [id])
 
   @@map("work_records")
+}
+
+model UserSchedule {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  date      DateTime
+  startTime DateTime
+  endTime   DateTime
+  title     String
+  type      String  
+  note      String?
+  user      Users    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+  @@map("user_schedule")
 }
 
 enum TaskStatus {

@@ -8,7 +8,7 @@ async function main() {
     console.log("seed start");
 
     // 初期データ挿入
-    for (const user of users) {
+    for (const user of users.users) {
         await prisma.users.upsert({
             where: { id: user.id },
             update: {
@@ -21,6 +21,30 @@ async function main() {
                 name: user.name,
                 email: user.email,
                 displayName: user.displayName,
+            },
+        })
+    }
+
+    for (const userSchedule of users.userSchedules) {
+        await prisma.userSchedule.upsert({
+            where: { id: userSchedule.id },
+            create: {
+                id: userSchedule.id,
+                userId: userSchedule.userId,
+                date: new Date(userSchedule.date),
+                startTime: new Date(userSchedule.startTime),
+                endTime: new Date(userSchedule.endTime),
+                title: userSchedule.title,
+                type: userSchedule.type,
+            },
+            update: {
+                userId: userSchedule.userId,
+                date: userSchedule.date,
+                startTime: userSchedule.startTime,
+                endTime: userSchedule.endTime,
+                title: userSchedule.title,
+                type: userSchedule.type,
+                note: userSchedule.note,
             },
         })
     }
