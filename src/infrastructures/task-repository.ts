@@ -135,6 +135,76 @@ export class TaskRepository implements ITaskRepository {
         }));
     }
 
+    async findByAssigneeId(assigneeId: string): Promise<Task[]> {
+        const tasksDb = await prisma.wbsTask.findMany({
+            where: {
+                assigneeId: assigneeId
+            },
+            include: {
+                assignee: true,
+                phase: true,
+                periods: {
+                    include: {
+                        kosus: true,
+                    },
+                },
+            }
+        });
+
+        const workRecordsDb = await prisma.workRecord.findMany({
+            where: {
+                taskId: {
+                    in: tasksDb.map(task => task.id),
+                },
+            },
+        });
+        return tasksDb.map(taskDb => Task.createFromDb({
+            id: taskDb.id,
+            taskNo: TaskId.reconstruct(taskDb.taskNo),
+            name: taskDb.name,
+            wbsId: taskDb.wbsId,
+            assigneeId: taskDb.assigneeId ?? undefined,
+            assignee: taskDb.assignee ? Assignee.createFromDb({
+                id: taskDb.assignee.id,
+                name: taskDb.assignee.name,
+                displayName: taskDb.assignee.displayName,
+            }) : undefined,
+            phaseId: taskDb.phaseId ?? undefined,
+            phase: taskDb.phase ? Phase.createFromDb({
+                id: taskDb.phase.id,
+                name: taskDb.phase.name,
+                code: new PhaseCode(taskDb.phase.code),
+                seq: taskDb.phase.seq,
+            }) : undefined,
+            periods: taskDb.periods.map(period => Period.createFromDb({
+                id: period.id,
+                startDate: period.startDate,
+                endDate: period.endDate,
+                type: new PeriodType({ type: period.type }),
+                manHours: period.kosus.map(kosu => ManHour.createFromDb({
+                    id: kosu.id,
+                    kosu: kosu.kosu,
+                    type: new ManHourType({ type: kosu.type }),
+                })),
+            })),
+            workRecords:
+                workRecordsDb
+                    .filter(workRecordDb => workRecordDb.taskId === taskDb.id)
+                    .map(workRecordDb =>
+                        WorkRecord.createFromDb({
+                            id: workRecordDb.id,
+                            taskId: workRecordDb.taskId!,
+                            startDate: workRecordDb.date,
+                            endDate: workRecordDb.date,
+                            manHours: workRecordDb.hours_worked,
+                        })
+                    ),
+            status: new TaskStatus({ status: taskDb.status }),
+            createdAt: taskDb.createdAt,
+            updatedAt: taskDb.updatedAt,
+        }));
+    }
+
     async create(task: Task): Promise<Task> {
         console.log("repository: create")
         console.log(task)

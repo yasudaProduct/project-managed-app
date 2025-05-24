@@ -1,9 +1,9 @@
-
-import type { Wbs as WbsType } from "@/types/wbs";
+import type { Assignee as AssigneeType, Wbs as WbsType } from "@/types/wbs";
 import { SYMBOL } from "@/types/symbol";
 import { inject, injectable } from "inversify";
 import type { IWbsRepository } from "./iwbs-repository";
 import { Wbs } from "@/domains/wbs/wbs";
+import type { IWbsAssigneeRepository } from "./iwbs-assignee-repository";
 
 export interface IWbsApplicationService {
     getWbsById(id: number): Promise<WbsType | null>;
@@ -11,13 +11,16 @@ export interface IWbsApplicationService {
     createWbs(args: { name: string; projectId: string }): Promise<{ success: boolean; error?: string; id?: number }>;
     updateWbs(args: { id: number; name?: string }): Promise<{ success: boolean; error?: string; id?: number }>;
     deleteWbs(id: number): Promise<{ success: boolean; error?: string; id?: number }>;
+    getAssignees(wbsId: number): Promise<AssigneeType[] | null>;
 }
 
 @injectable()
 export class WbsApplicationService implements IWbsApplicationService {
 
-    constructor(@inject(SYMBOL.IWbsRepository) private readonly wbsRepository: IWbsRepository) {
-    }
+    constructor(
+        @inject(SYMBOL.IWbsRepository) private readonly wbsRepository: IWbsRepository,
+        @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: IWbsAssigneeRepository
+    ) { }
 
     public async getWbsById(id: number): Promise<WbsType | null> {
         const wbs = await this.wbsRepository.findById(id);
@@ -77,5 +80,17 @@ export class WbsApplicationService implements IWbsApplicationService {
         await this.wbsRepository.delete(id);
 
         return { success: true, id: id }
+    }
+
+    public async getAssignees(wbsId: number): Promise<AssigneeType[] | null> {
+        const assignees = await this.wbsAssigneeRepository.findByWbsId(wbsId);
+
+        return assignees.map((assignee) => {
+            return {
+                id: assignee.userId,
+                name: assignee.userName!,
+                displayName: assignee.userName!,
+            }
+        });
     }
 }

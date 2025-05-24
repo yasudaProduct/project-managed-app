@@ -37,7 +37,7 @@ export class ProjectApplicationService implements IProjectApplicationService {
 
         // TODO ステータスで生きているものを絞り込んで返却する
         return projects.map((project) => {
-            return{
+            return {
                 id: project.id!,
                 name: project.name,
                 status: project.getStatus(),
@@ -46,7 +46,7 @@ export class ProjectApplicationService implements IProjectApplicationService {
                 endDate: project.endDate,
             }
         })
-        ;
+            ;
     }
 
     public async createProject(args: { name: string; description: string; startDate: Date; endDate: Date }): Promise<{ success: boolean; error?: string; id?: string }> {
