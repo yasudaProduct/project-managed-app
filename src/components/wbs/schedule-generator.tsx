@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useState, useRef } from "react";
 import { Button } from "../ui/button";
 import { parse } from "csv-parse/sync";
 import { generateSchedule } from "@/app/schedule-generator/action";
@@ -43,15 +43,29 @@ export function ScheduleGenerator({
     status: ProjectStatus;
     startDate: Date;
     endDate: Date;
+    wbs: {
+      id: number;
+      name: string;
+      assignees: {
+        id: number;
+        userId: string;
+        name: string;
+      }[];
+    }[];
   }[];
 }) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [selectedWbsId, setSelectedWbsId] = useState<string>("");
   const [scheduleResult, setScheduleResult] = useState<ScheduleResult | null>(
     null
   );
   const [isLoading, setIsLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
+  const selectedWbs = selectedProject?.wbs.find(
+    (wbs) => wbs.id === Number(selectedWbsId)
+  );
 
   // CSVアップロード
   const handleCsvUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -80,6 +94,11 @@ export function ScheduleGenerator({
       }
     };
     reader.readAsText(file);
+  };
+
+  // ファイル選択ボタンをクリック
+  const handleFileButtonClick = () => {
+    fileInputRef.current?.click();
   };
 
   // スケジュールをタスクに変換
@@ -216,56 +235,106 @@ export function ScheduleGenerator({
             </SelectContent>
           </Select>
 
-          <label>
-            <input
-              type="file"
-              accept=".csv"
-              style={{ display: "none" }}
-              onChange={handleCsvUpload}
-              disabled={!selectedProjectId || isLoading}
-            />
-            <Button disabled={!selectedProjectId || isLoading}>
-              {isLoading ? "処理中..." : "CSVアップロード"}
-            </Button>
-          </label>
+          <Select
+            value={selectedWbsId}
+            onValueChange={(value) => setSelectedWbsId(value)}
+            disabled={!selectedProjectId}
+          >
+            <SelectTrigger className="w-60" disabled={!selectedProjectId}>
+              <SelectValue placeholder="WBSを選択" />
+            </SelectTrigger>
+            <SelectContent>
+              {selectedProject?.wbs.map((wbs) => (
+                <SelectItem key={wbs.id} value={wbs.id.toString()}>
+                  {wbs.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            style={{ display: "none" }}
+            onChange={handleCsvUpload}
+            disabled={!selectedProjectId || isLoading}
+          />
+          <Button
+            onClick={handleFileButtonClick}
+            disabled={!selectedProjectId || isLoading}
+          >
+            {isLoading ? "処理中..." : "CSVアップロード"}
+          </Button>
         </div>
       </div>
 
       {/* 選択されたプロジェクトの情報 */}
       {selectedProject && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-3 text-blue-800">
-            プロジェクト情報
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-600">
-                プロジェクト名
-              </span>
-              <span className="text-base">{selectedProject.name}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-600">開始日</span>
-              <span className="text-base">
-                {formatDateyyyymmdd(selectedProject.startDate.toString())}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-600">終了日</span>
-              <span className="text-base">
-                {formatDateyyyymmdd(selectedProject.endDate.toString())}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-600">
-                ステータス
-              </span>
-              <span className="text-base">
-                {getProjectStatusName(selectedProject.status)}
-              </span>
+        <>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-lg font-semibold mb-3 text-blue-800">
+              プロジェクト情報
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-gray-600">
+                  プロジェクト名
+                </span>
+                <span className="text-base">{selectedProject.name}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-gray-600">
+                  開始日
+                </span>
+                <span className="text-base">
+                  {formatDateyyyymmdd(selectedProject.startDate.toString())}
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-gray-600">
+                  終了日
+                </span>
+                <span className="text-base">
+                  {formatDateyyyymmdd(selectedProject.endDate.toString())}
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-gray-600">
+                  ステータス
+                </span>
+                <span className="text-base">
+                  {getProjectStatusName(selectedProject.status)}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+          {selectedWbs && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-3 text-blue-800">
+                WBS情報
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-600">
+                    WBS名
+                  </span>
+                  <span className="text-base">{selectedWbs?.name}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-600">
+                    担当者
+                  </span>
+                  <span className="text-base">
+                    {selectedWbs.assignees
+                      .map((assignee) => assignee.name)
+                      .join(", ")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* 生成されたスケジュール */}
