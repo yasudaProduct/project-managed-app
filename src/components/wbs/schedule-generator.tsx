@@ -13,6 +13,7 @@ import {
 } from "../ui/select";
 import { ProjectStatus } from "@/types/wbs";
 import { formatDateyyyymmdd, getProjectStatusName } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 type ScheduleItem = {
   date: string;
@@ -105,27 +106,13 @@ export function ScheduleGenerator({
   const handleDownloadTemplate = () => {
     if (!selectedWbs) return;
 
-    // selectedWbsから taskCsvData 形式のサンプルデータを生成
-    const csvData = selectedWbs.assignees.flatMap((assignee, index) => [
-      {
-        name: `タスク${index + 1}_設計`,
-        assigneeId: assignee.userId,
-        phaseId: "1",
-        kosu: 8,
-      },
-      {
-        name: `タスク${index + 1}_実装`,
-        assigneeId: assignee.userId,
-        phaseId: "2",
-        kosu: 16,
-      },
-      {
-        name: `タスク${index + 1}_テスト`,
-        assigneeId: assignee.userId,
-        phaseId: "3",
-        kosu: 8,
-      },
-    ]);
+    // selectedWbsから taskCsvData 形式のテンプレートデータを生成（担当者IDのみ記載）
+    const csvData = selectedWbs.assignees.map((assignee) => ({
+      name: "",
+      assigneeId: assignee.userId,
+      phaseId: "",
+      kosu: "",
+    }));
 
     // CSVヘッダー
     const headers = ["name", "assigneeId", "phaseId", "kosu"];
@@ -148,7 +135,10 @@ export function ScheduleGenerator({
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `${selectedWbs.name}_タスクテンプレート.csv`);
+    link.setAttribute(
+      "download",
+      `${selectedWbs.name}_schedule-generator-template.csv`
+    );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -192,6 +182,46 @@ export function ScheduleGenerator({
     });
   };
 
+  // スケジュールをTSV形式でクリップボードにコピー
+  const handleCopyToClipboard = async () => {
+    if (!scheduleResult?.schedule) return;
+
+    const taskSummaries = convertToTaskSummary(scheduleResult.schedule);
+
+    // TSVヘッダー
+    const headers = ["タスク", "担当者", "開始日", "終了日", "工数"];
+
+    // TSVデータ行
+    const dataRows = taskSummaries.map((task) => [
+      task.taskName,
+      task.assigneeId,
+      task.startDate,
+      task.endDate,
+      `${task.totalHours}h`,
+    ]);
+
+    // TSV形式に変換（タブ区切り）
+    const tsvContent = [
+      headers.join("\t"),
+      ...dataRows.map((row) => row.join("\t")),
+    ].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(tsvContent);
+      toast({
+        title: "コピー完了",
+        description: "スケジュールをクリップボードにコピーしました",
+      });
+    } catch (err) {
+      console.error("クリップボードへのコピーに失敗しました:", err);
+      toast({
+        title: "コピー失敗",
+        description: "クリップボードへのコピーに失敗しました",
+        variant: "destructive",
+      });
+    }
+  };
+
   // スケジュールテーブルをレンダリング
   const renderScheduleTable = () => {
     if (!scheduleResult) return null;
@@ -219,7 +249,17 @@ export function ScheduleGenerator({
 
     return (
       <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-4">生成されたスケジュール</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">生成されたスケジュール</h3>
+          <Button
+            onClick={handleCopyToClipboard}
+            disabled={!scheduleResult?.schedule}
+            variant="outline"
+            size="sm"
+          >
+            TSV形式でコピー
+          </Button>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full border border-gray-300">
             <thead className="bg-gray-50">
