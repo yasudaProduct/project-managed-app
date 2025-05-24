@@ -13,18 +13,6 @@ export default async function ScheduleGeneratorPage() {
       <h1 className="text-2xl font-bold mb-4">予定自動作成</h1>
       <div className="flex flex-col gap-4 mb-10">
         <p>タスクのCSVをアップロードすると、予定が自動で作成されます。</p>
-        <p>
-          タスクのCSVは、以下の形式で作成してください。
-          <br />
-          タスク名,担当者ID,工数
-        </p>
-        <a
-          href="/schedule-generator/template.csv"
-          download
-          className="text-blue-500 underline"
-        >
-          雛形ダウンロード
-        </a>
         <ScheduleGenerator
           projects={projects.map((project) => ({
             id: project.id,

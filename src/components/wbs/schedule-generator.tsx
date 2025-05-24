@@ -70,7 +70,7 @@ export function ScheduleGenerator({
   // CSVアップロード
   const handleCsvUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !selectedProjectId) return;
+    if (!file || !selectedWbsId) return;
 
     setIsLoading(true);
     const reader = new FileReader();
@@ -81,7 +81,7 @@ export function ScheduleGenerator({
           columns: true,
           skip_empty_lines: true,
         });
-        const schedule = await generateSchedule(csv, Number(selectedProjectId));
+        const schedule = await generateSchedule(csv, Number(selectedWbsId));
         setScheduleResult(schedule);
       } catch (error) {
         console.error("CSV処理エラー:", error);
@@ -99,6 +99,60 @@ export function ScheduleGenerator({
   // ファイル選択ボタンをクリック
   const handleFileButtonClick = () => {
     fileInputRef.current?.click();
+  };
+
+  // CSVテンプレートをダウンロード
+  const handleDownloadTemplate = () => {
+    if (!selectedWbs) return;
+
+    // selectedWbsから taskCsvData 形式のサンプルデータを生成
+    const csvData = selectedWbs.assignees.flatMap((assignee, index) => [
+      {
+        name: `タスク${index + 1}_設計`,
+        assigneeId: assignee.userId,
+        phaseId: "1",
+        kosu: 8,
+      },
+      {
+        name: `タスク${index + 1}_実装`,
+        assigneeId: assignee.userId,
+        phaseId: "2",
+        kosu: 16,
+      },
+      {
+        name: `タスク${index + 1}_テスト`,
+        assigneeId: assignee.userId,
+        phaseId: "3",
+        kosu: 8,
+      },
+    ]);
+
+    // CSVヘッダー
+    const headers = ["name", "assigneeId", "phaseId", "kosu"];
+
+    // CSV文字列を生成
+    const csvContent = [
+      headers.join(","),
+      ...csvData.map((row) =>
+        [row.name, row.assigneeId, row.phaseId, row.kosu].join(",")
+      ),
+    ].join("\n");
+
+    // BOMを追加してExcelで文字化けを防ぐ
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    // ダウンロードリンクを作成
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${selectedWbs.name}_タスクテンプレート.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // スケジュールをタスクに変換
@@ -258,13 +312,21 @@ export function ScheduleGenerator({
             accept=".csv"
             style={{ display: "none" }}
             onChange={handleCsvUpload}
-            disabled={!selectedProjectId || isLoading}
+            disabled={!selectedWbsId || isLoading}
           />
           <Button
             onClick={handleFileButtonClick}
             disabled={!selectedProjectId || isLoading}
           >
             {isLoading ? "処理中..." : "CSVアップロード"}
+          </Button>
+
+          <Button
+            onClick={handleDownloadTemplate}
+            disabled={!selectedWbsId}
+            variant="outline"
+          >
+            CSVテンプレートダウンロード
           </Button>
         </div>
       </div>
