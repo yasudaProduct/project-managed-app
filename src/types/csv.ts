@@ -1,6 +1,6 @@
 export type taskCsvData = {
     name: string;
-    assigneeId: string;
+    userId: string;
     phaseId: string;
     kosu: number;
 }

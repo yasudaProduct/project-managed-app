@@ -17,7 +17,7 @@ describe("ScheduleGenerate.execute", () => {
         });
         const operationPossible = { "2024-07-01": 8 };
         const taskData: taskCsvData[] = [
-            { name: "タスク1", assigneeId: "u1", phaseId: "p1", kosu: 5 },
+            { name: "タスク1", userId: "u1", phaseId: "p1", kosu: 5 },
         ];
         const result = await scheduleGenerate.execute(project, operationPossible, taskData);
         expect(result).toEqual([
@@ -37,8 +37,8 @@ describe("ScheduleGenerate.execute", () => {
             "2024-07-03": 4,
         };
         const taskData: taskCsvData[] = [
-            { name: "タスク1", assigneeId: "u1", phaseId: "p1", kosu: 10 },
-            { name: "タスク2", assigneeId: "u2", phaseId: "p2", kosu: 10 },
+            { name: "タスク1", userId: "u1", phaseId: "p1", kosu: 10 },
+            { name: "タスク2", userId: "u2", phaseId: "p2", kosu: 10 },
         ];
         const result = await scheduleGenerate.execute(project, operationPossible, taskData);
         expect(result).toEqual([
@@ -62,10 +62,10 @@ describe("ScheduleGenerate.execute", () => {
             "2024-07-05": 7.5,
         };
         const taskData: taskCsvData[] = [
-            { name: "タスク1", assigneeId: "u1", phaseId: "p1", kosu: 5 },
-            { name: "タスク2", assigneeId: "u1", phaseId: "p1", kosu: 10 },
-            { name: "タスク3", assigneeId: "u1", phaseId: "p1", kosu: 10 },
-            { name: "タスク4", assigneeId: "u1", phaseId: "p1", kosu: 10 },
+            { name: "タスク1", userId: "u1", phaseId: "p1", kosu: 5 },
+            { name: "タスク2", userId: "u1", phaseId: "p1", kosu: 10 },
+            { name: "タスク3", userId: "u1", phaseId: "p1", kosu: 10 },
+            { name: "タスク4", userId: "u1", phaseId: "p1", kosu: 10 },
         ];
         const result = await scheduleGenerate.execute(project, operationPossible, taskData);
         console.log(result);

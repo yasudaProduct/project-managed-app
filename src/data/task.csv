@@ -1,4 +1,4 @@
-"name","assigneeId","phaseId","kosu"
+"name","userId","phaseId","kosu"
 "タスク01","dummy01","1","10"
 "タスク02","dummy02","2","20"
 "タスク03","dummy03","3","30"

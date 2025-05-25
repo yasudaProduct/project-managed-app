@@ -188,7 +188,7 @@ export function ScheduleGenerator({
 
     const taskSummaries = schedule.map((task) => ({
       taskName: task.taskName,
-      assigneeId: task.assigneeId,
+      assigneeId: task.userId,
       startDate: task.startDate,
       endDate: task.endDate,
       totalHours: task.totalHours,
@@ -274,16 +274,13 @@ export function ScheduleGenerator({
               </tr>
             </thead>
             <tbody>
-              {schedule.map((item) => (
-                <tr
-                  key={`${item.assigneeId}-${item.taskName}`}
-                  className="hover:bg-gray-50"
-                >
+              {schedule.map((item, index) => (
+                <tr key={`${index}`} className="hover:bg-gray-50">
                   <td className="border border-gray-300 px-4 py-2">
                     {item.taskName}
                   </td>
                   <td className="border border-gray-300 px-4 py-2">
-                    {item.assigneeId}
+                    {item.userId}
                   </td>
                   <td className="border border-gray-300 px-4 py-2">
                     {item.startDate}

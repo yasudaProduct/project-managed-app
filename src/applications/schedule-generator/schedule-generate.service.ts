@@ -19,7 +19,7 @@ export type ScheduleGenerateResult = {
     error?: string;
     schedule?: {
         taskName: string;
-        assigneeId: string;
+        userId: string;
         startDate: string;
         endDate: string;
         totalHours: number;
@@ -43,7 +43,7 @@ export class ScheduleGenerateService implements IScheduleGenerateService {
     }
 
     public async generateSchedule(taskData: taskCsvData[], wbsId: number): Promise<ScheduleGenerateResult> {
-        const scheduleList: { [assigneeId: string]: ScheduleItem[] } = {};
+        const scheduleList: { [userId: string]: ScheduleItem[] } = {};
 
         // WBS取得
         const wbs = await this.wbsRepository.findById(wbsId);
@@ -67,16 +67,16 @@ export class ScheduleGenerateService implements IScheduleGenerateService {
             const operationPossible = await this.getOperationPossible.execute(project, wbs, assignee);
 
             // タスクの開始日、終了日を生成
-            const taskDataForAssignee = taskData.filter((task) => task.assigneeId === assignee.userId);
+            const taskDataForAssignee = taskData.filter((task) => task.userId === assignee.userId);
             const schedule = await this.scheduleGenerate.execute(project, operationPossible, taskDataForAssignee);
 
-            scheduleList[assignee.id!] = schedule;
+            scheduleList[assignee.userId!] = schedule;
 
         }
 
         const schedule = Object.entries(scheduleList).flatMap(([assigneeId, schedule]) => schedule.map((item) => ({
             taskName: item.taskName,
-            assigneeId: assigneeId.toString(),
+            userId: assigneeId,
             startDate: item.date,
             endDate: item.date,
             totalHours: item.hours,
