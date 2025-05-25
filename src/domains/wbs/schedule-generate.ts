@@ -1,4 +1,3 @@
-import { taskCsvData } from "@/types/csv";
 import { Project } from "../project/project";
 
 type ScheduleItem = {
@@ -14,7 +13,7 @@ export class ScheduleGenerate {
     ) {
     }
 
-    async execute(project: Project, operationPossible: { [date: string]: number }, taskData: taskCsvData[]): Promise<ScheduleItem[]> {
+    async execute(project: Project, operationPossible: { [date: string]: number }, taskData: { name: string, kosu: number }[]): Promise<ScheduleItem[]> {
         const schedule: ScheduleItem[] = [];
         const remainingHours: { [date: string]: number } = { ...operationPossible };
 

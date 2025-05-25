@@ -29,22 +29,27 @@ describe("ScheduleGenerate.execute", () => {
         const project = Project.create({
             name: "プロジェクトB",
             startDate: new Date("2024-07-01"),
-            endDate: new Date("2024-07-03"),
+            endDate: new Date("2024-07-05"),
         });
         const operationPossible = {
             "2024-07-01": 4,
             "2024-07-02": 4,
             "2024-07-03": 4,
+            "2024-07-04": 4,
+            "2024-07-05": 4,
         };
-        const taskData: taskCsvData[] = [
-            { name: "タスク1", userId: "u1", phaseId: "p1", kosu: 10 },
-            { name: "タスク2", userId: "u2", phaseId: "p2", kosu: 10 },
+        const taskData: { name: string, kosu: number }[] = [
+            { name: "タスク1", kosu: 10 },
+            { name: "タスク2", kosu: 10 },
         ];
         const result = await scheduleGenerate.execute(project, operationPossible, taskData);
         expect(result).toEqual([
-            { date: "2024-07-01", taskName: "タスク2", hours: 4 },
-            { date: "2024-07-02", taskName: "タスク2", hours: 4 },
-            { date: "2024-07-03", taskName: "タスク2", hours: 2 }
+            { date: '2024-07-01', taskName: 'タスク1', hours: 4 },
+            { date: '2024-07-02', taskName: 'タスク1', hours: 4 },
+            { date: '2024-07-03', taskName: 'タスク1', hours: 2 },
+            { date: '2024-07-03', taskName: 'タスク2', hours: 2 },
+            { date: '2024-07-04', taskName: 'タスク2', hours: 4 },
+            { date: '2024-07-05', taskName: 'タスク2', hours: 4 },
         ]);
     });
 
