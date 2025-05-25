@@ -61,14 +61,21 @@ export class ScheduleGenerateService implements IScheduleGenerateService {
             return { success: false, error: "担当者が見つかりません" };
         }
 
-        for (const assignee of assignees) {
+        for (const task of taskData) {
 
-            // 稼働可能時間取得
+            const assignee = assignees.find((assignee) => assignee.userId === task.userId);
+            if (!assignee) {
+                return { success: false, error: `担当者「${task.userId}」が見つかりません` };
+            }
+
+            // 1. 稼働可能時間取得
             const operationPossible = await this.getOperationPossible.execute(project, wbs, assignee);
 
-            // タスクの開始日、終了日を生成
-            const taskDataForAssignee = taskData.filter((task) => task.userId === assignee.userId);
-            const schedule = await this.scheduleGenerate.execute(project, operationPossible, taskDataForAssignee);
+            // 2. タスクの開始日、終了日を生成
+            const schedule = await this.scheduleGenerate.execute(project, operationPossible, [{
+                name: task.name,
+                kosu: task.kosu,
+            }]);
 
             scheduleList[assignee.userId!] = schedule;
 

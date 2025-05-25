@@ -63,7 +63,7 @@ export function ScheduleGenerator({
           columns: true,
           skip_empty_lines: true,
         });
-        const { success, schedule } = await generateSchedule(
+        const { success, error, schedule } = await generateSchedule(
           csv,
           Number(selectedWbsId)
         );
@@ -78,7 +78,7 @@ export function ScheduleGenerator({
           setSchedule(null);
           toast({
             title: "スケジュールの生成に失敗しました",
-            description: "スケジュールの生成に失敗しました",
+            description: error,
             variant: "destructive",
           });
         }

@@ -73,12 +73,12 @@ export type ScheduleItem = {
 export async function generateSchedule(csv: taskCsvData[], wbsId: number): Promise<ScheduleGenerateResult> {
 
     // サービス呼び出し
-    const { schedule } = await scheduleGenerateService.generateSchedule(csv, wbsId);
+    const { success, error, schedule } = await scheduleGenerateService.generateSchedule(csv, wbsId);
 
-    if (!schedule) {
+    if (!success) {
         return {
             success: false,
-            error: "スケジュールの生成に失敗しました",
+            error: error,
         };
     }
 
