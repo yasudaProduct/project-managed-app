@@ -14,8 +14,20 @@ type ScheduleItem = {
     hours: number;
 };
 
+export type ScheduleGenerateResult = {
+    success: boolean;
+    error?: string;
+    schedule?: {
+        taskName: string;
+        assigneeId: string;
+        startDate: string;
+        endDate: string;
+        totalHours: number;
+    }[];
+};
+
 export interface IScheduleGenerateService {
-    generateSchedule(taskData: taskCsvData[], wbsId: number): Promise<{ success: boolean; error?: string; schedule?: { [assigneeId: string]: ScheduleItem[] } }>;
+    generateSchedule(taskData: taskCsvData[], wbsId: number): Promise<ScheduleGenerateResult>;
 }
 
 export class ScheduleGenerateService implements IScheduleGenerateService {
@@ -30,7 +42,7 @@ export class ScheduleGenerateService implements IScheduleGenerateService {
     ) {
     }
 
-    public async generateSchedule(taskData: taskCsvData[], wbsId: number): Promise<{ success: boolean; error?: string; schedule?: { [assigneeId: string]: ScheduleItem[] } }> {
+    public async generateSchedule(taskData: taskCsvData[], wbsId: number): Promise<ScheduleGenerateResult> {
         const scheduleList: { [assigneeId: string]: ScheduleItem[] } = {};
 
         // WBS取得
@@ -62,7 +74,20 @@ export class ScheduleGenerateService implements IScheduleGenerateService {
 
         }
 
-        return { success: true, schedule: scheduleList };
+        const schedule = Object.entries(scheduleList).flatMap(([assigneeId, schedule]) => schedule.map((item) => ({
+            taskName: item.taskName,
+            assigneeId: assigneeId.toString(),
+            startDate: item.date,
+            endDate: item.date,
+            totalHours: item.hours,
+        })));
+
+        const result: ScheduleGenerateResult = {
+            success: true,
+            schedule: schedule
+        };
+
+        return result;
     }
 
 }

@@ -14,26 +14,7 @@ import {
 import { ProjectStatus } from "@/types/wbs";
 import { formatDateyyyymmdd, getProjectStatusName } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-
-type ScheduleItem = {
-  date: string;
-  taskName: string;
-  hours: number;
-};
-
-type ScheduleResult = {
-  success: boolean;
-  error?: string;
-  schedule?: { [assigneeId: string]: ScheduleItem[] };
-};
-
-type TaskSummary = {
-  taskName: string;
-  assigneeId: string;
-  startDate: string;
-  endDate: string;
-  totalHours: number;
-};
+import { ScheduleGenerateResult } from "@/applications/schedule-generator/schedule-generate.service";
 
 export function ScheduleGenerator({
   projects,
@@ -57,9 +38,9 @@ export function ScheduleGenerator({
 }) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [selectedWbsId, setSelectedWbsId] = useState<string>("");
-  const [scheduleResult, setScheduleResult] = useState<ScheduleResult | null>(
-    null
-  );
+  const [schedule, setSchedule] = useState<
+    ScheduleGenerateResult["schedule"] | null
+  >(null);
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,13 +63,32 @@ export function ScheduleGenerator({
           columns: true,
           skip_empty_lines: true,
         });
-        const schedule = await generateSchedule(csv, Number(selectedWbsId));
-        setScheduleResult(schedule);
+        const { success, schedule } = await generateSchedule(
+          csv,
+          Number(selectedWbsId)
+        );
+
+        if (success) {
+          setSchedule(schedule);
+          toast({
+            title: "スケジュールの生成に成功しました",
+            description: "スケジュールを生成しました",
+          });
+        } else {
+          setSchedule(null);
+          toast({
+            title: "スケジュールの生成に失敗しました",
+            description: "スケジュールの生成に失敗しました",
+            variant: "destructive",
+          });
+        }
       } catch (error) {
         console.error("CSV処理エラー:", error);
-        setScheduleResult({
-          success: false,
-          error: "CSVの処理中にエラーが発生しました",
+        setSchedule(null);
+        toast({
+          title: "スケジュールの生成に失敗しました",
+          description: "スケジュールの生成に失敗しました",
+          variant: "destructive",
         });
       } finally {
         setIsLoading(false);
@@ -146,59 +146,64 @@ export function ScheduleGenerator({
   };
 
   // スケジュールをタスクに変換
-  const convertToTaskSummary = (schedule: {
-    [assigneeId: string]: ScheduleItem[];
-  }): TaskSummary[] => {
-    const taskMap = new Map<string, TaskSummary>();
+  // const convertToTaskSummary = (schedule: {
+  //   [assigneeId: string]: ScheduleItem[];
+  // }): TaskSummary[] => {
+  //   const taskMap = new Map<string, TaskSummary>();
 
-    Object.entries(schedule).forEach(([assigneeId, scheduleItems]) => {
-      scheduleItems.forEach((item) => {
-        const key = `${item.taskName}-${assigneeId}`;
+  //   Object.entries(schedule).forEach(([assigneeId, scheduleItems]) => {
+  //     scheduleItems.forEach((item) => {
+  //       const key = `${item.taskName}-${assigneeId}`;
 
-        if (taskMap.has(key)) {
-          const existing = taskMap.get(key)!;
-          existing.totalHours += item.hours;
-          existing.startDate =
-            item.date < existing.startDate ? item.date : existing.startDate;
-          existing.endDate =
-            item.date > existing.endDate ? item.date : existing.endDate;
-        } else {
-          taskMap.set(key, {
-            taskName: item.taskName,
-            assigneeId,
-            startDate: item.date,
-            endDate: item.date,
-            totalHours: item.hours,
-          });
-        }
-      });
-    });
+  //       if (taskMap.has(key)) {
+  //         const existing = taskMap.get(key)!;
+  //         existing.totalHours += item.hours;
+  //         existing.startDate =
+  //           item.date < existing.startDate ? item.date : existing.startDate;
+  //         existing.endDate =
+  //           item.date > existing.endDate ? item.date : existing.endDate;
+  //       } else {
+  //         taskMap.set(key, {
+  //           taskName: item.taskName,
+  //           assigneeId,
+  //           startDate: item.date,
+  //           endDate: item.date,
+  //           totalHours: item.hours,
+  //         });
+  //       }
+  //     });
+  //   });
 
-    return Array.from(taskMap.values()).sort((a, b) => {
-      if (a.startDate !== b.startDate) {
-        return a.startDate.localeCompare(b.startDate);
-      }
-      return a.taskName.localeCompare(b.taskName);
-    });
-  };
+  //   return Array.from(taskMap.values()).sort((a, b) => {
+  //     if (a.startDate !== b.startDate) {
+  //       return a.startDate.localeCompare(b.startDate);
+  //     }
+  //     return a.taskName.localeCompare(b.taskName);
+  //   });
+  // };
 
   // スケジュールをTSV形式でクリップボードにコピー
   const handleCopyToClipboard = async () => {
-    if (!scheduleResult?.schedule) return;
+    if (!schedule) return;
 
-    const taskSummaries = convertToTaskSummary(scheduleResult.schedule);
+    const taskSummaries = schedule.map((task) => ({
+      taskName: task.taskName,
+      assigneeId: task.assigneeId,
+      startDate: task.startDate,
+      endDate: task.endDate,
+      totalHours: task.totalHours,
+    }));
 
-    // TSVヘッダー
-    const headers = ["タスク", "担当者", "開始日", "終了日", "工数"];
-
-    // TSVデータ行
     const dataRows = taskSummaries.map((task) => [
       task.taskName,
       task.assigneeId,
       task.startDate,
       task.endDate,
-      `${task.totalHours}h`,
+      `${task.totalHours}`,
     ]);
+
+    // TSVヘッダー
+    const headers = ["タスク", "担当者", "開始日", "終了日", "工数"];
 
     // TSV形式に変換（タブ区切り）
     const tsvContent = [
@@ -224,20 +229,9 @@ export function ScheduleGenerator({
 
   // スケジュールテーブルをレンダリング
   const renderScheduleTable = () => {
-    if (!scheduleResult) return null;
+    if (!schedule) return null;
 
-    if (!scheduleResult.success) {
-      return (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
-          <p className="text-red-700">エラー: {scheduleResult.error}</p>
-        </div>
-      );
-    }
-
-    if (
-      !scheduleResult.schedule ||
-      Object.keys(scheduleResult.schedule).length === 0
-    ) {
+    if (!schedule || schedule.length === 0) {
       return (
         <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
           <p className="text-yellow-700">スケジュールデータがありません</p>
@@ -245,15 +239,13 @@ export function ScheduleGenerator({
       );
     }
 
-    const taskSummaries = convertToTaskSummary(scheduleResult.schedule);
-
     return (
       <div className="mt-8">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">生成されたスケジュール</h3>
           <Button
             onClick={handleCopyToClipboard}
-            disabled={!scheduleResult?.schedule}
+            disabled={!schedule}
             variant="outline"
             size="sm"
           >
@@ -282,22 +274,25 @@ export function ScheduleGenerator({
               </tr>
             </thead>
             <tbody>
-              {taskSummaries.map((task, index) => (
-                <tr key={index} className="hover:bg-gray-50">
+              {schedule.map((item) => (
+                <tr
+                  key={`${item.assigneeId}-${item.taskName}`}
+                  className="hover:bg-gray-50"
+                >
                   <td className="border border-gray-300 px-4 py-2">
-                    {task.taskName}
+                    {item.taskName}
                   </td>
                   <td className="border border-gray-300 px-4 py-2">
-                    {task.assigneeId}
+                    {item.assigneeId}
                   </td>
                   <td className="border border-gray-300 px-4 py-2">
-                    {task.startDate}
+                    {item.startDate}
                   </td>
                   <td className="border border-gray-300 px-4 py-2">
-                    {task.endDate}
+                    {item.endDate}
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {task.totalHours}h
+                    {item.totalHours}h
                   </td>
                 </tr>
               ))}

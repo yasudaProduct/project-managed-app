@@ -4,7 +4,7 @@ import { IProjectApplicationService } from "@/applications/projects/project-appl
 import { taskCsvData } from "@/types/csv";
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
-import { IScheduleGenerateService } from "@/applications/schedule-generator/schedule-generate.service";
+import { IScheduleGenerateService, ScheduleGenerateResult } from "@/applications/schedule-generator/schedule-generate.service";
 import { IWbsApplicationService } from "@/applications/wbs/wbs-application-service";
 import { ProjectStatus } from "@/types/wbs";
 
@@ -62,11 +62,28 @@ export async function getProjects(): Promise<{
     }));
 }
 
-export async function generateSchedule(csv: taskCsvData[], wbsId: number): Promise<{ success: boolean; error?: string; schedule?: { [assigneeId: string]: { date: string; taskName: string; hours: number }[] } }> {
+export type ScheduleItem = {
+    taskName: string;
+    assigneeId: string;
+    startDate: string;
+    endDate: string;
+    totalHours: number;
+};
+
+export async function generateSchedule(csv: taskCsvData[], wbsId: number): Promise<ScheduleGenerateResult> {
 
     // サービス呼び出し
-    const schedule = await scheduleGenerateService.generateSchedule(csv, wbsId);
+    const { schedule } = await scheduleGenerateService.generateSchedule(csv, wbsId);
 
-    return schedule;
+    if (!schedule) {
+        return {
+            success: false,
+            error: "スケジュールの生成に失敗しました",
+        };
+    }
 
+    return {
+        success: true,
+        schedule: schedule,
+    };
 }
