@@ -15,7 +15,15 @@ export class ScheduleGenerate {
 
     async execute(project: Project, operationPossible: { [date: string]: number }, taskData: { name: string, kosu: number }[]): Promise<ScheduleItem[]> {
         const schedule: ScheduleItem[] = [];
+
+        // 稼働可能時間を案件期間に拡張し、稼働可能時間がない場合はデフォルト値にする
         const remainingHours: { [date: string]: number } = { ...operationPossible };
+        for (let date = new Date(project.startDate); date <= project.endDate; date.setDate(date.getDate() + 1)) {
+            const ymd = date.toISOString().slice(0, 10);
+            if (!remainingHours[ymd]) {
+                remainingHours[ymd] = 7.5;
+            }
+        }
 
         // タスクの予定を作成
         // タスクの工数を稼働可能時間を考慮して、プロジェクト開始日から割り振っていく
@@ -68,6 +76,10 @@ export class ScheduleGenerate {
                 if (taskHours === 0) {
                     break;
                 }
+            }
+            // ここでtaskHoursが残っていたら例外
+            if (taskHours > 0) {
+                throw new Error(`タスク「${task.name}」はプロジェクト期間内に全て割り当てできませんでした`);
             }
         }
 

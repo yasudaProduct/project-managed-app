@@ -1,6 +1,5 @@
 import { ScheduleGenerate } from "@/domains/wbs/schedule-generate";
 import { Project } from "@/domains/project/project";
-import type { taskCsvData } from "@/types/csv";
 
 describe("ScheduleGenerate.execute", () => {
     let scheduleGenerate: ScheduleGenerate;
@@ -16,8 +15,8 @@ describe("ScheduleGenerate.execute", () => {
             endDate: new Date("2024-07-01"),
         });
         const operationPossible = { "2024-07-01": 8 };
-        const taskData: taskCsvData[] = [
-            { name: "タスク1", userId: "u1", phaseId: "p1", kosu: 5 },
+        const taskData: { name: string, kosu: number }[] = [
+            { name: "タスク1", kosu: 5 },
         ];
         const result = await scheduleGenerate.execute(project, operationPossible, taskData);
         expect(result).toEqual([
@@ -40,16 +39,12 @@ describe("ScheduleGenerate.execute", () => {
         };
         const taskData: { name: string, kosu: number }[] = [
             { name: "タスク1", kosu: 10 },
-            { name: "タスク2", kosu: 10 },
         ];
         const result = await scheduleGenerate.execute(project, operationPossible, taskData);
         expect(result).toEqual([
             { date: '2024-07-01', taskName: 'タスク1', hours: 4 },
             { date: '2024-07-02', taskName: 'タスク1', hours: 4 },
             { date: '2024-07-03', taskName: 'タスク1', hours: 2 },
-            { date: '2024-07-03', taskName: 'タスク2', hours: 2 },
-            { date: '2024-07-04', taskName: 'タスク2', hours: 4 },
-            { date: '2024-07-05', taskName: 'タスク2', hours: 4 },
         ]);
     });
 
@@ -66,11 +61,11 @@ describe("ScheduleGenerate.execute", () => {
             "2024-07-04": 7.5,
             "2024-07-05": 7.5,
         };
-        const taskData: taskCsvData[] = [
-            { name: "タスク1", userId: "u1", phaseId: "p1", kosu: 5 },
-            { name: "タスク2", userId: "u1", phaseId: "p1", kosu: 10 },
-            { name: "タスク3", userId: "u1", phaseId: "p1", kosu: 10 },
-            { name: "タスク4", userId: "u1", phaseId: "p1", kosu: 10 },
+        const taskData: { name: string, kosu: number }[] = [
+            { name: "タスク1", kosu: 5 },
+            { name: "タスク2", kosu: 10 },
+            { name: "タスク3", kosu: 10 },
+            { name: "タスク4", kosu: 10 },
         ];
         const result = await scheduleGenerate.execute(project, operationPossible, taskData);
         console.log(result);
@@ -83,5 +78,44 @@ describe("ScheduleGenerate.execute", () => {
             { date: "2024-07-04", taskName: "タスク4", hours: 5 },
             { date: "2024-07-05", taskName: "タスク4", hours: 5 },
         ]);
+    });
+
+    it("稼働可能時間入れるが存在しない場合デフォルトで処理される", async () => {
+        const project = Project.create({
+            name: "プロジェクトE",
+            startDate: new Date("2024-07-01"),
+            endDate: new Date("2024-07-05"),
+        });
+        const operationPossible = {
+            "2024-07-01": 1,
+        };
+        const taskData: { name: string, kosu: number }[] = [
+            { name: "タスク1", kosu: 10 },
+        ];
+        const result = await scheduleGenerate.execute(project, operationPossible, taskData);
+        expect(result).toEqual([
+            { date: "2024-07-01", taskName: "タスク1", hours: 1 },
+            { date: "2024-07-02", taskName: "タスク1", hours: 7.5 },
+            { date: "2024-07-03", taskName: "タスク1", hours: 1.5 },
+        ]);
+    });
+
+    it("プロジェクト期間内で全てタスクを割り当てられない場合、例外が発生する", async () => {
+        const project = Project.create({
+            name: "プロジェクトD",
+            startDate: new Date("2024-07-01"),
+            endDate: new Date("2024-07-02"),
+        });
+        const operationPossible = {
+            "2024-07-01": 7.5,
+            "2024-07-02": 7.5,
+            "2024-07-03": 7.5,
+        };
+        const taskData: { name: string, kosu: number }[] = [
+            { name: "タスク1", kosu: 10 },
+            { name: "タスク2", kosu: 10 },
+            { name: "タスク3", kosu: 10 },
+        ];
+        expect(scheduleGenerate.execute(project, operationPossible, taskData)).rejects.toThrow();
     });
 }); 
