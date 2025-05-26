@@ -13,7 +13,6 @@ export class GetOperationPossible {
     async execute(project: Project, wbs: Wbs, assignee: WbsAssignee): Promise<{ [key: string]: number }> {
         const operationPossible: { [key: string]: number } = {};
 
-
         // プロジェクト開始日から終了日まで1日づつループ
         for (let date = new Date(project.startDate); date <= new Date(project.endDate); date.setDate(date.getDate() + 1)) {
             const ymd = date.toISOString().slice(0, 10);

@@ -59,7 +59,7 @@ export const getHolidays = (year: number): Holiday[] => {
   return holiday_jp.between(startDate, endDate)
 }
 
-// 祝日かどうかを判定
+// 土日・祝日かどうかを判定
 export const isHoliday = (date: Date): boolean => {
-  return holiday_jp.isHoliday(date)
+  return holiday_jp.isHoliday(date) || date.getDay() === 0 || date.getDay() === 6;
 }

@@ -28,6 +28,7 @@ export type ScheduleGenerateResult = {
 
 export interface IScheduleGenerateService {
     generateSchedule(taskData: taskCsvData[], wbsId: number): Promise<ScheduleGenerateResult>;
+    getOperationPossibles(wbsId: number): Promise<{ [assigneeId: string]: { [date: string]: number } }>;
 }
 
 export class ScheduleGenerateService implements IScheduleGenerateService {
@@ -97,4 +98,29 @@ export class ScheduleGenerateService implements IScheduleGenerateService {
         return result;
     }
 
+    public async getOperationPossibles(wbsId: number): Promise<{ [assigneeId: string]: { [date: string]: number } }> {
+
+        const wbs = await this.wbsRepository.findById(wbsId);
+        if (!wbs) {
+            return {};
+        }
+
+        const project = await this.projectRepository.findById(wbs.projectId);
+        if (!project) {
+            return {};
+        }
+
+        const assignees = await this.wbsAssigneeRepository.findByWbsId(wbs.id!);
+        if (!assignees) {
+            return {};
+        }
+
+        const operationPossible: { [assigneeId: string]: { [date: string]: number } } = {};
+        for (const assignee of assignees) {
+            operationPossible[assignee.userId!] = await this.getOperationPossible.execute(project, wbs, assignee);
+        }
+
+        return operationPossible;
+
+    }
 }

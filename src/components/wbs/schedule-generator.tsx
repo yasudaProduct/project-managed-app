@@ -1,9 +1,12 @@
 "use client";
 
-import { ChangeEvent, useState, useRef } from "react";
+import { ChangeEvent, useState, useRef, useEffect } from "react";
 import { Button } from "../ui/button";
 import { parse } from "csv-parse/sync";
-import { generateSchedule } from "@/app/schedule-generator/action";
+import {
+  generateSchedule,
+  getOperationPossible,
+} from "@/app/schedule-generator/action";
 import {
   Select,
   SelectContent,
@@ -32,6 +35,7 @@ export function ScheduleGenerator({
         id: number;
         userId: string;
         name: string;
+        rate: number;
       }[];
     }[];
   }[];
@@ -48,6 +52,24 @@ export function ScheduleGenerator({
   const selectedWbs = selectedProject?.wbs.find(
     (wbs) => wbs.id === Number(selectedWbsId)
   );
+
+  const [operationPossible, setOperationPossible] = useState<
+    {
+      assigneeId: string;
+      operationPossible: { [date: string]: number };
+    }[]
+  >([]);
+
+  useEffect(() => {
+    if (!selectedWbs) return;
+
+    const fetchOperationPossible = async () => {
+      const operationPossible = await getOperationPossible(selectedWbs.id);
+      setOperationPossible(operationPossible);
+    };
+
+    fetchOperationPossible();
+  }, [selectedWbs]);
 
   // CSVアップロード
   const handleCsvUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -144,43 +166,6 @@ export function ScheduleGenerator({
     link.click();
     document.body.removeChild(link);
   };
-
-  // スケジュールをタスクに変換
-  // const convertToTaskSummary = (schedule: {
-  //   [assigneeId: string]: ScheduleItem[];
-  // }): TaskSummary[] => {
-  //   const taskMap = new Map<string, TaskSummary>();
-
-  //   Object.entries(schedule).forEach(([assigneeId, scheduleItems]) => {
-  //     scheduleItems.forEach((item) => {
-  //       const key = `${item.taskName}-${assigneeId}`;
-
-  //       if (taskMap.has(key)) {
-  //         const existing = taskMap.get(key)!;
-  //         existing.totalHours += item.hours;
-  //         existing.startDate =
-  //           item.date < existing.startDate ? item.date : existing.startDate;
-  //         existing.endDate =
-  //           item.date > existing.endDate ? item.date : existing.endDate;
-  //       } else {
-  //         taskMap.set(key, {
-  //           taskName: item.taskName,
-  //           assigneeId,
-  //           startDate: item.date,
-  //           endDate: item.date,
-  //           totalHours: item.hours,
-  //         });
-  //       }
-  //     });
-  //   });
-
-  //   return Array.from(taskMap.values()).sort((a, b) => {
-  //     if (a.startDate !== b.startDate) {
-  //       return a.startDate.localeCompare(b.startDate);
-  //     }
-  //     return a.taskName.localeCompare(b.taskName);
-  //   });
-  // };
 
   // スケジュールをTSV形式でクリップボードにコピー
   const handleCopyToClipboard = async () => {
@@ -419,16 +404,72 @@ export function ScheduleGenerator({
                   <span className="text-sm font-medium text-gray-600">
                     担当者
                   </span>
-                  <span className="text-base">
-                    {selectedWbs.assignees
-                      .map((assignee) => assignee.name)
-                      .join(", ")}
-                  </span>
+                  <div className="flex flex-col">
+                    {selectedWbs.assignees.map((assignee) => (
+                      <span key={assignee.userId} className="text-base">
+                        {assignee.name} ({assignee.rate * 100}%)
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           )}
         </>
+      )}
+
+      {/* 担当者ごとの稼働可能時間を表示 */}
+      {selectedWbs && operationPossible.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="text-lg font-semibold mb-3 text-blue-800">
+            担当者ごとの稼働可能時間
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border border-gray-300">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="border border-gray-300 px-4 py-2 text-left">
+                    担当者
+                  </th>
+                  {Object.keys(
+                    operationPossible[0]?.operationPossible || {}
+                  ).map((date) => (
+                    <th
+                      key={date}
+                      className="border border-gray-300 px-4 py-2 text-center"
+                    >
+                      {formatDateyyyymmdd(date)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {operationPossible.map(
+                  ({ assigneeId, operationPossible: possible }) => {
+                    const assignee = selectedWbs?.assignees.find(
+                      (a) => a.userId === assigneeId
+                    );
+                    return (
+                      <tr key={assigneeId}>
+                        <td className="border border-gray-300 px-4 py-2">
+                          {assignee?.name || assigneeId}
+                        </td>
+                        {Object.entries(possible).map(([date, hours]) => (
+                          <td
+                            key={date}
+                            className="border border-gray-300 px-4 py-2 text-center"
+                          >
+                            {hours}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  }
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* 生成されたスケジュール */}

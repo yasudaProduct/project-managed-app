@@ -90,6 +90,7 @@ export class WbsApplicationService implements IWbsApplicationService {
                 id: assignee.userId,
                 name: assignee.userName!,
                 displayName: assignee.userName!,
+                rate: assignee.getRate() ?? 0,
             }
         });
     }

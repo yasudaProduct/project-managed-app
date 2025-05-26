@@ -71,4 +71,28 @@ describe("GetOperationPossible.execute", () => {
             "2024-07-05": 3.75,
         });
     });
+
+    it("平日だけ稼働可能時間が7.5、祝日は0になる", async () => {
+        const project = Project.create({
+            name: "プロジェクトA",
+            startDate: new Date("2025-07-01"),
+            endDate: new Date("2025-07-08"),
+        });
+        const wbs = Wbs.create({ name: "WBS1", projectId: "p1" });
+        const assignee = WbsAssignee.create({ userId: "u1", rate: 0.5 });
+
+        isHoliday.mockImplementation((date: Date) => date.toISOString().slice(0, 10) === "2025-07-05" || date.toISOString().slice(0, 10) === "2025-07-06");
+
+        const result = await getOperationPossible.execute(project, wbs, assignee);
+        expect(result).toEqual({
+            "2025-07-01": 3.75,
+            "2025-07-02": 3.75,
+            "2025-07-03": 3.75,
+            "2025-07-04": 3.75,
+            "2025-07-05": 0,
+            "2025-07-06": 0,
+            "2025-07-07": 3.75,
+            "2025-07-08": 3.75,
+        });
+    });
 });

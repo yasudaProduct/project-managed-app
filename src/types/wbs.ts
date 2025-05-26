@@ -78,4 +78,5 @@ export type Assignee = {
     id: string
     name: string
     displayName: string
+    rate: number
 }

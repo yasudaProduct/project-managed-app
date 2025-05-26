@@ -25,6 +25,7 @@ export async function getProjects(): Promise<{
             id: number;
             userId: string;
             name: string;
+            rate: number;
         }[];
     }[];
 }[]> {
@@ -44,6 +45,7 @@ export async function getProjects(): Promise<{
                 id: Number(assignee.id),
                 userId: assignee.id,
                 name: assignee.displayName,
+                rate: assignee.rate,
             }))
         };
     }) ?? []);
@@ -86,4 +88,14 @@ export async function generateSchedule(csv: taskCsvData[], wbsId: number): Promi
         success: true,
         schedule: schedule,
     };
+}
+
+export async function getOperationPossible(wbsId: number): Promise<{ assigneeId: string, operationPossible: { [date: string]: number } }[]> {
+
+    const operationPossibles = await scheduleGenerateService.getOperationPossibles(wbsId);
+
+    return Object.entries(operationPossibles).map(([assigneeId, operationPossible]) => ({
+        assigneeId: assigneeId,
+        operationPossible: operationPossible,
+    }));
 }
