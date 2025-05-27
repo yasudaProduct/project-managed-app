@@ -1,5 +1,8 @@
 import { ProjectStatus as ProjectStatusType } from "@/types/wbs";
 
+/**
+ * プロジェクトステータス
+ */
 export class ProjectStatus {
     public readonly status: ProjectStatusType;
 
@@ -7,6 +10,10 @@ export class ProjectStatus {
         this.status = args.status;
     }
 
+    /**
+     * ステータス名を取得
+     * @returns ステータス名
+     */
     public Name() {
         switch (this.status) {
             case "INACTIVE":

@@ -48,11 +48,18 @@ export class Project {
         this.description = description;
     }
 
+
     public updateStartDate(startDate: Date) {
+        if (startDate > this.endDate) {
+            throw new Error("開始日は終了日より前に設定してください");
+        }
         this.startDate = startDate;
     }
 
     public updateEndDate(endDate: Date) {
+        if (endDate < this.startDate) {
+            throw new Error("終了日は開始日より後に設定してください");
+        }
         this.endDate = endDate;
     }
 
