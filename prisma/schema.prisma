@@ -201,14 +201,14 @@ model WorkRecord {
 }
 
 model UserSchedule {
-  id        Int      @id @default(autoincrement())
-  userId    String
-  date      DateTime
-  startTime DateTime
-  endTime   DateTime
-  title     String
-  type      String  
-  note      String?
+  id          Int      @id @default(autoincrement())
+  userId      String
+  date        DateTime
+  startTime   String
+  endTime     String
+  title       String
+  location    String?
+  description String?
   user      Users    @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

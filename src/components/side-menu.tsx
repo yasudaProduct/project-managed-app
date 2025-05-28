@@ -64,7 +64,11 @@ export function SideMenu() {
             className="text-lg flex items-center gap-2"
           >
             <Calendar className="h-4 w-4" />
-            作業実績
+            🚧作業実績取込
+          </Link>
+          <Link href="/schedule/" className="text-lg flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            スケジュール取込
           </Link>
           <Link
             href="/schedule-generator"

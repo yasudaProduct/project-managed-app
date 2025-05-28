@@ -32,10 +32,11 @@ async function main() {
                 id: userSchedule.id,
                 userId: userSchedule.userId,
                 date: new Date(userSchedule.date),
-                startTime: new Date(userSchedule.startTime),
-                endTime: new Date(userSchedule.endTime),
+                startTime: userSchedule.startTime,
+                endTime: userSchedule.endTime,
                 title: userSchedule.title,
-                type: userSchedule.type,
+                location: userSchedule.location,
+                description: userSchedule.description,
             },
             update: {
                 userId: userSchedule.userId,
@@ -43,8 +44,8 @@ async function main() {
                 startTime: userSchedule.startTime,
                 endTime: userSchedule.endTime,
                 title: userSchedule.title,
-                type: userSchedule.type,
-                note: userSchedule.note,
+                location: userSchedule.location,
+                description: userSchedule.description,
             },
         })
     }

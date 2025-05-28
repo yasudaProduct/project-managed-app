@@ -124,11 +124,11 @@ erDiagram
   Int id PK
   String userId FK
   DateTime date
-  DateTime startTime
-  DateTime endTime
+  String startTime
+  String endTime
   String title
-  String type
-  String note "nullable"
+  String location "nullable"
+  String description "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -300,7 +300,7 @@ erDiagram
   - `startTime`: 
   - `endTime`: 
   - `title`: 
-  - `type`: 
-  - `note`: 
+  - `location`: 
+  - `description`: 
   - `createdAt`: 
   - `updatedAt`: 
