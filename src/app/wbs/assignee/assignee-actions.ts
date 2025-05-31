@@ -28,3 +28,14 @@ export async function getWbsAssignees(wbsId: number) {
         },
     });
 }
+
+export async function getWbsAssigneeById(id: number) {
+    return await prisma.wbsAssignee.findUnique({
+        include: {
+            assignee: true,
+        },
+        where: {
+            id: id,
+        },
+    });
+}

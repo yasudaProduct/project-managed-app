@@ -17,14 +17,23 @@ export type WbsAssignee = {
   assignee: {
     id: string;
     name: string;
+    rate: number;
   };
   wbsId: number;
 };
 
 export const columns: ColumnDef<WbsAssignee & { link?: string }>[] = [
   {
+    accessorKey: "assignee.id",
+    header: "ID",
+  },
+  {
     accessorKey: "assignee.name",
     header: "担当者",
+  },
+  {
+    accessorKey: "rate",
+    header: "割合",
   },
   {
     id: "actions",

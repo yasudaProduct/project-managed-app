@@ -25,7 +25,7 @@ export default async function WbsAssigneePage({
         data={
           assignees?.map((assignee) => ({
             ...assignee,
-            link: `/wbs/${id}/assignee/${assignee.id}`,
+            link: `/wbs/assignee/${assignee.id}/edit`,
           })) ?? []
         }
       />

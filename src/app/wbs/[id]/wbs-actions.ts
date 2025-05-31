@@ -59,7 +59,7 @@ export async function createWbsPhase(wbsId: number, wbsPhaseData: { name: string
     return { success: true, wbsPhase: newWbsPhase };
 }
 
-export async function createWbsAssignee(wbsId: number, assigneeId: string) {
+export async function createWbsAssignee(wbsId: number, assigneeId: string, rate: number) {
     const existingAssignee = await prisma.wbsAssignee.findFirst({
         where: {
             wbsId: Number(wbsId),
@@ -75,10 +75,33 @@ export async function createWbsAssignee(wbsId: number, assigneeId: string) {
         data: {
             wbsId: Number(wbsId),
             assigneeId: assigneeId,
+            rate: rate / 100,
         },
     });
 
     return { success: true, assignee: newAssignee };
+}
+
+export async function updateWbsAssignee(id: number, assigneeId: string, rate: number) {
+
+    const existingAssignee = await prisma.wbsAssignee.findFirst({
+        where: {
+            id: Number(id),
+        },
+    });
+
+    if (!existingAssignee) {
+        return { success: false, message: "担当者が存在しません。" };
+    }
+
+    const assignee = await prisma.wbsAssignee.update({
+        where: { id: Number(id) },
+        data: {
+            assigneeId: assigneeId,
+            rate: rate / 100
+        },
+    });
+    return { success: true, assignee: assignee };
 }
 
 export async function getWbsBuffers(wbsId: number) {
@@ -95,5 +118,8 @@ export async function getAssignees(wbsId: number): Promise<Assignee[]> {
             assignee: true,
         },
     });
-    return assignees.map((assignee) => assignee.assignee);
+    return assignees.map((assignee) => ({
+        ...assignee.assignee,
+        rate: assignee.rate,
+    }));
 }
