@@ -52,12 +52,12 @@ describe("ScheduleGenerate.execute", () => {
         const project = Project.create({
             name: "プロジェクトC",
             startDate: new Date("2024-07-01"),
-            endDate: new Date("2024-07-05"),
+            endDate: new Date("2024-07-10"),
         });
         const operationPossible = {
             "2024-07-01": 7.5,
             "2024-07-02": 7.5,
-            "2024-07-03": 7.5,
+            "2024-07-03": 0,
             "2024-07-04": 7.5,
             "2024-07-05": 7.5,
         };
@@ -68,15 +68,14 @@ describe("ScheduleGenerate.execute", () => {
             { name: "タスク4", kosu: 10 },
         ];
         const result = await scheduleGenerate.execute(project, operationPossible, taskData);
-        console.log(result);
         expect(result).toEqual([
             { date: "2024-07-01", taskName: "タスク1", hours: 5 },
             { date: "2024-07-01", taskName: "タスク2", hours: 2.5 },
             { date: "2024-07-02", taskName: "タスク2", hours: 7.5 },
-            { date: "2024-07-03", taskName: "タスク3", hours: 7.5 },
-            { date: "2024-07-04", taskName: "タスク3", hours: 2.5 },
-            { date: "2024-07-04", taskName: "タスク4", hours: 5 },
+            { date: "2024-07-04", taskName: "タスク3", hours: 7.5 },
+            { date: "2024-07-05", taskName: "タスク3", hours: 2.5 },
             { date: "2024-07-05", taskName: "タスク4", hours: 5 },
+            { date: "2024-07-06", taskName: "タスク4", hours: 5 },
         ]);
     });
 

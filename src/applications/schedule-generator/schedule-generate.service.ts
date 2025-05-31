@@ -82,13 +82,35 @@ export class ScheduleGenerateService implements IScheduleGenerateService {
 
         }
 
-        const schedule = Object.entries(scheduleList).flatMap(([assigneeId, schedule]) => schedule.map((item) => ({
-            taskName: item.taskName,
-            userId: assigneeId,
-            startDate: item.date,
-            endDate: item.date,
-            totalHours: item.hours,
-        })));
+        console.log(scheduleList);
+        const schedule = Object.entries(scheduleList).flatMap(([assigneeId, schedules]) => {
+            // タスクごとにグループ化
+            const taskGroups = schedules.reduce((groups, schedule) => {
+                if (!groups[schedule.taskName]) {
+                    groups[schedule.taskName] = [];
+                }
+                groups[schedule.taskName].push(schedule);
+                return groups;
+            }, {} as { [taskName: string]: ScheduleItem[] });
+
+            // 各タスクグループを開始日と終了日に変換
+            return Object.entries(taskGroups).map(([taskName, taskSchedules]) => {
+                const sortedSchedules = taskSchedules.sort((a, b) =>
+                    new Date(a.date).getTime() - new Date(b.date).getTime()
+                );
+                const startDate = sortedSchedules[0].date;
+                const endDate = sortedSchedules[sortedSchedules.length - 1].date;
+                const totalHours = taskSchedules.reduce((sum, schedule) => sum + schedule.hours, 0);
+
+                return {
+                    taskName,
+                    userId: assigneeId,
+                    startDate,
+                    endDate,
+                    totalHours
+                };
+            });
+        });
 
         const result: ScheduleGenerateResult = {
             success: true,

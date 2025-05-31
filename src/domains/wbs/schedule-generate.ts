@@ -20,7 +20,7 @@ export class ScheduleGenerate {
         const remainingHours: { [date: string]: number } = { ...operationPossible };
         for (let date = new Date(project.startDate); date <= project.endDate; date.setDate(date.getDate() + 1)) {
             const ymd = date.toISOString().slice(0, 10);
-            if (!remainingHours[ymd]) {
+            if (remainingHours[ymd] === undefined) {
                 remainingHours[ymd] = 7.5;
             }
         }
