@@ -75,7 +75,8 @@ export type Milestone = {
 }
 
 export type Assignee = {
-    id: string
+    id: number
+    userId: string
     name: string
     displayName: string
     rate: number

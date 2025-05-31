@@ -10,7 +10,7 @@ export default async function EditWbsAssigneePage({
   const { id } = await params;
   const assignee = await getWbsAssigneeById(Number(id));
 
-  if (!assignee) {
+  if (!assignee.assignee) {
     notFound();
   }
 
@@ -18,12 +18,12 @@ export default async function EditWbsAssigneePage({
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6">担当者を編集</h1>
       <NewWbsAssigneeForm
-        wbsId={assignee.wbsId}
+        wbsId={assignee.wbsId!}
         assignee={{
-          id: assignee.id,
-          assigneeId: assignee.assigneeId,
+          id: assignee.assignee.id,
+          assigneeId: assignee.assignee.userId,
           name: assignee.assignee.name,
-          rate: assignee.rate,
+          rate: assignee.assignee.rate,
         }}
       />
     </div>

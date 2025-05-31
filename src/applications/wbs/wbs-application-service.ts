@@ -4,6 +4,7 @@ import { inject, injectable } from "inversify";
 import type { IWbsRepository } from "./iwbs-repository";
 import { Wbs } from "@/domains/wbs/wbs";
 import type { IWbsAssigneeRepository } from "./iwbs-assignee-repository";
+import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
 
 export interface IWbsApplicationService {
     getWbsById(id: number): Promise<WbsType | null>;
@@ -11,7 +12,8 @@ export interface IWbsApplicationService {
     createWbs(args: { name: string; projectId: string }): Promise<{ success: boolean; error?: string; id?: number }>;
     updateWbs(args: { id: number; name?: string }): Promise<{ success: boolean; error?: string; id?: number }>;
     deleteWbs(id: number): Promise<{ success: boolean; error?: string; id?: number }>;
-    getAssignees(wbsId: number): Promise<AssigneeType[] | null>;
+    getAssignees(wbsId: number): Promise<{ assignee: AssigneeType | null, wbsId: number }[] | null>;
+    getAssigneeById(id: number): Promise<{ assignee: AssigneeType | null, wbsId?: number }>;
 }
 
 @injectable()
@@ -82,16 +84,35 @@ export class WbsApplicationService implements IWbsApplicationService {
         return { success: true, id: id }
     }
 
-    public async getAssignees(wbsId: number): Promise<AssigneeType[] | null> {
-        const assignees = await this.wbsAssigneeRepository.findByWbsId(wbsId);
+    public async getAssignees(wbsId: number): Promise<{ assignee: AssigneeType | null, wbsId: number }[] | null> {
+        const assignees: WbsAssignee[] = await this.wbsAssigneeRepository.findByWbsId(wbsId);
 
         return assignees.map((assignee) => {
             return {
-                id: assignee.userId,
+                wbsId: wbsId,
+                assignee: {
+                    id: assignee.id!,
+                    userId: assignee.userId,
+                    name: assignee.userName!,
+                    displayName: assignee.userName!,
+                    rate: assignee.getRate() ?? 0,
+                },
+            }
+        });
+    }
+
+    public async getAssigneeById(id: number): Promise<{ assignee: AssigneeType | null, wbsId?: number }> {
+        const assignee = await this.wbsAssigneeRepository.findById(id);
+        if (!assignee) return { assignee: null, wbsId: undefined };
+        return {
+            wbsId: assignee.id!,
+            assignee: {
+                id: assignee.id!,
+                userId: assignee.userId,
                 name: assignee.userName!,
                 displayName: assignee.userName!,
                 rate: assignee.getRate() ?? 0,
-            }
-        });
+            },
+        }
     }
 }
