@@ -1,4 +1,4 @@
-import { NewWbsAssigneeForm } from "@/components/wbs/new-wbs-assignee-form";
+import { WbsAssigneeForm } from "@/components/wbs/wbs-assignee-form";
 import { notFound } from "next/navigation";
 import { getWbsAssigneeById } from "../../assignee-actions";
 
@@ -17,7 +17,7 @@ export default async function EditWbsAssigneePage({
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6">担当者を編集</h1>
-      <NewWbsAssigneeForm
+      <WbsAssigneeForm
         wbsId={assignee.wbsId!}
         assignee={{
           id: assignee.assignee.id,

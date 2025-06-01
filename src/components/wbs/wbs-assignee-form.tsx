@@ -36,7 +36,7 @@ const formSchema = z.object({
   rate: z.number().min(0).max(100).default(100),
 });
 
-type NewWbsAssigneeFormProps = {
+type WbsAssigneeFormProps = {
   wbsId: number;
   assignee?: {
     id: number;
@@ -46,10 +46,7 @@ type NewWbsAssigneeFormProps = {
   };
 };
 
-export function NewWbsAssigneeForm({
-  wbsId,
-  assignee,
-}: NewWbsAssigneeFormProps) {
+export function WbsAssigneeForm({ wbsId, assignee }: WbsAssigneeFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [users, setUsers] = useState<User[]>([]);

@@ -1,4 +1,4 @@
-import { NewWbsAssigneeForm } from "@/components/wbs/new-wbs-assignee-form";
+import { WbsAssigneeForm } from "@/components/wbs/wbs-assignee-form";
 
 export default async function NewWbsAssigneePage({
   params,
@@ -9,7 +9,7 @@ export default async function NewWbsAssigneePage({
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6">担当者を追加</h1>
-      <NewWbsAssigneeForm wbsId={id} />
+      <WbsAssigneeForm wbsId={id} />
     </div>
   );
 }
