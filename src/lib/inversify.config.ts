@@ -8,6 +8,7 @@ import { TaskFactory } from "@/applications/task/task-factory";
 import { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-repository";
 import { IWbsRepository } from "@/applications/wbs/iwbs-repository";
 import { IWbsApplicationService, WbsApplicationService } from "@/applications/wbs/wbs-application-service";
+import { IDashboardApplicationService, DashboardApplicationService } from "@/applications/dashboard/dashboard-application-service";
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 import { GetOperationPossible } from "@/domains/wbs/get-operation-possible";
 import { ScheduleGenerate } from "@/domains/wbs/schedule-generate";
@@ -26,6 +27,7 @@ container.bind<IProjectApplicationService>(SYMBOL.IProjectApplicationService).to
 container.bind<IWbsApplicationService>(SYMBOL.IWbsApplicationService).to(WbsApplicationService).inSingletonScope();
 container.bind<ITaskApplicationService>(SYMBOL.ITaskApplicationService).to(TaskApplicationService).inSingletonScope();
 container.bind<IScheduleGenerateService>(SYMBOL.IScheduleGenerateService).to(ScheduleGenerateService).inSingletonScope();
+container.bind<IDashboardApplicationService>(SYMBOL.IDashboardApplicationService).to(DashboardApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
