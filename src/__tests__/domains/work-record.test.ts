@@ -1,8 +1,7 @@
 import { WorkRecord } from "@/domains/work-records/work-recoed";
-import { TaskId } from "@/domains/task/value-object/task-id";
 
 describe('WorkRecord', () => {
-  const taskId = TaskId.reconstruct('D1-0001');
+  const taskId = 1;
   const startDate = new Date('2025-01-01');
   const endDate = new Date('2025-01-01');
   const manHours = 8;

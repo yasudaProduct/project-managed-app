@@ -9,7 +9,7 @@ jest.mock('@/lib/prisma', () => ({
   __esModule: true,
   default: {
     projects: {
-      findUnique: jest.fn() as jest.Mock, 
+      findUnique: jest.fn() as jest.Mock,
       findFirst: jest.fn() as jest.Mock,
       findMany: jest.fn() as jest.Mock,
       create: jest.fn() as jest.Mock,
@@ -43,7 +43,7 @@ describe('ProjectRepository', () => {
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      
+
       (prismaMock.projects.findUnique as jest.Mock).mockResolvedValue(mockProjectData);
 
       // メソッド実行
@@ -86,7 +86,7 @@ describe('ProjectRepository', () => {
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      
+
       (prismaMock.projects.findFirst as jest.Mock).mockResolvedValue(mockProjectData);
 
       const project = await projectRepository.findByName('テストプロジェクト');
@@ -134,8 +134,8 @@ describe('ProjectRepository', () => {
           updatedAt: new Date()
         }
       ];
-      
-      prismaMock.projects.findMany.mockResolvedValue(mockProjectsData);
+
+      (prismaMock.projects.findMany as jest.Mock).mockResolvedValue(mockProjectsData);
 
       const projects = await projectRepository.findAll();
 
@@ -179,7 +179,7 @@ describe('ProjectRepository', () => {
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      
+
       (prismaMock.projects.create as jest.Mock).mockResolvedValue(mockCreatedProject);
 
       // メソッド実行
@@ -225,7 +225,7 @@ describe('ProjectRepository', () => {
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      
+
       (prismaMock.projects.update as jest.Mock).mockResolvedValue(mockUpdatedProject);
 
       // メソッド実行
