@@ -1,4 +1,4 @@
-export class TaskId {
+export class TaskNo {
     private constructor(private readonly value: string) {
         this.validateFormat(value);
     }
@@ -11,15 +11,15 @@ export class TaskId {
         }
     }
 
-    public static create(phaseCode: string, sequenceNumber: number): TaskId {
+    public static create(phaseCode: string, sequenceNumber: number): TaskNo {
         console.log("create", phaseCode, sequenceNumber)
         const formattedNumber = String(sequenceNumber).padStart(4, '0');
         console.log("formattedNumber", formattedNumber)
-        return new TaskId(`${phaseCode}-${formattedNumber}`);
+        return new TaskNo(`${phaseCode}-${formattedNumber}`);
     }
 
-    public static reconstruct(value: string): TaskId {
-        return new TaskId(value);
+    public static reconstruct(value: string): TaskNo {
+        return new TaskNo(value);
     }
 
     public getValue(): string {

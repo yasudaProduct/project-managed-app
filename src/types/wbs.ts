@@ -21,9 +21,9 @@ export type WbsTask = {
     taskNo?: string;
     name: string;
     status: TaskStatus;
-    assigneeId?: string;
+    assigneeId?: number;
     assignee?: {
-        id: string;
+        id: number;
         name: string;
         displayName: string;
     };

@@ -1,5 +1,5 @@
-import { TaskId } from "../value-object/task-id";
+import { TaskNo } from "../value-object/task-id";
 
 export interface ITaskFactory {
-    createTaskId(wbsId: number, phaseId: number): Promise<TaskId>;
+    createTaskId(wbsId: number, phaseId: number): Promise<TaskNo>;
 }

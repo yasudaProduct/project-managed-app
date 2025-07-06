@@ -35,7 +35,6 @@ model Users {
   displayName String
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
-  tasks      WbsTask[]       @relation("TaskAssignee")
   statusLogs TaskStatusLog[] @relation("StatusChanger")
   assignees  WbsAssignee[]   @relation("WbsAssignee")
   workRecords WorkRecord[]
@@ -67,6 +66,7 @@ model WbsAssignee {
   rate      Float      @default(1.0) // 参画率（0.01〜1.0）
   wbs       Wbs        @relation(fields: [wbsId], references: [id])
   assignee  Users      @relation("WbsAssignee", fields: [assigneeId], references: [id])
+  tasks     WbsTask[]  @relation("TaskAssignee")
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -117,11 +117,11 @@ model WbsTask {
   wbsId            Int
   phaseId          Int?
   name             String
-  assigneeId       String?
+  assigneeId       Int?
   status           TaskStatus       @default(NOT_STARTED)
   wbs              Wbs              @relation(fields: [wbsId], references: [id])
   phase            WbsPhase?        @relation(fields: [phaseId], references: [id])
-  assignee         Users?           @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignee         WbsAssignee?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
   statusLogs       TaskStatusLog[]  @relation("TaskStatusLogs")
   periods          TaskPeriod[]     @relation("TaskPeriod")
   createdAt        DateTime         @default(now())

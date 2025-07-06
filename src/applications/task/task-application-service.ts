@@ -18,7 +18,7 @@ export interface CreateTaskCommand {
     yoteiStartDate: Date;
     yoteiEndDate: Date;
     yoteiKosu: number;
-    assigneeId?: string;
+    assigneeId?: number;
     status: TaskStatus;
 }
 
@@ -112,7 +112,6 @@ export class TaskApplicationService implements ITaskApplicationService {
         console.log("service: createTask")
         const { name, wbsId, phaseId, yoteiStartDate, yoteiEndDate, yoteiKosu, assigneeId, status } = command;
 
-        //TODO ファクトリーでtaskを生成する
         const task = Task.create(
             {
                 taskNo: await this.taskFactory.createTaskId(wbsId, phaseId),

@@ -2,7 +2,7 @@
 import { ITaskRepository } from "@/applications/task/itask-repository";
 import { TaskApplicationService } from "@/applications/task/task-application-service";
 import { Task } from "@/domains/task/task";
-import { TaskId } from "@/domains/task/value-object/task-id";
+import { TaskNo } from "@/domains/task/value-object/task-id";
 import { TaskStatus } from "@/domains/task/value-object/project-status";
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 import { Period } from "@/domains/task/period";
@@ -45,13 +45,13 @@ describe('TaskApplicationService', () => {
   describe('getTaskById', () => {
     it('存在するIDのタスクを取得できること', async () => {
       // モックの返り値を設定
-      const taskId = TaskId.reconstruct('D1-0001');
+      const taskId = TaskNo.reconstruct('D1-0001');
       const mockTask = Task.create({
         taskNo: taskId,
         wbsId: wbsId,
         name: 'テストタスク',
         phaseId: 1,
-        assigneeId: 'user1',
+        assigneeId: 1,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
@@ -94,7 +94,7 @@ describe('TaskApplicationService', () => {
       expect(result?.taskNo).toBe('D1-0001');
       expect(result?.name).toBe('テストタスク');
       expect(result?.status).toBe('NOT_STARTED');
-      expect(result?.assigneeId).toBe('user1');
+      expect(result?.assigneeId).toBe(1);
       expect(result?.assignee?.displayName).toBe('テストユーザー1');
       expect(result?.phaseId).toBe(1);
       expect(result?.phase?.name).toBe('設計フェーズ');
@@ -118,11 +118,11 @@ describe('TaskApplicationService', () => {
     it('すべてのタスクを取得できること', async () => {
       // モックの返り値を設定
       const task1 = Task.create({
-        taskNo: TaskId.reconstruct('D1-0001'),
+        taskNo: TaskNo.reconstruct('D1-0001'),
         wbsId: wbsId,
         name: 'タスク1',
         phaseId: 1,
-        assigneeId: 'user1',
+        assigneeId: 1,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
@@ -138,11 +138,11 @@ describe('TaskApplicationService', () => {
       });
 
       const task2 = Task.create({
-        taskNo: TaskId.reconstruct('D1-0002'),
+        taskNo: TaskNo.reconstruct('D1-0002'),
         wbsId: wbsId,
         name: 'タスク2',
         phaseId: 2,
-        assigneeId: 'user2',
+        assigneeId: 2,
         status: new TaskStatus({ status: 'IN_PROGRESS' }),
         periods: [
           Period.create({
@@ -185,7 +185,7 @@ describe('TaskApplicationService', () => {
   describe('createTask', () => {
     it('タスクを新規作成できること', async () => {
       // createTaskIdのモック
-      const mockTaskId = TaskId.reconstruct('D1-0001');
+      const mockTaskId = TaskNo.reconstruct('D1-0001');
       taskFactory.createTaskId.mockResolvedValue(mockTaskId);
 
       // createのモック
@@ -206,7 +206,7 @@ describe('TaskApplicationService', () => {
         yoteiStartDate,
         yoteiEndDate,
         yoteiKosu: 10,
-        assigneeId: 'user1',
+        assigneeId: 1,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
       });
 
@@ -220,7 +220,7 @@ describe('TaskApplicationService', () => {
       expect(createdTask.name).toBe('新規タスク');
       expect(createdTask.wbsId).toBe(wbsId);
       expect(createdTask.phaseId).toBe(1);
-      expect(createdTask.assigneeId).toBe('user1');
+      expect(createdTask.assigneeId).toBe(1);
       expect(createdTask.periods?.length).toBe(1);
       expect(createdTask.periods?.[0].type.type).toBe('YOTEI');
       expect(createdTask.periods?.[0].startDate).toEqual(yoteiStartDate);
@@ -232,13 +232,13 @@ describe('TaskApplicationService', () => {
   describe('updateTask', () => {
     it('タスク情報を更新できること', async () => {
       // 既存のタスクをモック
-      const taskId = TaskId.reconstruct('D1-0001');
+      const taskId = TaskNo.reconstruct('D1-0001');
       const existingTask = Task.create({
         taskNo: taskId,
         wbsId: wbsId,
         name: '更新前タスク',
         phaseId: 1,
-        assigneeId: 'user1',
+        assigneeId: 1,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
@@ -273,7 +273,7 @@ describe('TaskApplicationService', () => {
           taskNo: 'D1-0001',
           name: '更新後タスク',
           phaseId: 2,
-          assigneeId: 'user2',
+          assigneeId: 2,
           status: 'IN_PROGRESS',
           yoteiStart: newStartDate,
           yoteiEnd: newEndDate,
@@ -290,7 +290,7 @@ describe('TaskApplicationService', () => {
       const updatedTask = taskRepository.update.mock.calls[0][1];
       expect(updatedTask.name).toBe('更新後タスク');
       expect(updatedTask.phaseId).toBe(2);
-      expect(updatedTask.assigneeId).toBe('user2');
+      expect(updatedTask.assigneeId).toBe(2);
       expect(updatedTask.status.getStatus()).toBe('IN_PROGRESS');
       expect(updatedTask.getYoteiStart()).toEqual(newStartDate);
       expect(updatedTask.getYoteiEnd()).toEqual(newEndDate);

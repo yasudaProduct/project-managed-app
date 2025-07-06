@@ -1,7 +1,7 @@
 // filepath: /Users/yuta/Develop/project-managed-app/src/__integration_tests__/infrastructures/task-repository.test.ts
 import { TaskRepository } from '@/infrastructures/task-repository';
 import { Task } from '@/domains/task/task';
-import { TaskId } from '@/domains/task/value-object/task-id';
+import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/project-status';
 import { Period } from '@/domains/task/period';
 import { PeriodType } from '@/domains/task/value-object/period-type';
@@ -29,7 +29,7 @@ describe('TaskRepository Integration Tests', () => {
   describe('タスクのCRUD操作', () => {
     it('タスクを作成できること', async () => {
       // テスト用のタスクを作成
-      const taskId = TaskId.reconstruct(`TEST-${Date.now() % 1000}`);
+      const taskId = TaskNo.reconstruct(`TEST-${Date.now() % 1000}`);
       testTaskId = taskId.getValue();
       testIds.taskId = testTaskId;
 
@@ -38,7 +38,7 @@ describe('TaskRepository Integration Tests', () => {
         wbsId: testIds.wbsId,
         name: '結合テスト用タスク',
         phaseId: testIds.phaseId,
-        assigneeId: 'user1',
+        assigneeId: 1,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
@@ -89,13 +89,13 @@ describe('TaskRepository Integration Tests', () => {
 
     it('すべてのタスクの取得', async () => {
       // 追加のタスクを作成
-      const additionalTaskId = TaskId.reconstruct(`TEST-${Date.now() % 1000}`);
+      const additionalTaskId = TaskNo.reconstruct(`TEST-${Date.now() % 1000}`);
       const additionalTask = Task.create({
         id: additionalTaskId,
         wbsId: testIds.wbsId,
         name: '追加タスク',
         phaseId: testIds.phaseId,
-        assigneeId: 'user2',
+        assigneeId: 2,
         status: new TaskStatus({ status: 'IN_PROGRESS' }),
         periods: [
           Period.create({
@@ -141,7 +141,7 @@ describe('TaskRepository Integration Tests', () => {
         // タスク情報を更新
         taskToUpdate.name = '更新されたタスク名';
         taskToUpdate.status = new TaskStatus({ status: 'IN_PROGRESS' });
-        taskToUpdate.assigneeId = 'user3';
+        taskToUpdate.assigneeId = 3;
 
         // 期間情報を更新
         if (taskToUpdate.periods && taskToUpdate.periods.length > 0) {
@@ -162,7 +162,7 @@ describe('TaskRepository Integration Tests', () => {
         expect(updatedTask).toBeTruthy();
         expect(updatedTask.name).toBe('更新されたタスク名');
         expect(updatedTask.status.getStatus()).toBe('IN_PROGRESS');
-        expect(updatedTask.assigneeId).toBe('user3');
+        expect(updatedTask.assigneeId).toBe(3);
 
         // DBが本当に更新されたことを確認
         const refetchedTask = await taskRepository.findById(testIds.wbsId, testTaskId);

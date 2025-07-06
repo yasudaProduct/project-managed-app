@@ -1,7 +1,7 @@
 // filepath: /Users/yuta/Develop/project-managed-app/src/__tests__/infrastructures/task-repository.test.ts
 import { TaskRepository } from "@/infrastructures/task-repository";
 import { Task } from "@/domains/task/task";
-import { TaskId } from "@/domains/task/value-object/task-id";
+import { TaskNo } from "@/domains/task/value-object/task-id";
 import { TaskStatus } from "@/domains/task/value-object/project-status";
 import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
@@ -67,10 +67,10 @@ describe('TaskRepository', () => {
         wbsId: wbsId,
         name: 'テストタスク',
         status: 'NOT_STARTED' as const,
-        assigneeId: 'user1',
+        assigneeId: 1,
         phaseId: 1,
         assignee: {
-          id: 'user1',
+          id: 1,
           name: 'ユーザー1',
           displayName: 'テストユーザー1'
         },
@@ -125,7 +125,7 @@ describe('TaskRepository', () => {
       expect(task?.taskNo?.getValue()).toBe(taskNo);
       expect(task?.name).toBe('テストタスク');
       expect(task?.status.getStatus()).toBe('NOT_STARTED');
-      expect(task?.assigneeId).toBe('user1');
+      expect(task?.assigneeId).toBe(1);
       expect(task?.assignee?.displayName).toBe('テストユーザー1');
       expect(task?.phaseId).toBe(1);
       expect(task?.phase?.name).toBe('設計フェーズ');
@@ -159,10 +159,10 @@ describe('TaskRepository', () => {
           wbsId: wbsId,
           name: 'タスク1',
           status: 'NOT_STARTED' as const,
-          assigneeId: 'user1',
+          assigneeId: 1,
           phaseId: 1,
           assignee: {
-            id: 'user1',
+            id: 1,
             name: 'ユーザー1',
             displayName: 'テストユーザー1'
           },
@@ -200,10 +200,10 @@ describe('TaskRepository', () => {
           wbsId: wbsId,
           name: 'タスク2',
           status: 'IN_PROGRESS' as const,
-          assigneeId: 'user2',
+          assigneeId: 2,
           phaseId: 2,
           assignee: {
-            id: 'user2',
+            id: 2,
             name: 'ユーザー2',
             displayName: 'テストユーザー2'
           },
@@ -294,13 +294,13 @@ describe('TaskRepository', () => {
   describe('create', () => {
     it('タスクを新規作成できること', async () => {
       // 作成するタスクを準備
-      const taskNo = TaskId.reconstruct('D1-0001');
+      const taskNo = TaskNo.reconstruct('D1-0001');
       const newTask = Task.create({
         taskNo: taskNo,
         wbsId: wbsId,
         name: '新規タスク',
         phaseId: 1,
-        assigneeId: 'user1',
+        assigneeId: 1,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
@@ -324,7 +324,7 @@ describe('TaskRepository', () => {
         wbsId: wbsId,
         name: '新規タスク',
         phaseId: 1,
-        assigneeId: 'user1',
+        assigneeId: 1,
         status: 'NOT_STARTED' as const,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -360,7 +360,7 @@ describe('TaskRepository', () => {
           name: '新規タスク',
           wbsId: wbsId,
           phaseId: 1,
-          assigneeId: 'user1',
+          assigneeId: 1,
           status: 'NOT_STARTED',
         }
       });
@@ -389,13 +389,13 @@ describe('TaskRepository', () => {
   describe('update', () => {
     it('タスク情報を更新できること', async () => {
       // 更新するタスクを準備
-      const taskNo = TaskId.reconstruct('D1-0001');
+      const taskNo = TaskNo.reconstruct('D1-0001');
       const task = Task.create({
         taskNo: taskNo,
         wbsId: wbsId,
         name: '更新後タスク',
         phaseId: 2,
-        assigneeId: 'user2',
+        assigneeId: 2,
         status: new TaskStatus({ status: 'IN_PROGRESS' }),
         periods: [
           Period.createFromDb({
@@ -422,7 +422,7 @@ describe('TaskRepository', () => {
         wbsId: wbsId,
         name: '更新後タスク',
         phaseId: 2,
-        assigneeId: 'user2',
+        assigneeId: 2,
         status: 'IN_PROGRESS' as const,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -457,7 +457,7 @@ describe('TaskRepository', () => {
         data: {
           name: '更新後タスク',
           phaseId: 2,
-          assigneeId: 'user2',
+          assigneeId: 2,
           status: 'IN_PROGRESS',
         }
       });

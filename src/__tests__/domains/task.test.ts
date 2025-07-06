@@ -1,5 +1,5 @@
 import { Task } from "@/domains/task/task";
-import { TaskId } from "@/domains/task/value-object/task-id";
+import { TaskNo } from "@/domains/task/value-object/task-id";
 import { TaskStatus } from "@/domains/task/value-object/project-status";
 import { Phase } from "@/domains/phase/phase";
 import { PhaseCode } from "@/domains/phase/phase-code";
@@ -11,7 +11,7 @@ import { ManHourType } from "@/domains/task/value-object/man-hour-type";
 import { WorkRecord } from "@/domains/work-records/work-recoed";
 
 describe('Task', () => {
-  const taskNo = TaskId.reconstruct('D1-0001');
+  const taskNo = TaskNo.reconstruct('D1-0001');
   const taskId = 1;
   const wbsId = 1;
   const name = 'テストタスク';
@@ -39,7 +39,7 @@ describe('Task', () => {
 
     it('オプションのフィールドも一緒に作成できること', () => {
       const phaseId = 1;
-      const assigneeId = 'user-1';
+      const assigneeId = 1;
       const periods = [
         Period.create({
           startDate,
@@ -75,7 +75,7 @@ describe('Task', () => {
         seq: 1
       });
 
-      const assigneeId = 'user-1';
+      const assigneeId = 1;
       const assignee = Assignee.createFromDb({
         id: assigneeId,
         name: 'yamada',
@@ -169,7 +169,7 @@ describe('Task', () => {
       });
 
       const task2 = Task.create({
-        taskNo: TaskId.reconstruct('D1-0002'),
+        taskNo: TaskNo.reconstruct('D1-0002'),
         wbsId,
         name,
         status

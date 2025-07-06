@@ -8,7 +8,7 @@ import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
 import { TaskStatus } from "@/domains/task/value-object/project-status";
 import { Task } from "@/domains/task/task";
-import { TaskId } from "@/domains/task/value-object/task-id";
+import { TaskNo } from "@/domains/task/value-object/task-id";
 import { WorkRecord } from "@/domains/work-records/work-recoed";
 import prisma from "@/lib/prisma";
 import { injectable } from "inversify";
@@ -21,7 +21,11 @@ export class TaskRepository implements ITaskRepository {
         const taskDb = await prisma.wbsTask.findUnique({
             where: { id: Number(id) },
             include: {
-                assignee: true,
+                assignee: {
+                    include: {
+                        assignee: true
+                    }
+                },
                 phase: true,
                 periods: {
                     include: {
@@ -34,15 +38,15 @@ export class TaskRepository implements ITaskRepository {
         if (!taskDb) return null;
         return Task.createFromDb({
             id: taskDb.id,
-            taskNo: TaskId.reconstruct(taskDb.taskNo),
+            taskNo: TaskNo.reconstruct(taskDb.taskNo),
             wbsId: taskDb.wbsId,
             name: taskDb.name,
             status: new TaskStatus({ status: taskDb.status }),
             assigneeId: taskDb.assigneeId ?? undefined,
             assignee: taskDb.assignee ? Assignee.createFromDb({
                 id: taskDb.assignee.id,
-                name: taskDb.assignee.name,
-                displayName: taskDb.assignee.displayName,
+                name: taskDb.assignee.assignee.name,
+                displayName: taskDb.assignee.assignee.displayName,
             }) : undefined,
             phaseId: taskDb.phaseId ?? undefined,
             phase: taskDb.phase ? Phase.createFromDb({
@@ -65,13 +69,18 @@ export class TaskRepository implements ITaskRepository {
         });
     }
 
-    async findAll(wbsId: number): Promise<Task[]> {
+    // async findAll(): Promise<Task[]>;
+    // async findAll(wbsId: number): Promise<Task[]>;
+    async findAll(wbsId?: number): Promise<Task[]> {
+        const whereClause = wbsId ? { wbsId: wbsId } : {};
         const tasksDb = await prisma.wbsTask.findMany({
-            where: {
-                wbsId: wbsId
-            },
+            where: whereClause,
             include: {
-                assignee: true,
+                assignee: {
+                    include: {
+                        assignee: true
+                    }
+                },
                 phase: true,
                 periods: {
                     include: {
@@ -90,14 +99,14 @@ export class TaskRepository implements ITaskRepository {
         });
         return tasksDb.map(taskDb => Task.createFromDb({
             id: taskDb.id,
-            taskNo: TaskId.reconstruct(taskDb.taskNo),
+            taskNo: TaskNo.reconstruct(taskDb.taskNo),
             name: taskDb.name,
             wbsId: taskDb.wbsId,
             assigneeId: taskDb.assigneeId ?? undefined,
             assignee: taskDb.assignee ? Assignee.createFromDb({
                 id: taskDb.assignee.id,
-                name: taskDb.assignee.name,
-                displayName: taskDb.assignee.displayName,
+                name: taskDb.assignee.assignee.name,
+                displayName: taskDb.assignee.assignee.displayName,
             }) : undefined,
             phaseId: taskDb.phaseId ?? undefined,
             phase: taskDb.phase ? Phase.createFromDb({
@@ -135,13 +144,17 @@ export class TaskRepository implements ITaskRepository {
         }));
     }
 
-    async findByAssigneeId(assigneeId: string): Promise<Task[]> {
+    async findByAssigneeId(assigneeId: number): Promise<Task[]> {
         const tasksDb = await prisma.wbsTask.findMany({
             where: {
                 assigneeId: assigneeId
             },
             include: {
-                assignee: true,
+                assignee: {
+                    include: {
+                        assignee: true
+                    }
+                },
                 phase: true,
                 periods: {
                     include: {
@@ -160,14 +173,14 @@ export class TaskRepository implements ITaskRepository {
         });
         return tasksDb.map(taskDb => Task.createFromDb({
             id: taskDb.id,
-            taskNo: TaskId.reconstruct(taskDb.taskNo),
+            taskNo: TaskNo.reconstruct(taskDb.taskNo),
             name: taskDb.name,
             wbsId: taskDb.wbsId,
             assigneeId: taskDb.assigneeId ?? undefined,
             assignee: taskDb.assignee ? Assignee.createFromDb({
                 id: taskDb.assignee.id,
-                name: taskDb.assignee.name,
-                displayName: taskDb.assignee.displayName,
+                name: taskDb.assignee.assignee.name,
+                displayName: taskDb.assignee.assignee.displayName,
             }) : undefined,
             phaseId: taskDb.phaseId ?? undefined,
             phase: taskDb.phase ? Phase.createFromDb({
@@ -244,7 +257,7 @@ export class TaskRepository implements ITaskRepository {
         console.log("taskDb", taskDb)
         return Task.createFromDb({
             id: taskDb.id,
-            taskNo: TaskId.reconstruct(taskDb.taskNo),
+            taskNo: TaskNo.reconstruct(taskDb.taskNo),
             name: taskDb.name,
             wbsId: taskDb.wbsId,
             assigneeId: taskDb.assigneeId ?? undefined,
@@ -301,7 +314,7 @@ export class TaskRepository implements ITaskRepository {
 
         return Task.createFromDb({
             id: taskDb.id,
-            taskNo: TaskId.reconstruct(taskDb.taskNo),
+            taskNo: TaskNo.reconstruct(taskDb.taskNo),
             name: task.name,
             wbsId: task.wbsId,
             assigneeId: task.assigneeId ?? undefined,
