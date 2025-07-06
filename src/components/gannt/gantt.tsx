@@ -29,7 +29,7 @@ interface GanttComponentProps {
 declare module "gantt-task-react" {
   interface Task {
     assignee: {
-      id: string;
+      id: number;
       name: string;
     };
     phase: {

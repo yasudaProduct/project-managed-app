@@ -71,7 +71,7 @@ erDiagram
   Int wbsId FK
   Int phaseId FK "nullable"
   String name
-  String assigneeId FK "nullable"
+  Int assigneeId FK "nullable"
   TaskStatus status
   DateTime createdAt
   DateTime updatedAt
@@ -139,7 +139,7 @@ erDiagram
 "wbs_buffer" }o--|| "wbs" : wbs
 "wbs_task" }o--|| "wbs" : wbs
 "wbs_task" }o--o| "wbs_phase" : phase
-"wbs_task" }o--o| "users" : assignee
+"wbs_task" }o--o| "wbs_assignee" : assignee
 "task_period" }o--|| "wbs_task" : task
 "task_kosu" }o--|| "task_period" : period
 "task_kosu" }o--|| "wbs" : wbs

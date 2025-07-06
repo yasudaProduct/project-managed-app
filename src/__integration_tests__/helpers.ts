@@ -53,7 +53,7 @@ export function createTestTask(wbsId: number, phaseId: number, overrides = {}) {
     name: `テストタスク-${Date.now()}`,
     phaseId,
     status: new TaskStatus({ status: 'NOT_STARTED' }),
-    assigneeId: 'user1',
+    assigneeId: 1,
     periods: [
       Period.create({
         startDate: new Date('2025-05-10'),

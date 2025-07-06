@@ -20,11 +20,20 @@ export class TaskFactory implements ITaskFactory {
             throw new Error("Phase not found");
         }
 
-        // 最新のタスクIDを取得
-        // TODO wbsPhaseのIDを条件に最大値を取得する
-        const lastTask = (await this.taskRepository.findAll(wbsId)).findLast(
-            (task) => task.taskNo?.getValue().startsWith(wbsPhase.code.value())
+        // 指定されたPhase内の最新のタスクIDを取得
+        const allTasks = await this.taskRepository.findAll(wbsId);
+        const phaseTasks = allTasks.filter(
+            (task) => task.phaseId === phaseId && task.taskNo?.getValue().startsWith(wbsPhase.code.value())
         );
+        
+        // タスクNo順でソートし、最後のタスクを取得
+        const lastTask = phaseTasks
+            .sort((a, b) => {
+                const aNum = parseInt(a.taskNo!.getValue().split("-")[1] ?? "0", 10);
+                const bNum = parseInt(b.taskNo!.getValue().split("-")[1] ?? "0", 10);
+                return aNum - bNum;
+            })
+            .pop();
 
         let nextNumber = 1;
         if (lastTask) {

@@ -51,7 +51,7 @@ describe('TaskApplicationService', () => {
         wbsId: wbsId,
         name: 'テストタスク',
         phaseId: 1,
-        assigneeId: 'user1',
+        assigneeId: 1,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
@@ -94,7 +94,7 @@ describe('TaskApplicationService', () => {
       expect(result?.taskNo).toBe('D1-0001');
       expect(result?.name).toBe('テストタスク');
       expect(result?.status).toBe('NOT_STARTED');
-      expect(result?.assigneeId).toBe('user1');
+      expect(result?.assigneeId).toBe(1);
       expect(result?.assignee?.displayName).toBe('テストユーザー1');
       expect(result?.phaseId).toBe(1);
       expect(result?.phase?.name).toBe('設計フェーズ');
@@ -122,7 +122,7 @@ describe('TaskApplicationService', () => {
         wbsId: wbsId,
         name: 'タスク1',
         phaseId: 1,
-        assigneeId: 'user1',
+        assigneeId: 1,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
@@ -142,7 +142,7 @@ describe('TaskApplicationService', () => {
         wbsId: wbsId,
         name: 'タスク2',
         phaseId: 2,
-        assigneeId: 'user2',
+        assigneeId: 2,
         status: new TaskStatus({ status: 'IN_PROGRESS' }),
         periods: [
           Period.create({
@@ -206,7 +206,7 @@ describe('TaskApplicationService', () => {
         yoteiStartDate,
         yoteiEndDate,
         yoteiKosu: 10,
-        assigneeId: 'user1',
+        assigneeId: 1,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
       });
 
@@ -220,7 +220,7 @@ describe('TaskApplicationService', () => {
       expect(createdTask.name).toBe('新規タスク');
       expect(createdTask.wbsId).toBe(wbsId);
       expect(createdTask.phaseId).toBe(1);
-      expect(createdTask.assigneeId).toBe('user1');
+      expect(createdTask.assigneeId).toBe(1);
       expect(createdTask.periods?.length).toBe(1);
       expect(createdTask.periods?.[0].type.type).toBe('YOTEI');
       expect(createdTask.periods?.[0].startDate).toEqual(yoteiStartDate);
@@ -238,7 +238,7 @@ describe('TaskApplicationService', () => {
         wbsId: wbsId,
         name: '更新前タスク',
         phaseId: 1,
-        assigneeId: 'user1',
+        assigneeId: 1,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
@@ -273,7 +273,7 @@ describe('TaskApplicationService', () => {
           taskNo: 'D1-0001',
           name: '更新後タスク',
           phaseId: 2,
-          assigneeId: 'user2',
+          assigneeId: 2,
           status: 'IN_PROGRESS',
           yoteiStart: newStartDate,
           yoteiEnd: newEndDate,
@@ -290,7 +290,7 @@ describe('TaskApplicationService', () => {
       const updatedTask = taskRepository.update.mock.calls[0][1];
       expect(updatedTask.name).toBe('更新後タスク');
       expect(updatedTask.phaseId).toBe(2);
-      expect(updatedTask.assigneeId).toBe('user2');
+      expect(updatedTask.assigneeId).toBe(2);
       expect(updatedTask.status.getStatus()).toBe('IN_PROGRESS');
       expect(updatedTask.getYoteiStart()).toEqual(newStartDate);
       expect(updatedTask.getYoteiEnd()).toEqual(newEndDate);

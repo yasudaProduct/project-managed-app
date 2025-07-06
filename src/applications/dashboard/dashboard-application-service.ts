@@ -5,6 +5,7 @@ import { Project } from "@/domains/project/project";
 import { Task } from "@/domains/task/task";
 import { SYMBOL } from "@/types/symbol";
 import { inject, injectable } from "inversify";
+import { ProjectStatus } from "@/types/wbs";
 
 export interface DashboardStats {
     totalProjects: number;
@@ -28,7 +29,7 @@ export class DashboardApplicationService implements IDashboardApplicationService
         @inject(SYMBOL.IProjectRepository) private readonly projectRepository: IProjectRepository,
         @inject(SYMBOL.IWbsRepository) private readonly wbsRepository: IWbsRepository,
         @inject(SYMBOL.ITaskRepository) private readonly taskRepository: ITaskRepository
-    ) {}
+    ) { }
 
     public async getDashboardStats(): Promise<DashboardStats> {
         const projects = await this.projectRepository.findAll();
@@ -111,7 +112,7 @@ export class DashboardApplicationService implements IDashboardApplicationService
         today.setHours(0, 0, 0, 0);
 
         return projects
-            .filter(p => p.endDate < today && p.getStatus() !== 'COMPLETED')
+            .filter(p => p.endDate < today && p.getStatus() !== 'COMPLETED' as ProjectStatus)
             .map(p => ({
                 projectId: p.id!,
                 projectName: p.name,

@@ -39,7 +39,7 @@ describe('Task', () => {
 
     it('オプションのフィールドも一緒に作成できること', () => {
       const phaseId = 1;
-      const assigneeId = 'user-1';
+      const assigneeId = 1;
       const periods = [
         Period.create({
           startDate,
@@ -75,7 +75,7 @@ describe('Task', () => {
         seq: 1
       });
 
-      const assigneeId = 'user-1';
+      const assigneeId = 1;
       const assignee = Assignee.createFromDb({
         id: assigneeId,
         name: 'yamada',

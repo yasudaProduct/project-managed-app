@@ -18,7 +18,7 @@ export class Task {
     public status: TaskStatus;
     public phaseId?: number;
     public phase?: Phase;
-    public assigneeId?: string;
+    public assigneeId?: number;
     public assignee?: Assignee;
     public periods?: Period[];
     public workRecords?: WorkRecord[];
@@ -30,7 +30,7 @@ export class Task {
         taskNo: TaskNo;
         wbsId: number;
         name: string;
-        assigneeId?: string;
+        assigneeId?: number;
         status: TaskStatus;
         phaseId?: number;
         phase?: Phase;
@@ -64,7 +64,7 @@ export class Task {
         wbsId: number;
         name: string;
         phaseId?: number;
-        assigneeId?: string;
+        assigneeId?: number;
         status: TaskStatus;
         periods?: Period[];
     }): Task {
@@ -78,7 +78,7 @@ export class Task {
             wbsId: number;
             name: string;
             status: TaskStatus;
-            assigneeId?: string;
+            assigneeId?: number;
             assignee?: Assignee;
             phaseId?: number;
             phase?: Phase;
@@ -90,7 +90,7 @@ export class Task {
         return new Task(args);
     }
 
-    public update(args: { name: string; assigneeId?: string; status: TaskStatus; phaseId?: number; periods?: Period[]; }) {
+    public update(args: { name: string; assigneeId?: number; status: TaskStatus; phaseId?: number; periods?: Period[]; }) {
 
         if (!args.name) {
             throw new Error("タスク名は必須です");

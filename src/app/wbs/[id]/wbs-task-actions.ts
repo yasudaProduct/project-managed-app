@@ -54,7 +54,7 @@ export async function createTask(
             id: taskId.getValue(),
             name: taskData.name,
             wbsId: wbsId,
-            assigneeId: taskData.assigneeId,
+            assigneeId: taskData.assigneeId ? Number(taskData.assigneeId) : undefined,
             phaseId: taskData.phaseId!,
             status: new TaskStatusDomain({ status: taskData.status }),
             yoteiStartDate: new Date(taskData.periods![0].startDate!),
@@ -83,7 +83,7 @@ export async function updateTask(
         yoteiEnd?: string;
         yoteiKosu?: number;
         status: TaskStatus;
-        assigneeId?: string;
+        assigneeId?: number;
         phaseId?: number;
     },
 ): Promise<{ success: boolean; task?: WbsTask, error?: string }> {

@@ -35,7 +35,7 @@ const formSchema = z.object({
   wbsId: z.string().min(1, {
     message: "WBSIDを入力して下さい",
   }),
-  assigneeId: z.string().min(1, {
+  assigneeId: z.number().min(0, {
     message: "担当者を入力して下さい",
   }),
   start: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
@@ -74,7 +74,7 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
     defaultValues: {
       name: task?.name,
       wbsId: task?.taskNo,
-      assigneeId: task?.assignee.id,
+      assigneeId: task?.assignee?.id ?? undefined,
       start: formatDateyyyymmdd(task?.start?.toISOString()),
       end: task?.yoteiEnd ? formatDateyyyymmdd(task?.end?.toISOString()) : "",
       kosu: task?.yoteiKosu,
@@ -96,7 +96,7 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
     try {
       setIsSubmitting(true);
       const result = await updateTask(wbsId, {
-        id: task.id,
+        id: Number(task.id),
         taskNo: task.taskNo,
         name: values.name,
         yoteiStart: values.start,
