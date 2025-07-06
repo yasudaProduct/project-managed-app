@@ -135,7 +135,7 @@ export async function getTaskStatusCount(wbsId: number) {
     statusCount.todo = await prisma.wbsTask.count({
         where: {
             wbsId: wbsId,
-            status: 'IN_PROGRESS',
+            status: 'NOT_STARTED' as TaskStatus,
         }
     })
 
@@ -154,6 +154,101 @@ export async function getTaskStatusCount(wbsId: number) {
     })
 
     return statusCount;
+}
+
+export async function getTaskProgressByPhase(wbsId: number) {
+    const phases = await prisma.wbsPhase.findMany({
+        where: { wbsId: wbsId },
+        orderBy: { seq: 'asc' },
+        include: {
+            _count: {
+                select: {
+                    tasks: true,
+                }
+            }
+        }
+    });
+
+    const progressData = await Promise.all(
+        phases.map(async (phase) => {
+            const taskStatusCount = await prisma.wbsTask.groupBy({
+                by: ['status'],
+                where: {
+                    wbsId: wbsId,
+                    phaseId: phase.id,
+                },
+                _count: {
+                    id: true,
+                },
+            });
+
+            const statusMap = taskStatusCount.reduce((acc, curr) => {
+                acc[curr.status] = curr._count.id;
+                return acc;
+            }, {} as Record<string, number>);
+
+            return {
+                phase: phase.name,
+                total: phase._count.tasks,
+                todo: statusMap['TODO'] || 0,
+                inProgress: statusMap['IN_PROGRESS'] || 0,
+                completed: statusMap['COMPLETED'] || 0,
+            };
+        })
+    );
+
+    return progressData;
+}
+
+export async function getKosuSummary(wbsId: number) {
+    const kosuData = await prisma.wbsTask.findMany({
+        where: { wbsId: wbsId },
+        include: {
+            phase: true,
+            assignee: true,
+            periods: {
+                include: {
+                    kosus: true,
+                }
+            }
+        }
+    });
+
+    const phaseSummary = kosuData.reduce((acc, task) => {
+        const phaseName = task.phase?.name || '未分類';
+        if (!acc[phaseName]) {
+            acc[phaseName] = {
+                kijun: 0,
+                yotei: 0,
+                jisseki: 0,
+            };
+        }
+
+        task.periods.forEach(period => {
+            period.kosus.forEach(kosu => {
+                if (kosu.type === 'KIJUN' as KosuType) {
+                    acc[phaseName].kijun += kosu.kosu;
+                } else if (kosu.type === 'YOTEI' as KosuType) {
+                    acc[phaseName].yotei += kosu.kosu;
+                } else if (kosu.type === 'JISSEKI' as KosuType) {
+                    acc[phaseName].jisseki += kosu.kosu;
+                }
+            });
+        });
+
+        return acc;
+    }, {} as Record<string, { kijun: number; yotei: number; jisseki: number }>);
+
+    return phaseSummary;
+}
+
+export async function getMilestones(wbsId: number) {
+    const milestones = await prisma.milestone.findMany({
+        where: { wbsId: wbsId },
+        orderBy: { date: 'asc' },
+    });
+
+    return milestones;
 }
 
 // function formatTask(task: WbsTaskPrisma & { phase?: WbsPhasePrisma | null } & { assignee?: UserPrisma | null } & { periods?: (TaskPeriodPrisma & { kosus: TaskKosuPrisma[] })[] }): WbsTask {
