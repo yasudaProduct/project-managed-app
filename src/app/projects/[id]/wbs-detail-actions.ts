@@ -10,16 +10,6 @@ export async function getWbsAssignees(wbsId: number) {
     return await wbsService.getAssignees(wbsId);
 }
 
-export async function getAllPhases() {
-    const phaseRepository = container.get<IPhaseRepository>(SYMBOL.IPhaseRepository);
-    const phases = await phaseRepository.findAll();
-    return phases.map(phase => ({
-        id: phase.id!,
-        name: phase.name,
-        code: phase.code.value()
-    }));
-}
-
 export async function getWbsPhases(wbsId: number) {
     const phaseRepository = container.get<IPhaseRepository>(SYMBOL.IPhaseRepository);
     const phases = await phaseRepository.findByWbsId(wbsId);

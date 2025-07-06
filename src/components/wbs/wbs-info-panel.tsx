@@ -21,7 +21,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   getWbsAssignees,
-  getAllPhases,
   getWbsPhases,
 } from "@/app/projects/[id]/wbs-detail-actions";
 
