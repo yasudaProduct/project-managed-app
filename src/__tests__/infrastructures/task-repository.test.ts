@@ -106,11 +106,11 @@ describe('TaskRepository', () => {
       (prismaMock.wbsTask.findUnique as jest.Mock).mockResolvedValue(mockTaskData);
 
       // メソッド実行
-      const task = await taskRepository.findById(wbsId, taskNo);
+      const task = await taskRepository.findById(taskId);
 
       // 検証
       expect(prismaMock.wbsTask.findUnique).toHaveBeenCalledWith({
-        where: { taskNo, wbsId },
+        where: { id: taskId },
         include: {
           assignee: true,
           phase: true,
@@ -139,10 +139,10 @@ describe('TaskRepository', () => {
     it('存在しないIDの場合はnullを返すこと', async () => {
       (prismaMock.wbsTask.findUnique as jest.Mock).mockResolvedValue(null);
 
-      const task = await taskRepository.findById(wbsId, 'not-exist');
+      const task = await taskRepository.findById(taskId);
 
       expect(prismaMock.wbsTask.findUnique).toHaveBeenCalledWith({
-        where: { taskNo: 'not-exist', wbsId },
+        where: { id: wbsId },
         include: expect.anything()
       });
       expect(task).toBeNull();
