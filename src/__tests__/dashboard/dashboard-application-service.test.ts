@@ -6,7 +6,7 @@ import { Project } from "@/domains/project/project";
 import { ProjectStatus } from "@/domains/project/project-status";
 import { Task } from "@/domains/task/task";
 import { TaskStatus } from "@/domains/task/value-object/project-status";
-import { TaskId } from "@/domains/task/value-object/task-id";
+import { TaskNo } from "@/domains/task/value-object/task-id";
 import { Wbs } from "@/domains/wbs/wbs";
 
 const mockProjectRepository: jest.Mocked<IProjectRepository> = {
@@ -53,7 +53,7 @@ describe("DashboardApplicationService", () => {
             // Arrange
             const futureDate = new Date();
             futureDate.setFullYear(futureDate.getFullYear() + 1); // 1 year from now
-            
+
             const mockProjects = [
                 Project.createFromDb({
                     id: "1",
@@ -79,14 +79,14 @@ describe("DashboardApplicationService", () => {
             const mockTasks = [
                 Task.createFromDb({
                     id: 1,
-                    taskNo: TaskId.reconstruct("A1-0001"),
+                    taskNo: TaskNo.reconstruct("A1-0001"),
                     wbsId: 1,
                     name: "Task 1",
                     status: new TaskStatus({ status: "COMPLETED" }),
                 }),
                 Task.createFromDb({
                     id: 2,
-                    taskNo: TaskId.reconstruct("A1-0002"),
+                    taskNo: TaskNo.reconstruct("A1-0002"),
                     wbsId: 2,
                     name: "Task 2",
                     status: new TaskStatus({ status: "IN_PROGRESS" }),

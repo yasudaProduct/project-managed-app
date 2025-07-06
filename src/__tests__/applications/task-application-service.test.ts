@@ -2,7 +2,7 @@
 import { ITaskRepository } from "@/applications/task/itask-repository";
 import { TaskApplicationService } from "@/applications/task/task-application-service";
 import { Task } from "@/domains/task/task";
-import { TaskId } from "@/domains/task/value-object/task-id";
+import { TaskNo } from "@/domains/task/value-object/task-id";
 import { TaskStatus } from "@/domains/task/value-object/project-status";
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 import { Period } from "@/domains/task/period";
@@ -45,7 +45,7 @@ describe('TaskApplicationService', () => {
   describe('getTaskById', () => {
     it('存在するIDのタスクを取得できること', async () => {
       // モックの返り値を設定
-      const taskId = TaskId.reconstruct('D1-0001');
+      const taskId = TaskNo.reconstruct('D1-0001');
       const mockTask = Task.create({
         taskNo: taskId,
         wbsId: wbsId,
@@ -118,7 +118,7 @@ describe('TaskApplicationService', () => {
     it('すべてのタスクを取得できること', async () => {
       // モックの返り値を設定
       const task1 = Task.create({
-        taskNo: TaskId.reconstruct('D1-0001'),
+        taskNo: TaskNo.reconstruct('D1-0001'),
         wbsId: wbsId,
         name: 'タスク1',
         phaseId: 1,
@@ -138,7 +138,7 @@ describe('TaskApplicationService', () => {
       });
 
       const task2 = Task.create({
-        taskNo: TaskId.reconstruct('D1-0002'),
+        taskNo: TaskNo.reconstruct('D1-0002'),
         wbsId: wbsId,
         name: 'タスク2',
         phaseId: 2,
@@ -185,7 +185,7 @@ describe('TaskApplicationService', () => {
   describe('createTask', () => {
     it('タスクを新規作成できること', async () => {
       // createTaskIdのモック
-      const mockTaskId = TaskId.reconstruct('D1-0001');
+      const mockTaskId = TaskNo.reconstruct('D1-0001');
       taskFactory.createTaskId.mockResolvedValue(mockTaskId);
 
       // createのモック
@@ -232,7 +232,7 @@ describe('TaskApplicationService', () => {
   describe('updateTask', () => {
     it('タスク情報を更新できること', async () => {
       // 既存のタスクをモック
-      const taskId = TaskId.reconstruct('D1-0001');
+      const taskId = TaskNo.reconstruct('D1-0001');
       const existingTask = Task.create({
         taskNo: taskId,
         wbsId: wbsId,

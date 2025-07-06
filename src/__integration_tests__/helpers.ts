@@ -5,7 +5,7 @@ import { Phase } from '@/domains/phase/phase';
 import { PhaseCode } from '@/domains/phase/phase-code';
 import { Task } from '@/domains/task/task';
 import { TaskStatus } from '@/domains/task/value-object/project-status';
-import { TaskId } from '@/domains/task/value-object/task-id';
+import { TaskNo } from '@/domains/task/value-object/task-id';
 import { Period } from '@/domains/task/period';
 import { PeriodType } from '@/domains/task/value-object/period-type';
 import { ManHour } from '@/domains/task/man-hour';
@@ -46,7 +46,7 @@ export function createTestPhase(wbsId: number, overrides = {}) {
 }
 
 export function createTestTask(wbsId: number, phaseId: number, overrides = {}) {
-  const taskId = TaskId.reconstruct(`TEST-${Date.now() % 1000}`);
+  const taskId = TaskNo.reconstruct(`TEST-${Date.now() % 1000}`);
   return Task.create({
     taskNo: taskId,
     wbsId,

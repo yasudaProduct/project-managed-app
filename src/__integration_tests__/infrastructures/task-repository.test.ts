@@ -1,7 +1,7 @@
 // filepath: /Users/yuta/Develop/project-managed-app/src/__integration_tests__/infrastructures/task-repository.test.ts
 import { TaskRepository } from '@/infrastructures/task-repository';
 import { Task } from '@/domains/task/task';
-import { TaskId } from '@/domains/task/value-object/task-id';
+import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/project-status';
 import { Period } from '@/domains/task/period';
 import { PeriodType } from '@/domains/task/value-object/period-type';
@@ -29,7 +29,7 @@ describe('TaskRepository Integration Tests', () => {
   describe('タスクのCRUD操作', () => {
     it('タスクを作成できること', async () => {
       // テスト用のタスクを作成
-      const taskId = TaskId.reconstruct(`TEST-${Date.now() % 1000}`);
+      const taskId = TaskNo.reconstruct(`TEST-${Date.now() % 1000}`);
       testTaskId = taskId.getValue();
       testIds.taskId = testTaskId;
 
@@ -89,7 +89,7 @@ describe('TaskRepository Integration Tests', () => {
 
     it('すべてのタスクの取得', async () => {
       // 追加のタスクを作成
-      const additionalTaskId = TaskId.reconstruct(`TEST-${Date.now() % 1000}`);
+      const additionalTaskId = TaskNo.reconstruct(`TEST-${Date.now() % 1000}`);
       const additionalTask = Task.create({
         id: additionalTaskId,
         wbsId: testIds.wbsId,

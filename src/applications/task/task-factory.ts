@@ -1,5 +1,5 @@
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
-import { TaskId } from "@/domains/task/value-object/task-id";
+import { TaskNo } from "@/domains/task/value-object/task-id";
 import { inject, injectable } from "inversify";
 import type { ITaskRepository } from "./itask-repository";
 import { SYMBOL } from "@/types/symbol";
@@ -13,7 +13,7 @@ export class TaskFactory implements ITaskFactory {
         @inject(SYMBOL.IPhaseRepository) private readonly phaseRepository: IPhaseRepository) {
     }
 
-    async createTaskId(wbsId: number, phaseId: number): Promise<TaskId> {
+    async createTaskId(wbsId: number, phaseId: number): Promise<TaskNo> {
 
         const wbsPhase = await this.phaseRepository.findById(phaseId);
         if (!wbsPhase) {
@@ -32,6 +32,6 @@ export class TaskFactory implements ITaskFactory {
             nextNumber = lastNumber + 1;
         }
 
-        return TaskId.create(wbsPhase.code.value(), nextNumber);
+        return TaskNo.create(wbsPhase.code.value(), nextNumber);
     }
 }

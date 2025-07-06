@@ -1,7 +1,7 @@
 // filepath: /Users/yuta/Develop/project-managed-app/src/__tests__/infrastructures/task-repository.test.ts
 import { TaskRepository } from "@/infrastructures/task-repository";
 import { Task } from "@/domains/task/task";
-import { TaskId } from "@/domains/task/value-object/task-id";
+import { TaskNo } from "@/domains/task/value-object/task-id";
 import { TaskStatus } from "@/domains/task/value-object/project-status";
 import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
@@ -294,7 +294,7 @@ describe('TaskRepository', () => {
   describe('create', () => {
     it('タスクを新規作成できること', async () => {
       // 作成するタスクを準備
-      const taskNo = TaskId.reconstruct('D1-0001');
+      const taskNo = TaskNo.reconstruct('D1-0001');
       const newTask = Task.create({
         taskNo: taskNo,
         wbsId: wbsId,
@@ -389,7 +389,7 @@ describe('TaskRepository', () => {
   describe('update', () => {
     it('タスク情報を更新できること', async () => {
       // 更新するタスクを準備
-      const taskNo = TaskId.reconstruct('D1-0001');
+      const taskNo = TaskNo.reconstruct('D1-0001');
       const task = Task.create({
         taskNo: taskNo,
         wbsId: wbsId,

@@ -5,7 +5,7 @@ import { IPhaseRepository } from "@/applications/task/iphase-repository";
 import { Phase } from "@/domains/phase/phase";
 import { PhaseCode } from "@/domains/phase/phase-code";
 import { Task } from "@/domains/task/task";
-import { TaskId } from "@/domains/task/value-object/task-id";
+import { TaskNo } from "@/domains/task/value-object/task-id";
 import { TaskStatus } from "@/domains/task/value-object/project-status";
 
 // モックの設定
@@ -73,14 +73,14 @@ describe('TaskFactory', () => {
 
       // 既存のタスクをモック（D10-0001, D10-0002が存在する）
       const task1 = Task.create({
-        taskNo: TaskId.reconstruct('D10-0001'),
+        taskNo: TaskNo.reconstruct('D10-0001'),
         wbsId: wbsId,
         name: 'タスク1',
         status: new TaskStatus({ status: 'NOT_STARTED' }),
       });
 
       const task2 = Task.create({
-        taskNo: TaskId.reconstruct('D10-0002'),
+        taskNo: TaskNo.reconstruct('D10-0002'),
         wbsId: wbsId,
         name: 'タスク2',
         status: new TaskStatus({ status: 'NOT_STARTED' }),
@@ -107,14 +107,14 @@ describe('TaskFactory', () => {
 
       // 既存のタスクは設計フェーズのみ
       const task1 = Task.create({
-        taskNo: TaskId.reconstruct('D10-0001'),
+        taskNo: TaskNo.reconstruct('D10-0001'),
         wbsId: wbsId,
         name: '設計タスク1',
         status: new TaskStatus({ status: 'COMPLETED' }),
       });
 
       const task2 = Task.create({
-        taskNo: TaskId.reconstruct('D10-0002'),
+        taskNo: TaskNo.reconstruct('D10-0002'),
         wbsId: wbsId,
         name: '設計タスク2',
         status: new TaskStatus({ status: 'COMPLETED' }),
@@ -151,14 +151,14 @@ describe('TaskFactory', () => {
 
       // タスクDESIGN-1とDESIGN-3が存在する（DESIGN-2は欠番）
       const task1 = Task.create({
-        taskNo: TaskId.reconstruct('D1-0001'),
+        taskNo: TaskNo.reconstruct('D1-0001'),
         wbsId: wbsId,
         name: 'タスク1',
         status: new TaskStatus({ status: 'COMPLETED' }),
       });
 
       const task3 = Task.create({
-        taskNo: TaskId.reconstruct('D1-0003'),
+        taskNo: TaskNo.reconstruct('D1-0003'),
         wbsId: wbsId,
         name: 'タスク3',
         status: new TaskStatus({ status: 'NOT_STARTED' }),
