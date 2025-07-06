@@ -21,4 +21,41 @@ export class PhaseRepository implements IPhaseRepository {
             seq: phaseDb.seq,
         });
     }
+
+    async findAll(): Promise<Phase[]> {
+        console.log("repository: findAll")
+        const phasesDb = await prisma.wbsPhase.findMany({
+            orderBy: { seq: 'asc' },
+        });
+
+        return phasesDb.map(phaseDb => Phase.createFromDb({
+            id: phaseDb.id,
+            name: phaseDb.name,
+            code: new PhaseCode(phaseDb.code),
+            seq: phaseDb.seq,
+        }));
+    }
+
+    async findByWbsId(wbsId: number): Promise<Phase[]> {
+        console.log("repository: findByWbsId", wbsId)
+        
+        // WBSに関連するタスクから使用されているフェーズを取得
+        const phasesDb = await prisma.wbsPhase.findMany({
+            where: {
+                tasks: {
+                    some: {
+                        wbsId: wbsId
+                    }
+                }
+            },
+            orderBy: { seq: 'asc' },
+        });
+
+        return phasesDb.map(phaseDb => Phase.createFromDb({
+            id: phaseDb.id,
+            name: phaseDb.name,
+            code: new PhaseCode(phaseDb.code),
+            seq: phaseDb.seq,
+        }));
+    }
 }
