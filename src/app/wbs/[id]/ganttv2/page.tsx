@@ -5,7 +5,13 @@ import { getTaskAll } from "../wbs-task-actions";
 import { Milestone, WbsTask } from "@/types/wbs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { CalendarCheck, CirclePlus, Trello, Users, ArrowLeft } from "lucide-react";
+import {
+  CalendarCheck,
+  CirclePlus,
+  Trello,
+  Users,
+  ArrowLeft,
+} from "lucide-react";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { getMilestones } from "../milistone/action";
 import GanttV2Component from "@/components/ganttv2/gantt-v2";
@@ -37,7 +43,9 @@ export default async function GanttV2Page({
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">ガントチャート v2</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              ガントチャート v2
+            </h1>
             <p className="text-gray-600 mt-1">{wbs.name}</p>
           </div>
         </div>
@@ -79,21 +87,17 @@ export default async function GanttV2Page({
       </Card>
 
       {/* ガントチャート */}
-      <Card>
-        <CardContent className="p-0">
-          {wbsTasks && wbsTasks.length > 0 ? (
-            <GanttV2Component tasks={wbsTasks} milestones={milestones} wbs={wbs} />
-          ) : (
-            <div className="w-full h-96 flex justify-center items-center">
-              <div className="text-center text-gray-500">
-                <CalendarCheck className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">タスクがありません</p>
-                <p className="text-sm mt-2">新しいタスクを作成してください</p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {wbsTasks && wbsTasks.length > 0 ? (
+        <GanttV2Component tasks={wbsTasks} milestones={milestones} wbs={wbs} />
+      ) : (
+        <div className="w-full h-96 flex justify-center items-center">
+          <div className="text-center text-gray-500">
+            <CalendarCheck className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <p className="text-lg font-medium">タスクがありません</p>
+            <p className="text-sm mt-2">新しいタスクを作成してください</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { formatDateyyyymmdd, getTaskStatusName } from "@/lib/utils";
 import {
@@ -174,7 +174,7 @@ export default function GanttV2Component({
           groupKey = task.phase?.id?.toString() || "unknown";
           break;
         case "assignee":
-          groupKey = task.assignee?.id || "unassigned";
+          groupKey = task.assignee?.id?.toString() || "unassigned";
           break;
         case "status":
           groupKey = task.status;
@@ -398,9 +398,9 @@ export default function GanttV2Component({
       {/* ガントチャート */}
       <Card>
         <CardContent className="p-0">
-          <div className="flex">
+          <div className="flex overflow-hidden">
             {/* タスクリスト */}
-            <div className="w-80 border-r border-gray-200 bg-gray-50">
+            <div className="w-80 border-r border-gray-200 bg-gray-50 flex-shrink-0">
               {/* ヘッダー */}
               <div className="h-12 border-b border-gray-200 flex items-center px-4 bg-gray-100 font-semibold text-sm">
                 タスク一覧
@@ -480,9 +480,9 @@ export default function GanttV2Component({
             </div>
 
             {/* チャート領域 */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative min-w-0">
               {/* 時間軸ヘッダー */}
-              <div className="h-12 border-b border-gray-200 bg-gray-100 relative">
+              <div className="h-12 border-b border-gray-200 bg-gray-100 relative overflow-hidden">
                 {timeAxis.map((interval, index) => (
                   <div
                     key={index}
@@ -516,8 +516,8 @@ export default function GanttV2Component({
               </div>
 
               {/* チャート本体 */}
-              <ScrollArea className="h-96">
-                <div className="relative">
+              <div className="overflow-auto">
+                <div className="relative min-w-full">
                   {/* グリッド線 */}
                   {timeAxis.map((interval, index) => (
                     <div
@@ -584,57 +584,11 @@ export default function GanttV2Component({
                     ))}
                   </div>
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* 統計情報 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">総タスク数</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredTasks.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">完了率</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {filteredTasks.length > 0
-                ? Math.round(
-                    (filteredTasks.filter((t) => t.status === "COMPLETED")
-                      .length /
-                      filteredTasks.length) *
-                      100
-                  )
-                : 0}
-              %
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">総工数</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {filteredTasks.reduce(
-                (sum, task) => sum + (task.yoteiKosu || 0),
-                0
-              )}
-              h
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
