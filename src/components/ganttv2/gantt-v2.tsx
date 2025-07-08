@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { Milestone, TaskStatus, Wbs, WbsTask } from "@/types/wbs";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,6 +70,10 @@ export default function GanttV2Component({
     new Set()
   );
 
+  // スクロール同期用のref
+  const headerScrollRef = useRef<HTMLDivElement>(null);
+  const chartScrollRef = useRef<HTMLDivElement>(null);
+
   // 日付範囲の計算
   const dateRange = useMemo(() => {
     if (tasks.length === 0) {
@@ -117,13 +121,44 @@ export default function GanttV2Component({
     });
   }, [tasks, statusFilter, assigneeFilter]);
 
+  // 時間軸の生成とチャート幅の計算
+  const { timeAxis, chartWidth } = useMemo(() => {
+    const currentMode = VIEW_MODES.find((mode) => mode.value === viewMode)!;
+    const totalDays = Math.ceil(
+      (dateRange.end.getTime() - dateRange.start.getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    // 横スクロールを可能にするために、各日の最小幅を設定
+    const minDayWidth =
+      viewMode === "day" ? 60 : viewMode === "week" ? 80 : 120;
+    const calculatedChartWidth = Math.max(
+      1200,
+      (totalDays * minDayWidth) / currentMode.days
+    );
+
+    const intervals = Math.ceil(totalDays / currentMode.days);
+    const intervalWidth = calculatedChartWidth / intervals;
+
+    const axis = Array.from({ length: intervals }, (_, i) => {
+      const date = new Date(dateRange.start);
+      date.setDate(date.getDate() + i * currentMode.days);
+      return {
+        date,
+        position: i * intervalWidth,
+        width: intervalWidth,
+      };
+    });
+
+    return { timeAxis: axis, chartWidth: calculatedChartWidth };
+  }, [dateRange, viewMode]);
+
   // タスクの位置計算
   const tasksWithPosition = useMemo(() => {
     const totalDays = Math.ceil(
       (dateRange.end.getTime() - dateRange.start.getTime()) /
         (1000 * 60 * 60 * 24)
     );
-    const dayWidth = 100 / totalDays;
 
     return filteredTasks.map((task) => {
       const taskStart = task.yoteiStart || dateRange.start;
@@ -143,13 +178,17 @@ export default function GanttV2Component({
         )
       );
 
+      // チャート幅に基づいてピクセル位置を計算
+      const startPosition = (startDays / totalDays) * chartWidth;
+      const width = (duration / totalDays) * chartWidth;
+
       return {
         ...task,
-        startPosition: startDays * dayWidth,
-        width: duration * dayWidth,
+        startPosition,
+        width,
       } as TaskWithPosition;
     });
-  }, [filteredTasks, dateRange]);
+  }, [filteredTasks, dateRange, chartWidth]);
 
   // グループ化
   const groups = useMemo(() => {
@@ -205,26 +244,6 @@ export default function GanttV2Component({
     }));
   }, [tasksWithPosition, groupBy, collapsedGroups]);
 
-  // 時間軸の生成
-  const timeAxis = useMemo(() => {
-    const currentMode = VIEW_MODES.find((mode) => mode.value === viewMode)!;
-    const totalDays = Math.ceil(
-      (dateRange.end.getTime() - dateRange.start.getTime()) /
-        (1000 * 60 * 60 * 24)
-    );
-    const intervals = Math.ceil(totalDays / currentMode.days);
-
-    return Array.from({ length: intervals }, (_, i) => {
-      const date = new Date(dateRange.start);
-      date.setDate(date.getDate() + i * currentMode.days);
-      return {
-        date,
-        position: (i * currentMode.days * 100) / totalDays,
-        width: (currentMode.days * 100) / totalDays,
-      };
-    });
-  }, [dateRange, viewMode]);
-
   // マイルストーンの位置計算
   const milestonesWithPosition = useMemo(() => {
     if (!showMilestones) return [];
@@ -235,7 +254,7 @@ export default function GanttV2Component({
     );
 
     return milestones.map((milestone) => {
-      const position = Math.max(
+      const positionDays = Math.max(
         0,
         Math.ceil(
           (milestone.date.getTime() - dateRange.start.getTime()) /
@@ -244,10 +263,23 @@ export default function GanttV2Component({
       );
       return {
         ...milestone,
-        position: (position * 100) / totalDays,
+        position: (positionDays / totalDays) * chartWidth,
       };
     });
-  }, [milestones, dateRange, showMilestones]);
+  }, [milestones, dateRange, showMilestones, chartWidth]);
+
+  // スクロール同期関数
+  const handleHeaderScroll = useCallback(() => {
+    if (headerScrollRef.current && chartScrollRef.current) {
+      chartScrollRef.current.scrollLeft = headerScrollRef.current.scrollLeft;
+    }
+  }, []);
+
+  const handleChartScroll = useCallback(() => {
+    if (headerScrollRef.current && chartScrollRef.current) {
+      headerScrollRef.current.scrollLeft = chartScrollRef.current.scrollLeft;
+    }
+  }, []);
 
   const toggleGroup = useCallback((groupId: string) => {
     setCollapsedGroups((prev) => {
@@ -398,7 +430,7 @@ export default function GanttV2Component({
       {/* ガントチャート */}
       <Card>
         <CardContent className="p-0">
-          <div className="flex overflow-hidden">
+          <div className="flex">
             {/* タスクリスト */}
             <div className="w-80 border-r border-gray-200 bg-gray-50 flex-shrink-0">
               {/* ヘッダー */}
@@ -482,48 +514,70 @@ export default function GanttV2Component({
             {/* チャート領域 */}
             <div className="flex-1 relative min-w-0">
               {/* 時間軸ヘッダー */}
-              <div className="h-12 border-b border-gray-200 bg-gray-100 relative overflow-hidden">
-                {timeAxis.map((interval, index) => (
-                  <div
-                    key={index}
-                    className="absolute top-0 h-full border-r border-gray-300 flex items-center justify-center text-xs font-medium"
-                    style={{
-                      left: `${interval.position}%`,
-                      width: `${interval.width}%`,
-                    }}
-                  >
-                    {viewMode === "day" &&
-                      interval.date.toLocaleDateString("ja-JP", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    {viewMode === "week" &&
-                      interval.date.toLocaleDateString("ja-JP", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    {viewMode === "month" &&
-                      interval.date.toLocaleDateString("ja-JP", {
-                        year: "numeric",
-                        month: "short",
-                      })}
-                    {viewMode === "quarter" &&
-                      `${interval.date.getFullYear()}Q${Math.ceil(
-                        (interval.date.getMonth() + 1) / 3
-                      )}`}
-                  </div>
-                ))}
+              <div 
+                ref={headerScrollRef}
+                className="h-12 border-b border-gray-200 bg-gray-100 overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden"
+                onScroll={handleHeaderScroll}
+                style={{ 
+                  scrollbarWidth: 'none', 
+                  msOverflowStyle: 'none'
+                }}
+              >
+                <div
+                  className="relative h-full"
+                  style={{ width: `${chartWidth}px` }}
+                >
+                  {timeAxis.map((interval, index) => (
+                    <div
+                      key={index}
+                      className="absolute top-0 h-full border-r border-gray-300 flex items-center justify-center text-xs font-medium bg-transparent"
+                      style={{
+                        left: `${interval.position}px`,
+                        width: `${interval.width}px`,
+                      }}
+                    >
+                      <span className="px-1 truncate">
+                        {viewMode === "day" &&
+                          interval.date.toLocaleDateString("ja-JP", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        {viewMode === "week" &&
+                          interval.date.toLocaleDateString("ja-JP", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        {viewMode === "month" &&
+                          interval.date.toLocaleDateString("ja-JP", {
+                            year: "numeric",
+                            month: "short",
+                          })}
+                        {viewMode === "quarter" &&
+                          `${interval.date.getFullYear()}Q${Math.ceil(
+                            (interval.date.getMonth() + 1) / 3
+                          )}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* チャート本体 */}
-              <div className="overflow-auto">
-                <div className="relative min-w-full">
+              <div 
+                ref={chartScrollRef}
+                className="h-96 overflow-auto"
+                onScroll={handleChartScroll}
+              >
+                <div
+                  className="relative"
+                  style={{ width: `${chartWidth}px`, minWidth: "100%" }}
+                >
                   {/* グリッド線 */}
                   {timeAxis.map((interval, index) => (
                     <div
                       key={index}
                       className="absolute top-0 bottom-0 border-r border-gray-200"
-                      style={{ left: `${interval.position}%` }}
+                      style={{ left: `${interval.position}px` }}
                     />
                   ))}
 
@@ -532,7 +586,7 @@ export default function GanttV2Component({
                     <div
                       key={milestone.id}
                       className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
-                      style={{ left: `${milestone.position}%` }}
+                      style={{ left: `${milestone.position}px` }}
                     >
                       <div className="absolute top-0 -left-2">
                         <Target className="h-4 w-4 text-red-500" />
@@ -564,8 +618,8 @@ export default function GanttV2Component({
                                     getStatusColor(task.status)
                                   )}
                                   style={{
-                                    left: `${task.startPosition}%`,
-                                    width: `${Math.max(task.width, 2)}%`,
+                                    left: `${task.startPosition}px`,
+                                    width: `${Math.max(task.width, 20)}px`,
                                   }}
                                   title={`${task.name} (${formatDateyyyymmdd(
                                     task.yoteiStart.toISOString()
@@ -574,7 +628,7 @@ export default function GanttV2Component({
                                   )})`}
                                 >
                                   <span className="truncate">
-                                    {task.width > 10 && task.name}
+                                    {task.width > 50 && task.name}
                                   </span>
                                 </div>
                               )}
