@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import { Milestone, TaskStatus, Wbs, WbsTask } from "@/types/wbs";
+import { Project } from "@/types/project";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -31,6 +32,7 @@ interface GanttV2ComponentProps {
   tasks: WbsTask[];
   milestones: Milestone[];
   wbs: Wbs;
+  project: Project;
 }
 
 type ViewMode = "day" | "week" | "month" | "quarter";
@@ -59,6 +61,7 @@ const GROUP_OPTIONS = [
 export default function GanttV2Component({
   tasks,
   milestones,
+  project,
 }: GanttV2ComponentProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [groupBy, setGroupBy] = useState<GroupBy>("phase");
@@ -73,39 +76,20 @@ export default function GanttV2Component({
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
 
-  // 日付範囲の計算
+  // 日付範囲の計算（プロジェクト期間をベースに設定）
   const dateRange = useMemo(() => {
-    if (tasks.length === 0) {
-      const now = new Date();
-      return {
-        start: new Date(now.getFullYear(), now.getMonth(), 1),
-        end: new Date(now.getFullYear(), now.getMonth() + 3, 0),
-      };
-    }
+    // プロジェクトの開始日と終了日をベースに設定
+    const projectStart = new Date(project.startDate);
+    const projectEnd = new Date(project.endDate);
 
-    const allDates = tasks
-      .flatMap((task) => [task.yoteiStart, task.yoteiEnd])
-      .filter((date): date is Date => date !== null && date !== undefined);
-
-    if (allDates.length === 0) {
-      const now = new Date();
-      return {
-        start: new Date(now.getFullYear(), now.getMonth(), 1),
-        end: new Date(now.getFullYear(), now.getMonth() + 3, 0),
-      };
-    }
-
-    const minDate = new Date(Math.min(...allDates.map((d) => d.getTime())));
-    const maxDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
-
-    // 範囲を少し拡張
-    const start = new Date(minDate);
+    // プロジェクト期間を少し拡張してバッファを追加
+    const start = new Date(projectStart);
     start.setDate(start.getDate() - 7);
-    const end = new Date(maxDate);
+    const end = new Date(projectEnd);
     end.setDate(end.getDate() + 7);
 
     return { start, end };
-  }, [tasks]);
+  }, [project.startDate, project.endDate]);
 
   // フィルタリングされたタスク
   const filteredTasks = useMemo(() => {

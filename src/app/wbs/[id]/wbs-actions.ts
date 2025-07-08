@@ -120,6 +120,8 @@ export async function getAssignees(wbsId: number): Promise<Assignee[]> {
     });
     return assignees.map((assignee) => ({
         ...assignee.assignee,
+        id: Number(assignee.assignee.id),
+        userId: assignee.assignee.id,
         rate: assignee.rate,
     }));
 }

@@ -16,6 +16,7 @@ import { TaskModal } from "@/components/wbs/task-modal";
 import { getMilestones } from "../milistone/action";
 import GanttV2Component from "@/components/ganttv2/gantt-v2";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getProjectById } from "@/app/projects/project-actions";
 
 export default async function GanttV2Page({
   params,
@@ -27,6 +28,8 @@ export default async function GanttV2Page({
   if (!wbs) {
     notFound();
   }
+
+  const project = await getProjectById(wbs.projectId);
 
   const wbsTasks: WbsTask[] = await getTaskAll(wbs.id);
   const milestones: Milestone[] = await getMilestones(wbs.id);
@@ -88,7 +91,18 @@ export default async function GanttV2Page({
 
       {/* ガントチャート */}
       {wbsTasks && wbsTasks.length > 0 ? (
-        <GanttV2Component tasks={wbsTasks} milestones={milestones} wbs={wbs} />
+        <GanttV2Component
+          tasks={wbsTasks}
+          milestones={milestones}
+          wbs={wbs}
+          project={{
+            id: project!.id,
+            name: project?.name ?? "",
+            status: project!.status,
+            startDate: project!.startDate,
+            endDate: project!.endDate,
+          }}
+        />
       ) : (
         <div className="w-full h-96 flex justify-center items-center">
           <div className="text-center text-gray-500">
