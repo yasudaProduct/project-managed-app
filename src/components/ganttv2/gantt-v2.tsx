@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import { Milestone, TaskStatus, Wbs, WbsTask } from "@/types/wbs";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { formatDateyyyymmdd, getTaskStatusName } from "@/lib/utils";
 import {
@@ -428,221 +427,213 @@ export default function GanttV2Component({
       </div>
 
       {/* ガントチャート */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="flex">
-            {/* タスクリスト */}
-            <div className="w-80 border-r border-gray-200 bg-gray-50 flex-shrink-0">
-              {/* ヘッダー */}
-              <div className="h-12 border-b border-gray-200 flex items-center px-4 bg-gray-100 font-semibold text-sm">
-                タスク一覧
-              </div>
+      <div className="flex">
+        {/* タスクリスト */}
+        <div className="w-80 border-r border-gray-200 bg-gray-50 flex-shrink-0">
+          {/* ヘッダー */}
+          <div className="h-12 border-b border-gray-200 flex items-center px-4 bg-gray-100 font-semibold text-sm">
+            タスク一覧
+          </div>
 
-              {/* タスクリスト */}
-              <ScrollArea className="h-96">
+          {/* タスクリスト */}
+          <ScrollArea className="">
+            {groups.map((group) => (
+              <div key={group.id}>
+                {groupBy !== "none" && (
+                  <div
+                    className="h-8 px-4 bg-gray-100 border-b border-gray-200 flex items-center cursor-pointer hover:bg-gray-200"
+                    onClick={() => toggleGroup(group.id)}
+                  >
+                    {group.collapsed ? (
+                      <ChevronRight className="h-4 w-4 mr-2" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 mr-2" />
+                    )}
+                    <span className="text-sm font-medium">{group.name}</span>
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      {group.tasks.length}
+                    </Badge>
+                  </div>
+                )}
+
+                {!group.collapsed &&
+                  group.tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="h-12 px-4 border-b border-gray-200 flex items-center hover:bg-gray-50"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">
+                          {task.name}
+                        </div>
+                        <div className="text-xs text-gray-500 flex items-center gap-2">
+                          {task.assignee && (
+                            <span className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {task.assignee.displayName}
+                            </span>
+                          )}
+                          {task.yoteiKosu && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {task.yoteiKosu}h
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Badge
+                        variant={
+                          task.status === "COMPLETED" ? "default" : "secondary"
+                        }
+                        className={cn(
+                          "text-xs",
+                          task.status === "COMPLETED" &&
+                            "bg-green-100 text-green-800",
+                          task.status === "IN_PROGRESS" &&
+                            "bg-blue-100 text-blue-800",
+                          task.status === "NOT_STARTED" &&
+                            "bg-gray-100 text-gray-800"
+                        )}
+                      >
+                        {getTaskStatusName(task.status)}
+                      </Badge>
+                    </div>
+                  ))}
+              </div>
+            ))}
+          </ScrollArea>
+        </div>
+
+        {/* チャート領域 */}
+        <div className="flex-1 relative min-w-0">
+          {/* 時間軸ヘッダー */}
+          <div
+            ref={headerScrollRef}
+            className="h-12 border-b border-gray-200 bg-gray-100 overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden"
+            onScroll={handleHeaderScroll}
+            style={{
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+            }}
+          >
+            <div
+              className="relative h-full"
+              style={{ width: `${chartWidth}px` }}
+            >
+              {timeAxis.map((interval, index) => (
+                <div
+                  key={index}
+                  className="absolute top-0 h-full border-r border-gray-300 flex items-center justify-center text-xs font-medium bg-transparent"
+                  style={{
+                    left: `${interval.position}px`,
+                    width: `${interval.width}px`,
+                  }}
+                >
+                  <span className="px-1 truncate">
+                    {viewMode === "day" &&
+                      interval.date.toLocaleDateString("ja-JP", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    {viewMode === "week" &&
+                      interval.date.toLocaleDateString("ja-JP", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    {viewMode === "month" &&
+                      interval.date.toLocaleDateString("ja-JP", {
+                        year: "numeric",
+                        month: "short",
+                      })}
+                    {viewMode === "quarter" &&
+                      `${interval.date.getFullYear()}Q${Math.ceil(
+                        (interval.date.getMonth() + 1) / 3
+                      )}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* チャート本体 */}
+          <div
+            ref={chartScrollRef}
+            className="h-96"
+            onScroll={handleChartScroll}
+          >
+            <div
+              className="relative"
+              style={{ width: `${chartWidth}px`, minWidth: "100%" }}
+            >
+              {/* グリッド線 */}
+              {timeAxis.map((interval, index) => (
+                <div
+                  key={index}
+                  className="absolute top-0 bottom-0 border-r border-gray-200"
+                  style={{ left: `${interval.position}px` }}
+                />
+              ))}
+
+              {/* マイルストーン */}
+              {milestonesWithPosition.map((milestone) => (
+                <div
+                  key={milestone.id}
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
+                  style={{ left: `${milestone.position}px` }}
+                >
+                  <div className="absolute top-0 -left-2">
+                    <Target className="h-4 w-4 text-red-500" />
+                  </div>
+                  <div className="absolute top-5 -left-10 text-xs text-red-600 font-medium whitespace-nowrap">
+                    {milestone.name}
+                  </div>
+                </div>
+              ))}
+
+              {/* タスクバー */}
+              <div className="space-y-0">
                 {groups.map((group) => (
                   <div key={group.id}>
                     {groupBy !== "none" && (
-                      <div
-                        className="h-8 px-4 bg-gray-100 border-b border-gray-200 flex items-center cursor-pointer hover:bg-gray-200"
-                        onClick={() => toggleGroup(group.id)}
-                      >
-                        {group.collapsed ? (
-                          <ChevronRight className="h-4 w-4 mr-2" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 mr-2" />
-                        )}
-                        <span className="text-sm font-medium">
-                          {group.name}
-                        </span>
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          {group.tasks.length}
-                        </Badge>
-                      </div>
+                      <div className="h-8 bg-gray-100 border-b border-gray-200" />
                     )}
 
                     {!group.collapsed &&
                       group.tasks.map((task) => (
                         <div
                           key={task.id}
-                          className="h-12 px-4 border-b border-gray-200 flex items-center hover:bg-gray-50"
+                          className="h-12 border-b border-gray-200 relative hover:bg-gray-50"
                         >
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">
-                              {task.name}
-                            </div>
-                            <div className="text-xs text-gray-500 flex items-center gap-2">
-                              {task.assignee && (
-                                <span className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  {task.assignee.displayName}
-                                </span>
+                          {task.yoteiStart && task.yoteiEnd && (
+                            <div
+                              className={cn(
+                                "absolute top-2 h-8 rounded-md shadow-sm flex items-center px-2 text-white text-xs font-medium",
+                                getStatusColor(task.status)
                               )}
-                              {task.yoteiKosu && (
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {task.yoteiKosu}h
-                                </span>
-                              )}
+                              style={{
+                                left: `${task.startPosition}px`,
+                                width: `${Math.max(task.width, 20)}px`,
+                              }}
+                              title={`${task.name} (${formatDateyyyymmdd(
+                                task.yoteiStart.toISOString()
+                              )} - ${formatDateyyyymmdd(
+                                task.yoteiEnd.toISOString()
+                              )})`}
+                            >
+                              <span className="truncate">
+                                {task.width > 50 && task.name}
+                              </span>
                             </div>
-                          </div>
-                          <Badge
-                            variant={
-                              task.status === "COMPLETED"
-                                ? "default"
-                                : "secondary"
-                            }
-                            className={cn(
-                              "text-xs",
-                              task.status === "COMPLETED" &&
-                                "bg-green-100 text-green-800",
-                              task.status === "IN_PROGRESS" &&
-                                "bg-blue-100 text-blue-800",
-                              task.status === "NOT_STARTED" &&
-                                "bg-gray-100 text-gray-800"
-                            )}
-                          >
-                            {getTaskStatusName(task.status)}
-                          </Badge>
+                          )}
                         </div>
                       ))}
                   </div>
                 ))}
-              </ScrollArea>
-            </div>
-
-            {/* チャート領域 */}
-            <div className="flex-1 relative min-w-0">
-              {/* 時間軸ヘッダー */}
-              <div 
-                ref={headerScrollRef}
-                className="h-12 border-b border-gray-200 bg-gray-100 overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden"
-                onScroll={handleHeaderScroll}
-                style={{ 
-                  scrollbarWidth: 'none', 
-                  msOverflowStyle: 'none'
-                }}
-              >
-                <div
-                  className="relative h-full"
-                  style={{ width: `${chartWidth}px` }}
-                >
-                  {timeAxis.map((interval, index) => (
-                    <div
-                      key={index}
-                      className="absolute top-0 h-full border-r border-gray-300 flex items-center justify-center text-xs font-medium bg-transparent"
-                      style={{
-                        left: `${interval.position}px`,
-                        width: `${interval.width}px`,
-                      }}
-                    >
-                      <span className="px-1 truncate">
-                        {viewMode === "day" &&
-                          interval.date.toLocaleDateString("ja-JP", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        {viewMode === "week" &&
-                          interval.date.toLocaleDateString("ja-JP", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        {viewMode === "month" &&
-                          interval.date.toLocaleDateString("ja-JP", {
-                            year: "numeric",
-                            month: "short",
-                          })}
-                        {viewMode === "quarter" &&
-                          `${interval.date.getFullYear()}Q${Math.ceil(
-                            (interval.date.getMonth() + 1) / 3
-                          )}`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* チャート本体 */}
-              <div 
-                ref={chartScrollRef}
-                className="h-96 overflow-auto"
-                onScroll={handleChartScroll}
-              >
-                <div
-                  className="relative"
-                  style={{ width: `${chartWidth}px`, minWidth: "100%" }}
-                >
-                  {/* グリッド線 */}
-                  {timeAxis.map((interval, index) => (
-                    <div
-                      key={index}
-                      className="absolute top-0 bottom-0 border-r border-gray-200"
-                      style={{ left: `${interval.position}px` }}
-                    />
-                  ))}
-
-                  {/* マイルストーン */}
-                  {milestonesWithPosition.map((milestone) => (
-                    <div
-                      key={milestone.id}
-                      className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
-                      style={{ left: `${milestone.position}px` }}
-                    >
-                      <div className="absolute top-0 -left-2">
-                        <Target className="h-4 w-4 text-red-500" />
-                      </div>
-                      <div className="absolute top-5 -left-10 text-xs text-red-600 font-medium whitespace-nowrap">
-                        {milestone.name}
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* タスクバー */}
-                  <div className="space-y-0">
-                    {groups.map((group) => (
-                      <div key={group.id}>
-                        {groupBy !== "none" && (
-                          <div className="h-8 bg-gray-100 border-b border-gray-200" />
-                        )}
-
-                        {!group.collapsed &&
-                          group.tasks.map((task) => (
-                            <div
-                              key={task.id}
-                              className="h-12 border-b border-gray-200 relative hover:bg-gray-50"
-                            >
-                              {task.yoteiStart && task.yoteiEnd && (
-                                <div
-                                  className={cn(
-                                    "absolute top-2 h-8 rounded-md shadow-sm flex items-center px-2 text-white text-xs font-medium",
-                                    getStatusColor(task.status)
-                                  )}
-                                  style={{
-                                    left: `${task.startPosition}px`,
-                                    width: `${Math.max(task.width, 20)}px`,
-                                  }}
-                                  title={`${task.name} (${formatDateyyyymmdd(
-                                    task.yoteiStart.toISOString()
-                                  )} - ${formatDateyyyymmdd(
-                                    task.yoteiEnd.toISOString()
-                                  )})`}
-                                >
-                                  <span className="truncate">
-                                    {task.width > 50 && task.name}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
