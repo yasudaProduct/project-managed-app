@@ -41,6 +41,7 @@ interface GanttChartProps {
   onScroll: () => void;
   wbsId: number;
   onTaskUpdate?: () => void;
+  collapsedTasks: Set<string>;
 }
 
 export default function GanttChart({
@@ -53,6 +54,7 @@ export default function GanttChart({
   onScroll,
   wbsId,
   onTaskUpdate,
+  collapsedTasks,
 }: GanttChartProps) {
   const [selectedTask, setSelectedTask] = useState<WbsTask | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -123,21 +125,28 @@ export default function GanttChart({
               )}
 
               {!group.collapsed &&
-                group.tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="h-12 border-b border-gray-200 relative hover:bg-gray-50"
-                  >
+                group.tasks.map((task) => {
+                  const isTaskCollapsed = collapsedTasks.has(task.id.toString());
+                  return (
+                    <div
+                      key={task.id}
+                      className="border-b border-gray-200 relative hover:bg-gray-50 transition-all duration-200 py-2"
+                      style={{
+                        height: isTaskCollapsed ? "3rem" : "auto",
+                        minHeight: isTaskCollapsed ? "3rem" : "3.5rem"
+                      }}
+                    >
                     {task.yoteiStart && task.yoteiEnd && (
                       <div
                         className={cn(
-                          "absolute top-2 h-8 rounded-md shadow-sm flex items-center px-2 text-white text-xs font-medium cursor-pointer transition-all duration-200 group",
+                          "absolute h-8 rounded-md shadow-sm flex items-center px-2 text-white text-xs font-medium cursor-pointer transition-all duration-200 group",
                           "hover:shadow-md hover:scale-105 hover:z-10",
                           getStatusColor(task.status)
                         )}
                         style={{
                           left: `${task.startPosition}px`,
                           width: `${Math.max(task.width, 20)}px`,
+                          top: isTaskCollapsed ? "0.375rem" : "0.5rem", // 6px : 8px
                         }}
                         title={`${task.name} (${formatDateyyyymmdd(
                           task.yoteiStart.toISOString()
@@ -152,8 +161,9 @@ export default function GanttChart({
                         <Edit className="h-3 w-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                       </div>
                     )}
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
             </div>
           ))}
         </div>

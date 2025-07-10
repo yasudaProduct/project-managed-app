@@ -45,6 +45,7 @@ export default function GanttV2Component({
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     new Set()
   );
+  const [collapsedTasks, setCollapsedTasks] = useState<Set<string>>(new Set());
 
   // スクロール同期用のref
   const headerScrollRef = useRef<HTMLDivElement>(null);
@@ -255,6 +256,22 @@ export default function GanttV2Component({
     });
   }, []);
 
+  const toggleAllTasks = useCallback(() => {
+    // 全タスクのIDを取得
+    const allTaskIds = tasksWithPosition.map(task => task.id.toString());
+    
+    // 現在の折りたたみ状態をチェック
+    const allCollapsed = allTaskIds.every(id => collapsedTasks.has(id));
+    
+    if (allCollapsed) {
+      // 全て折りたたまれている場合 → 全て展開
+      setCollapsedTasks(new Set());
+    } else {
+      // 一部または全て展開されている場合 → 全て折りたたむ
+      setCollapsedTasks(new Set(allTaskIds));
+    }
+  }, [tasksWithPosition, collapsedTasks]);
+
 
   return (
     <div className="space-y-4">
@@ -280,6 +297,19 @@ export default function GanttV2Component({
           groups={groups}
           groupBy={groupBy}
           onToggleGroup={toggleGroup}
+          collapsedTasks={collapsedTasks}
+          onToggleTask={(taskId: string) => {
+            setCollapsedTasks((prev) => {
+              const newSet = new Set(prev);
+              if (newSet.has(taskId)) {
+                newSet.delete(taskId);
+              } else {
+                newSet.add(taskId);
+              }
+              return newSet;
+            });
+          }}
+          onToggleAllTasks={toggleAllTasks}
         />
 
         {/* チャート領域 */}
@@ -304,6 +334,7 @@ export default function GanttV2Component({
             onScroll={handleChartScroll}
             wbsId={wbsId}
             onTaskUpdate={onTaskUpdate}
+            collapsedTasks={collapsedTasks}
           />
         </div>
       </div>
