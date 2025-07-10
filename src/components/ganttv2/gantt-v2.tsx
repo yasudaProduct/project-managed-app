@@ -37,7 +37,7 @@ export default function GanttV2Component({
   wbsId,
   onTaskUpdate,
 }: GanttV2ComponentProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [groupBy, setGroupBy] = useState<GroupBy>("phase");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
@@ -220,10 +220,10 @@ export default function GanttV2Component({
             (1000 * 60 * 60 * 24)
         )
       );
-      
+
       // タスクと同じピクセル位置計算
       const position = (positionDays / totalDays) * chartWidth;
-      
+
       return {
         ...milestone,
         position,
@@ -258,11 +258,11 @@ export default function GanttV2Component({
 
   const toggleAllTasks = useCallback(() => {
     // 全タスクのIDを取得
-    const allTaskIds = tasksWithPosition.map(task => task.id.toString());
-    
+    const allTaskIds = tasksWithPosition.map((task) => task.id.toString());
+
     // 現在の折りたたみ状態をチェック
-    const allCollapsed = allTaskIds.every(id => collapsedTasks.has(id));
-    
+    const allCollapsed = allTaskIds.every((id) => collapsedTasks.has(id));
+
     if (allCollapsed) {
       // 全て折りたたまれている場合 → 全て展開
       setCollapsedTasks(new Set());
@@ -271,7 +271,6 @@ export default function GanttV2Component({
       setCollapsedTasks(new Set(allTaskIds));
     }
   }, [tasksWithPosition, collapsedTasks]);
-
 
   return (
     <div className="space-y-4">
