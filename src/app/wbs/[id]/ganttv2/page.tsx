@@ -94,7 +94,7 @@ export default async function GanttV2Page({
         <GanttV2Component
           tasks={wbsTasks}
           milestones={milestones}
-          wbs={wbs}
+          // wbs={wbs}
           project={{
             id: project!.id,
             name: project?.name ?? "",

@@ -1,42 +1,19 @@
 "use client";
 
 import React, { useState, useMemo, useCallback, useRef } from "react";
-import { Milestone, TaskStatus, Wbs, WbsTask } from "@/types/wbs";
+import { Milestone, WbsTask } from "@/types/wbs";
 import { Project } from "@/types/project";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@radix-ui/react-scroll-area";
-import { formatDateyyyymmdd, getTaskStatusName } from "@/lib/utils";
-import {
-  Calendar,
-  Filter,
-  Eye,
-  EyeOff,
-  ChevronDown,
-  ChevronRight,
-  Target,
-  User,
-  Clock,
-  BarChart3,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import GanttControls, { ViewMode, GroupBy } from "./gantt-controls";
+import GanttTimeAxis from "./gantt-time-axis";
+import GanttChart from "./gantt-chart";
+import GanttTaskList from "./gantt-task-list";
+import { getTaskStatusName } from "@/lib/utils";
 
 interface GanttV2ComponentProps {
   tasks: WbsTask[];
   milestones: Milestone[];
-  wbs: Wbs;
   project: Project;
 }
-
-type ViewMode = "day" | "week" | "month" | "quarter";
-type GroupBy = "phase" | "assignee" | "status" | "none";
 
 interface TaskWithPosition extends WbsTask {
   startPosition: number;
@@ -49,13 +26,6 @@ const VIEW_MODES = [
   { value: "week" as ViewMode, label: "週", days: 7 },
   { value: "month" as ViewMode, label: "月", days: 30 },
   { value: "quarter" as ViewMode, label: "四半期", days: 90 },
-];
-
-const GROUP_OPTIONS = [
-  { value: "none" as GroupBy, label: "グループなし" },
-  { value: "phase" as GroupBy, label: "工程別" },
-  { value: "assignee" as GroupBy, label: "担当者別" },
-  { value: "status" as GroupBy, label: "ステータス別" },
 ];
 
 export default function GanttV2Component({
@@ -149,7 +119,7 @@ export default function GanttV2Component({
 
       const startDays = Math.max(
         0,
-        Math.ceil(
+        Math.floor(
           (taskStart.getTime() - dateRange.start.getTime()) /
             (1000 * 60 * 60 * 24)
         )
@@ -237,16 +207,21 @@ export default function GanttV2Component({
     );
 
     return milestones.map((milestone) => {
+      // タスクと同じ計算方法を使用
       const positionDays = Math.max(
         0,
-        Math.ceil(
+        Math.floor(
           (milestone.date.getTime() - dateRange.start.getTime()) /
             (1000 * 60 * 60 * 24)
         )
       );
+      
+      // タスクと同じピクセル位置計算
+      const position = (positionDays / totalDays) * chartWidth;
+      
       return {
         ...milestone,
-        position: (positionDays / totalDays) * chartWidth,
+        position,
       };
     });
   }, [milestones, dateRange, showMilestones, chartWidth]);
@@ -276,346 +251,54 @@ export default function GanttV2Component({
     });
   }, []);
 
-  const getStatusColor = (status: TaskStatus) => {
-    switch (status) {
-      case "NOT_STARTED":
-        return "bg-gray-400";
-      case "IN_PROGRESS":
-        return "bg-blue-500";
-      case "COMPLETED":
-        return "bg-green-500";
-      default:
-        return "bg-gray-400";
-    }
-  };
 
   return (
     <div className="space-y-4">
       {/* コントロールパネル */}
-      <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* 表示モード */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              表示モード
-            </label>
-            <Select
-              value={viewMode}
-              onValueChange={(value: ViewMode) => setViewMode(value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {VIEW_MODES.map((mode) => (
-                  <SelectItem key={mode.value} value={mode.value}>
-                    {mode.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* グループ化 */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              グループ化
-            </label>
-            <Select
-              value={groupBy}
-              onValueChange={(value: GroupBy) => setGroupBy(value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {GROUP_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* ステータスフィルター */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              ステータス
-            </label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">すべて</SelectItem>
-                {Array.from(new Set(tasks.map((t) => t.status))).map(
-                  (status) => (
-                    <SelectItem key={status} value={status}>
-                      {getTaskStatusName(status)}
-                    </SelectItem>
-                  )
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 担当者フィルター */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <User className="h-4 w-4" />
-              担当者
-            </label>
-            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">すべて</SelectItem>
-                {Array.from(
-                  new Set(
-                    tasks.map((t) => t.assignee?.displayName).filter(Boolean)
-                  )
-                ).map((assignee) => (
-                  <SelectItem key={assignee} value={assignee!}>
-                    {assignee}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* 表示オプション */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowMilestones(!showMilestones)}
-            className={cn(
-              "gap-2",
-              showMilestones && "bg-blue-50 border-blue-200"
-            )}
-          >
-            {showMilestones ? (
-              <Eye className="h-4 w-4" />
-            ) : (
-              <EyeOff className="h-4 w-4" />
-            )}
-            マイルストーン
-          </Button>
-        </div>
-      </div>
+      <GanttControls
+        viewMode={viewMode}
+        groupBy={groupBy}
+        statusFilter={statusFilter}
+        assigneeFilter={assigneeFilter}
+        showMilestones={showMilestones}
+        tasks={tasks}
+        onViewModeChange={setViewMode}
+        onGroupByChange={setGroupBy}
+        onStatusFilterChange={setStatusFilter}
+        onAssigneeFilterChange={setAssigneeFilter}
+        onShowMilestonesChange={setShowMilestones}
+      />
 
       {/* ガントチャート */}
       <div className="flex">
         {/* タスクリスト */}
-        <div className="w-80 border-r border-gray-200 bg-gray-50 flex-shrink-0">
-          {/* ヘッダー */}
-          <div className="h-12 border-b border-gray-200 flex items-center px-4 bg-gray-100 font-semibold text-sm">
-            タスク一覧
-          </div>
-
-          {/* タスクリスト */}
-          <ScrollArea className="">
-            {groups.map((group) => (
-              <div key={group.id}>
-                {groupBy !== "none" && (
-                  <div
-                    className="h-8 px-4 bg-gray-100 border-b border-gray-200 flex items-center cursor-pointer hover:bg-gray-200"
-                    onClick={() => toggleGroup(group.id)}
-                  >
-                    {group.collapsed ? (
-                      <ChevronRight className="h-4 w-4 mr-2" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 mr-2" />
-                    )}
-                    <span className="text-sm font-medium">{group.name}</span>
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      {group.tasks.length}
-                    </Badge>
-                  </div>
-                )}
-
-                {!group.collapsed &&
-                  group.tasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="h-12 px-4 border-b border-gray-200 flex items-center hover:bg-gray-50"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">
-                          {task.name}
-                        </div>
-                        <div className="text-xs text-gray-500 flex items-center gap-2">
-                          {task.assignee && (
-                            <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              {task.assignee.displayName}
-                            </span>
-                          )}
-                          {task.yoteiKosu && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {task.yoteiKosu}h
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <Badge
-                        variant={
-                          task.status === "COMPLETED" ? "default" : "secondary"
-                        }
-                        className={cn(
-                          "text-xs",
-                          task.status === "COMPLETED" &&
-                            "bg-green-100 text-green-800",
-                          task.status === "IN_PROGRESS" &&
-                            "bg-blue-100 text-blue-800",
-                          task.status === "NOT_STARTED" &&
-                            "bg-gray-100 text-gray-800"
-                        )}
-                      >
-                        {getTaskStatusName(task.status)}
-                      </Badge>
-                    </div>
-                  ))}
-              </div>
-            ))}
-          </ScrollArea>
-        </div>
+        <GanttTaskList
+          groups={groups}
+          groupBy={groupBy}
+          onToggleGroup={toggleGroup}
+        />
 
         {/* チャート領域 */}
         <div className="flex-1 relative min-w-0">
           {/* 時間軸ヘッダー */}
-          <div
-            ref={headerScrollRef}
-            className="h-12 border-b border-gray-200 bg-gray-100 overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden"
+          <GanttTimeAxis
+            timeAxis={timeAxis}
+            chartWidth={chartWidth}
+            viewMode={viewMode}
+            headerScrollRef={headerScrollRef}
             onScroll={handleHeaderScroll}
-            style={{
-              scrollbarWidth: "none",
-              msOverflowStyle: "none",
-            }}
-          >
-            <div
-              className="relative h-full"
-              style={{ width: `${chartWidth}px` }}
-            >
-              {timeAxis.map((interval, index) => (
-                <div
-                  key={index}
-                  className="absolute top-0 h-full border-r border-gray-300 flex items-center justify-center text-xs font-medium bg-transparent"
-                  style={{
-                    left: `${interval.position}px`,
-                    width: `${interval.width}px`,
-                  }}
-                >
-                  <span className="px-1 truncate">
-                    {viewMode === "day" &&
-                      interval.date.toLocaleDateString("ja-JP", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    {viewMode === "week" &&
-                      interval.date.toLocaleDateString("ja-JP", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    {viewMode === "month" &&
-                      interval.date.toLocaleDateString("ja-JP", {
-                        year: "numeric",
-                        month: "short",
-                      })}
-                    {viewMode === "quarter" &&
-                      `${interval.date.getFullYear()}Q${Math.ceil(
-                        (interval.date.getMonth() + 1) / 3
-                      )}`}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          />
 
           {/* チャート本体 */}
-          <div
-            ref={chartScrollRef}
-            className="h-96"
+          <GanttChart
+            timeAxis={timeAxis}
+            chartWidth={chartWidth}
+            groups={groups}
+            groupBy={groupBy}
+            milestonesWithPosition={milestonesWithPosition}
+            chartScrollRef={chartScrollRef}
             onScroll={handleChartScroll}
-          >
-            <div
-              className="relative"
-              style={{ width: `${chartWidth}px`, minWidth: "100%" }}
-            >
-              {/* グリッド線 */}
-              {timeAxis.map((interval, index) => (
-                <div
-                  key={index}
-                  className="absolute top-0 bottom-0 border-r border-gray-200"
-                  style={{ left: `${interval.position}px` }}
-                />
-              ))}
-
-              {/* マイルストーン */}
-              {milestonesWithPosition.map((milestone) => (
-                <div
-                  key={milestone.id}
-                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
-                  style={{ left: `${milestone.position}px` }}
-                >
-                  <div className="absolute top-0 -left-2">
-                    <Target className="h-4 w-4 text-red-500" />
-                  </div>
-                  <div className="absolute top-5 -left-10 text-xs text-red-600 font-medium whitespace-nowrap">
-                    {milestone.name}
-                  </div>
-                </div>
-              ))}
-
-              {/* タスクバー */}
-              <div className="space-y-0">
-                {groups.map((group) => (
-                  <div key={group.id}>
-                    {groupBy !== "none" && (
-                      <div className="h-8 bg-gray-100 border-b border-gray-200" />
-                    )}
-
-                    {!group.collapsed &&
-                      group.tasks.map((task) => (
-                        <div
-                          key={task.id}
-                          className="h-12 border-b border-gray-200 relative hover:bg-gray-50"
-                        >
-                          {task.yoteiStart && task.yoteiEnd && (
-                            <div
-                              className={cn(
-                                "absolute top-2 h-8 rounded-md shadow-sm flex items-center px-2 text-white text-xs font-medium",
-                                getStatusColor(task.status)
-                              )}
-                              style={{
-                                left: `${task.startPosition}px`,
-                                width: `${Math.max(task.width, 20)}px`,
-                              }}
-                              title={`${task.name} (${formatDateyyyymmdd(
-                                task.yoteiStart.toISOString()
-                              )} - ${formatDateyyyymmdd(
-                                task.yoteiEnd.toISOString()
-                              )})`}
-                            >
-                              <span className="truncate">
-                                {task.width > 50 && task.name}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          />
         </div>
       </div>
     </div>
