@@ -97,6 +97,13 @@ interface TaskModalProps {
 export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClose }: TaskModalProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+
+  // 日付変換のヘルパー関数
+  const formatDateForForm = (date: string | Date | undefined): string => {
+    if (!date) return "";
+    if (typeof date === 'string') return date;
+    return date.toISOString().split('T')[0].replace(/-/g, '/');
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [assignees, setAssignees] = useState<{ id: string; name: string }[]>([]);
@@ -107,8 +114,8 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
     defaultValues: task ? {
       name: task.name,
       assigneeId: task.assigneeId?.toString() || "",
-      yoteiStartDate: typeof task.yoteiStart === 'string' ? task.yoteiStart : task.yoteiStart?.toISOString().split('T')[0].replace(/-/g, '/') || "",
-      yoteiEndDate: typeof task.yoteiEnd === 'string' ? task.yoteiEnd : task.yoteiEnd?.toISOString().split('T')[0].replace(/-/g, '/') || "",
+      yoteiStartDate: formatDateForForm(task.yoteiStart),
+      yoteiEndDate: formatDateForForm(task.yoteiEnd),
       yoteiKosu: task.yoteiKosu || 0,
       status: task.status,
       phaseId: task.phaseId || 0,
@@ -146,6 +153,19 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
           seq: p.seq,
         }));
         setPhases(phasesList);
+
+        // 編集時にフォームの値を設定
+        if (task) {
+          form.reset({
+            name: task.name,
+            assigneeId: task.assigneeId?.toString() || "",
+            yoteiStartDate: formatDateForForm(task.yoteiStart),
+            yoteiEndDate: formatDateForForm(task.yoteiEnd),
+            yoteiKosu: task.yoteiKosu || 0,
+            status: task.status,
+            phaseId: task.phaseId || 0,
+          });
+        }
       } catch {
         toast({
           title: "データの取得に失敗しました",
@@ -158,7 +178,7 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
     };
     
     fetchData();
-  }, [wbsId, isOpen]);
+  }, [wbsId, isOpen, task, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -256,11 +276,59 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
             {modalTitle}
           </DialogTitle>
           {isEditMode && task && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Badge variant="outline" className="px-2 py-1">
-                {getTaskStatusName(task.status)}
-              </Badge>
-              <span>ID: {task.id}</span>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Badge variant="outline" className="px-2 py-1">
+                  {getTaskStatusName(task.status)}
+                </Badge>
+                <span>ID: {task.id}</span>
+              </div>
+              
+              {/* 元の値を表示 */}
+              <div className="bg-gray-50 rounded-lg p-4 border">
+                <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  現在の設定値
+                </h4>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                  <div>
+                    <span className="text-gray-500">タスク名:</span>
+                    <span className="ml-2 font-medium">{task.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">工程:</span>
+                    <span className="ml-2 font-medium">{task.phase?.name || "未設定"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">担当者:</span>
+                    <span className="ml-2 font-medium">{task.assignee?.displayName || "未設定"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">ステータス:</span>
+                    <span className="ml-2 font-medium">{getTaskStatusName(task.status)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">予定開始:</span>
+                    <span className="ml-2 font-medium">
+                      {task.yoteiStart ? 
+                        (typeof task.yoteiStart === 'string' ? task.yoteiStart : task.yoteiStart.toLocaleDateString('ja-JP'))
+                        : "未設定"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">予定終了:</span>
+                    <span className="ml-2 font-medium">
+                      {task.yoteiEnd ? 
+                        (typeof task.yoteiEnd === 'string' ? task.yoteiEnd : task.yoteiEnd.toLocaleDateString('ja-JP'))
+                        : "未設定"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">予定工数:</span>
+                    <span className="ml-2 font-medium">{task.yoteiKosu || 0}時間</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </DialogHeader>
@@ -294,7 +362,7 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                           <FormControl>
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value.toString()}
+                              value={field.value.toString()}
                               disabled={isLoading}
                             >
                               <SelectTrigger>
@@ -336,7 +404,7 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                           <FormControl>
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              value={field.value}
                               disabled={isLoading}
                             >
                               <SelectTrigger>
@@ -469,7 +537,7 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                         <FormControl>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value}
                             disabled={isLoading}
                           >
                             <SelectTrigger>
@@ -508,6 +576,32 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
               >
                 キャンセル
               </Button>
+              {isEditMode && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    if (task) {
+                      form.reset({
+                        name: task.name,
+                        assigneeId: task.assigneeId?.toString() || "",
+                        yoteiStartDate: formatDateForForm(task.yoteiStart),
+                        yoteiEndDate: formatDateForForm(task.yoteiEnd),
+                        yoteiKosu: task.yoteiKosu || 0,
+                        status: task.status,
+                        phaseId: task.phaseId || 0,
+                      });
+                      toast({
+                        title: "フォームをリセットしました",
+                        description: "元の値に戻しました",
+                      });
+                    }
+                  }}
+                  disabled={isSubmitting || isLoading}
+                >
+                  元に戻す
+                </Button>
+              )}
               <Button
                 type="submit"
                 disabled={isSubmitting || isLoading}
