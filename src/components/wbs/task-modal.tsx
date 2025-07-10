@@ -89,11 +89,14 @@ const formSchema = z.object({
 interface TaskModalProps {
   wbsId: number;
   task?: WbsTask;
-  children: ReactNode;
+  children?: ReactNode;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export function TaskModal({ wbsId, task, children }: TaskModalProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClose }: TaskModalProps) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [assignees, setAssignees] = useState<{ id: string; name: string }[]>([]);
@@ -221,7 +224,11 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
       });
     } finally {
       setIsSubmitting(false);
-      setIsOpen(false);
+      if (onClose) {
+        onClose();
+      } else {
+        setInternalIsOpen(false);
+      }
     }
   }
 
@@ -231,9 +238,17 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
     (isSubmitting ? "更新中..." : "更新") : 
     (isSubmitting ? "作成中..." : "作成");
 
+  const handleOpenChange = (open: boolean) => {
+    if (onClose && !open) {
+      onClose();
+    } else {
+      setInternalIsOpen(open);
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-3">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
@@ -488,7 +503,7 @@ export function TaskModal({ wbsId, task, children }: TaskModalProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsOpen(false)}
+                onClick={() => handleOpenChange(false)}
                 disabled={isSubmitting}
               >
                 キャンセル

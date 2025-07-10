@@ -13,6 +13,8 @@ interface GanttV2ComponentProps {
   tasks: WbsTask[];
   milestones: Milestone[];
   project: Project;
+  wbsId: number;
+  onTaskUpdate?: () => void;
 }
 
 interface TaskWithPosition extends WbsTask {
@@ -32,6 +34,8 @@ export default function GanttV2Component({
   tasks,
   milestones,
   project,
+  wbsId,
+  onTaskUpdate,
 }: GanttV2ComponentProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [groupBy, setGroupBy] = useState<GroupBy>("phase");
@@ -298,6 +302,8 @@ export default function GanttV2Component({
             milestonesWithPosition={milestonesWithPosition}
             chartScrollRef={chartScrollRef}
             onScroll={handleChartScroll}
+            wbsId={wbsId}
+            onTaskUpdate={onTaskUpdate}
           />
         </div>
       </div>

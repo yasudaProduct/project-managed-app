@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { getMilestones } from "../milistone/action";
-import GanttV2Component from "@/components/ganttv2/gantt-v2";
+import GanttV2Wrapper from "@/components/ganttv2/gantt-v2-wrapper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProjectById } from "@/app/projects/project-actions";
 
@@ -91,10 +91,10 @@ export default async function GanttV2Page({
 
       {/* ガントチャート */}
       {wbsTasks && wbsTasks.length > 0 ? (
-        <GanttV2Component
+        <GanttV2Wrapper
           tasks={wbsTasks}
           milestones={milestones}
-          // wbs={wbs}
+          wbsId={wbs.id}
           project={{
             id: project!.id,
             name: project?.name ?? "",

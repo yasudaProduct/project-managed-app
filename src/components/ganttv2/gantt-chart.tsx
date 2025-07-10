@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Milestone, TaskStatus, WbsTask } from "@/types/wbs";
 import { GroupBy } from "./gantt-controls";
 import { formatDateyyyymmdd } from "@/lib/utils";
-import { Target } from "lucide-react";
+import { Target, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TaskModal } from "@/components/wbs/task-modal";
 
 interface TaskWithPosition extends WbsTask {
   startPosition: number;
@@ -38,6 +39,8 @@ interface GanttChartProps {
   milestonesWithPosition: MilestoneWithPosition[];
   chartScrollRef: React.RefObject<HTMLDivElement | null>;
   onScroll: () => void;
+  wbsId: number;
+  onTaskUpdate?: () => void;
 }
 
 export default function GanttChart({
@@ -48,7 +51,11 @@ export default function GanttChart({
   milestonesWithPosition,
   chartScrollRef,
   onScroll,
+  wbsId,
+  onTaskUpdate,
 }: GanttChartProps) {
+  const [selectedTask, setSelectedTask] = useState<WbsTask | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const getStatusColor = (status: TaskStatus) => {
     switch (status) {
       case "NOT_STARTED":
@@ -59,6 +66,20 @@ export default function GanttChart({
         return "bg-green-500";
       default:
         return "bg-gray-400";
+    }
+  };
+
+  const handleTaskClick = (task: TaskWithPosition) => {
+    setSelectedTask(task);
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedTask(null);
+    // タスク更新後にコールバックを呼び出す
+    if (onTaskUpdate) {
+      onTaskUpdate();
     }
   };
 
@@ -110,7 +131,8 @@ export default function GanttChart({
                     {task.yoteiStart && task.yoteiEnd && (
                       <div
                         className={cn(
-                          "absolute top-2 h-8 rounded-md shadow-sm flex items-center px-2 text-white text-xs font-medium",
+                          "absolute top-2 h-8 rounded-md shadow-sm flex items-center px-2 text-white text-xs font-medium cursor-pointer transition-all duration-200 group",
+                          "hover:shadow-md hover:scale-105 hover:z-10",
                           getStatusColor(task.status)
                         )}
                         style={{
@@ -121,11 +143,13 @@ export default function GanttChart({
                           task.yoteiStart.toISOString()
                         )} - ${formatDateyyyymmdd(
                           task.yoteiEnd.toISOString()
-                        )})`}
+                        )}) - クリックして編集`}
+                        onClick={() => handleTaskClick(task)}
                       >
-                        <span className="truncate">
+                        <span className="truncate flex-1">
                           {task.width > 50 && task.name}
                         </span>
+                        <Edit className="h-3 w-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                       </div>
                     )}
                   </div>
@@ -134,6 +158,14 @@ export default function GanttChart({
           ))}
         </div>
       </div>
+
+      {/* タスク編集モーダル */}
+      <TaskModal 
+        wbsId={wbsId} 
+        task={selectedTask || undefined}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+      />
     </div>
   );
 }
