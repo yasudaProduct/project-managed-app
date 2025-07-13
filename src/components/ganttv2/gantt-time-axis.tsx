@@ -24,6 +24,7 @@ export default function GanttTimeAxis({
   headerScrollRef,
   onScroll,
 }: GanttTimeAxisProps) {
+  console.log("timeAxis", timeAxis);
   return (
     <div
       ref={headerScrollRef}
@@ -34,10 +35,7 @@ export default function GanttTimeAxis({
         msOverflowStyle: "none",
       }}
     >
-      <div
-        className="relative h-full"
-        style={{ width: `${chartWidth}px` }}
-      >
+      <div className="relative h-full" style={{ width: `${chartWidth}px` }}>
         {timeAxis.map((interval, index) => (
           <div
             key={index}

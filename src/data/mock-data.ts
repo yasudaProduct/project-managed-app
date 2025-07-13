@@ -17,17 +17,17 @@ export const mockData = {
         {
             id: 1,
             wbsId: 1,
-            assigneeId: 1,
+            assigneeId: "dummy01",
         },
         {
             id: 2,
             wbsId: 1,
-            assigneeId: 2,
+            assigneeId: "dummy02",
         },
         {
             id: 3,
             wbsId: 1,
-            assigneeId: 3,
+            assigneeId: "dummy03",
         },
     ],
     wbsPhase: [

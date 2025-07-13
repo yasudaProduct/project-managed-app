@@ -116,18 +116,28 @@ export default function GanttChart({
     const start = timeAxis[0].date;
     const end = new Date(timeAxis[timeAxis.length - 1].date);
     end.setDate(end.getDate() + 7); // 最後の期間を考慮
+    console.log("dateRange", start.toISOString(), end.toISOString());
     return { start, end };
   }, [timeAxis]);
 
   // ピクセル位置から日付を計算
   const positionToDate = (position: number): Date => {
+    // 時間軸計算と同じ正規化ロジックを使用
+    const normalizedRangeStart = new Date(dateRange.start);
+    normalizedRangeStart.setHours(0, 0, 0, 0);
+
+    const normalizedRangeEnd = new Date(dateRange.end);
+    normalizedRangeEnd.setHours(0, 0, 0, 0);
+
     const totalDays = Math.ceil(
-      (dateRange.end.getTime() - dateRange.start.getTime()) /
+      (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
         (1000 * 60 * 60 * 24)
     );
+
     const dayPosition = (position / chartWidth) * totalDays;
-    const resultDate = new Date(dateRange.start);
-    resultDate.setDate(resultDate.getDate() + dayPosition);
+
+    const resultDate = new Date(normalizedRangeStart);
+    resultDate.setDate(resultDate.getDate() + Math.round(dayPosition));
     return resultDate;
   };
 

@@ -63,6 +63,11 @@ export default function GanttV2Component({
     const end = new Date(projectEnd);
     end.setDate(end.getDate() + 7);
 
+    console.log("projectStart", projectStart.toISOString());
+    console.log("projectEnd", projectEnd.toISOString());
+    console.log("start", start.toISOString());
+    console.log("end", end.toISOString());
+
     return { start, end };
   }, [project.startDate, project.endDate]);
 
@@ -82,10 +87,20 @@ export default function GanttV2Component({
   // 時間軸の生成とチャート幅の計算
   const { timeAxis, chartWidth } = useMemo(() => {
     const currentMode = VIEW_MODES.find((mode) => mode.value === viewMode)!;
+
+    // 日付範囲を正規化
+    const normalizedRangeStart = new Date(dateRange.start);
+    normalizedRangeStart.setHours(0, 0, 0, 0);
+
+    const normalizedRangeEnd = new Date(dateRange.end);
+    normalizedRangeEnd.setHours(0, 0, 0, 0);
+
+    // 正規化された日付で総日数を計算
     const totalDays = Math.ceil(
-      (dateRange.end.getTime() - dateRange.start.getTime()) /
+      (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
         (1000 * 60 * 60 * 24)
     );
+    console.log("totalDays", totalDays);
 
     // 横スクロールを可能にするために、各日の最小幅を設定
     const minDayWidth =
@@ -99,8 +114,9 @@ export default function GanttV2Component({
     const intervalWidth = calculatedChartWidth / intervals;
 
     const axis = Array.from({ length: intervals }, (_, i) => {
-      const date = new Date(dateRange.start);
+      const date = new Date(normalizedRangeStart);
       date.setDate(date.getDate() + i * currentMode.days);
+      console.log("date", date.toISOString());
       return {
         date,
         position: i * intervalWidth,
@@ -113,28 +129,48 @@ export default function GanttV2Component({
 
   // タスクの位置計算
   const tasksWithPosition = useMemo(() => {
+    // 時間軸と同じ正規化された日付範囲を使用
+    const normalizedRangeStart = new Date(dateRange.start);
+    normalizedRangeStart.setHours(0, 0, 0, 0);
+
+    const normalizedRangeEnd = new Date(dateRange.end);
+    normalizedRangeEnd.setHours(0, 0, 0, 0);
+
     const totalDays = Math.ceil(
-      (dateRange.end.getTime() - dateRange.start.getTime()) /
+      (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
         (1000 * 60 * 60 * 24)
     );
 
     return filteredTasks.map((task) => {
-      const taskStart = task.yoteiStart || dateRange.start;
+      const taskStart = task.yoteiStart || normalizedRangeStart;
       const taskEnd = task.yoteiEnd || taskStart;
 
+      // 日付を正規化（時刻部分を削除）
+      const normalizedStart = new Date(taskStart);
+      normalizedStart.setHours(0, 0, 0, 0);
+
+      const normalizedEnd = new Date(taskEnd);
+      normalizedEnd.setHours(0, 0, 0, 0);
+
+      // より正確な日数計算（開始日からの経過日数）
       const startDays = Math.max(
         0,
-        Math.floor(
-          (taskStart.getTime() - dateRange.start.getTime()) /
+        Math.round(
+          (normalizedStart.getTime() - normalizedRangeStart.getTime()) /
             (1000 * 60 * 60 * 24)
         )
       );
-      const duration = Math.max(
-        1,
-        Math.ceil(
-          (taskEnd.getTime() - taskStart.getTime()) / (1000 * 60 * 60 * 24)
+
+      // 期間計算（終了日を含む期間として計算）
+      const endDays = Math.max(
+        0,
+        Math.round(
+          (normalizedEnd.getTime() - normalizedRangeStart.getTime()) /
+            (1000 * 60 * 60 * 24)
         )
       );
+
+      const duration = Math.max(1, endDays - startDays + 2);
 
       // チャート幅に基づいてピクセル位置を計算
       const startPosition = (startDays / totalDays) * chartWidth;
@@ -206,19 +242,28 @@ export default function GanttV2Component({
   const milestonesWithPosition = useMemo(() => {
     if (!showMilestones) return [];
 
+    // 時間軸と同じ正規化された日付範囲を使用
+    const normalizedRangeStart = new Date(dateRange.start);
+    normalizedRangeStart.setHours(0, 0, 0, 0);
+
+    const normalizedRangeEnd = new Date(dateRange.end);
+    normalizedRangeEnd.setHours(0, 0, 0, 0);
+
     const totalDays = Math.ceil(
-      (dateRange.end.getTime() - dateRange.start.getTime()) /
+      (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
         (1000 * 60 * 60 * 24)
     );
 
     return milestones.map((milestone) => {
+      // 日付を正規化
+      const normalizedMilestoneDate = new Date(milestone.date);
+      normalizedMilestoneDate.setHours(0, 0, 0, 0);
+
       // タスクと同じ計算方法を使用
       const positionDays = Math.max(
         0,
-        Math.floor(
-          (milestone.date.getTime() - dateRange.start.getTime()) /
-            (1000 * 60 * 60 * 24)
-        )
+        (normalizedMilestoneDate.getTime() - normalizedRangeStart.getTime()) /
+          (1000 * 60 * 60 * 24)
       );
 
       // タスクと同じピクセル位置計算
