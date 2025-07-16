@@ -12,6 +12,10 @@
 
 # testing
 /coverage
+/test-results
+/playwright-report
+/src/__tests__/e2e/*.ts-snapshots/
+/src/__tests__/e2e/screenshots/
 
 # next.js
 /.next/

@@ -11,7 +11,12 @@
     "test:watch": "jest --config=jest.config.js --watch",
     "test:coverage": "jest --config=jest.config.js --coverage",
     "test:integration": "jest --config=jest.integration.config.js",
-    "test:integration:watch": "jest --config=jest.integration.config.js --watch"
+    "test:integration:watch": "jest --config=jest.integration.config.js --watch",
+    "test:visual": "playwright test src/__tests__/e2e/gantt-visual.spec.ts",
+    "test:visual:update": "playwright test src/__tests__/e2e/gantt-visual.spec.ts --update-snapshots",
+    "test:visual:ui": "playwright test src/__tests__/e2e/gantt-visual.spec.ts  --ui",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@holiday-jp/holiday_jp": "^2.4.0",
@@ -53,7 +58,13 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@babel/core": "^7.28.0",
+    "@babel/plugin-proposal-decorators": "^7.28.0",
+    "@babel/preset-env": "^7.28.0",
+    "@babel/preset-react": "^7.27.1",
+    "@babel/preset-typescript": "^7.27.1",
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.54.1",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -62,6 +73,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "babel-jest": "^30.0.4",
     "dotenv": "^16.5.0",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",

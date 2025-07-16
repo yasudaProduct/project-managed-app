@@ -1,14 +1,8 @@
 // filepath: /Users/yuta/Develop/project-managed-app/jest.integration.config.js
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const nextJest = require("next/jest");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require("path");
 
-const createJestConfig = nextJest({
-  dir: "./",
-});
-
-// 結合テスト用のJest設定
+// 結合テスト用のJest設定（Next.jsのcreateJestConfigを使用しない）
 const integrationJestConfig = {
   testEnvironment: "node",
   rootDir: ".",
@@ -30,6 +24,30 @@ const integrationJestConfig = {
   setupFiles: [
     path.resolve(__dirname, "./src/__integration_tests__/load-env.ts"),
   ],
+  // SWCの代わりにts-jestとbabel-jestを使用
+  transform: {
+    "^.+\\.(ts|tsx)$": [
+      "ts-jest",
+      {
+        tsconfig: {
+          jsx: "react-jsx",
+        },
+      },
+    ],
+    "^.+\\.(js|jsx)$": [
+      "babel-jest",
+      {
+        presets: [
+          ["@babel/preset-env", { targets: { node: "current" } }],
+          "@babel/preset-react",
+        ],
+      },
+    ],
+  },
+  transformIgnorePatterns: [
+    "/node_modules/",
+    "^.+\\.module\\.(css|sass|scss)$",
+  ],
 };
 
-module.exports = createJestConfig(integrationJestConfig);
+module.exports = integrationJestConfig;
