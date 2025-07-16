@@ -70,9 +70,11 @@ describe('TaskRepository', () => {
         assigneeId: 1,
         phaseId: 1,
         assignee: {
-          id: 1,
-          name: 'ユーザー1',
-          displayName: 'テストユーザー1'
+          assignee: {
+            id: 1,
+            name: 'ユーザー1',
+            displayName: 'テストユーザー1'
+          }
         },
         phase: {
           id: 1,
@@ -112,7 +114,11 @@ describe('TaskRepository', () => {
       expect(prismaMock.wbsTask.findUnique).toHaveBeenCalledWith({
         where: { id: taskId },
         include: {
-          assignee: true,
+          assignee: {
+            include: {
+              assignee: true,
+            },
+          },
           phase: true,
           periods: {
             include: {
@@ -162,9 +168,11 @@ describe('TaskRepository', () => {
           assigneeId: 1,
           phaseId: 1,
           assignee: {
-            id: 1,
-            name: 'ユーザー1',
-            displayName: 'テストユーザー1'
+            assignee: {
+              id: 1,
+              name: 'ユーザー1',
+              displayName: 'テストユーザー1'
+            }
           },
           phase: {
             id: 1,
@@ -203,9 +211,11 @@ describe('TaskRepository', () => {
           assigneeId: 2,
           phaseId: 2,
           assignee: {
-            id: 2,
-            name: 'ユーザー2',
-            displayName: 'テストユーザー2'
+            assignee: {
+              id: 2,
+              name: 'ユーザー2',
+              displayName: 'テストユーザー2'
+            }
           },
           phase: {
             id: 2,

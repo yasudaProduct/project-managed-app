@@ -64,8 +64,8 @@ describe('TaskFactory', () => {
     it('既存のタスクがある場合、連番で次の番号を生成すること', async () => {
       // フェーズのモック
       const mockPhase = Phase.create({
-        name: '設計フェーズ',
-        code: new PhaseCode('D10'),
+        name: '設計',
+        code: new PhaseCode('D1'),
         seq: 1
       });
 
@@ -73,15 +73,17 @@ describe('TaskFactory', () => {
 
       // 既存のタスクをモック（D10-0001, D10-0002が存在する）
       const task1 = Task.create({
-        taskNo: TaskNo.reconstruct('D10-0001'),
+        taskNo: TaskNo.reconstruct('D1-0001'),
         wbsId: wbsId,
+        phaseId: 1,
         name: 'タスク1',
         status: new TaskStatus({ status: 'NOT_STARTED' }),
       });
 
       const task2 = Task.create({
-        taskNo: TaskNo.reconstruct('D10-0002'),
+        taskNo: TaskNo.reconstruct('D1-0002'),
         wbsId: wbsId,
+        phaseId: 1,
         name: 'タスク2',
         status: new TaskStatus({ status: 'NOT_STARTED' }),
       });
@@ -92,7 +94,7 @@ describe('TaskFactory', () => {
       const taskId = await taskFactory.createTaskId(wbsId, 1);
 
       // 検証 - D10-0003が生成されるべき
-      expect(taskId.getValue()).toBe('D10-0003');
+      expect(taskId.getValue()).toBe('D1-0003');
     });
 
     it('異なるフェーズコードのタスクがある場合、新しいフェーズでは1から始まること', async () => {
@@ -153,6 +155,7 @@ describe('TaskFactory', () => {
       const task1 = Task.create({
         taskNo: TaskNo.reconstruct('D1-0001'),
         wbsId: wbsId,
+        phaseId: 1,
         name: 'タスク1',
         status: new TaskStatus({ status: 'COMPLETED' }),
       });
@@ -160,6 +163,7 @@ describe('TaskFactory', () => {
       const task3 = Task.create({
         taskNo: TaskNo.reconstruct('D1-0003'),
         wbsId: wbsId,
+        phaseId: 1,
         name: 'タスク3',
         status: new TaskStatus({ status: 'NOT_STARTED' }),
       });

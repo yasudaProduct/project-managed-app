@@ -15,8 +15,6 @@ export const createMockProject = (overrides: Partial<Project> = {}): Project => 
   endDate: new Date('2024-05-31'),
   status: 'ACTIVE',
   description: 'テスト用プロジェクト',
-  createdAt: new Date('2024-01-01'),
-  updatedAt: new Date('2024-01-01'),
   ...overrides
 });
 
@@ -66,10 +64,10 @@ export const createMockTasks = (count: number, baseOverrides: Partial<WbsTask> =
     const id = index + 1;
     const startDate = new Date('2024-05-09');
     startDate.setDate(startDate.getDate() + index * 3); // 3日間隔でタスクを配置
-    
+
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + 5); // 5日間のタスク
-    
+
     return createMockTask(id, {
       yoteiStart: startDate,
       yoteiEnd: endDate,
@@ -93,7 +91,7 @@ export const createMockMilestones = (count: number): Milestone[] => {
     const id = index + 1;
     const date = new Date('2024-05-15');
     date.setDate(date.getDate() + index * 7); // 7日間隔でマイルストーンを配置
-    
+
     return createMockMilestone(id, { date });
   });
 };
@@ -183,7 +181,7 @@ export const dateHelpers = {
     normalized1.setHours(0, 0, 0, 0);
     const normalized2 = new Date(date2);
     normalized2.setHours(0, 0, 0, 0);
-    
+
     return Math.abs(
       Math.ceil((normalized2.getTime() - normalized1.getTime()) / (1000 * 60 * 60 * 24))
     );
@@ -204,7 +202,7 @@ export const dateHelpers = {
   daysInRange: (startDate: Date, endDate: Date): number => {
     const start = dateHelpers.normalizeDate(startDate);
     const end = dateHelpers.normalizeDate(endDate);
-    
+
     return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   }
 };
@@ -262,19 +260,19 @@ export const eventHelpers = {
       clientY: 100,
       bubbles: true
     });
-    
+
     const mouseMoveEvent = new MouseEvent('mousemove', {
       clientX: endX,
       clientY: 100,
       bubbles: true
     });
-    
+
     const mouseUpEvent = new MouseEvent('mouseup', {
       clientX: endX,
       clientY: 100,
       bubbles: true
     });
-    
+
     element.dispatchEvent(mouseDownEvent);
     document.dispatchEvent(mouseMoveEvent);
     document.dispatchEvent(mouseUpEvent);
@@ -303,10 +301,10 @@ export const assertionHelpers = {
     expectedWidth: number,
     tolerance: number = 5
   ) => {
-    const rect = taskElement.getBoundingClientRect();
+    taskElement.getBoundingClientRect();
     const actualLeft = parseFloat(taskElement.style.left || '0');
     const actualWidth = parseFloat(taskElement.style.width || '0');
-    
+
     expect(Math.abs(actualLeft - expectedLeft)).toBeLessThanOrEqual(tolerance);
     expect(Math.abs(actualWidth - expectedWidth)).toBeLessThanOrEqual(tolerance);
   },
@@ -317,7 +315,7 @@ export const assertionHelpers = {
   expectDateEqual: (actual: Date, expected: Date) => {
     const actualNormalized = dateHelpers.normalizeDate(actual);
     const expectedNormalized = dateHelpers.normalizeDate(expected);
-    
+
     expect(actualNormalized.getTime()).toBe(expectedNormalized.getTime());
   }
 };

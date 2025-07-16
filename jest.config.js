@@ -9,7 +9,7 @@ const customJestConfig = {
     // Next.jsのキャッシュ機能をモック
     "^next/cache$": "<rootDir>/__mocks__/next-cache.js",
   },
-  testRegex: ["/src/__tests__/.*\\.[jt]sx?$"],
+  testRegex: ["/src/__tests__/.*\\.test\\.[jt]sx?$"],
   // SWCの代わりにBabelトランスフォーマーを明示的に使用
   transform: {
     "^.+\\.(js|jsx|ts|tsx)$": [
