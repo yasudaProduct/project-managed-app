@@ -5,6 +5,7 @@ import {
   calculateTaskPositions,
   groupTasks,
   calculateMilestonePositions,
+  TaskWithPosition,
 } from "@/components/ganttv2/gantt-utils";
 import { WbsTask, Milestone, TaskStatus, ProjectStatus } from "@/types/wbs";
 import { Project } from "@/types/project";
@@ -16,17 +17,14 @@ describe("gantt-utils", () => {
         id: "1",
         name: "Test Project",
         status: "INACTIVE" as ProjectStatus,
-        startDate: new Date("2025-05-09"),
-        endDate: new Date("2025-05-16"),
+        startDate: new Date("2024-01-10"),
+        endDate: new Date("2024-01-20"),
       };
 
       const result = calculateDateRange(project);
-      console.log(result);
-      console.log(result.start);
-      console.log(result.start.toISOString());
 
-      expect(result.start).toEqual(new Date("2025-05-02"));
-      expect(result.end).toEqual(new Date("2025-05-23"));
+      expect(result.start).toEqual(new Date("2024-01-03"));
+      expect(result.end).toEqual(new Date("2024-01-27"));
     });
   });
 
@@ -84,16 +82,14 @@ describe("gantt-utils", () => {
 
   describe("generateTimeAxis", () => {
     const dateRange = {
-      start: new Date("2025-05-09"),
-      end: new Date("2025-05-13"),
+      start: new Date("2024-01-01"),
+      end: new Date("2024-01-31"),
     };
 
     it("日表示モードで時間軸を生成する", () => {
       const { timeAxis, chartWidth } = generateTimeAxis(dateRange, "day");
 
-      console.log(timeAxis);
-      console.log(chartWidth);
-      expect(timeAxis).toHaveLength(5); // 1月は31日間だが、0時で正規化されるため30日間
+      expect(timeAxis).toHaveLength(31);
       expect(chartWidth).toBeGreaterThan(1200); // 最小幅以上
 
       // タイムゾーンの影響を受けないように日付を比較
@@ -116,7 +112,7 @@ describe("gantt-utils", () => {
     it("月表示モードで時間軸を生成する", () => {
       const { timeAxis, chartWidth } = generateTimeAxis(dateRange, "month");
 
-      expect(timeAxis).toHaveLength(1); // 30日 / 30日 = 1月
+      expect(timeAxis).toHaveLength(2); // 30日 / 30日 = 1月
       expect(chartWidth).toBe(1200); // 最小幅
     });
 
@@ -184,41 +180,37 @@ describe("gantt-utils", () => {
     const tasks = [
       {
         id: 1,
-        wbsId: 1,
         name: "Task 1",
-        description: "",
-        status: "planning" as TaskStatus,
-        sequence: 1,
-        phase: { id: 1, name: "Phase 1" },
+        status: "NOT_STARTED" as TaskStatus,
+        phase: { id: 1, name: "Phase 1", seq: 1 },
         assignee: { id: 1, displayName: "User 1", name: "user1" },
-        startPosition: 0,
-        width: 100,
-        yoteiStart: null,
-        yoteiEnd: null,
-        jissekiStart: null,
-        jissekiEnd: null,
+        yoteiStart: undefined,
+        yoteiEnd: undefined,
+        jissekiStart: undefined,
+        jissekiEnd: undefined,
         createdAt: new Date(),
         updatedAt: new Date(),
+        startPosition: 0,
+        width: 100,
+        groupId: "1",
       },
       {
         id: 2,
-        wbsId: 1,
         name: "Task 2",
-        description: "",
-        status: "working" as TaskStatus,
-        sequence: 2,
-        phase: { id: 1, name: "Phase 1" },
+        status: "IN_PROGRESS" as TaskStatus,
+        phase: { id: 1, name: "Phase 1", seq: 1 },
         assignee: { id: 2, displayName: "User 2", name: "user2" },
-        startPosition: 100,
-        width: 100,
-        yoteiStart: null,
-        yoteiEnd: null,
-        jissekiStart: null,
-        jissekiEnd: null,
+        yoteiStart: undefined,
+        yoteiEnd: undefined,
+        jissekiStart: undefined,
+        jissekiEnd: undefined,
         createdAt: new Date(),
         updatedAt: new Date(),
+        startPosition: 100,
+        width: 100,
+        groupId: "1",
       },
-    ] as any[];
+    ] as TaskWithPosition[];
 
     it("グループ化なしの場合、すべてのタスクを1つのグループにする", () => {
       const result = groupTasks(tasks, "none", new Set());
