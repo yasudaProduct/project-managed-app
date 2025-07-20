@@ -16,14 +16,17 @@ describe("gantt-utils", () => {
         id: "1",
         name: "Test Project",
         status: "INACTIVE" as ProjectStatus,
-        startDate: new Date("2024-01-10"),
-        endDate: new Date("2024-01-20"),
+        startDate: new Date("2025-05-09"),
+        endDate: new Date("2025-05-16"),
       };
 
       const result = calculateDateRange(project);
+      console.log(result);
+      console.log(result.start);
+      console.log(result.start.toISOString());
 
-      expect(result.start).toEqual(new Date("2024-01-03"));
-      expect(result.end).toEqual(new Date("2024-01-27"));
+      expect(result.start).toEqual(new Date("2025-05-02"));
+      expect(result.end).toEqual(new Date("2025-05-23"));
     });
   });
 
@@ -81,14 +84,16 @@ describe("gantt-utils", () => {
 
   describe("generateTimeAxis", () => {
     const dateRange = {
-      start: new Date("2024-01-01"),
-      end: new Date("2024-01-31"),
+      start: new Date("2025-05-09"),
+      end: new Date("2025-05-13"),
     };
 
     it("日表示モードで時間軸を生成する", () => {
       const { timeAxis, chartWidth } = generateTimeAxis(dateRange, "day");
 
-      expect(timeAxis).toHaveLength(30); // 1月は31日間だが、0時で正規化されるため30日間
+      console.log(timeAxis);
+      console.log(chartWidth);
+      expect(timeAxis).toHaveLength(5); // 1月は31日間だが、0時で正規化されるため30日間
       expect(chartWidth).toBeGreaterThan(1200); // 最小幅以上
 
       // タイムゾーンの影響を受けないように日付を比較

@@ -16,9 +16,17 @@ const projectApplicationService = container.get<IProjectApplicationService>(SYMB
  * @returns プロジェクト
  */
 export async function getProjectById(id: string) {
-    return await prisma.projects.findUnique({
+    const project = await prisma.projects.findUnique({
         where: { id: id },
     })
+    if (!project) {
+        return null
+    }
+    return {
+        ...project,
+        startDate: new Date(project.startDate.toISOString().split("T")[0]),
+        endDate: new Date(project.endDate.toISOString().split("T")[0]),
+    }
 }
 
 /**

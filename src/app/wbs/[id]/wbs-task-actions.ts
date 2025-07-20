@@ -15,7 +15,11 @@ const taskFactory = container.get<ITaskFactory>(SYMBOL.ITaskFactory);
 export async function getTaskAll(wbsId: number): Promise<WbsTask[]> {
 
     const tasks = await taskApplicationService.getTaskAll(wbsId);
-    return tasks;
+    return tasks.map(task => ({
+        ...task,
+        yoteiStart: task.yoteiStart ? new Date(task.yoteiStart.toISOString().split("T")[0]) : undefined,
+        yoteiEnd: task.yoteiEnd ? new Date(task.yoteiEnd.toISOString().split("T")[0]) : undefined,
+    }));
 
 }
 

@@ -54,6 +54,9 @@ export function calculateDateRange(project: Project): DateRange {
   const end = new Date(projectEnd);
   end.setDate(end.getDate() + 7);
 
+  console.log("calculateDateRange:start", start);
+  console.log("calculateDateRange:end", end);
+
   return { start, end };
 }
 
@@ -84,6 +87,7 @@ export function generateTimeAxis(
   viewMode: ViewMode
 ): { timeAxis: TimeAxisItem[]; chartWidth: number } {
   const currentMode = VIEW_MODES.find((mode) => mode.value === viewMode)!;
+  console.log("generateTimeAxis:dateRange", dateRange);
 
   // 日付範囲を正規化
   const normalizedRangeStart = new Date(dateRange.start);
@@ -95,8 +99,8 @@ export function generateTimeAxis(
   // 正規化された日付で総日数を計算
   const totalDays = Math.ceil(
     (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
+    (1000 * 60 * 60 * 24)
+  ) + 1;
 
   // 横スクロールを可能にするために、各日の最小幅を設定
   const minDayWidth =
@@ -130,6 +134,8 @@ export function calculateTaskPositions(
   dateRange: DateRange,
   chartWidth: number
 ): TaskWithPosition[] {
+  console.log("calculateTaskPositions:tasks", tasks);
+
   // 時間軸と同じ正規化された日付範囲を使用
   const normalizedRangeStart = new Date(dateRange.start);
   normalizedRangeStart.setHours(0, 0, 0, 0);
@@ -139,7 +145,7 @@ export function calculateTaskPositions(
 
   const totalDays = Math.ceil(
     (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
-      (1000 * 60 * 60 * 24)
+    (1000 * 60 * 60 * 24)
   );
 
   return tasks.map((task) => {
@@ -158,7 +164,7 @@ export function calculateTaskPositions(
       0,
       Math.round(
         (normalizedStart.getTime() - normalizedRangeStart.getTime()) /
-          (1000 * 60 * 60 * 24)
+        (1000 * 60 * 60 * 24)
       )
     );
 
@@ -167,7 +173,7 @@ export function calculateTaskPositions(
       0,
       Math.round(
         (normalizedEnd.getTime() - normalizedRangeStart.getTime()) /
-          (1000 * 60 * 60 * 24)
+        (1000 * 60 * 60 * 24)
       )
     );
 
@@ -235,10 +241,10 @@ export function groupTasks(
       ? groupBy === "phase"
         ? tasks[0].phase?.name || "未分類"
         : groupBy === "assignee"
-        ? tasks[0].assignee?.displayName || "未割り当て"
-        : groupBy === "status"
-        ? getTaskStatusName(tasks[0].status)
-        : "すべてのタスク"
+          ? tasks[0].assignee?.displayName || "未割り当て"
+          : groupBy === "status"
+            ? getTaskStatusName(tasks[0].status)
+            : "すべてのタスク"
       : "未分類",
     tasks,
     collapsed: collapsedGroups.has(id),
@@ -262,7 +268,7 @@ export function calculateMilestonePositions(
 
   const totalDays = Math.ceil(
     (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
-      (1000 * 60 * 60 * 24)
+    (1000 * 60 * 60 * 24)
   );
 
   return milestones.map((milestone) => {
@@ -274,7 +280,7 @@ export function calculateMilestonePositions(
     const positionDays = Math.max(
       0,
       (normalizedMilestoneDate.getTime() - normalizedRangeStart.getTime()) /
-        (1000 * 60 * 60 * 24)
+      (1000 * 60 * 60 * 24)
     );
 
     // タスクと同じピクセル位置計算
