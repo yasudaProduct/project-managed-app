@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { WbsTask } from "@/types/wbs";
@@ -13,7 +13,6 @@ import {
   Clock,
   Calendar,
   CalendarDays,
-  ChevronUp,
   Minimize2,
   Maximize2,
 } from "lucide-react";
@@ -54,32 +53,37 @@ export default function GanttTaskList({
       {/* ヘッダー */}
       <div className="h-12 border-b border-gray-200 flex items-center justify-between px-4 bg-gray-100 font-semibold text-sm">
         <span>タスク詳細</span>
-        
+
         {/* 全タスク切り替えボタン */}
         <button
           onClick={onToggleAllTasks}
           className="flex items-center gap-1 px-2 py-1 text-xs bg-white hover:bg-gray-50 border border-gray-300 rounded transition-colors"
-          title={
-            (() => {
-              // 全タスクの総数を計算
-              const totalTasks = groups.reduce((sum, group) => sum + group.tasks.length, 0);
-              const collapsedCount = collapsedTasks.size;
-              
-              if (collapsedCount === 0) {
-                return "全て折りたたむ";
-              } else if (collapsedCount === totalTasks) {
-                return "全て展開";
-              } else {
-                return "全て折りたたむ";
-              }
-            })()
-          }
+          data-testid="toggle-all-tasks-button"
+          title={(() => {
+            // 全タスクの総数を計算
+            const totalTasks = groups.reduce(
+              (sum, group) => sum + group.tasks.length,
+              0
+            );
+            const collapsedCount = collapsedTasks.size;
+
+            if (collapsedCount === 0) {
+              return "全て折りたたむ";
+            } else if (collapsedCount === totalTasks) {
+              return "全て展開";
+            } else {
+              return "全て折りたたむ";
+            }
+          })()}
         >
           {(() => {
             // 全タスクの総数を計算
-            const totalTasks = groups.reduce((sum, group) => sum + group.tasks.length, 0);
+            const totalTasks = groups.reduce(
+              (sum, group) => sum + group.tasks.length,
+              0
+            );
             const collapsedCount = collapsedTasks.size;
-            
+
             if (collapsedCount === 0) {
               return (
                 <>
@@ -130,12 +134,14 @@ export default function GanttTaskList({
             {!group.collapsed &&
               group.tasks.map((task) => {
                 // 日付フォーマット関数
-                const formatDate = (date: string | Date | undefined): string => {
+                const formatDate = (
+                  date: string | Date | undefined
+                ): string => {
                   if (!date) return "未設定";
-                  if (typeof date === 'string') return date;
-                  return date.toLocaleDateString('ja-JP', {
-                    month: 'short',
-                    day: 'numeric'
+                  if (typeof date === "string") return date;
+                  return date.toLocaleDateString("ja-JP", {
+                    month: "short",
+                    day: "numeric",
                   });
                 };
 
@@ -147,7 +153,7 @@ export default function GanttTaskList({
                     className="px-4 border-b border-gray-200 hover:bg-gray-50 transition-all duration-200 py-2"
                     style={{
                       height: isTaskCollapsed ? "3rem" : "auto",
-                      minHeight: isTaskCollapsed ? "3rem" : "3.5rem"
+                      minHeight: isTaskCollapsed ? "3rem" : "3.5rem",
                     }}
                   >
                     {/* タスク名とコントロール */}
@@ -157,7 +163,9 @@ export default function GanttTaskList({
                         <button
                           onClick={() => onToggleTask(task.id.toString())}
                           className="flex-shrink-0 p-1 hover:bg-gray-200 rounded transition-colors"
-                          title={isTaskCollapsed ? "詳細を表示" : "詳細を非表示"}
+                          title={
+                            isTaskCollapsed ? "詳細を表示" : "詳細を非表示"
+                          }
                         >
                           {isTaskCollapsed ? (
                             <ChevronRight className="h-3 w-3 text-gray-500" />
@@ -165,13 +173,13 @@ export default function GanttTaskList({
                             <ChevronDown className="h-3 w-3 text-gray-500" />
                           )}
                         </button>
-                        
+
                         {/* タスク名 */}
                         <div className="text-sm font-medium truncate pr-2">
                           {task.name}
                         </div>
                       </div>
-                      
+
                       {/* ステータスバッジ */}
                       <Badge
                         variant={
@@ -198,7 +206,9 @@ export default function GanttTaskList({
                         {task.assignee && (
                           <div className="text-xs text-gray-600 flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            <span className="truncate">{task.assignee.displayName}</span>
+                            <span className="truncate">
+                              {task.assignee.displayName}
+                            </span>
                           </div>
                         )}
 
@@ -207,25 +217,35 @@ export default function GanttTaskList({
                           {/* 予定開始日 */}
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3 flex-shrink-0" />
-                            <span className="whitespace-nowrap">{formatDate(task.yoteiStart)}</span>
+                            <span className="whitespace-nowrap">
+                              {formatDate(task.yoteiStart)}
+                            </span>
                           </div>
 
                           {/* 矢印 */}
-                          <span className="text-gray-400 hidden sm:inline">→</span>
+                          <span className="text-gray-400 hidden sm:inline">
+                            →
+                          </span>
 
                           {/* 予定終了日 */}
                           <div className="flex items-center gap-1">
                             <CalendarDays className="h-3 w-3 flex-shrink-0 sm:hidden" />
-                            <span className="whitespace-nowrap">{formatDate(task.yoteiEnd)}</span>
+                            <span className="whitespace-nowrap">
+                              {formatDate(task.yoteiEnd)}
+                            </span>
                           </div>
 
                           {/* 予定工数 */}
                           {task.yoteiKosu && task.yoteiKosu > 0 && (
                             <>
-                              <span className="text-gray-400 hidden sm:inline">|</span>
+                              <span className="text-gray-400 hidden sm:inline">
+                                |
+                              </span>
                               <div className="flex items-center gap-1">
                                 <Clock className="h-3 w-3 flex-shrink-0" />
-                                <span className="whitespace-nowrap">{task.yoteiKosu}h</span>
+                                <span className="whitespace-nowrap">
+                                  {task.yoteiKosu}h
+                                </span>
                               </div>
                             </>
                           )}

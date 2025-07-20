@@ -337,27 +337,29 @@ export default function GanttV2Component({
       {/* ガントチャート */}
       <div className="flex">
         {/* タスクリスト */}
-        <GanttTaskList
-          groups={groups}
-          groupBy={groupBy}
-          onToggleGroup={toggleGroup}
-          collapsedTasks={collapsedTasks}
-          onToggleTask={(taskId: string) => {
-            setCollapsedTasks((prev) => {
-              const newSet = new Set(prev);
-              if (newSet.has(taskId)) {
-                newSet.delete(taskId);
-              } else {
-                newSet.add(taskId);
-              }
-              return newSet;
-            });
-          }}
-          onToggleAllTasks={toggleAllTasks}
-        />
+        <div data-testid="gantt-task-list">
+          <GanttTaskList
+            groups={groups}
+            groupBy={groupBy}
+            onToggleGroup={toggleGroup}
+            collapsedTasks={collapsedTasks}
+            onToggleTask={(taskId: string) => {
+              setCollapsedTasks((prev) => {
+                const newSet = new Set(prev);
+                if (newSet.has(taskId)) {
+                  newSet.delete(taskId);
+                } else {
+                  newSet.add(taskId);
+                }
+                return newSet;
+              });
+            }}
+            onToggleAllTasks={toggleAllTasks}
+          />
+        </div>
 
         {/* チャート領域 */}
-        <div className="flex-1 relative min-w-0">
+        <div className="flex-1 relative min-w-0" data-testid="gantt-chart-area">
           {/* 時間軸ヘッダー */}
           <GanttTimeAxis
             timeAxis={timeAxis}

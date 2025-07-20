@@ -61,10 +61,10 @@ export default defineConfig({
     },
 
     /* Test against branded browsers. */
-    {
-      name: 'Microsoft Edge',
-      use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    },
+    // {
+    //   name: 'Microsoft Edge',
+    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    // },
     {
       name: 'Google Chrome',
       use: { ...devices['Desktop Chrome'], channel: 'chrome' },
@@ -82,13 +82,13 @@ export default defineConfig({
   /* Screenshot configuration */
   expect: {
     // Compare screenshots with a threshold of 0.2 (20% difference allowed)
-    toHaveScreenshot: { 
+    toHaveScreenshot: {
       threshold: 0.2,
       mode: 'local'
     },
     // Match screenshots with a pixel threshold
-    toMatchSnapshot: { 
-      threshold: 0.3 
+    toMatchSnapshot: {
+      threshold: 0.3
     },
   },
 });

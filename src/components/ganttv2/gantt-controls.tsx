@@ -11,14 +11,7 @@ import {
 } from "@/components/ui/select";
 import { WbsTask } from "@/types/wbs";
 import { getTaskStatusName } from "@/lib/utils";
-import {
-  Calendar,
-  Filter,
-  Eye,
-  EyeOff,
-  User,
-  BarChart3,
-} from "lucide-react";
+import { Calendar, Filter, Eye, EyeOff, User, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ViewMode = "day" | "week" | "month" | "quarter";
@@ -74,11 +67,8 @@ export default function GanttControls({
             <Calendar className="h-4 w-4" />
             表示モード
           </label>
-          <Select
-            value={viewMode}
-            onValueChange={onViewModeChange}
-          >
-            <SelectTrigger>
+          <Select value={viewMode} onValueChange={onViewModeChange}>
+            <SelectTrigger data-testid="view-mode-select">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -97,11 +87,8 @@ export default function GanttControls({
             <BarChart3 className="h-4 w-4" />
             グループ化
           </label>
-          <Select
-            value={groupBy}
-            onValueChange={onGroupByChange}
-          >
-            <SelectTrigger>
+          <Select value={groupBy} onValueChange={onGroupByChange}>
+            <SelectTrigger data-testid="group-by-select">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -121,18 +108,16 @@ export default function GanttControls({
             ステータス
           </label>
           <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-            <SelectTrigger>
+            <SelectTrigger data-testid="status-filter-select">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">すべて</SelectItem>
-              {Array.from(new Set(tasks.map((t) => t.status))).map(
-                (status) => (
-                  <SelectItem key={status} value={status}>
-                    {getTaskStatusName(status)}
-                  </SelectItem>
-                )
-              )}
+              {Array.from(new Set(tasks.map((t) => t.status))).map((status) => (
+                <SelectItem key={status} value={status}>
+                  {getTaskStatusName(status)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -144,7 +129,7 @@ export default function GanttControls({
             担当者
           </label>
           <Select value={assigneeFilter} onValueChange={onAssigneeFilterChange}>
-            <SelectTrigger>
+            <SelectTrigger data-testid="assignee-filter-select">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -173,6 +158,7 @@ export default function GanttControls({
             "gap-2",
             showMilestones && "bg-blue-50 border-blue-200"
           )}
+          data-testid="milestone-toggle-button"
         >
           {showMilestones ? (
             <Eye className="h-4 w-4" />

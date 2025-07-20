@@ -4,10 +4,10 @@ test.describe('ガントチャート ビジュアルリグレッションテス�
   test.beforeEach(async ({ page }) => {
     // テストページに移動
     await page.goto('/test/gantt');
-    
+
     // ページが完全に読み込まれるまで待機
     await page.waitForSelector('[data-testid="gantt-component"]');
-    
+
     // アニメーションが完了するまで少し待機
     await page.waitForTimeout(1000);
   });
@@ -22,11 +22,11 @@ test.describe('ガントチャート ビジュアルリグレッションテス�
     await expect(ganttComponent).toHaveScreenshot('gantt-default-full.png');
 
     // タスクリスト部分のスクリーンショット
-    const taskList = page.locator('.flex > div:first-child');
+    const taskList = page.locator('[data-testid="gantt-task-list"]');
     await expect(taskList).toHaveScreenshot('gantt-task-list.png');
 
     // チャート部分のスクリーンショット
-    const chartArea = page.locator('.flex > div:last-child');
+    const chartArea = page.locator('[data-testid="gantt-chart-area"]');
     await expect(chartArea).toHaveScreenshot('gantt-chart-area.png');
   });
 
@@ -56,19 +56,19 @@ test.describe('ガントチャート ビジュアルリグレッションテス�
 
   test('表示モード切り替えのスクリーンショット', async ({ page }) => {
     // 日表示
-    await page.click('text=日');
+    await page.selectOption('[data-testid="view-mode-select"]', 'day');
     await page.waitForTimeout(500);
-    
+
     const ganttComponent = page.locator('[data-testid="gantt-component"]');
     await expect(ganttComponent).toHaveScreenshot('gantt-day-view.png');
 
     // 週表示
-    await page.click('text=週');
+    await page.selectOption('[data-testid="view-mode-select"]', 'week');
     await page.waitForTimeout(500);
     await expect(ganttComponent).toHaveScreenshot('gantt-week-view.png');
 
     // 月表示
-    await page.click('text=月');
+    await page.selectOption('[data-testid="view-mode-select"]', 'month');
     await page.waitForTimeout(500);
     await expect(ganttComponent).toHaveScreenshot('gantt-month-view.png');
   });
@@ -79,12 +79,12 @@ test.describe('ガントチャート ビジュアルリグレッションテス�
     await expect(ganttComponent).toHaveScreenshot('gantt-group-by-phase.png');
 
     // 担当者でグループ化
-    await page.selectOption('select:has-text("フェーズ")', 'assignee');
+    await page.selectOption('[data-testid="group-by-select"]', 'assignee');
     await page.waitForTimeout(500);
     await expect(ganttComponent).toHaveScreenshot('gantt-group-by-assignee.png');
 
     // ステータスでグループ化
-    await page.selectOption('select:has-text("担当者")', 'status');
+    await page.selectOption('[data-testid="group-by-select"]', 'status');
     await page.waitForTimeout(500);
     await expect(ganttComponent).toHaveScreenshot('gantt-group-by-status.png');
   });
@@ -93,16 +93,16 @@ test.describe('ガントチャート ビジュアルリグレッションテス�
     const ganttComponent = page.locator('[data-testid="gantt-component"]');
 
     // ステータスフィルター: 進行中のみ
-    await page.selectOption('select >> nth=1', 'IN_PROGRESS');
+    await page.selectOption('[data-testid="status-filter-select"]', 'IN_PROGRESS');
     await page.waitForTimeout(500);
     await expect(ganttComponent).toHaveScreenshot('gantt-filter-in-progress.png');
 
     // フィルターをリセット
-    await page.selectOption('select >> nth=1', 'all');
+    await page.selectOption('[data-testid="status-filter-select"]', 'all');
     await page.waitForTimeout(500);
 
     // 担当者フィルター: 佐藤花子のみ
-    await page.selectOption('select >> nth=2', '佐藤花子');
+    await page.selectOption('[data-testid="assignee-filter-select"]', '佐藤花子');
     await page.waitForTimeout(500);
     await expect(ganttComponent).toHaveScreenshot('gantt-filter-assignee.png');
   });
@@ -114,12 +114,12 @@ test.describe('ガントチャート ビジュアルリグレッションテス�
     await expect(ganttComponent).toHaveScreenshot('gantt-expanded.png');
 
     // 全て折りたたむ
-    await page.click('text=全て折りたたむ');
+    await page.click('[data-testid="toggle-all-tasks-button"]');
     await page.waitForTimeout(500);
     await expect(ganttComponent).toHaveScreenshot('gantt-collapsed.png');
 
     // 全て展開
-    await page.click('text=全て展開');
+    await page.click('[data-testid="toggle-all-tasks-button"]');
     await page.waitForTimeout(500);
     await expect(ganttComponent).toHaveScreenshot('gantt-re-expanded.png');
   });
@@ -131,7 +131,7 @@ test.describe('ガントチャート ビジュアルリグレッションテス�
     await expect(ganttComponent).toHaveScreenshot('gantt-with-milestones.png');
 
     // マイルストーン非表示
-    await page.uncheck('input[type="checkbox"]:has-text("マイルストーン")');
+    await page.click('[data-testid="milestone-toggle-button"]');
     await page.waitForTimeout(500);
     await expect(ganttComponent).toHaveScreenshot('gantt-without-milestones.png');
   });
@@ -140,7 +140,7 @@ test.describe('ガントチャート ビジュアルリグレッションテス�
     // タブレットサイズ
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.waitForTimeout(500);
-    
+
     const ganttComponent = page.locator('[data-testid="gantt-component"]');
     await expect(ganttComponent).toHaveScreenshot('gantt-tablet.png');
 
@@ -159,7 +159,7 @@ test.describe('ガントチャート ビジュアルリグレッションテス�
     await page.waitForTimeout(1000);
 
     const ganttComponent = page.locator('[data-testid="gantt-component"]');
-    
+
     // 初期位置
     await expect(ganttComponent).toHaveScreenshot('gantt-scroll-start.png');
 
@@ -186,13 +186,13 @@ test.describe('ガントチャート ビジュアルリグレッションテス�
         }
       `
     });
-    
+
     await page.evaluate(() => {
       document.documentElement.classList.add('dark');
     });
-    
+
     await page.waitForTimeout(500);
-    
+
     const ganttComponent = page.locator('[data-testid="gantt-component"]');
     await expect(ganttComponent).toHaveScreenshot('gantt-dark-mode.png');
   });
@@ -202,12 +202,12 @@ test.describe('ガントチャート ビジュアルリグレッションテス�
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.evaluate(() => {
       Object.defineProperty(window, 'devicePixelRatio', {
-        get: function() { return 2; }
+        get: function () { return 2; }
       });
     });
-    
+
     await page.waitForTimeout(500);
-    
+
     const ganttComponent = page.locator('[data-testid="gantt-component"]');
     await expect(ganttComponent).toHaveScreenshot('gantt-high-dpi.png');
   });
@@ -225,7 +225,7 @@ test.describe('ガントチャート インタラクションテスト', () => {
     const taskBar = page.locator('[data-task-id="1"]').first();
     await taskBar.hover();
     await page.waitForTimeout(500);
-    
+
     const ganttComponent = page.locator('[data-testid="gantt-component"]');
     await expect(ganttComponent).toHaveScreenshot('gantt-task-hover.png');
   });
@@ -235,7 +235,7 @@ test.describe('ガントチャート インタラクションテスト', () => {
     const taskBar = page.locator('[data-task-id="2"]').first();
     await taskBar.click();
     await page.waitForTimeout(500);
-    
+
     const ganttComponent = page.locator('[data-testid="gantt-component"]');
     await expect(ganttComponent).toHaveScreenshot('gantt-task-selected.png');
   });
@@ -245,7 +245,7 @@ test.describe('ガントチャート インタラクションテスト', () => {
     const milestone = page.locator('[data-milestone-id="1"]').first();
     await milestone.hover();
     await page.waitForTimeout(1000);
-    
+
     const ganttComponent = page.locator('[data-testid="gantt-component"]');
     await expect(ganttComponent).toHaveScreenshot('gantt-milestone-tooltip.png');
   });
@@ -255,15 +255,14 @@ test.describe('ガントチャート エラー状態テスト', () => {
   test('エラー状態のスクリーンショット', async ({ page }) => {
     // JavaScriptエラーを意図的に発生させる
     await page.goto('/test/gantt');
-    
+
     // コンソールエラーをキャッチ
-    let errorOccurred = false;
     page.on('pageerror', () => {
-      errorOccurred = true;
+      console.error('エラーが発生しました');
     });
-    
+
     await page.waitForSelector('[data-testid="gantt-component"]', { timeout: 10000 });
-    
+
     // エラーが発生していない場合でも、エラー境界のテストとしてスクリーンショットを撮る
     const ganttComponent = page.locator('[data-testid="gantt-component"]');
     await expect(ganttComponent).toHaveScreenshot('gantt-no-error.png');

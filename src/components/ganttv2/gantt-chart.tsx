@@ -449,6 +449,7 @@ export default function GanttChart({
         {milestonesWithPosition.map((milestone) => (
           <div
             key={milestone.id}
+            data-milestone-id={milestone.id}
             className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
             style={{ left: `${milestone.position}px` }}
           >
@@ -485,6 +486,7 @@ export default function GanttChart({
                     >
                       {task.yoteiStart && task.yoteiEnd && (
                         <div
+                          data-task-id={task.id}
                           className={cn(
                             "absolute h-8 rounded-md shadow-sm flex items-center px-2 text-white text-xs font-medium transition-all duration-200 group select-none",
                             "hover:shadow-md hover:z-10 relative",
