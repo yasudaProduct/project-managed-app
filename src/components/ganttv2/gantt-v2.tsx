@@ -45,9 +45,16 @@ export default function GanttV2Component({
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
 
-  // 日付範囲の計算（プロジェクト期間をベースに設定）
+  // 日付範囲の計算
   const dateRange = useMemo(
-    () => calculateDateRange(project),
+    () =>
+      calculateDateRange(
+        project,
+        tasks.map((task) => ({
+          startDate: task.yoteiStart,
+          endDate: task.yoteiEnd,
+        }))
+      ),
     [project.startDate, project.endDate]
   );
 

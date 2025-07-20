@@ -43,9 +43,17 @@ export const VIEW_MODES = [
 
 /**
  * プロジェクトの日付範囲を計算（UTCベース）
- * プロジェクトの開始日と終了日をベースに、前後7日のバッファを追加
+ * start:プロジェクトの開始日とタスクの最小開始日のうち小さい方
+ * end:プロジェクトの終了日とタスクの最大終了日のうち大きい方
+ * 期間を拡張してバッファを追加
  */
-export function calculateDateRange(project: Project): DateRange {
+export function calculateDateRange(
+  project: Project,
+  periods?: {
+    startDate: Date | undefined;
+    endDate: Date | undefined;
+  }[]
+): DateRange {
   // UTCで受け取った日付をローカル日付として解釈
   const projectStart = utcToLocalDate(new Date(project.startDate));
   const projectEnd = utcToLocalDate(new Date(project.endDate));
@@ -54,10 +62,27 @@ export function calculateDateRange(project: Project): DateRange {
     throw new Error("Invalid project date range");
   }
 
+  // periods配列から最小のstartDateを取得
+  const minTaskStart = periods && periods.length > 0
+    ? new Date(
+      Math.min(
+        ...periods.map((p) => utcToLocalDate(p.startDate)?.getTime() ?? Infinity)
+      )
+    )
+    : undefined;
+
+  const maxTaskEnd = periods && periods.length > 0
+    ? new Date(
+      Math.max(
+        ...periods.map((p) => utcToLocalDate(p.endDate)?.getTime() ?? -Infinity)
+      )
+    )
+    : undefined;
+
   // プロジェクト期間を少し拡張してバッファを追加
-  const start = new Date(projectStart);
+  const start = new Date(minTaskStart || projectStart);
   start.setDate(start.getDate() - 7);
-  const end = new Date(projectEnd);
+  const end = new Date(maxTaskEnd || projectEnd);
   end.setDate(end.getDate() + 7);
 
   return { start, end };
