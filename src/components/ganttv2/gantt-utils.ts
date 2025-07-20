@@ -1,6 +1,7 @@
 import { WbsTask, Milestone } from "@/types/wbs";
 import { Project } from "@/types/project";
 import { getTaskStatusName } from "@/lib/utils";
+import { utcToLocalDate } from "@/lib/date-display-utils";
 
 export interface DateRange {
   start: Date;
@@ -41,21 +42,23 @@ export const VIEW_MODES = [
 ];
 
 /**
- * プロジェクトの日付範囲を計算
+ * プロジェクトの日付範囲を計算（UTCベース）
  * プロジェクトの開始日と終了日をベースに、前後7日のバッファを追加
  */
 export function calculateDateRange(project: Project): DateRange {
-  const projectStart = new Date(project.startDate);
-  const projectEnd = new Date(project.endDate);
+  // UTCで受け取った日付をローカル日付として解釈
+  const projectStart = utcToLocalDate(new Date(project.startDate));
+  const projectEnd = utcToLocalDate(new Date(project.endDate));
+
+  if (!projectStart || !projectEnd) {
+    throw new Error("Invalid project date range");
+  }
 
   // プロジェクト期間を少し拡張してバッファを追加
   const start = new Date(projectStart);
   start.setDate(start.getDate() - 7);
   const end = new Date(projectEnd);
   end.setDate(end.getDate() + 7);
-
-  console.log("calculateDateRange:start", start);
-  console.log("calculateDateRange:end", end);
 
   return { start, end };
 }
@@ -80,16 +83,15 @@ export function filterTasks(
 }
 
 /**
- * 時間軸の生成とチャート幅の計算
+ * 時間軸の生成とチャート幅の計算（UTCベース）
  */
 export function generateTimeAxis(
   dateRange: DateRange,
   viewMode: ViewMode
 ): { timeAxis: TimeAxisItem[]; chartWidth: number } {
   const currentMode = VIEW_MODES.find((mode) => mode.value === viewMode)!;
-  console.log("generateTimeAxis:dateRange", dateRange);
 
-  // 日付範囲を正規化
+  // 日付範囲を正規化（ローカル時刻で00:00:00）
   const normalizedRangeStart = new Date(dateRange.start);
   normalizedRangeStart.setHours(0, 0, 0, 0);
 
@@ -134,7 +136,6 @@ export function calculateTaskPositions(
   dateRange: DateRange,
   chartWidth: number
 ): TaskWithPosition[] {
-  console.log("calculateTaskPositions:tasks", tasks);
 
   // 時間軸と同じ正規化された日付範囲を使用
   const normalizedRangeStart = new Date(dateRange.start);
@@ -149,8 +150,12 @@ export function calculateTaskPositions(
   );
 
   return tasks.map((task) => {
-    const taskStart = task.yoteiStart || normalizedRangeStart;
-    const taskEnd = task.yoteiEnd || taskStart;
+    // UTCで受け取った日付をローカル日付として解釈
+    const taskStartLocal = task.yoteiStart ? utcToLocalDate(task.yoteiStart) : null;
+    const taskEndLocal = task.yoteiEnd ? utcToLocalDate(task.yoteiEnd) : null;
+
+    const taskStart = taskStartLocal || normalizedRangeStart;
+    const taskEnd = taskEndLocal || taskStart;
 
     // 日付を正規化（時刻部分を削除）
     const normalizedStart = new Date(taskStart);
@@ -252,6 +257,17 @@ export function groupTasks(
 }
 
 /**
+ * ローカル日付をYYYY/MM/DD形式の文字列に変換
+ * タイムゾーンの影響を受けない日付文字列を生成
+ */
+export function formatDateToLocalString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}/${month}/${day}`;
+}
+
+/**
  * マイルストーンの位置を計算
  */
 export function calculateMilestonePositions(
@@ -272,8 +288,12 @@ export function calculateMilestonePositions(
   );
 
   return milestones.map((milestone) => {
+    // UTCで受け取った日付をローカル日付として解釈
+    const milestoneLocal = utcToLocalDate(milestone.date);
+    if (!milestoneLocal) return { ...milestone, position: 0 };
+
     // 日付を正規化
-    const normalizedMilestoneDate = new Date(milestone.date);
+    const normalizedMilestoneDate = new Date(milestoneLocal);
     normalizedMilestoneDate.setHours(0, 0, 0, 0);
 
     // タスクと同じ計算方法を使用

@@ -23,7 +23,7 @@ import {
 } from "../ui/dialog";
 import { DatePicker } from "../date-picker";
 import SelectPhases, { SelectAssignee, SelectStatus } from "../form/select";
-import { formatDateyyyymmdd } from "@/lib/utils";
+import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
 import { updateTask } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
@@ -75,8 +75,8 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
       name: task?.name,
       wbsId: task?.taskNo,
       assigneeId: task?.assignee?.id ?? undefined,
-      start: formatDateyyyymmdd(task?.start?.toISOString()),
-      end: task?.yoteiEnd ? formatDateyyyymmdd(task?.end?.toISOString()) : "",
+      start: formatUTCDateForDisplaySlash(task?.start),
+      end: formatUTCDateForDisplaySlash(task?.end),
       kosu: task?.yoteiKosu,
       status: task?.status,
       phaseId: task?.phase.id,
@@ -85,8 +85,8 @@ export default function EditDialog({ children, task, wbsId }: EditDialogProps) {
 
   useEffect(() => {
     // ganttで日付が変更された時にformに再セット
-    const start = formatDateyyyymmdd(task.start.toISOString());
-    const end = formatDateyyyymmdd(task.end.toISOString());
+    const start = formatUTCDateForDisplaySlash(task.start);
+    const end = formatUTCDateForDisplaySlash(task.end);
 
     form.setValue("start", start ? start : "");
     form.setValue("end", end ? end : "");

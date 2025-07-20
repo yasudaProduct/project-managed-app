@@ -7,6 +7,7 @@ import { ProjectStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { container } from "@/lib/inversify.config"
 import { Project } from "@/types/project"
+import { ensureUTC } from "@/lib/date-utils"
 
 const projectApplicationService = container.get<IProjectApplicationService>(SYMBOL.IProjectApplicationService);
 
@@ -22,11 +23,8 @@ export async function getProjectById(id: string) {
     if (!project) {
         return null
     }
-    return {
-        ...project,
-        startDate: new Date(project.startDate.toISOString().split("T")[0]),
-        endDate: new Date(project.endDate.toISOString().split("T")[0]),
-    }
+    // データベースからのUTC日付はそのまま返す（クライアント側で表示変換）
+    return project
 }
 
 /**
@@ -54,8 +52,8 @@ export async function createProject(projectData: {
         {
             name: projectData.name,
             description: projectData.description,
-            startDate: new Date(projectData.startDate),
-            endDate: new Date(projectData.endDate),
+            startDate: ensureUTC(projectData.startDate)!,
+            endDate: ensureUTC(projectData.endDate)!,
         }
     );
 
@@ -95,8 +93,8 @@ export async function updateProject(
             id: projectId,
             name: projectData.name,
             description: projectData.description,
-            startDate: projectData.startDate ? new Date(projectData.startDate) : undefined,
-            endDate: projectData.endDate ? new Date(projectData.endDate) : undefined,
+            startDate: ensureUTC(projectData.startDate),
+            endDate: ensureUTC(projectData.endDate),
         }
     );
 

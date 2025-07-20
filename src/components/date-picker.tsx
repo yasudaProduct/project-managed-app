@@ -4,7 +4,8 @@ import { FormControl } from "./ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "./ui/calendar";
-import { formatDateyyyymmdd } from "@/lib/utils";
+import { formatUTCDateForDisplaySlash, utcToLocalDate } from "@/lib/date-display-utils";
+import { formatDateToLocalString } from "@/components/ganttv2/gantt-utils";
 
 type DatePickerProp = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,7 +34,7 @@ export function DatePicker({ field }: DatePickerProp) {
           mode="single"
           selected={field.value ? new Date(field.value) : undefined}
           onSelect={(date) => {
-            field.onChange(date ? formatDateyyyymmdd(date.toISOString()) : "");
+            field.onChange(date ? formatDateToLocalString(date) : "");
           }}
           // locale={ja}
           initialFocus

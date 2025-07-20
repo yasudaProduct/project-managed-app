@@ -38,53 +38,61 @@ import { toast } from "@/hooks/use-toast";
 import { DatePicker } from "../date-picker";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
 import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
-import { 
-  CalendarDays, 
-  User, 
-  Clock, 
-  Flag, 
+import {
+  CalendarDays,
+  User,
+  Clock,
+  Flag,
   Target,
   AlertCircle,
-  Loader2
+  Loader2,
 } from "lucide-react";
+import { formatDateToLocalString } from "../ganttv2/gantt-utils";
 
-const formSchema = z.object({
-  name: z.string()
-    .min(1, { message: "タスク名は必須です。" })
-    .max(100, { message: "タスク名は100文字以内で入力してください。" }),
-  assigneeId: z.string().min(1, {
-    message: "担当者を選択してください。",
-  }),
-  yoteiStartDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
-    message: "予定開始日は YYYY/MM/DD 形式で入力してください。",
-  }),
-  yoteiEndDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
-    message: "予定終了日は YYYY/MM/DD 形式で入力してください。",
-  }),
-  yoteiKosu: z.preprocess(
-    (val) => Number(val),
-    z.number()
-      .min(0, { message: "工数は0以上の数値を入力してください。" })
-      .max(1000, { message: "工数は1000時間以内で入力してください。" })
-  ),
-  status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] as const, {
-    message: "ステータスを選択してください。",
-  }),
-  phaseId: z.preprocess(
-    (val) => Number(val),
-    z.number().min(1, {
-      message: "工程を選択してください。",
-    })
-  ),
-}).refine((data) => {
-  // 開始日と終了日の妥当性チェック
-  const startDate = new Date(data.yoteiStartDate.replace(/\//g, '-'));
-  const endDate = new Date(data.yoteiEndDate.replace(/\//g, '-'));
-  return startDate <= endDate;
-}, {
-  message: "予定終了日は予定開始日以降の日付を入力してください。",
-  path: ["yoteiEndDate"],
-});
+const formSchema = z
+  .object({
+    name: z
+      .string()
+      .min(1, { message: "タスク名は必須です。" })
+      .max(100, { message: "タスク名は100文字以内で入力してください。" }),
+    assigneeId: z.string().min(1, {
+      message: "担当者を選択してください。",
+    }),
+    yoteiStartDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
+      message: "予定開始日は YYYY/MM/DD 形式で入力してください。",
+    }),
+    yoteiEndDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
+      message: "予定終了日は YYYY/MM/DD 形式で入力してください。",
+    }),
+    yoteiKosu: z.preprocess(
+      (val) => Number(val),
+      z
+        .number()
+        .min(0, { message: "工数は0以上の数値を入力してください。" })
+        .max(1000, { message: "工数は1000時間以内で入力してください。" })
+    ),
+    status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] as const, {
+      message: "ステータスを選択してください。",
+    }),
+    phaseId: z.preprocess(
+      (val) => Number(val),
+      z.number().min(1, {
+        message: "工程を選択してください。",
+      })
+    ),
+  })
+  .refine(
+    (data) => {
+      // 開始日と終了日の妥当性チェック
+      const startDate = new Date(data.yoteiStartDate.replace(/\//g, "-"));
+      const endDate = new Date(data.yoteiEndDate.replace(/\//g, "-"));
+      return startDate <= endDate;
+    },
+    {
+      message: "予定終了日は予定開始日以降の日付を入力してください。",
+      path: ["yoteiEndDate"],
+    }
+  );
 
 interface TaskModalProps {
   wbsId: number;
@@ -94,54 +102,73 @@ interface TaskModalProps {
   onClose?: () => void;
 }
 
-export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClose }: TaskModalProps) {
+export function TaskModal({
+  wbsId,
+  task,
+  children,
+  isOpen: externalIsOpen,
+  onClose,
+}: TaskModalProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
 
   // 日付変換のヘルパー関数
   const formatDateForForm = (date: string | Date | undefined): string => {
     if (!date) return "";
-    if (typeof date === 'string') return date;
-    return date.toISOString().split('T')[0].replace(/-/g, '/');
+    if (typeof date === "string") return date;
+    return date.toISOString().split("T")[0].replace(/-/g, "/");
   };
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [assignees, setAssignees] = useState<{ id: string; name: string }[]>([]);
-  const [phases, setPhases] = useState<{ id: number; name: string; code: string; seq: number }[]>([]);
+  const [assignees, setAssignees] = useState<{ id: string; name: string }[]>(
+    []
+  );
+  const [phases, setPhases] = useState<
+    { id: number; name: string; code: string; seq: number }[]
+  >([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: task ? {
-      name: task.name,
-      assigneeId: task.assigneeId?.toString() || "",
-      yoteiStartDate: formatDateForForm(task.yoteiStart),
-      yoteiEndDate: formatDateForForm(task.yoteiEnd),
-      yoteiKosu: task.yoteiKosu || 0,
-      status: task.status,
-      phaseId: task.phaseId || 0,
-    } : {
-      name: "",
-      assigneeId: "",
-      yoteiStartDate: "",
-      yoteiEndDate: "",
-      yoteiKosu: 0,
-      status: "NOT_STARTED",
-      phaseId: 0,
-    },
+    defaultValues: task
+      ? {
+          name: task.name,
+          assigneeId: task.assigneeId?.toString() || "",
+          yoteiStartDate: task.yoteiStart
+            ? formatDateToLocalString(task.yoteiStart)
+            : "",
+          yoteiEndDate: task.yoteiEnd
+            ? formatDateToLocalString(task.yoteiEnd)
+            : "",
+          yoteiKosu: task.yoteiKosu || 0,
+          status: task.status,
+          phaseId: task.phaseId || 0,
+        }
+      : {
+          name: "",
+          assigneeId: "",
+          yoteiStartDate: "",
+          yoteiEndDate: "",
+          yoteiKosu: 0,
+          status: "NOT_STARTED",
+          phaseId: 0,
+        },
   });
 
   useEffect(() => {
     const fetchData = async () => {
       if (!isOpen) return;
-      
+
       setIsLoading(true);
       try {
         // 担当者リストを取得
         const assigneesData = await getWbsAssignees(wbsId);
-        const assigneesList = assigneesData?.map((a) => ({
-          id: a.assignee?.id?.toString() ?? "",
-          name: a.assignee?.displayName ?? "",
-        })).filter(a => a.id && a.name) ?? [];
+        const assigneesList =
+          assigneesData
+            ?.map((a) => ({
+              id: a.assignee?.id?.toString() ?? "",
+              name: a.assignee?.displayName ?? "",
+            }))
+            .filter((a) => a.id && a.name) ?? [];
         setAssignees(assigneesList);
 
         // 工程リストを取得
@@ -176,7 +203,7 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
         setIsLoading(false);
       }
     };
-    
+
     fetchData();
   }, [wbsId, isOpen, task, form]);
 
@@ -213,11 +240,17 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
           });
         }
       } else {
+        console.log("values.yoteiStartDate", values.yoteiStartDate);
+        console.log("values.yoteiEndDate", values.yoteiEndDate);
+        console.log("values.yoteiStartDate", new Date(values.yoteiStartDate));
+        console.log("values.yoteiEndDate", new Date(values.yoteiEndDate));
+        console.log("newDate", new Date());
+
         const result = await updateTask(wbsId, {
           id: Number(task.id),
           name: values.name,
-          yoteiStart: values.yoteiStartDate,
-          yoteiEnd: values.yoteiEndDate,
+          yoteiStart: new Date(values.yoteiStartDate),
+          yoteiEnd: new Date(values.yoteiEndDate),
           yoteiKosu: values.yoteiKosu,
           status: values.status,
           assigneeId: Number(values.assigneeId),
@@ -254,9 +287,13 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
 
   const isEditMode = !!task;
   const modalTitle = isEditMode ? "タスクを編集" : "新規タスク追加";
-  const submitButtonText = isEditMode ? 
-    (isSubmitting ? "更新中..." : "更新") : 
-    (isSubmitting ? "作成中..." : "作成");
+  const submitButtonText = isEditMode
+    ? isSubmitting
+      ? "更新中..."
+      : "更新"
+    : isSubmitting
+    ? "作成中..."
+    : "作成";
 
   const handleOpenChange = (open: boolean) => {
     if (onClose && !open) {
@@ -283,7 +320,7 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                 </Badge>
                 <span>ID: {task.id}</span>
               </div>
-              
+
               {/* 元の値を表示 */}
               <div className="bg-gray-50 rounded-lg p-4 border">
                 <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
@@ -297,35 +334,47 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                   </div>
                   <div>
                     <span className="text-gray-500">工程:</span>
-                    <span className="ml-2 font-medium">{task.phase?.name || "未設定"}</span>
+                    <span className="ml-2 font-medium">
+                      {task.phase?.name || "未設定"}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-500">担当者:</span>
-                    <span className="ml-2 font-medium">{task.assignee?.displayName || "未設定"}</span>
+                    <span className="ml-2 font-medium">
+                      {task.assignee?.displayName || "未設定"}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-500">ステータス:</span>
-                    <span className="ml-2 font-medium">{getTaskStatusName(task.status)}</span>
+                    <span className="ml-2 font-medium">
+                      {getTaskStatusName(task.status)}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-500">予定開始:</span>
                     <span className="ml-2 font-medium">
-                      {task.yoteiStart ? 
-                        (typeof task.yoteiStart === 'string' ? task.yoteiStart : task.yoteiStart.toLocaleDateString('ja-JP'))
+                      {task.yoteiStart
+                        ? typeof task.yoteiStart === "string"
+                          ? task.yoteiStart
+                          : task.yoteiStart.toLocaleDateString("ja-JP")
                         : "未設定"}
                     </span>
                   </div>
                   <div>
                     <span className="text-gray-500">予定終了:</span>
                     <span className="ml-2 font-medium">
-                      {task.yoteiEnd ? 
-                        (typeof task.yoteiEnd === 'string' ? task.yoteiEnd : task.yoteiEnd.toLocaleDateString('ja-JP'))
+                      {task.yoteiEnd
+                        ? typeof task.yoteiEnd === "string"
+                          ? task.yoteiEnd
+                          : task.yoteiEnd.toLocaleDateString("ja-JP")
                         : "未設定"}
                     </span>
                   </div>
                   <div>
                     <span className="text-gray-500">予定工数:</span>
-                    <span className="ml-2 font-medium">{task.yoteiKosu || 0}時間</span>
+                    <span className="ml-2 font-medium">
+                      {task.yoteiKosu || 0}時間
+                    </span>
                   </div>
                 </div>
               </div>
@@ -350,7 +399,7 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                     <Flag className="h-4 w-4" />
                     基本情報
                   </h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* 工程選択 */}
                     <FormField
@@ -358,7 +407,9 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                       name="phaseId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm font-medium">工程 *</FormLabel>
+                          <FormLabel className="text-sm font-medium">
+                            工程 *
+                          </FormLabel>
                           <FormControl>
                             <Select
                               onValueChange={field.onChange}
@@ -437,11 +488,13 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium">タスク名 *</FormLabel>
+                        <FormLabel className="text-sm font-medium">
+                          タスク名 *
+                        </FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="例：機能A作成" 
-                            {...field} 
+                          <Input
+                            placeholder="例：機能A作成"
+                            {...field}
                             className="text-sm"
                           />
                         </FormControl>
@@ -460,7 +513,7 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                     <CalendarDays className="h-4 w-4" />
                     日程・工数
                   </h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* 予定開始日 */}
                     <FormField
@@ -468,7 +521,9 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                       name="yoteiStartDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm font-medium">予定開始日 *</FormLabel>
+                          <FormLabel className="text-sm font-medium">
+                            予定開始日 *
+                          </FormLabel>
                           <DatePicker field={field} />
                           <FormMessage />
                         </FormItem>
@@ -481,7 +536,9 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                       name="yoteiEndDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm font-medium">予定終了日 *</FormLabel>
+                          <FormLabel className="text-sm font-medium">
+                            予定終了日 *
+                          </FormLabel>
                           <DatePicker field={field} />
                           <FormMessage />
                         </FormItem>
@@ -527,13 +584,15 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                     <AlertCircle className="h-4 w-4" />
                     ステータス
                   </h3>
-                  
+
                   <FormField
                     control={form.control}
                     name="status"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium">ステータス *</FormLabel>
+                        <FormLabel className="text-sm font-medium">
+                          ステータス *
+                        </FormLabel>
                         <FormControl>
                           <Select
                             onValueChange={field.onChange}
@@ -607,7 +666,9 @@ export function TaskModal({ wbsId, task, children, isOpen: externalIsOpen, onClo
                 disabled={isSubmitting || isLoading}
                 className="min-w-[100px]"
               >
-                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                {isSubmitting && (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                )}
                 {submitButtonText}
               </Button>
             </DialogFooter>

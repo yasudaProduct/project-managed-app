@@ -143,6 +143,8 @@ export class TaskApplicationService implements ITaskApplicationService {
 
     public async updateTask(args: { wbsId: number, updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }> {
         console.log("service: updateTask")
+        console.log("service: updateTask:yoteiStart", args.updateTask.yoteiStart);
+        console.log("service: updateTask:yoteiEnd", args.updateTask.yoteiEnd);
         const { wbsId, updateTask } = args;
 
         const task: Task | null = await this.taskRepository.findById(updateTask.id);

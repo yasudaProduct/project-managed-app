@@ -3,12 +3,12 @@
 import React, { useState } from "react";
 import { Milestone, TaskStatus, WbsTask } from "@/types/wbs";
 import { GroupBy } from "./gantt-controls";
-import { formatDateyyyymmdd } from "@/lib/utils";
 import { Target, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { updateTask } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
+import { formatDateToLocalString } from "./gantt-utils";
 
 interface TaskWithPosition extends WbsTask {
   startPosition: number;
@@ -116,7 +116,6 @@ export default function GanttChart({
     const start = timeAxis[0].date;
     const end = new Date(timeAxis[timeAxis.length - 1].date);
     end.setDate(end.getDate() + 7); // 最後の期間を考慮
-    console.log("dateRange", start.toISOString(), end.toISOString());
     return { start, end };
   }, [timeAxis]);
 
@@ -320,8 +319,8 @@ export default function GanttChart({
       const result = await updateTask(wbsId, {
         id: Number(draggedTask.id),
         name: draggedTask.name,
-        yoteiStart: newStartDate.toISOString().split("T")[0].replace(/-/g, "/"),
-        yoteiEnd: newEndDate.toISOString().split("T")[0].replace(/-/g, "/"),
+        yoteiStart: newStartDate,
+        yoteiEnd: newEndDate,
         yoteiKosu: draggedTask.yoteiKosu || 0,
         status: draggedTask.status,
         assigneeId: Number(draggedTask.assigneeId),
@@ -514,10 +513,10 @@ export default function GanttChart({
                             }px`,
                             top: isTaskCollapsed ? "0.375rem" : "0.5rem", // 6px : 8px
                           }}
-                          title={`${task.name} (${formatDateyyyymmdd(
-                            task.yoteiStart.toISOString()
-                          )} - ${formatDateyyyymmdd(
-                            task.yoteiEnd.toISOString()
+                          title={`${task.name} (${formatDateToLocalString(
+                            task.yoteiStart
+                          )} - ${formatDateToLocalString(
+                            task.yoteiEnd
                           )}) - ドラッグで移動、クリックで編集`}
                           onMouseDown={(e) => handleMouseDown(e, task)}
                         >

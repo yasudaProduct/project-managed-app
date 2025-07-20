@@ -5,6 +5,7 @@ import {
   calculateTaskPositions,
   groupTasks,
   calculateMilestonePositions,
+  formatDateToLocalString,
   TaskWithPosition,
 } from "@/components/ganttv2/gantt-utils";
 import { WbsTask, Milestone, TaskStatus, ProjectStatus } from "@/types/wbs";
@@ -304,6 +305,33 @@ describe("gantt-utils", () => {
       expect(result).toHaveLength(2);
       expect(result[0].position).toBeCloseTo((9 / 30) * 3000, 0);
       expect(result[1].position).toBeCloseTo((19 / 30) * 3000, 0);
+    });
+  });
+
+  describe("formatDateToLocalString", () => {
+    it("ローカル日付をYYYY/MM/DD形式に変換する", () => {
+      const date = new Date(2024, 0, 15); // 2024年1月15日（ローカル）
+      const result = formatDateToLocalString(date);
+      expect(result).toBe("2024/01/15");
+    });
+
+    it("一桁の月と日を0埋めする", () => {
+      const date = new Date(2024, 2, 5); // 2024年3月5日
+      const result = formatDateToLocalString(date);
+      expect(result).toBe("2024/03/05");
+    });
+
+    it("年末年始の日付も正しく変換する", () => {
+      const date = new Date(2023, 11, 31); // 2023年12月31日
+      const result = formatDateToLocalString(date);
+      expect(result).toBe("2023/12/31");
+    });
+
+    it("タイムゾーンに影響されない", () => {
+      // 午前中の時刻でテスト（UTC変換で日付が変わらない）
+      const date = new Date(2024, 0, 15, 10, 30, 0); // 2024年1月15日 10:30
+      const result = formatDateToLocalString(date);
+      expect(result).toBe("2024/01/15");
     });
   });
 });

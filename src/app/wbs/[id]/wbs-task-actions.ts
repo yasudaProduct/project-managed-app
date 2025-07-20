@@ -8,6 +8,7 @@ import { container } from "@/lib/inversify.config"
 import { ITaskApplicationService } from "@/applications/task/task-application-service";
 import { TaskStatus as TaskStatusDomain } from "@/domains/task/value-object/project-status";
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
+import { ensureUTC } from "@/lib/date-utils";
 
 const taskApplicationService = container.get<ITaskApplicationService>(SYMBOL.ITaskApplicationService);
 const taskFactory = container.get<ITaskFactory>(SYMBOL.ITaskFactory);
@@ -15,11 +16,8 @@ const taskFactory = container.get<ITaskFactory>(SYMBOL.ITaskFactory);
 export async function getTaskAll(wbsId: number): Promise<WbsTask[]> {
 
     const tasks = await taskApplicationService.getTaskAll(wbsId);
-    return tasks.map(task => ({
-        ...task,
-        yoteiStart: task.yoteiStart ? new Date(task.yoteiStart.toISOString().split("T")[0]) : undefined,
-        yoteiEnd: task.yoteiEnd ? new Date(task.yoteiEnd.toISOString().split("T")[0]) : undefined,
-    }));
+    // データベースからのUTC日付はそのまま返す（クライアント側で表示変換）
+    return tasks;
 
 }
 
@@ -61,8 +59,8 @@ export async function createTask(
             assigneeId: taskData.assigneeId ? Number(taskData.assigneeId) : undefined,
             phaseId: taskData.phaseId!,
             status: new TaskStatusDomain({ status: taskData.status }),
-            yoteiStartDate: new Date(taskData.periods![0].startDate!),
-            yoteiEndDate: new Date(taskData.periods![0].endDate!),
+            yoteiStartDate: ensureUTC(taskData.periods![0].startDate!)!,
+            yoteiEndDate: ensureUTC(taskData.periods![0].endDate!)!,
             yoteiKosu: taskData.periods?.[0].kosus.find(k => k.type === 'NORMAL')?.kosu ?? 0,
         });
 
@@ -83,22 +81,24 @@ export async function updateTask(
         id: number;
         taskNo?: string;
         name: string;
-        yoteiStart?: string;
-        yoteiEnd?: string;
+        yoteiStart?: Date;
+        yoteiEnd?: Date;
         yoteiKosu?: number;
         status: TaskStatus;
         assigneeId?: number;
         phaseId?: number;
     },
 ): Promise<{ success: boolean; task?: WbsTask, error?: string }> {
-    console.log("updateTask");
+    console.log("updateTask:yoteiStart", taskData.yoteiStart);
+    console.log("updateTask:yoteiEnd", taskData.yoteiEnd);
+    console.log("newDate", new Date());
 
     const result = await taskApplicationService.updateTask({
         wbsId: wbsId,
         updateTask: {
             ...taskData,
-            yoteiStart: taskData.yoteiStart ? new Date(taskData.yoteiStart) : undefined,
-            yoteiEnd: taskData.yoteiEnd ? new Date(taskData.yoteiEnd) : undefined,
+            yoteiStart: ensureUTC(taskData.yoteiStart),
+            yoteiEnd: ensureUTC(taskData.yoteiEnd),
         }
     });
 

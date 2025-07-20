@@ -41,7 +41,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TaskStatus, WbsTask } from "@/types/wbs";
-import { formatDateyyyymmdd, getTaskStatusName } from "@/lib/utils";
+import { getTaskStatusName } from "@/lib/utils";
+import { formatUTCDateForDisplay } from "@/lib/date-display-utils";
 
 export interface TaskTableViewPageProps {
   wbsTasks: WbsTask[];
@@ -50,14 +51,14 @@ export interface TaskTableViewPageProps {
 export type TaskTableViewProp = {
   id: string;
   name: string;
-  kijunStart?: string;
-  kijunEnd?: string;
+  kijunStart?: Date;
+  kijunEnd?: Date;
   kijunKosu?: number;
-  yoteiStart?: string;
-  yoteiEnd?: string;
+  yoteiStart?: Date;
+  yoteiEnd?: Date;
   yoteiKosu?: number;
-  jissekiStart?: string;
-  jissekiEnd?: string;
+  jissekiStart?: Date;
+  jissekiEnd?: Date;
   jissekiKosu?: number;
   status: TaskStatus;
   assigneeId: string;
@@ -99,7 +100,7 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
     header: "基準開始日",
     cell: ({ row }) => (
       <div className="capitalize">
-        {formatDateyyyymmdd(row.getValue("kijunStart"))}
+        {formatUTCDateForDisplay(row.getValue("kijunStart"))}
       </div>
     ),
   },
@@ -108,7 +109,7 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
     header: "基準終了日",
     cell: ({ row }) => (
       <div className="capitalize">
-        {formatDateyyyymmdd(row.getValue("kijunEnd"))}
+        {formatUTCDateForDisplay(row.getValue("kijunEnd"))}
       </div>
     ),
   },
@@ -124,7 +125,7 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
     header: "予定開始日",
     cell: ({ row }) => (
       <div className="capitalize">
-        {formatDateyyyymmdd(row.getValue("yoteiStart"))}
+        {formatUTCDateForDisplay(row.getValue("yoteiStart"))}
       </div>
     ),
   },
@@ -133,7 +134,7 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
     header: "予定終了日",
     cell: ({ row }) => (
       <div className="capitalize">
-        {formatDateyyyymmdd(row.getValue("yoteiEnd"))}
+        {formatUTCDateForDisplay(row.getValue("yoteiEnd"))}
       </div>
     ),
   },
@@ -149,7 +150,7 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
     header: "実績開始日",
     cell: ({ row }) => (
       <div className="capitalize">
-        {formatDateyyyymmdd(row.getValue("jissekiStart"))}
+        {formatUTCDateForDisplay(row.getValue("jissekiStart"))}
       </div>
     ),
   },
@@ -158,7 +159,7 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
     header: "実績終了日",
     cell: ({ row }) => (
       <div className="capitalize">
-        {formatDateyyyymmdd(row.getValue("jissekiEnd"))}
+        {formatUTCDateForDisplay(row.getValue("jissekiEnd"))}
       </div>
     ),
   },
@@ -228,14 +229,14 @@ export function TaskTableViewPage({
         ? wbsTasks.map((wbsTask) => ({
             id: wbsTask.taskNo ?? "",
             name: wbsTask.name,
-            kijunStart: wbsTask.kijunStart?.toISOString(),
-            kijunEnd: wbsTask.kijunEnd?.toISOString(),
+            kijunStart: wbsTask.kijunStart,
+            kijunEnd: wbsTask.kijunEnd,
             kijunKosu: wbsTask.kijunKosu,
-            yoteiStart: wbsTask.yoteiStart?.toISOString(),
-            yoteiEnd: wbsTask.yoteiEnd?.toISOString(),
+            yoteiStart: wbsTask.yoteiStart,
+            yoteiEnd: wbsTask.yoteiEnd,
             yoteiKosu: wbsTask.yoteiKosu,
-            jissekiStart: wbsTask.jissekiStart?.toISOString(),
-            jissekiEnd: wbsTask.jissekiEnd?.toISOString(),
+            jissekiStart: wbsTask.jissekiStart,
+            jissekiEnd: wbsTask.jissekiEnd,
             jissekiKosu: wbsTask.jissekiKosu,
             status: wbsTask.status,
             assigneeId: wbsTask.assigneeId ?? "",

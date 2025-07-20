@@ -24,7 +24,6 @@ export default function GanttTimeAxis({
   headerScrollRef,
   onScroll,
 }: GanttTimeAxisProps) {
-  console.log("timeAxis", timeAxis);
   return (
     <div
       ref={headerScrollRef}

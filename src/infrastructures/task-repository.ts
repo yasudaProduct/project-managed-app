@@ -12,6 +12,7 @@ import { TaskNo } from "@/domains/task/value-object/task-id";
 import { WorkRecord } from "@/domains/work-records/work-recoed";
 import prisma from "@/lib/prisma";
 import { injectable } from "inversify";
+import { ensureUTC, fromDatabase } from "@/lib/date-utils";
 
 @injectable()
 export class TaskRepository implements ITaskRepository {
@@ -236,8 +237,8 @@ export class TaskRepository implements ITaskRepository {
             const periodDb = await prisma.taskPeriod.create({
                 data: {
                     taskId: taskDb.id,
-                    startDate: period.startDate,
-                    endDate: period.endDate,
+                    startDate: ensureUTC(period.startDate)!,
+                    endDate: ensureUTC(period.endDate)!,
                     type: period.type.type,
                 },
             });
@@ -285,13 +286,13 @@ export class TaskRepository implements ITaskRepository {
                     id: period.id ?? 0, // undefinedの場合,エラーになるので0を設定
                 },
                 update: {
-                    startDate: period.startDate,
-                    endDate: period.endDate,
+                    startDate: ensureUTC(period.startDate)!,
+                    endDate: ensureUTC(period.endDate)!,
                 },
                 create: {
                     taskId: task.id!,
-                    startDate: period.startDate,
-                    endDate: period.endDate,
+                    startDate: ensureUTC(period.startDate)!,
+                    endDate: ensureUTC(period.endDate)!,
                     type: period.type.type,
                 },
             })

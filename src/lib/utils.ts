@@ -7,6 +7,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * @deprecated Use formatUTCDateForDisplaySlash from date-display-utils.ts instead
+ * この関数はローカルタイムゾーンを使用するため、日付のズレが発生する可能性があります
+ */
 export const formatDateyyyymmdd = (dateString: string): string | undefined => {
   if (!dateString) return undefined;
   if (isNaN(Date.parse(dateString))) return undefined;

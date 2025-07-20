@@ -6,7 +6,9 @@
       "Bash(npm install:*)",
       "mcp__ide__getDiagnostics",
       "Bash(npx prisma db seed:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(npm run build:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }
