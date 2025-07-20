@@ -9,7 +9,11 @@ import { TaskModal } from "@/components/wbs/task-modal";
 import { updateTask } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
 import { formatDateToLocalString } from "./gantt-utils";
-import { getTaskRowStyleDynamic, getGroupHeaderStyle, getTaskBarStyleDynamic } from "./gantt-row-constants";
+import {
+  getTaskRowStyleDynamic,
+  getGroupHeaderStyle,
+  getTaskBarStyleDynamic,
+} from "./gantt-row-constants";
 
 interface TaskWithPosition extends WbsTask {
   startPosition: number;
@@ -467,8 +471,8 @@ export default function GanttChart({
           {groups.map((group) => (
             <div key={group.id}>
               {groupBy !== "none" && (
-                <div 
-                  className="bg-gray-100 border-b border-gray-200" 
+                <div
+                  className="bg-gray-100 border-b border-gray-200"
                   style={getGroupHeaderStyle()}
                 />
               )}
