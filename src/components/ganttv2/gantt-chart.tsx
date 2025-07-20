@@ -9,6 +9,7 @@ import { TaskModal } from "@/components/wbs/task-modal";
 import { updateTask } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
 import { formatDateToLocalString } from "./gantt-utils";
+import { getTaskRowStyleDynamic, getGroupHeaderStyle, getTaskBarStyleDynamic } from "./gantt-row-constants";
 
 interface TaskWithPosition extends WbsTask {
   startPosition: number;
@@ -466,7 +467,10 @@ export default function GanttChart({
           {groups.map((group) => (
             <div key={group.id}>
               {groupBy !== "none" && (
-                <div className="h-8 bg-gray-100 border-b border-gray-200" />
+                <div 
+                  className="bg-gray-100 border-b border-gray-200" 
+                  style={getGroupHeaderStyle()}
+                />
               )}
 
               {!group.collapsed &&
@@ -477,17 +481,14 @@ export default function GanttChart({
                   return (
                     <div
                       key={task.id}
-                      className="border-b border-gray-200 relative hover:bg-gray-50 transition-all duration-200 py-2"
-                      style={{
-                        height: isTaskCollapsed ? "3rem" : "auto",
-                        minHeight: isTaskCollapsed ? "3rem" : "3.5rem",
-                      }}
+                      className="border-b border-gray-200 relative hover:bg-gray-50 transition-all duration-200"
+                      style={getTaskRowStyleDynamic(task, isTaskCollapsed)}
                     >
                       {task.yoteiStart && task.yoteiEnd && (
                         <div
                           data-task-id={task.id}
                           className={cn(
-                            "absolute h-8 rounded-md shadow-sm flex items-center px-2 text-white text-xs font-medium transition-all duration-200 group select-none",
+                            "absolute rounded-md shadow-sm flex items-center px-2 text-white text-xs font-medium transition-all duration-200 group select-none",
                             "hover:shadow-md hover:z-10 relative",
                             (isDragging || isResizing) &&
                               draggedTask?.id === task.id
@@ -511,7 +512,7 @@ export default function GanttChart({
                                 ? Math.max(draggedTask.width, 20)
                                 : Math.max(task.width, 20)
                             }px`,
-                            top: isTaskCollapsed ? "0.375rem" : "0.5rem", // 6px : 8px
+                            ...getTaskBarStyleDynamic(task, isTaskCollapsed),
                           }}
                           title={`${task.name} (${formatDateToLocalString(
                             task.yoteiStart

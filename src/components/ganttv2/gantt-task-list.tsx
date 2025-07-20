@@ -17,6 +17,7 @@ import {
   Maximize2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getTaskRowStyleDynamic, getGroupHeaderStyle } from "./gantt-row-constants";
 
 interface TaskWithPosition extends WbsTask {
   startPosition: number;
@@ -116,7 +117,8 @@ export default function GanttTaskList({
           <div key={group.id}>
             {groupBy !== "none" && (
               <div
-                className="h-8 px-4 bg-gray-100 border-b border-gray-200 flex items-center cursor-pointer hover:bg-gray-200"
+                className="px-4 bg-gray-100 border-b border-gray-200 flex items-center cursor-pointer hover:bg-gray-200"
+                style={getGroupHeaderStyle()}
                 onClick={() => onToggleGroup(group.id)}
               >
                 {group.collapsed ? (
@@ -150,11 +152,10 @@ export default function GanttTaskList({
                 return (
                   <div
                     key={task.id}
-                    className="px-4 border-b border-gray-200 hover:bg-gray-50 transition-all duration-200 py-2"
-                    style={{
-                      height: isTaskCollapsed ? "3rem" : "auto",
-                      minHeight: isTaskCollapsed ? "3rem" : "3.5rem",
-                    }}
+                    className={`px-4 border-b border-gray-200 hover:bg-gray-50 transition-all duration-200 flex flex-col ${
+                      isTaskCollapsed ? 'justify-center' : 'py-2'
+                    }`}
+                    style={getTaskRowStyleDynamic(task, isTaskCollapsed)}
                   >
                     {/* タスク名とコントロール */}
                     <div className="flex items-center justify-between">
