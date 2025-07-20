@@ -172,7 +172,7 @@ export function calculateTaskPositions(
   const totalDays = Math.ceil(
     (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
     (1000 * 60 * 60 * 24)
-  );
+  ) + 1;
 
   return tasks.map((task) => {
     // UTCで受け取った日付をローカル日付として解釈
@@ -207,7 +207,8 @@ export function calculateTaskPositions(
       )
     );
 
-    const duration = Math.max(1, endDays - startDays + 2);
+    // タスクの期間を計算
+    const duration = Math.max(1, endDays - startDays + 1);
 
     // チャート幅に基づいてピクセル位置を計算
     const startPosition = (startDays / totalDays) * chartWidth;

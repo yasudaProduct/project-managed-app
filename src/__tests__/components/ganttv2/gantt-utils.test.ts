@@ -24,7 +24,7 @@ describe("gantt-utils", () => {
 
       const result = calculateDateRange(project);
 
-      expect(result.start).toEqual(new Date("2024-01-03"));
+      expect(result.start).toEqual(new Date("2024-01-02"));
       expect(result.end).toEqual(new Date("2024-01-27"));
     });
   });
@@ -85,6 +85,8 @@ describe("gantt-utils", () => {
     const dateRange = {
       start: new Date("2024-01-01"),
       end: new Date("2024-01-31"),
+      // start: new Date("2025-05-14T00:00:00Z"),
+      // end: new Date("2025-05-17T00:00:00Z"),
     };
 
     it("日表示モードで時間軸を生成する", () => {
@@ -126,13 +128,12 @@ describe("gantt-utils", () => {
   });
 
   describe("calculateTaskPositions", () => {
-    const dateRange = {
-      start: new Date("2024-01-01"),
-      end: new Date("2024-01-31"),
-    };
-    const chartWidth = 3000; // 30日 * 100px/日
-
     it("タスクの位置とサイズを計算する", () => {
+      const dateRange = {
+        start: new Date("2024-01-01"),
+        end: new Date("2024-01-31"),
+      };
+      const chartWidth = 3000; // 30日 * 100px/日
       const tasks: WbsTask[] = [
         {
           id: 1,
@@ -153,10 +154,72 @@ describe("gantt-utils", () => {
       const task = result[0];
 
       // 開始位置: 4日目（1月5日は5日目だが、0ベースなので4）
-      expect(task.startPosition).toBeCloseTo((4 / 30) * 3000, 0);
+      expect(task.startPosition).toBeCloseTo((4 / 31) * 3000, 0);
 
-      // 幅: 7日間（5日から10日まで + 2日）
-      expect(task.width).toBeCloseTo((7 / 30) * 3000, 0);
+      // 幅: 6日間（5日から10日まで）
+      expect(task.width).toBeCloseTo((6 / 31) * 3000, 0);
+    });
+
+    it("タスクの位置とサイズを計算する 2日のタスク", () => {
+      const dateRange = {
+        start: new Date("2024-01-01"),
+        end: new Date("2024-01-31"),
+      };
+      const chartWidth = 3000; // 30日 * 100px/日
+      const tasks: WbsTask[] = [
+        {
+          id: 1,
+          name: "Task 1",
+          status: "NOT_STARTED" as TaskStatus,
+          yoteiStart: new Date("2024-01-02"),
+          yoteiEnd: new Date("2024-01-03"),
+          jissekiStart: undefined,
+          jissekiEnd: undefined,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const result = calculateTaskPositions(tasks, dateRange, chartWidth);
+
+      expect(result).toHaveLength(1);
+      const task = result[0];
+
+      // 開始位置: 0日目（1月1日は1日目だが、0ベースなので0）
+      expect(task.startPosition).toBeCloseTo((1 / 30) * chartWidth, 0);
+
+      // 幅: 2日間（1日から2日まで）
+      expect(task.width).toBeCloseTo((2 / 30) * chartWidth, 0);
+    });
+
+    it("タスクの位置とサイズを計算する 2日のタスク", () => {
+      const dateRange = {
+        start: new Date("2025-07-01"),
+        end: new Date("2025-07-30"),
+      };
+      const { chartWidth } = generateTimeAxis(dateRange, "day");
+      const tasks: WbsTask[] = [
+        {
+          id: 2,
+          name: "Task 2",
+          status: "NOT_STARTED" as TaskStatus,
+          yoteiStart: new Date("2025-07-02"),
+          yoteiEnd: new Date("2025-07-04"),
+          jissekiStart: undefined,
+          jissekiEnd: undefined,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const result = calculateTaskPositions(tasks, dateRange, chartWidth);
+
+      expect(result).toHaveLength(1);
+      const task1 = result[0];
+
+      // 開始位置: 2日目（7月2日は7月2日だが、0ベースなので1）
+      expect(task1.startPosition).toBeCloseTo((1 / 29) * chartWidth, 2);
+      expect(task1.width).toBeCloseTo((1 / 29) * chartWidth, 0);
     });
 
     it("開始日がない場合は範囲開始日を使用する", () => {
