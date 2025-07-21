@@ -147,14 +147,11 @@ export default function GanttV2Component({
         assigneeFilter={assigneeFilter}
         showMilestones={showMilestones}
         tasks={tasks}
-        milestones={milestones}
-        wbsId={wbsId}
         onViewModeChange={setViewMode}
         onGroupByChange={setGroupBy}
         onStatusFilterChange={setStatusFilter}
         onAssigneeFilterChange={setAssigneeFilter}
         onShowMilestonesChange={setShowMilestones}
-        onMilestoneUpdate={onTaskUpdate || (() => {})}
       />
 
       {/* ガントチャート */}

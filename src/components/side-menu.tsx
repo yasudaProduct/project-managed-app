@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, Home, Menu, PlusCircle, Trello, Users } from "lucide-react";
+import { Calendar, Home, Menu, PlusCircle, Target, Trello, Users } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Sheet,
@@ -108,11 +108,18 @@ export function SideMenu() {
                 🚧月別集計
               </Link>
               <Link
-                href={`/wbs/${wbsId}/gantt`}
+                href={`/wbs/${wbsId}/ganttv2`}
                 className="text-lg flex items-center gap-2"
               >
                 <Trello className="h-4 w-4" />
-                🚧ガントチャート
+                ガントチャート
+              </Link>
+              <Link
+                href={`/wbs/${wbsId}/milestone`}
+                className="text-lg flex items-center gap-2"
+              >
+                <Target className="h-4 w-4" />
+                マイルストーン管理
               </Link>
             </>
           )}

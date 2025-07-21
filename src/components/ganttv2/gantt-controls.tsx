@@ -9,11 +9,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { WbsTask, Milestone } from "@/types/wbs";
+import { WbsTask } from "@/types/wbs";
 import { getTaskStatusName } from "@/lib/utils";
 import { Calendar, Filter, Eye, EyeOff, User, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import MilestoneControls from "./milestone-controls";
 
 export type ViewMode = "day" | "week" | "month" | "quarter";
 export type GroupBy = "phase" | "assignee" | "status" | "none";
@@ -39,14 +38,11 @@ interface GanttControlsProps {
   assigneeFilter: string;
   showMilestones: boolean;
   tasks: WbsTask[];
-  milestones: Milestone[];
-  wbsId: number;
   onViewModeChange: (mode: ViewMode) => void;
   onGroupByChange: (groupBy: GroupBy) => void;
   onStatusFilterChange: (status: string) => void;
   onAssigneeFilterChange: (assignee: string) => void;
   onShowMilestonesChange: (show: boolean) => void;
-  onMilestoneUpdate: () => void;
 }
 
 export default function GanttControls({
@@ -56,18 +52,15 @@ export default function GanttControls({
   assigneeFilter,
   showMilestones,
   tasks,
-  milestones,
-  wbsId,
   onViewModeChange,
   onGroupByChange,
   onStatusFilterChange,
   onAssigneeFilterChange,
   onShowMilestonesChange,
-  onMilestoneUpdate,
 }: GanttControlsProps) {
   return (
     <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 表示モード */}
         <div className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
@@ -155,36 +148,25 @@ export default function GanttControls({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* 表示オプション */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onShowMilestonesChange(!showMilestones)}
-            className={cn(
-              "gap-2",
-              showMilestones && "bg-blue-50 border-blue-200"
-            )}
-            data-testid="milestone-toggle-button"
-          >
-            {showMilestones ? (
-              <Eye className="h-4 w-4" />
-            ) : (
-              <EyeOff className="h-4 w-4" />
-            )}
-            マイルストーン表示
-          </Button>
-        </div>
-
-        {/* マイルストーン管理 */}
-        <div className="lg:col-span-2">
-          <MilestoneControls
-            milestones={milestones}
-            wbsId={wbsId}
-            onMilestoneUpdate={onMilestoneUpdate}
-          />
-        </div>
+      {/* 表示オプション */}
+      <div className="flex items-center gap-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onShowMilestonesChange(!showMilestones)}
+          className={cn(
+            "gap-2",
+            showMilestones && "bg-blue-50 border-blue-200"
+          )}
+          data-testid="milestone-toggle-button"
+        >
+          {showMilestones ? (
+            <Eye className="h-4 w-4" />
+          ) : (
+            <EyeOff className="h-4 w-4" />
+          )}
+          マイルストーン
+        </Button>
       </div>
     </div>
   );

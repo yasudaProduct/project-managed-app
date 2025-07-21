@@ -28,7 +28,8 @@ import {
 } from "@/app/wbs/[id]/milestone-actions";
 import { toast } from "@/hooks/use-toast";
 import { Trash2, Calendar } from "lucide-react";
-import { utcToLocalDate, localDateToUtc } from "@/lib/date-display-utils";
+import { utcToLocalDate } from "@/lib/date-display-utils";
+import { ensureUTC } from "@/lib/date-utils";
 
 interface MilestoneModalProps {
   isOpen: boolean;
@@ -74,15 +75,15 @@ export function MilestoneModal({
     if (!name.trim() || !date) return;
 
     setIsLoading(true);
-    
+
     try {
       // ローカル日付をUTCに変換
       const localDateObj = new Date(date + "T00:00:00");
-      const utcDate = localDateToUtc(localDateObj);
+      const utcDate = ensureUTC(localDateObj);
 
       const milestoneData = {
         name: name.trim(),
-        date: utcDate,
+        date: utcDate!,
         wbsId,
       };
 
@@ -98,7 +99,9 @@ export function MilestoneModal({
 
       if (result.success) {
         toast({
-          title: isEditing ? "マイルストーンを更新しました" : "マイルストーンを作成しました",
+          title: isEditing
+            ? "マイルストーンを更新しました"
+            : "マイルストーンを作成しました",
           description: `${name}を${isEditing ? "更新" : "作成"}しました`,
         });
         onClose();
@@ -112,7 +115,7 @@ export function MilestoneModal({
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "エラー",
         description: "予期しないエラーが発生しました",
@@ -146,7 +149,7 @@ export function MilestoneModal({
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "エラー",
         description: "予期しないエラーが発生しました",
@@ -217,7 +220,10 @@ export function MilestoneModal({
                 >
                   キャンセル
                 </Button>
-                <Button type="submit" disabled={isLoading || !name.trim() || !date}>
+                <Button
+                  type="submit"
+                  disabled={isLoading || !name.trim() || !date}
+                >
                   {isLoading ? "保存中..." : isEditing ? "更新" : "作成"}
                 </Button>
               </div>
@@ -236,7 +242,9 @@ export function MilestoneModal({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>キャンセル</AlertDialogCancel>
+            <AlertDialogCancel disabled={isLoading}>
+              キャンセル
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isLoading}

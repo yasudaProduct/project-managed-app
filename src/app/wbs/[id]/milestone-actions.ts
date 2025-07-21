@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/db";
+import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -51,7 +51,7 @@ export async function createMilestone(
     };
   } catch (error) {
     console.error("Failed to create milestone:", error);
-    
+
     if (error instanceof z.ZodError) {
       return {
         success: false,
@@ -99,7 +99,7 @@ export async function updateMilestone(
     };
   } catch (error) {
     console.error("Failed to update milestone:", error);
-    
+
     if (error instanceof z.ZodError) {
       return {
         success: false,
@@ -134,7 +134,7 @@ export async function deleteMilestone(
     };
   } catch (error) {
     console.error("Failed to delete milestone:", error);
-    
+
     return {
       success: false,
       error: "マイルストーンの削除に失敗しました",

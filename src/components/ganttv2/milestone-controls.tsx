@@ -75,7 +75,7 @@ export default function MilestoneControls({
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "エラー",
         description: "予期しないエラーが発生しました",

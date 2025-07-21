@@ -16,6 +16,7 @@ import {
   BarChart,
   ExternalLink,
   UserPlus,
+  Target,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -223,7 +224,7 @@ export function WbsInfoPanel({ selectedWbs }: WbsInfoPanelProps) {
                 ダッシュボード
               </Button>
             </Link>
-            <Link href={`/wbs/${selectedWbs.id}/gantt`} className="block">
+            <Link href={`/wbs/${selectedWbs.id}/ganttv2`} className="block">
               <Button
                 variant="outline"
                 size="sm"
@@ -233,14 +234,14 @@ export function WbsInfoPanel({ selectedWbs }: WbsInfoPanelProps) {
                 ガントチャート
               </Button>
             </Link>
-            <Link href={`/wbs/${selectedWbs.id}/ganttv2`} className="block">
+            <Link href={`/wbs/${selectedWbs.id}/milestone`} className="block">
               <Button
                 variant="outline"
                 size="sm"
                 className="w-full justify-start gap-2"
               >
-                <Calendar className="h-4 w-4" />
-                ガントチャート ver2
+                <Target className="h-4 w-4" />
+                マイルストーン管理
               </Button>
             </Link>
             <Link href={`/wbs/${selectedWbs.id}/assignee`} className="block">
