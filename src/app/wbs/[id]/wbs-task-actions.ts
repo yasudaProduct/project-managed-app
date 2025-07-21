@@ -16,7 +16,6 @@ const taskFactory = container.get<ITaskFactory>(SYMBOL.ITaskFactory);
 export async function getTaskAll(wbsId: number): Promise<WbsTask[]> {
 
     const tasks = await taskApplicationService.getTaskAll(wbsId);
-    // データベースからのUTC日付はそのまま返す（クライアント側で表示変換）
     return tasks;
 
 }

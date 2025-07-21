@@ -12,7 +12,7 @@ import { TaskNo } from "@/domains/task/value-object/task-id";
 import { WorkRecord } from "@/domains/work-records/work-recoed";
 import prisma from "@/lib/prisma";
 import { injectable } from "inversify";
-import { ensureUTC, fromDatabase } from "@/lib/date-utils";
+import { ensureUTC } from "@/lib/date-utils";
 
 @injectable()
 export class TaskRepository implements ITaskRepository {
@@ -88,7 +88,7 @@ export class TaskRepository implements ITaskRepository {
                         kosus: true,
                     },
                 },
-            }
+            },
         });
 
         const workRecordsDb = await prisma.workRecord.findMany({

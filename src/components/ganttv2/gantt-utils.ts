@@ -117,8 +117,6 @@ export function generateTimeAxis(
   dateRange: DateRange,
   viewMode: ViewMode
 ): { timeAxis: TimeAxisItem[]; chartWidth: number } {
-  console.log("dateRange", dateRange);
-  console.log("viewMode", viewMode);
   const currentMode = VIEW_MODES.find((mode) => mode.value === viewMode)!;
 
   // 日付範囲を正規化（ローカル時刻で00:00:00）
@@ -155,8 +153,6 @@ export function generateTimeAxis(
     };
   });
 
-  console.log("axis", axis);
-  console.log("calculatedChartWidth", calculatedChartWidth);
   return { timeAxis: axis, chartWidth: calculatedChartWidth };
 }
 
@@ -237,12 +233,27 @@ export function groupTasks(
   groupBy: GroupBy,
   collapsedGroups: Set<string>
 ): Group[] {
+  // タスクを開始日順でソート
+  const sortTasksByStartDate = (taskList: TaskWithPosition[]) => {
+    return [...taskList].sort((a, b) => {
+      // 開始日がない場合は最後に配置
+      const aStart = a.yoteiStart ? utcToLocalDate(a.yoteiStart) : null;
+      const bStart = b.yoteiStart ? utcToLocalDate(b.yoteiStart) : null;
+      
+      if (!aStart && !bStart) return 0;
+      if (!aStart) return 1;
+      if (!bStart) return -1;
+      
+      return aStart.getTime() - bStart.getTime();
+    });
+  };
+
   if (groupBy === "none") {
     return [
       {
         id: "all",
         name: "すべてのタスク",
-        tasks,
+        tasks: sortTasksByStartDate(tasks),
         collapsed: false,
       },
     ];
@@ -284,7 +295,7 @@ export function groupTasks(
             ? getTaskStatusName(tasks[0].status)
             : "すべてのタスク"
       : "未分類",
-    tasks,
+    tasks: sortTasksByStartDate(tasks), // 各グループ内でタスクをソート
     collapsed: collapsedGroups.has(id),
   }));
 }

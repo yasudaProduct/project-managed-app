@@ -272,6 +272,12 @@ describe("gantt-utils", () => {
     });
 
     it("開始日がない場合は範囲開始日を使用する", () => {
+      const dateRange = {
+        start: new Date("2024-01-01"),
+        end: new Date("2024-01-31"),
+      };
+      const chartWidth = 3000;
+      
       const tasks: WbsTask[] = [
         {
           id: 1,
@@ -325,6 +331,58 @@ describe("gantt-utils", () => {
       },
     ] as TaskWithPosition[];
 
+    // ソートテスト用のタスク（開始日あり）
+    const tasksWithDates = [
+      {
+        id: 1,
+        name: "Task 1 - Later",
+        status: "NOT_STARTED" as TaskStatus,
+        phase: { id: 1, name: "Phase 1", seq: 1 },
+        assignee: { id: 1, displayName: "User 1", name: "user1" },
+        yoteiStart: new Date("2024-01-15T00:00:00Z"),
+        yoteiEnd: new Date("2024-01-20T00:00:00Z"),
+        jissekiStart: undefined,
+        jissekiEnd: undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        startPosition: 0,
+        width: 100,
+        groupId: "1",
+      },
+      {
+        id: 2,
+        name: "Task 2 - Earlier",
+        status: "IN_PROGRESS" as TaskStatus,
+        phase: { id: 1, name: "Phase 1", seq: 1 },
+        assignee: { id: 1, displayName: "User 1", name: "user1" },
+        yoteiStart: new Date("2024-01-10T00:00:00Z"),
+        yoteiEnd: new Date("2024-01-18T00:00:00Z"),
+        jissekiStart: undefined,
+        jissekiEnd: undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        startPosition: 100,
+        width: 100,
+        groupId: "1",
+      },
+      {
+        id: 3,
+        name: "Task 3 - No Date",
+        status: "IN_PROGRESS" as TaskStatus,
+        phase: { id: 1, name: "Phase 1", seq: 1 },
+        assignee: { id: 1, displayName: "User 1", name: "user1" },
+        yoteiStart: undefined,
+        yoteiEnd: undefined,
+        jissekiStart: undefined,
+        jissekiEnd: undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        startPosition: 200,
+        width: 100,
+        groupId: "1",
+      },
+    ] as TaskWithPosition[];
+
     it("グループ化なしの場合、すべてのタスクを1つのグループにする", () => {
       const result = groupTasks(tasks, "none", new Set());
 
@@ -362,6 +420,30 @@ describe("gantt-utils", () => {
       const result = groupTasks(tasks, "phase", collapsedGroups);
 
       expect(result[0].collapsed).toBe(true);
+    });
+
+    it("タスクを開始日順でソートする", () => {
+      const result = groupTasks(tasksWithDates, "none", new Set());
+
+      expect(result[0].tasks).toHaveLength(3);
+      // Task 2が最初（2024-01-10）
+      expect(result[0].tasks[0].name).toBe("Task 2 - Earlier");
+      // Task 1が2番目（2024-01-15）
+      expect(result[0].tasks[1].name).toBe("Task 1 - Later");
+      // Task 3が最後（開始日なし）
+      expect(result[0].tasks[2].name).toBe("Task 3 - No Date");
+    });
+
+    it("グループ内でタスクを開始日順でソートする", () => {
+      const result = groupTasks(tasksWithDates, "assignee", new Set());
+
+      // すべてのタスクが同じ担当者なので1グループ
+      expect(result).toHaveLength(1);
+      expect(result[0].tasks).toHaveLength(3);
+      // グループ内でも開始日順にソートされる
+      expect(result[0].tasks[0].name).toBe("Task 2 - Earlier");
+      expect(result[0].tasks[1].name).toBe("Task 1 - Later");
+      expect(result[0].tasks[2].name).toBe("Task 3 - No Date");
     });
   });
 
