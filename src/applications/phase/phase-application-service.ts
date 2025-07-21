@@ -8,6 +8,7 @@ import { PhaseCode } from "@/domains/phase/phase-code";
 export interface IPhaseApplicationService {
     getAllPhaseTemplates(): Promise<PhaseType[] | null>;
     createPhaseTemplate(phase: { name: string, code: string, seq: number }): Promise<{ success: boolean, phase?: PhaseType }>;
+    updatePhaseTemplate(phase: { id: number, name: string, code: string, seq: number }): Promise<{ success: boolean, phase?: PhaseType }>;
 }
 
 /**
@@ -67,4 +68,34 @@ export class PhaseApplicationService implements IPhaseApplicationService {
         };
     }
 
+    /**
+     * 工程テンプレートを更新
+     * @param phase 工程テンプレート
+     * @returns 工程テンプレート
+     */
+    public async updatePhaseTemplate(phase: { id: number, name: string, code: string, seq: number }): Promise<{ success: boolean, phase?: PhaseType }> {
+        const cheackPhase = await this.phaseRepository.findAllTemplates();
+        if (cheackPhase.some(p => p.id !== phase.id && (p.name === phase.name || p.code.value() === phase.code))) {
+            return { success: false, phase: undefined };
+        }
+
+        const phaseDb = await this.phaseRepository.findById(phase.id);
+        if (!phaseDb) {
+            return { success: false, phase: undefined };
+        }
+
+        phaseDb.name = phase.name;
+        phaseDb.code = new PhaseCode(phase.code);
+        phaseDb.seq = phase.seq;
+
+        const updatedPhaseDb = await this.phaseRepository.updateTemplate(phaseDb);
+        return {
+            success: true, phase: {
+                id: updatedPhaseDb.id!,
+                name: updatedPhaseDb.name,
+                seq: updatedPhaseDb.seq,
+                code: updatedPhaseDb.code.value(),
+            }
+        };
+    }
 }

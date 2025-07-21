@@ -89,4 +89,22 @@ export class PhaseRepository implements IPhaseRepository {
             seq: phaseDb.seq,
         });
     }
+
+    async updateTemplate(phase: Phase): Promise<Phase> {
+        console.log("repository: updateTemplate")
+        const phaseDb = await prisma.phaseTemplate.update({
+            where: { id: phase.id },
+            data: {
+                name: phase.name,
+                code: phase.code.value(),
+                seq: phase.seq,
+            },
+        });
+        return Phase.createFromDb({
+            id: phaseDb.id,
+            name: phaseDb.name,
+            code: new PhaseCode(phaseDb.code),
+            seq: phaseDb.seq,
+        });
+    }
 }
