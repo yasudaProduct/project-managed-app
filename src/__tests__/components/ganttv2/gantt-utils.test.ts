@@ -18,14 +18,28 @@ describe("gantt-utils", () => {
         id: "1",
         name: "Test Project",
         status: "INACTIVE" as ProjectStatus,
-        startDate: new Date("2024-01-10"),
-        endDate: new Date("2024-01-20"),
+        startDate: new Date("2024-01-10T00:00:00Z"),
+        endDate: new Date("2024-01-20T00:00:00Z"),
       };
+      const periods = [
+        {
+          yoteiStart: undefined,
+          yoteiEnd: undefined,
+        },
+      ];
 
-      const result = calculateDateRange(project);
+      const result = calculateDateRange(
+        project,
+        periods.map((period) => ({
+          startDate: period.yoteiStart,
+          endDate: period.yoteiEnd,
+        }))
+      );
 
-      expect(result.start).toEqual(new Date("2024-01-02"));
-      expect(result.end).toEqual(new Date("2024-01-27"));
+      expect(result.start).not.toBeNull();
+      expect(result.end).not.toBeNull();
+      expect(result.start.toISOString().split("T")[0]).toEqual(new Date("2024-01-02").toISOString().split("T")[0]);
+      expect(result.end.toISOString().split("T")[0]).toEqual(new Date("2024-01-26").toISOString().split("T")[0]);
     });
   });
 

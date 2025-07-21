@@ -31,11 +31,16 @@ export default function GanttV2Component({
   wbsId,
   onTaskUpdate,
 }: GanttV2ComponentProps) {
+  // フィルタリング
   const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [groupBy, setGroupBy] = useState<GroupBy>("phase");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+
+  // マイルストーン
   const [showMilestones, setShowMilestones] = useState(true);
+
+  // 折りたたみ
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     new Set()
   );
@@ -46,6 +51,14 @@ export default function GanttV2Component({
   const chartScrollRef = useRef<HTMLDivElement>(null);
 
   // 日付範囲の計算
+  console.log("project", project);
+  console.log(
+    "tasks",
+    tasks.map((task) => ({
+      startDate: task.yoteiStart,
+      endDate: task.yoteiEnd,
+    }))
+  );
   const dateRange = useMemo(
     () =>
       calculateDateRange(

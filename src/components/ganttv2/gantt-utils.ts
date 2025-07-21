@@ -55,15 +55,15 @@ export function calculateDateRange(
   }[]
 ): DateRange {
   // UTCで受け取った日付をローカル日付として解釈
-  const projectStart = utcToLocalDate(new Date(project.startDate));
-  const projectEnd = utcToLocalDate(new Date(project.endDate));
+  const projectStart = utcToLocalDate(new Date(project.startDate))!;
+  const projectEnd = utcToLocalDate(new Date(project.endDate))!;
 
   if (!projectStart || !projectEnd) {
     throw new Error("Invalid project date range");
   }
 
   // periods配列から最小のstartDateを取得
-  const minTaskStart = periods && periods.length > 0
+  const minTaskStart = periods && periods.length > 0 && periods.some((p) => p.startDate)
     ? new Date(
       Math.min(
         ...periods.map((p) => utcToLocalDate(p.startDate)?.getTime() ?? Infinity)
@@ -71,18 +71,21 @@ export function calculateDateRange(
     )
     : undefined;
 
-  const maxTaskEnd = periods && periods.length > 0
+  // periods配列から最大のendDateを取得
+  const maxTaskEnd = periods && periods.length > 0 && periods.some((p) => p.endDate)
     ? new Date(
       Math.max(
-        ...periods.map((p) => utcToLocalDate(p.endDate)?.getTime() ?? -Infinity)
+        ...periods.map((p) => utcToLocalDate(p.endDate)?.getTime() ?? Infinity)
       )
     )
     : undefined;
 
+  // タスクの期間とプロジェクトの期間のうち早い方と遅い方を取得
+  const start = new Date(Math.min(minTaskStart?.getTime() ?? projectStart.getTime(), projectStart.getTime()))!;
+  const end = new Date(Math.max(maxTaskEnd?.getTime() ?? projectEnd.getTime(), projectEnd.getTime()))!;
+
   // プロジェクト期間を少し拡張してバッファを追加
-  const start = new Date(minTaskStart || projectStart);
   start.setDate(start.getDate() - 7);
-  const end = new Date(maxTaskEnd || projectEnd);
   end.setDate(end.getDate() + 7);
 
   return { start, end };
@@ -114,6 +117,8 @@ export function generateTimeAxis(
   dateRange: DateRange,
   viewMode: ViewMode
 ): { timeAxis: TimeAxisItem[]; chartWidth: number } {
+  console.log("dateRange", dateRange);
+  console.log("viewMode", viewMode);
   const currentMode = VIEW_MODES.find((mode) => mode.value === viewMode)!;
 
   // 日付範囲を正規化（ローカル時刻で00:00:00）
@@ -150,6 +155,8 @@ export function generateTimeAxis(
     };
   });
 
+  console.log("axis", axis);
+  console.log("calculatedChartWidth", calculatedChartWidth);
   return { timeAxis: axis, chartWidth: calculatedChartWidth };
 }
 
