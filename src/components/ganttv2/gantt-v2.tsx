@@ -183,6 +183,8 @@ export default function GanttV2Component({
               });
             }}
             onToggleAllTasks={toggleAllTasks}
+            wbsId={wbsId}
+            onTaskUpdate={onTaskUpdate}
           />
         </div>
 

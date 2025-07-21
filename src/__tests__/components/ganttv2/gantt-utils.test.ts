@@ -43,6 +43,41 @@ describe("gantt-utils", () => {
     });
   });
 
+  describe("calculateDateRange", () => {
+    it("期間未設定のタスクがある場合", () => {
+      const project: Project = {
+        id: "1",
+        name: "Test Project",
+        status: "INACTIVE" as ProjectStatus,
+        startDate: new Date("2024-01-10T00:00:00Z"),
+        endDate: new Date("2024-01-20T00:00:00Z"),
+      };
+      const periods = [
+        {
+          yoteiStart: undefined,
+          yoteiEnd: undefined,
+        },
+        {
+          yoteiStart: new Date("2024-01-15T00:00:00Z"),
+          yoteiEnd: new Date("2024-01-16T00:00:00Z"),
+        },
+      ];
+
+      const result = calculateDateRange(
+        project,
+        periods.map((period) => ({
+          startDate: period.yoteiStart,
+          endDate: period.yoteiEnd,
+        }))
+      );
+
+      expect(result.start).not.toBeNull();
+      expect(result.end).not.toBeNull();
+      expect(result.start.toISOString().split("T")[0]).toEqual(new Date("2024-01-02").toISOString().split("T")[0]);
+      expect(result.end.toISOString().split("T")[0]).toEqual(new Date("2024-01-26").toISOString().split("T")[0]);
+    });
+  });
+
   describe("filterTasks", () => {
     const tasks: WbsTask[] = [
       {

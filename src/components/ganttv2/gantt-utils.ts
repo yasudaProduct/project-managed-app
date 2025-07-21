@@ -75,7 +75,7 @@ export function calculateDateRange(
   const maxTaskEnd = periods && periods.length > 0 && periods.some((p) => p.endDate)
     ? new Date(
       Math.max(
-        ...periods.map((p) => utcToLocalDate(p.endDate)?.getTime() ?? Infinity)
+        ...periods.map((p) => utcToLocalDate(p.endDate)?.getTime() ?? -Infinity)
       )
     )
     : undefined;

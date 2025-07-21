@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { WbsTask } from "@/types/wbs";
@@ -15,9 +15,11 @@ import {
   CalendarDays,
   Minimize2,
   Maximize2,
+  Edit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTaskRowStyleDynamic, getGroupHeaderStyle } from "./gantt-row-constants";
+import { TaskModal } from "@/components/wbs/task-modal";
 
 interface TaskWithPosition extends WbsTask {
   startPosition: number;
@@ -39,6 +41,8 @@ interface GanttTaskListProps {
   collapsedTasks: Set<string>;
   onToggleTask: (taskId: string) => void;
   onToggleAllTasks: () => void;
+  wbsId: number;
+  onTaskUpdate?: () => void;
 }
 
 export default function GanttTaskList({
@@ -48,7 +52,24 @@ export default function GanttTaskList({
   collapsedTasks,
   onToggleTask,
   onToggleAllTasks,
+  wbsId,
+  onTaskUpdate,
 }: GanttTaskListProps) {
+  const [selectedTask, setSelectedTask] = useState<WbsTask | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleEditClick = (task: WbsTask) => {
+    setSelectedTask(task);
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedTask(null);
+    if (onTaskUpdate) {
+      onTaskUpdate();
+    }
+  };
   return (
     <div className="w-80 lg:w-96 border-r border-gray-200 bg-gray-50 flex-shrink-0">
       {/* ヘッダー */}
@@ -181,23 +202,34 @@ export default function GanttTaskList({
                         </div>
                       </div>
 
-                      {/* ステータスバッジ */}
-                      <Badge
-                        variant={
-                          task.status === "COMPLETED" ? "default" : "secondary"
-                        }
-                        className={cn(
-                          "text-xs flex-shrink-0",
-                          task.status === "COMPLETED" &&
-                            "bg-green-100 text-green-800",
-                          task.status === "IN_PROGRESS" &&
-                            "bg-blue-100 text-blue-800",
-                          task.status === "NOT_STARTED" &&
-                            "bg-gray-100 text-gray-800"
-                        )}
-                      >
-                        {getTaskStatusName(task.status)}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        {/* 編集ボタン */}
+                        <button
+                          onClick={() => handleEditClick(task)}
+                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                          title="タスクを編集"
+                        >
+                          <Edit className="h-3 w-3 text-gray-500" />
+                        </button>
+
+                        {/* ステータスバッジ */}
+                        <Badge
+                          variant={
+                            task.status === "COMPLETED" ? "default" : "secondary"
+                          }
+                          className={cn(
+                            "text-xs flex-shrink-0",
+                            task.status === "COMPLETED" &&
+                              "bg-green-100 text-green-800",
+                            task.status === "IN_PROGRESS" &&
+                              "bg-blue-100 text-blue-800",
+                            task.status === "NOT_STARTED" &&
+                              "bg-gray-100 text-gray-800"
+                          )}
+                        >
+                          {getTaskStatusName(task.status)}
+                        </Badge>
+                      </div>
                     </div>
 
                     {/* 詳細情報（折りたたみ可能） */}
@@ -259,6 +291,14 @@ export default function GanttTaskList({
           </div>
         ))}
       </ScrollArea>
+
+      {/* タスク編集モーダル */}
+      <TaskModal
+        wbsId={wbsId}
+        task={selectedTask || undefined}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+      />
     </div>
   );
 }
