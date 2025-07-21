@@ -6,6 +6,7 @@ import { GroupBy } from "./gantt-controls";
 import { Target, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TaskModal } from "@/components/wbs/task-modal";
+import { MilestoneModal } from "@/components/milestone/milestone-modal";
 import { updateTask } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
 import { formatDateToLocalString } from "./gantt-utils";
@@ -65,6 +66,8 @@ export default function GanttChart({
 }: GanttChartProps) {
   const [selectedTask, setSelectedTask] = useState<WbsTask | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+  const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
 
   // ドラッグ関連の状態
   const [isDragging, setIsDragging] = useState(false);
@@ -110,6 +113,20 @@ export default function GanttChart({
     setIsModalOpen(false);
     setSelectedTask(null);
     // タスク更新後にコールバックを呼び出す
+    if (onTaskUpdate) {
+      onTaskUpdate();
+    }
+  };
+
+  const handleMilestoneClick = React.useCallback((milestone: Milestone) => {
+    setSelectedMilestone(milestone);
+    setIsMilestoneModalOpen(true);
+  }, []);
+
+  const handleMilestoneModalClose = () => {
+    setIsMilestoneModalOpen(false);
+    setSelectedMilestone(null);
+    // マイルストーン更新後にコールバックを呼び出す
     if (onTaskUpdate) {
       onTaskUpdate();
     }
@@ -454,13 +471,15 @@ export default function GanttChart({
           <div
             key={milestone.id}
             data-milestone-id={milestone.id}
-            className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
+            className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20 cursor-pointer group"
             style={{ left: `${milestone.position}px` }}
+            onClick={() => handleMilestoneClick(milestone)}
+            title={`${milestone.name} - クリックで編集`}
           >
-            <div className="absolute top-0 -left-2">
+            <div className="absolute top-0 -left-2 group-hover:scale-110 transition-transform">
               <Target className="h-4 w-4 text-red-500" />
             </div>
-            <div className="absolute top-5 -left-10 text-xs text-red-600 font-medium whitespace-nowrap">
+            <div className="absolute top-5 -left-10 text-xs text-red-600 font-medium whitespace-nowrap group-hover:text-red-800 transition-colors">
               {milestone.name}
             </div>
           </div>
@@ -564,6 +583,15 @@ export default function GanttChart({
         task={selectedTask || undefined}
         isOpen={isModalOpen}
         onClose={handleModalClose}
+      />
+
+      {/* マイルストーン編集モーダル */}
+      <MilestoneModal
+        wbsId={wbsId}
+        milestone={selectedMilestone || undefined}
+        isOpen={isMilestoneModalOpen}
+        onClose={handleMilestoneModalClose}
+        onMilestoneUpdate={onTaskUpdate}
       />
     </div>
   );
