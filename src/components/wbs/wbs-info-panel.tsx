@@ -233,6 +233,16 @@ export function WbsInfoPanel({ selectedWbs }: WbsInfoPanelProps) {
                 ガントチャート
               </Button>
             </Link>
+            <Link href={`/wbs/${selectedWbs.id}/ganttv2`} className="block">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-2"
+              >
+                <Calendar className="h-4 w-4" />
+                ガントチャート ver2
+              </Button>
+            </Link>
             <Link href={`/wbs/${selectedWbs.id}/assignee`} className="block">
               <Button
                 variant="outline"
