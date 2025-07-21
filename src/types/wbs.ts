@@ -8,12 +8,10 @@ export type KosuType = "NORMAL" | "RISK"
 
 export type WbsPhase = {
     id: number
-    wbsId: number
     seq: number
     name: string
+    code: string
     tasks?: WbsTask[]
-    createdAt: Date
-    updatedAt: Date
 }
 
 export type WbsTask = {

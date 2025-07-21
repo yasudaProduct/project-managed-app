@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { getPhases } from "./phase-actions";
+import { getPhaseTemplates } from "./phase-actions";
 import { columns } from "./columns";
 
 export default async function PhasePage() {
-  const phases = await getPhases();
+  const phases = await getPhaseTemplates();
 
   return (
     <div className="container mx-auto py-10">

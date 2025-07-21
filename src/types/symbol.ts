@@ -5,6 +5,7 @@ export const SYMBOL = {
     ITaskApplicationService: Symbol.for('ITaskApplicationService'),
     IScheduleGenerateService: Symbol.for('IScheduleGenerateService'),
     IDashboardApplicationService: Symbol.for('IDashboardApplicationService'),
+    IPhaseApplicationService: Symbol.for('IPhaseApplicationService'),
 
     // ドメインサービス
     GetOperationPossible: Symbol.for('GetOperationPossible'),

@@ -15,7 +15,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { createPhase, updatePhase } from "@/app/wbs/phase/phase-actions";
+import {
+  createPhaseTemplate,
+  updatePhase,
+} from "@/app/wbs/phase/phase-actions";
 import { toast } from "@/hooks/use-toast";
 import { updateWbsPhase } from "../[id]/wbs-phase-actions";
 
@@ -82,7 +85,7 @@ export function PhaseForm({ phase, wbsId }: PhaseFormProps) {
           }
         } else {
           // 新規
-          const result = await createPhase(values);
+          const result = await createPhaseTemplate(values);
           if (result.success) {
             toast({
               title: "作成しました。",

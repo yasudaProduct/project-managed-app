@@ -25,8 +25,8 @@ import {
 } from "@/components/ui/select";
 import { createWbsPhase } from "@/app/wbs/[id]/wbs-actions";
 import { toast } from "@/hooks/use-toast";
-import { PhaseTemplate } from "@prisma/client";
-import { getPhases } from "@/app/wbs/phase/phase-actions";
+import { PhaseTemplate } from "@/types/phase";
+import { getPhaseTemplates } from "@/app/wbs/phase/phase-actions";
 import { CirclePlus } from "lucide-react";
 
 const formSchema = z.object({
@@ -66,8 +66,7 @@ export function NewWbsPhaseForm({ wbsId }: NewWbsPhaseFormProps) {
 
   useEffect(() => {
     async function fetchTemplates() {
-      const templates = await getPhases();
-      setTemplates(templates);
+      setTemplates(await getPhaseTemplates());
     }
     fetchTemplates();
   }, []);

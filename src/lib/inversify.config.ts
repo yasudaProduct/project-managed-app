@@ -19,6 +19,7 @@ import { WbsAssigneeRepository } from "@/infrastructures/wbs-assignee-repository
 import { WbsRepository } from "@/infrastructures/wbs-repository";
 import { SYMBOL } from "@/types/symbol";
 import { Container } from "inversify";
+import { IPhaseApplicationService, PhaseApplicationService } from "@/applications/phase/phase-application-service";
 
 
 const container: Container = new Container();
@@ -28,6 +29,7 @@ container.bind<IWbsApplicationService>(SYMBOL.IWbsApplicationService).to(WbsAppl
 container.bind<ITaskApplicationService>(SYMBOL.ITaskApplicationService).to(TaskApplicationService).inSingletonScope();
 container.bind<IScheduleGenerateService>(SYMBOL.IScheduleGenerateService).to(ScheduleGenerateService).inSingletonScope();
 container.bind<IDashboardApplicationService>(SYMBOL.IDashboardApplicationService).to(DashboardApplicationService).inSingletonScope();
+container.bind<IPhaseApplicationService>(SYMBOL.IPhaseApplicationService).to(PhaseApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();

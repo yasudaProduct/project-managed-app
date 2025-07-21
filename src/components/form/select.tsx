@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
 import { getTaskStatusName } from "@/lib/utils";
-import { getPhases } from "@/app/wbs/phase/phase-actions";
+import { getPhaseTemplates } from "@/app/wbs/phase/phase-actions";
 
 type SelectPhasesProp = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -42,7 +42,7 @@ export default function SelectPhases({ field, wbsId }: SelectPhasesProp) {
 
     const fetchPhases = async () => {
       if (key === "all") {
-        const phases = await getPhases();
+        const phases = await getPhaseTemplates();
         setPhases(
           phases.map((phase) => ({
             id: phase.id,
