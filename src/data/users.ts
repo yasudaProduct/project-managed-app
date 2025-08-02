@@ -2,33 +2,33 @@ export const users = {
     users: [
         {
             id: "dummy01",
-            name: "dummy01",
+            name: "安田 優太",
             email: "dummy01@example.com",
-            displayName: "DM1",
+            displayName: "安田",
         },
         {
             id: "dummy02",
-            name: "dummy02",
+            name: "山田 太郎",
             email: "dummy02@example.com",
-            displayName: "DM2",
+            displayName: "山田",
         },
         {
             id: "dummy03",
-            name: "dummy03",
+            name: "鈴木 花子",
             email: "dummy03@example.com",
-            displayName: "DM3",
+            displayName: "鈴木",
         },
         {
             id: "dummy04",
-            name: "dummy04",
+            name: "佐藤 一郎",
             email: "dummy04@example.com",
-            displayName: "DM4",
+            displayName: "佐藤",
         },
         {
             id: "dummy05",
-            name: "dummy05",
+            name: "田中 二郎",
             email: "dummy05@example.com",
-            displayName: "DM5",
+            displayName: "田中",
         },
     ],
     userSchedules: [
