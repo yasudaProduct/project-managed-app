@@ -17,6 +17,11 @@ export const SYMBOL = {
     IWbsAssigneeRepository: Symbol.for('IWbsAssigneeRepository'),
     IPhaseRepository: Symbol.for('IPhaseRepository'),
     ITaskRepository: Symbol.for('ITaskRepository'),
+    IDashboardQueryRepository: Symbol.for('IDashboardQueryRepository'),
+
+    // CQRS
+    IQueryBus: Symbol.for('IQueryBus'),
+    GetDashboardStatsHandler: Symbol.for('GetDashboardStatsHandler'),
 
     ITaskFactory: Symbol.for('ITaskFactory'),
 }

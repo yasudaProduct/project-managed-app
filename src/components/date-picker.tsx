@@ -4,7 +4,6 @@ import { FormControl } from "./ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "./ui/calendar";
-import { formatUTCDateForDisplaySlash, utcToLocalDate } from "@/lib/date-display-utils";
 import { formatDateToLocalString } from "@/components/ganttv2/gantt-utils";
 
 type DatePickerProp = {

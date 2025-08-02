@@ -17,6 +17,7 @@ export interface DashboardStats {
     tasksByStatus: { status: string; count: number }[];
     upcomingDeadlines: { projectId: string; projectName: string; endDate: Date }[];
     overdueProjects: { projectId: string; projectName: string; endDate: Date }[];
+    activeProjectsList: { projectId: string; projectName: string; startDate: Date; endDate: Date; progress: number }[];
 }
 
 export interface IDashboardApplicationService {
@@ -54,6 +55,9 @@ export class DashboardApplicationService implements IDashboardApplicationService
         // 期限切れプロジェクト
         const overdueProjects = this.getOverdueProjects(projects);
 
+        // 進行中プロジェクト一覧（開始日が新しい順で5件）
+        const activeProjectsList = await this.getActiveProjectsList(projects);
+
         return {
             totalProjects,
             activeProjects,
@@ -63,7 +67,8 @@ export class DashboardApplicationService implements IDashboardApplicationService
             projectsByStatus,
             tasksByStatus,
             upcomingDeadlines,
-            overdueProjects
+            overdueProjects,
+            activeProjectsList
         };
     }
 
@@ -119,5 +124,47 @@ export class DashboardApplicationService implements IDashboardApplicationService
                 endDate: p.endDate
             }))
             .sort((a, b) => a.endDate.getTime() - b.endDate.getTime());
+    }
+
+    private async getActiveProjectsList(projects: Project[]): Promise<{ projectId: string; projectName: string; startDate: Date; endDate: Date; progress: number }[]> {
+        // 進行中のプロジェクトをフィルタリング
+        const activeProjects = projects.filter(p => p.getStatus() === 'ACTIVE' as ProjectStatus);
+        
+        // 開始日が新しい順でソート
+        const sortedProjects = activeProjects.sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
+        
+        // 上位5件を取得
+        const top5Projects = sortedProjects.slice(0, 5);
+        
+        // 各プロジェクトの進捗率を計算
+        const projectsWithProgress = await Promise.all(
+            top5Projects.map(async (project) => {
+                // プロジェクトに関連するタスクを取得
+                const projectWbs = await this.wbsRepository.findByProjectId(project.id!);
+                const wbsIds = projectWbs.map(w => w.id!);
+                
+                let totalTasks = 0;
+                let completedTasks = 0;
+                
+                // 各WBSのタスクを集計
+                for (const wbsId of wbsIds) {
+                    const tasks = await this.taskRepository.findAll(Number(wbsId));
+                    totalTasks += tasks.length;
+                    completedTasks += tasks.filter((t: Task) => t.getStatus() === 'COMPLETED').length;
+                }
+                
+                const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+                
+                return {
+                    projectId: project.id!,
+                    projectName: project.name,
+                    startDate: project.startDate,
+                    endDate: project.endDate,
+                    progress
+                };
+            })
+        );
+        
+        return projectsWithProgress;
     }
 }

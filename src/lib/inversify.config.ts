@@ -20,6 +20,12 @@ import { WbsRepository } from "@/infrastructures/wbs-repository";
 import { SYMBOL } from "@/types/symbol";
 import { Container } from "inversify";
 import { IPhaseApplicationService, PhaseApplicationService } from "@/applications/phase/phase-application-service";
+import { IQueryBus } from "@/applications/shared/cqrs/base-classes";
+import { QueryBus } from "@/applications/shared/query-bus/query-bus";
+import { GetDashboardStatsHandler } from "@/applications/dashboard/queries/get-dashboard-stats/get-dashboard-stats.handler";
+import { GetDashboardStatsQuery } from "@/applications/dashboard/queries/get-dashboard-stats/get-dashboard-stats.query";
+import type { IDashboardQueryRepository } from "@/applications/dashboard/repositories/idashboard-query.repository";
+import { DashboardQueryRepository } from "@/infrastructures/dashboard-query.repository";
 
 
 const container: Container = new Container();
@@ -41,9 +47,18 @@ container.bind<IWbsRepository>(SYMBOL.IWbsRepository).to(WbsRepository).inSingle
 container.bind<IPhaseRepository>(SYMBOL.IPhaseRepository).to(PhaseRepository).inSingletonScope();
 container.bind<ITaskRepository>(SYMBOL.ITaskRepository).to(TaskRepository).inSingletonScope();
 container.bind<IWbsAssigneeRepository>(SYMBOL.IWbsAssigneeRepository).to(WbsAssigneeRepository).inSingletonScope();
+container.bind<IDashboardQueryRepository>(SYMBOL.IDashboardQueryRepository).to(DashboardQueryRepository).inSingletonScope();
 
 // ファクトリ
 container.bind<ITaskFactory>(SYMBOL.ITaskFactory).to(TaskFactory).inSingletonScope();
 
+// CQRS
+container.bind<IQueryBus>(SYMBOL.IQueryBus).to(QueryBus).inSingletonScope();
+container.bind<GetDashboardStatsHandler>(SYMBOL.GetDashboardStatsHandler).to(GetDashboardStatsHandler).inSingletonScope();
+
+// QueryBusの初期化（ハンドラーの登録）
+const queryBus = container.get<QueryBus>(SYMBOL.IQueryBus);
+const dashboardStatsHandler = container.get<GetDashboardStatsHandler>(SYMBOL.GetDashboardStatsHandler);
+queryBus.register(GetDashboardStatsQuery, dashboardStatsHandler);
 
 export { container };

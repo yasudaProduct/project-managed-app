@@ -83,8 +83,7 @@ export default defineConfig({
   expect: {
     // Compare screenshots with a threshold of 0.2 (20% difference allowed)
     toHaveScreenshot: {
-      threshold: 0.2,
-      mode: 'local'
+      threshold: 0.2
     },
     // Match screenshots with a pixel threshold
     toMatchSnapshot: {

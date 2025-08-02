@@ -61,6 +61,8 @@ class MockPhaseRepository implements IPhaseRepository {
   }
 
   async findByWbsId(wbsId: number): Promise<Phase[]> {
+    // wbsIdは使用しないが、インターフェースを満たすために引数として受け取る
+    void wbsId;
     return this.phases;
   }
 }

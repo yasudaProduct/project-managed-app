@@ -116,7 +116,7 @@ export function SelectAssignee({ field, wbsId }: SelectAssigneeProp) {
       }
     };
     fetchAssignees();
-  }, []);
+  }, [wbsId]);
 
   return (
     <Select

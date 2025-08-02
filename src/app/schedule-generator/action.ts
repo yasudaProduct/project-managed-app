@@ -42,10 +42,10 @@ export async function getProjects(): Promise<{
         return {
             ...wbs,
             assignees: (assignees ?? []).map((assignee) => ({
-                id: Number(assignee.id),
-                userId: assignee.id,
-                name: assignee.displayName,
-                rate: assignee.rate,
+                id: Number(assignee.assignee?.id ?? 0),
+                userId: String(assignee.assignee?.id ?? 0),
+                name: assignee.assignee?.name ?? "",
+                rate: 100,
             }))
         };
     }) ?? []);

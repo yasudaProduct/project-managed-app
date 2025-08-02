@@ -2,9 +2,15 @@
 
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
-import { IDashboardApplicationService } from "@/applications/dashboard/dashboard-application-service";
+import type { IQueryBus } from "@/applications/shared/cqrs/base-classes";
+import { GetDashboardStatsQuery } from "@/applications/dashboard/queries/get-dashboard-stats/get-dashboard-stats.query";
+import { GetDashboardStatsResult } from "@/applications/dashboard/queries/get-dashboard-stats/get-dashboard-stats.result";
 
-export async function getDashboardStats() {
-    const dashboardService = container.get<IDashboardApplicationService>(SYMBOL.IDashboardApplicationService);
-    return await dashboardService.getDashboardStats();
+export async function getDashboardStats(): Promise<GetDashboardStatsResult> {
+    // DIコンテナからQueryBusを取得
+    const queryBus = container.get<IQueryBus>(SYMBOL.IQueryBus);
+    
+    // CQRSクエリを使用してダッシュボードデータを取得
+    const query = new GetDashboardStatsQuery();
+    return await queryBus.execute<GetDashboardStatsResult>(query);
 }

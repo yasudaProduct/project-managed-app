@@ -372,9 +372,9 @@ describe("GanttV2Component - 統合テスト", () => {
         {
           id: 1,
           name: "不正タスク",
-          status: "INVALID_STATUS" as any,
+          status: "INVALID_STATUS" as unknown as TaskStatus,
           yoteiStart: new Date("invalid-date"),
-          yoteiEnd: null as any,
+          yoteiEnd: null as unknown as Date,
           createdAt: new Date("2024-01-01"),
           updatedAt: new Date("2024-01-01"),
         },

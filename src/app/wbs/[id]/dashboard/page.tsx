@@ -63,7 +63,7 @@ export default async function DashboardPage({
           <p className="text-gray-600 mt-1">{wbs.name}</p>
         </div>
         <Badge 
-          variant={project.status === 'IN_PROGRESS' ? 'default' : 'secondary'}
+          variant={project.status === 'ACTIVE' ? 'default' : 'secondary'}
           className="text-sm"
         >
           {getProjectStatusName(project.status)}

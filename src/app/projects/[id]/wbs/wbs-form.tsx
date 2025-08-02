@@ -56,7 +56,7 @@ export function WbsForm({ projectId, wbs }: WbsFormProps) {
         } else {
           toast({
             title: "WBSを更新できませんでした",
-            description: result.error,
+            description: "エラーが発生しました",
             variant: "destructive",
           });
         }
