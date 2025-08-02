@@ -26,6 +26,10 @@ import { GetDashboardStatsHandler } from "@/applications/dashboard/queries/get-d
 import { GetDashboardStatsQuery } from "@/applications/dashboard/queries/get-dashboard-stats/get-dashboard-stats.query";
 import type { IDashboardQueryRepository } from "@/applications/dashboard/repositories/idashboard-query.repository";
 import { DashboardQueryRepository } from "@/infrastructures/dashboard-query.repository";
+import type { IAuthApplicationService } from "@/applications/auth/auth-application-service";
+import { AuthApplicationService } from "@/applications/auth/auth-application-service";
+import type { IAuthRepository } from "@/domains/auth/auth-service";
+import { AuthRepository } from "@/infrastructures/auth-repository";
 
 
 const container: Container = new Container();
@@ -36,6 +40,7 @@ container.bind<ITaskApplicationService>(SYMBOL.ITaskApplicationService).to(TaskA
 container.bind<IScheduleGenerateService>(SYMBOL.IScheduleGenerateService).to(ScheduleGenerateService).inSingletonScope();
 container.bind<IDashboardApplicationService>(SYMBOL.IDashboardApplicationService).to(DashboardApplicationService).inSingletonScope();
 container.bind<IPhaseApplicationService>(SYMBOL.IPhaseApplicationService).to(PhaseApplicationService).inSingletonScope();
+container.bind<IAuthApplicationService>(SYMBOL.IAuthApplicationService).to(AuthApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
@@ -48,6 +53,7 @@ container.bind<IPhaseRepository>(SYMBOL.IPhaseRepository).to(PhaseRepository).in
 container.bind<ITaskRepository>(SYMBOL.ITaskRepository).to(TaskRepository).inSingletonScope();
 container.bind<IWbsAssigneeRepository>(SYMBOL.IWbsAssigneeRepository).to(WbsAssigneeRepository).inSingletonScope();
 container.bind<IDashboardQueryRepository>(SYMBOL.IDashboardQueryRepository).to(DashboardQueryRepository).inSingletonScope();
+container.bind<IAuthRepository>(SYMBOL.IAuthRepository).to(AuthRepository).inSingletonScope();
 
 // ファクトリ
 container.bind<ITaskFactory>(SYMBOL.ITaskFactory).to(TaskFactory).inSingletonScope();
@@ -59,6 +65,6 @@ container.bind<GetDashboardStatsHandler>(SYMBOL.GetDashboardStatsHandler).to(Get
 // QueryBusの初期化（ハンドラーの登録）
 const queryBus = container.get<QueryBus>(SYMBOL.IQueryBus);
 const dashboardStatsHandler = container.get<GetDashboardStatsHandler>(SYMBOL.GetDashboardStatsHandler);
-queryBus.register(GetDashboardStatsQuery, dashboardStatsHandler);
+queryBus.register(GetDashboardStatsQuery as new (...args: unknown[]) => GetDashboardStatsQuery, dashboardStatsHandler);
 
 export { container };

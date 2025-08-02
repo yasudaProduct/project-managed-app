@@ -12,6 +12,7 @@ import {
   SheetTrigger,
 } from "./ui/sheet";
 import { usePathname } from "next/navigation";
+import { AuthStatus } from "./auth/auth-status";
 
 export function SideMenu() {
   const pathname = usePathname();
@@ -43,6 +44,10 @@ export function SideMenu() {
           <Link href="/" className="text-lg flex items-center gap-2">
             <Home className="h-4 w-4" />
             ホーム
+          </Link>
+          <Link href="/dashboard" className="text-lg flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            ダッシュボード
           </Link>
           <Link
             href="/projects/new"
@@ -124,6 +129,9 @@ export function SideMenu() {
             </>
           )}
         </nav>
+        
+        {/* ログイン状況表示 */}
+        <AuthStatus />
       </SheetContent>
     </Sheet>
   );

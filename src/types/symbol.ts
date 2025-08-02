@@ -23,5 +23,9 @@ export const SYMBOL = {
     IQueryBus: Symbol.for('IQueryBus'),
     GetDashboardStatsHandler: Symbol.for('GetDashboardStatsHandler'),
 
+    // Auth
+    IAuthRepository: Symbol.for('IAuthRepository'),
+    IAuthApplicationService: Symbol.for('IAuthApplicationService'),
+
     ITaskFactory: Symbol.for('ITaskFactory'),
 }

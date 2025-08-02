@@ -21,6 +21,15 @@ erDiagram
   String email UK
   String name
   String displayName
+  String password "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"user_sessions" {
+  String id PK
+  String userId FK
+  String token UK
+  DateTime expiresAt
   DateTime createdAt
   DateTime updatedAt
 }
@@ -132,6 +141,7 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"user_sessions" }o--|| "users" : user
 "wbs" }o--|| "projects" : project
 "wbs_assignee" }o--|| "wbs" : wbs
 "wbs_assignee" }o--|| "users" : assignee
@@ -170,6 +180,17 @@ erDiagram
   - `email`: 
   - `name`: 
   - `displayName`: 
+  - `password`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `user_sessions`
+
+**Properties**
+  - `id`: 
+  - `userId`: 
+  - `token`: 
+  - `expiresAt`: 
   - `createdAt`: 
   - `updatedAt`: 
 

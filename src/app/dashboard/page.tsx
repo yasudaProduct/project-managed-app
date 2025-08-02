@@ -5,13 +5,17 @@ import TaskProgress from "@/components/dashboard/task-progress";
 import UpcomingDeadlines from "@/components/dashboard/upcoming-deadlines";
 import RecentActivity from "@/components/dashboard/recent-activity";
 import ActiveProjectsList from "@/components/dashboard/active-projects-list";
+import { AuthHeader } from "@/components/auth/auth-header";
 
 export default async function DashboardPage() {
     const dashboardData = await getDashboardStats();
 
     return (
         <div className="container mx-auto p-6">
-            <h1 className="text-3xl font-bold mb-6">ダッシュボード</h1>
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold">ダッシュボード</h1>
+                <AuthHeader />
+            </div>
             
             <div className="space-y-6">
                 <DashboardOverview stats={dashboardData.overview} />

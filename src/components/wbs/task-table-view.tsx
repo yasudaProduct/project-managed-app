@@ -245,7 +245,7 @@ export function TaskTableViewPage({
             phase: wbsTask.phase?.name ?? "",
           }))
         : [],
-    columns: columns as ColumnDef<TaskTableViewProp>[],
+    columns: columns as unknown as ColumnDef<unknown>[],
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),

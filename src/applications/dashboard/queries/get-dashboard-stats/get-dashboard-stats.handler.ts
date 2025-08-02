@@ -13,6 +13,7 @@ export class GetDashboardStatsHandler implements IQueryHandler<GetDashboardStats
     ) {}
 
     async execute(query: GetDashboardStatsQuery): Promise<GetDashboardStatsResult> {
+        void query; // Explicitly mark as unused
         // 基本統計情報の取得
         const [
             projectStats,
@@ -21,8 +22,8 @@ export class GetDashboardStatsHandler implements IQueryHandler<GetDashboardStats
             upcomingDeadlines,
             overdueProjects
         ] = await Promise.all([
-            this.dashboardQueryRepository.getProjectStatistics(query.dateRange),
-            this.dashboardQueryRepository.getTaskStatistics(query.dateRange),
+            this.dashboardQueryRepository.getProjectStatistics(),
+            this.dashboardQueryRepository.getTaskStatistics(),
             this.dashboardQueryRepository.getActiveProjects(5), // 上位5件
             this.dashboardQueryRepository.getUpcomingDeadlines(7), // 7日以内
             this.dashboardQueryRepository.getOverdueProjects()

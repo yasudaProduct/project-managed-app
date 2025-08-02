@@ -33,13 +33,27 @@ model Users {
   email      String          @unique
   name       String
   displayName String
+  password   String?         // パスワードハッシュ（オプション）
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
   statusLogs TaskStatusLog[] @relation("StatusChanger")
   assignees  WbsAssignee[]   @relation("WbsAssignee")
   workRecords WorkRecord[]
   schedules  UserSchedule[]
+  sessions   UserSession[]
   @@map("users")
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_sessions")
 }
 
 model Wbs {

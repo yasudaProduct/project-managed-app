@@ -27,6 +27,7 @@ export type WbsPhase = {
   code: string;
   seq: number;
   wbsId: number;
+  link?: string;
 };
 
 export const columns: ColumnDef<WbsPhase>[] = [

@@ -102,13 +102,18 @@ export function SelectAssignee({ field, wbsId }: SelectAssigneeProp) {
   useEffect(() => {
     const fetchAssignees = async () => {
       if (wbsId) {
-        const assignees = (await getWbsAssignees(wbsId)).map((a) => {
-          return {
-            id: a.assignee.id,
-            name: a.assignee.displayName,
-          };
-        });
-        setAssignees(assignees);
+        const result = await getWbsAssignees(wbsId);
+        if (result) {
+          const assignees = result
+            .filter((a) => a.assignee !== null)
+            .map((a) => {
+              return {
+                id: a.assignee!.id.toString(),
+                name: a.assignee!.displayName,
+              };
+            });
+          setAssignees(assignees);
+        }
       } else {
         // TODO wbsIdがない場合は、全ての担当者を取得する
         // const assignees = await getAssignees();

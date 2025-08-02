@@ -40,10 +40,10 @@ export interface OverdueInfo {
 
 export interface IDashboardQueryRepository {
     // プロジェクト統計
-    getProjectStatistics(dateRange?: { from: Date; to: Date }): Promise<ProjectStatistics>;
+    getProjectStatistics(): Promise<ProjectStatistics>;
     
     // タスク統計
-    getTaskStatistics(dateRange?: { from: Date; to: Date }): Promise<TaskStatistics>;
+    getTaskStatistics(): Promise<TaskStatistics>;
     
     // アクティブプロジェクト一覧（進捗率付き）
     getActiveProjects(limit: number): Promise<ActiveProjectInfo[]>;

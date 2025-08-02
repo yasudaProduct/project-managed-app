@@ -10,7 +10,7 @@ import type {
 
 @injectable()
 export class DashboardQueryRepository implements IDashboardQueryRepository {
-    async getProjectStatistics(dateRange?: { from: Date; to: Date }): Promise<ProjectStatistics> {
+    async getProjectStatistics(): Promise<ProjectStatistics> {
         // TODO: 実際の実装では、Prismaを使用してデータベースから統計情報を取得
         return {
             total: 10,
@@ -24,7 +24,7 @@ export class DashboardQueryRepository implements IDashboardQueryRepository {
         };
     }
 
-    async getTaskStatistics(dateRange?: { from: Date; to: Date }): Promise<TaskStatistics> {
+    async getTaskStatistics(): Promise<TaskStatistics> {
         // TODO: 実際の実装では、Prismaを使用してデータベースから統計情報を取得
         return {
             totalTasks: 100,
