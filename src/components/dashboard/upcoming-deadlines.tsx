@@ -42,12 +42,12 @@ export default function UpcomingDeadlines({ upcomingDeadlines, overdueProjects }
                                     >
                                         <p className="font-medium text-sm">{project.projectName}</p>
                                     </Link>
-                                    <p className="text-xs text-muted-foreground">
-                                        期限: {formatDate(project.endDate)}
-                                        <Badge variant="destructive" className="ml-2 text-xs">
+                                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                                        <span>期限: {formatDate(project.endDate)}</span>
+                                        <Badge variant="destructive" className="text-xs">
                                             {project.daysOverdue}日超過
                                         </Badge>
-                                    </p>
+                                    </div>
                                 </li>
                             ))}
                         </ul>
@@ -70,12 +70,12 @@ export default function UpcomingDeadlines({ upcomingDeadlines, overdueProjects }
                                     >
                                         <p className="font-medium text-sm">{project.projectName}</p>
                                     </Link>
-                                    <p className="text-xs text-muted-foreground">
-                                        期限: {formatDate(project.endDate)}
-                                        <Badge variant="outline" className="ml-2 text-xs">
+                                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                                        <span>期限: {formatDate(project.endDate)}</span>
+                                        <Badge variant="outline" className="text-xs">
                                             残り{project.daysRemaining}日
                                         </Badge>
-                                    </p>
+                                    </div>
                                 </li>
                             ))}
                         </ul>
