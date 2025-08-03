@@ -86,6 +86,10 @@ async function insertSeedData() {
     console.log('🌱 MySQL geppoテーブルのシードデータを開始します...')
 
     try {
+        // 文字セットを設定
+        console.log('🔧 文字セットを設定しています...')
+        await execAsync(`docker exec project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test -e "SET NAMES utf8mb4;"`)
+
         // 既存データをクリア
         console.log('🗑️  既存のgeppoデータをクリアしています...')
         await execAsync(`docker exec project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test -e "DELETE FROM geppo;"`)

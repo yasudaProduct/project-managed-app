@@ -8,7 +8,8 @@ set -e
 echo "🚀 MySQL環境のセットアップを開始します..."
 
 # 環境変数の設定
-export DATABASE_URL="mysql://app_user:app_password@localhost:3306/project_managed"
+export DATABASE_URL="mysql://app_user:app_password@localhost:3306/project_managed?charset=utf8mb4"
+export GEPPO_DATABASE_URL="mysql://test_user:test_password@localhost:3307/project_managed_test?charset=utf8mb4"
 
 # 1. MySQLコンテナの起動確認
 echo "📦 MySQLコンテナの状態を確認しています..."

@@ -15,10 +15,13 @@
 
 ```env
 # MySQL Database Configuration
-DATABASE_URL="mysql://app_user:app_password@localhost:3306/project_managed"
+DATABASE_URL="mysql://app_user:app_password@localhost:3306/project_managed?charset=utf8mb4"
 
 # Test Database Configuration  
-DATABASE_TEST_URL="mysql://test_user:test_password@localhost:3307/project_managed_test"
+DATABASE_TEST_URL="mysql://test_user:test_password@localhost:3307/project_managed_test?charset=utf8mb4"
+
+# Geppo Database Configuration
+GEPPO_DATABASE_URL="mysql://test_user:test_password@localhost:3307/project_managed_test?charset=utf8mb4"
 
 # Database Credentials
 MYSQL_ROOT_PASSWORD=root

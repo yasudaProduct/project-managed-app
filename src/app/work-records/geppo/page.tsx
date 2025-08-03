@@ -40,7 +40,6 @@ import {
   Download,
   Calendar,
   Users,
-  Clock,
   AlertTriangle,
   Loader2,
 } from "lucide-react";
@@ -475,19 +474,118 @@ export default function GeppoPage() {
               <p>検索条件を変更して再度お試しください</p>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
+            <div className="rounded-md border overflow-x-auto">
+              <Table className="min-w-max">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>作業日</TableHead>
-                    <TableHead>プロジェクト</TableHead>
-                    <TableHead>ユーザー</TableHead>
-                    <TableHead>開始時刻</TableHead>
-                    <TableHead>終了時刻</TableHead>
-                    <TableHead className="text-right">休憩時間</TableHead>
-                    <TableHead className="text-right">作業時間</TableHead>
-                    <TableHead>作業内容</TableHead>
-                    <TableHead>カテゴリ</TableHead>
+                    <TableHead className="whitespace-nowrap">作業日</TableHead>
+                    <TableHead className="whitespace-nowrap">
+                      プロジェクト
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap">
+                      ユーザー
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap">
+                      タスク名
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap">WBS ID</TableHead>
+                    <TableHead className="whitespace-nowrap">
+                      ステータス
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap">備考</TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      1日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      2日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      3日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      4日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      5日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      6日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      7日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      8日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      9日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      10日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      11日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      12日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      13日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      14日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      15日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      16日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      17日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      18日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      19日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      20日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      21日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      22日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      23日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      24日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      25日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      26日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      27日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      28日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      29日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      30日
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center min-w-[60px]">
+                      31日
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -495,43 +593,148 @@ export default function GeppoPage() {
                     <TableRow
                       key={`${entry.id}-${entry.userId}-${entry.yyyyMM}-${index}`}
                     >
-                      <TableCell className="font-mono">
+                      <TableCell className="font-mono whitespace-nowrap">
                         {entry.yyyyMM}
                       </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{entry.projectName}</div>
-                          <div className="text-sm text-muted-foreground">
+                      <TableCell className="whitespace-nowrap">
+                        <div className="min-w-[200px]">
+                          <div
+                            className="font-medium truncate"
+                            title={entry.projectName}
+                          >
                             {entry.projectName}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{entry.userId}</div>
-                          <div className="text-sm text-muted-foreground">
+                      <TableCell className="whitespace-nowrap">
+                        <div className="min-w-[120px]">
+                          <div
+                            className="font-medium truncate"
+                            title={entry.userId}
+                          >
                             {entry.userId}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono">{entry.day01}</TableCell>
-                      <TableCell className="font-mono">{entry.day02}</TableCell>
-                      <TableCell className="text-right font-mono">
-                        {entry.day03}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        <div className="flex items-center justify-end space-x-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{entry.day04}h</span>
+                      <TableCell className="whitespace-nowrap">
+                        <div
+                          className="min-w-[200px] truncate"
+                          title={entry.taskName}
+                        >
+                          {entry.taskName}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="max-w-xs truncate" title={entry.biko}>
+                      <TableCell className="whitespace-nowrap">
+                        <div
+                          className="min-w-[200px] truncate"
+                          title={entry.wbsId}
+                        >
+                          {entry.wbsId}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Badge variant="outline">{entry.status}</Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <div
+                          className="min-w-[200px] truncate"
+                          title={entry.biko}
+                        >
                           {entry.biko}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{entry.status}</Badge>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day01}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day02}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day03}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day04}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day05}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day06}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day07}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day08}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day09}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day10}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day11}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day12}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day13}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day14}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day15}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day16}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day17}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day18}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day19}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day20}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day21}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day22}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day23}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day24}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day25}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day26}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day27}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day28}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day29}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day30}
+                      </TableCell>
+                      <TableCell className="font-mono whitespace-nowrap text-center">
+                        {entry.day31}
                       </TableCell>
                     </TableRow>
                   ))}
