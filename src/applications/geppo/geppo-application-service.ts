@@ -8,6 +8,7 @@ import type {
 } from '@/domains/geppo/types'
 import { SYMBOL } from '@/types/symbol'
 import { Project } from '@/types/project'
+import { User } from '@/types/user'
 
 export interface IGeppoApplicationService {
   /**
@@ -23,7 +24,7 @@ export interface IGeppoApplicationService {
    */
   getFilterOptions(): Promise<{
     projects: Project[]
-    // users: User[]
+    users: User[]
   }>
 
   /**
@@ -38,7 +39,7 @@ export class GeppoApplicationService implements IGeppoApplicationService {
     @inject(SYMBOL.IGeppoRepository)
     private readonly geppoRepository: IGeppoRepository,
     @inject(SYMBOL.IProjectRepository)
-    private readonly projectRepository: IProjectRepository
+    private readonly projectRepository: IProjectRepository,
   ) { }
 
   async searchWorkEntries(
@@ -63,14 +64,14 @@ export class GeppoApplicationService implements IGeppoApplicationService {
 
   async getFilterOptions(): Promise<{
     projects: Project[]
-    // users: User[]
-    // departments: string[]
-    // taskCategories: string[]
+    users: User[]
   }> {
     try {
       const projects = await this.projectRepository.findAll()
 
       const activeProjects = projects.filter(p => p.getStatus() === 'ACTIVE')
+
+      // const users = await this.userRepository.findAll()
 
       return {
         projects: activeProjects.map(p => ({
@@ -80,7 +81,8 @@ export class GeppoApplicationService implements IGeppoApplicationService {
           description: p.description,
           startDate: p.startDate,
           endDate: p.endDate
-        }))
+        })),
+        users: []
       }
     } catch (error) {
       console.error('Failed to get filter options:', error)

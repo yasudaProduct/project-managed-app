@@ -44,6 +44,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Project } from "@/types/project";
+import { User } from "@/types/user";
 
 interface Geppo {
   id: number;
@@ -88,22 +89,22 @@ interface Geppo {
 }
 
 interface SearchFilters {
-  projectCode: string;
+  projectName: string;
   userId: string;
   dateFrom: string;
   dateTo: string;
-  department: string;
-  taskCategory: string;
 }
 
 interface FilterOptions {
   projects: Project[];
+  users: User[];
 }
 
 export default function GeppoPage() {
   const [entries, setEntries] = useState<Geppo[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     projects: [],
+    users: [],
   });
   const [loading, setLoading] = useState(false);
   const [loadingFilters, setLoadingFilters] = useState(true);
@@ -113,12 +114,10 @@ export default function GeppoPage() {
   );
 
   const [filters, setFilters] = useState<SearchFilters>({
-    projectCode: "",
+    projectName: "",
     userId: "",
     dateFrom: "",
     dateTo: "",
-    department: "",
-    taskCategory: "",
   });
 
   const [pagination, setPagination] = useState({
@@ -215,12 +214,10 @@ export default function GeppoPage() {
   // フィルタリセット
   const resetFilters = () => {
     setFilters({
-      projectCode: "",
+      projectName: "",
       userId: "",
       dateFrom: "",
       dateTo: "",
-      department: "",
-      taskCategory: "",
     });
     setEntries([]);
     setPagination((prev) => ({ ...prev, page: 1, total: 0, totalPages: 0 }));
@@ -301,11 +298,11 @@ export default function GeppoPage() {
                 <div className="space-y-2">
                   <Label>プロジェクト</Label>
                   <Select
-                    value={filters.projectCode || "_all"}
+                    value={filters.projectName || "_all"}
                     onValueChange={(value) =>
                       setFilters((prev) => ({
                         ...prev,
-                        projectCode: value === "_all" ? "" : value,
+                        projectName: value === "_all" ? "" : value,
                       }))
                     }
                   >
@@ -323,7 +320,7 @@ export default function GeppoPage() {
                   </Select>
                 </div>
 
-                {/* <div className="space-y-2">
+                <div className="space-y-2">
                   <Label>ユーザー</Label>
                   <Select
                     value={filters.userId || "_all"}
@@ -340,13 +337,13 @@ export default function GeppoPage() {
                     <SelectContent>
                       <SelectItem value="_all">全て</SelectItem>
                       {filterOptions.users.map((user) => (
-                        <SelectItem key={user.userId} value={user.userId}>
-                          {user.userKanji} ({user.userId})
+                        <SelectItem key={user.id} value={user.id.toString()}>
+                          {user.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div> */}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

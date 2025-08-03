@@ -1,7 +1,7 @@
 import { injectable } from 'inversify'
 import { geppoPrisma } from '@/lib/prisma/geppo'
 import type { IGeppoRepository } from '@/applications/geppo/repositories/igeppo.repository'
-import type { GeppoSearchFilters, GeppoPaginationOptions, GeppoSearchResult, Geppo } from '@/domains/geppo/types'
+import type { GeppoSearchFilters, GeppoPaginationOptions, GeppoSearchResult } from '@/domains/geppo/types'
 
 @injectable()
 export class GeppoPrismaRepository implements IGeppoRepository {
