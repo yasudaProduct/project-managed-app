@@ -1,0 +1,102 @@
+#!/bin/bash
+
+# MySQL環境セットアップスクリプト
+# geppoテーブルの作成とシードデータの投入
+
+set -e
+
+echo "🚀 MySQL環境のセットアップを開始します..."
+
+# 環境変数の設定
+export DATABASE_URL="mysql://app_user:app_password@localhost:3306/project_managed"
+
+# 1. MySQLコンテナの起動確認
+echo "📦 MySQLコンテナの状態を確認しています..."
+if ! docker ps | grep -q project-managed-mysql-test; then
+    echo "🔄 MySQLコンテナを起動しています..."
+    docker compose -f compose.mysql.yml up -d db-test
+    
+    # MySQLの起動を待機
+    echo "⏳ MySQLの起動を待機しています..."
+    sleep 10
+    
+    # 接続確認
+    max_attempts=30
+    attempt=1
+    while [ $attempt -le $max_attempts ]; do
+        if docker exec project-managed-mysql-test mysql -u test_user -ptest_password -e "SELECT 1;" project_managed_test > /dev/null 2>&1; then
+            echo "✅ MySQLに接続できました"
+            break
+        fi
+        echo "🔄 MySQL接続試行 $attempt/$max_attempts..."
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+    
+    if [ $attempt -gt $max_attempts ]; then
+        echo "❌ MySQLへの接続に失敗しました"
+        exit 1
+    fi
+else
+    echo "✅ MySQLコンテナは既に起動しています"
+fi
+
+# 2. geppoテーブルの作成
+echo "🏗️  geppoテーブルを作成しています..."
+docker exec -i project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test << 'EOF'
+CREATE TABLE IF NOT EXISTS geppo (
+    id VARCHAR(255) PRIMARY KEY,
+    projectName VARCHAR(255),
+    taskName VARCHAR(255),
+    wbsId VARCHAR(255),
+    biko TEXT,
+    status VARCHAR(255),
+    day01 INT DEFAULT 0,
+    day02 INT DEFAULT 0,
+    day03 INT DEFAULT 0,
+    day04 INT DEFAULT 0,
+    day05 INT DEFAULT 0,
+    day06 INT DEFAULT 0,
+    day07 INT DEFAULT 0,
+    day08 INT DEFAULT 0,
+    day09 INT DEFAULT 0,
+    day10 INT DEFAULT 0,
+    day11 INT DEFAULT 0,
+    day12 INT DEFAULT 0,
+    day13 INT DEFAULT 0,
+    day14 INT DEFAULT 0,
+    day15 INT DEFAULT 0,
+    day16 INT DEFAULT 0,
+    day17 INT DEFAULT 0,
+    day18 INT DEFAULT 0,
+    day19 INT DEFAULT 0,
+    day20 INT DEFAULT 0,
+    day21 INT DEFAULT 0,
+    day22 INT DEFAULT 0,
+    day23 INT DEFAULT 0,
+    day24 INT DEFAULT 0,
+    day25 INT DEFAULT 0,
+    day26 INT DEFAULT 0,
+    day27 INT DEFAULT 0,
+    day28 INT DEFAULT 0,
+    day29 INT DEFAULT 0,
+    day30 INT DEFAULT 0,
+    day31 INT DEFAULT 0
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+EOF
+
+echo "✅ geppoテーブルが作成されました"
+
+# 3. シードデータの投入
+echo "🌱 シードデータを投入しています..."
+npx tsx scripts/seed-mysql.ts
+
+echo ""
+echo "🎉 MySQL環境のセットアップが完了しました!"
+echo ""
+echo "📋 次のコマンドでデータを確認できます:"
+echo "   mysql -h localhost -P 3307 -u test_user -ptest_password project_managed_test"
+echo "   > SELECT * FROM geppo;"
+echo ""
+echo "🐳 MySQLコンテナを停止する場合:"
+echo "   docker compose -f compose.mysql.yml down" 

@@ -40,11 +40,30 @@ NEXTAUTH_URL=http://localhost:3000
 SHADOW_DATABASE_URL="mysql://app_user:app_password@localhost:3306/project_managed_shadow"
 ```
 
-## Docker Composeでの起動
+## セットアップと実行
+
+### ワンコマンドセットアップ
+```bash
+# MySQL環境の一括セットアップ（推奨）
+npm run mysql:setup
+```
+
+### 個別実行
 
 ```bash
 # MySQL用compose.ymlを使用してコンテナを起動
+npm run mysql:start
+# または
 docker compose -f compose.mysql.yml up -d
+
+# シードデータのみ投入
+npm run mysql:seed
+
+# ログの確認
+npm run mysql:logs
+
+# コンテナの停止
+npm run mysql:stop
 ```
 
 ## MySQL用Prismaマイグレーション
@@ -84,11 +103,14 @@ npx prisma migrate dev --schema=./prisma/schema.mysql.prisma --name init
 ## データベース接続確認
 
 ```bash
-# MySQLクライアントで接続
-mysql -h localhost -P 3306 -u app_user -p project_managed
+# docker execで直接接続（推奨）
+docker exec -it project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test
 
-# または、docker execで直接接続
-docker exec -it project-managed-mysql mysql -u root -p
+# rootユーザーでの接続
+docker exec -it project-managed-mysql-test mysql -u root -proot project_managed_test
+
+# データの確認
+docker exec project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test -e "SELECT * FROM geppo LIMIT 5;"
 ```
 
 ## 設定詳細
