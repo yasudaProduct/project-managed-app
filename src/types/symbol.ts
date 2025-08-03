@@ -27,5 +27,9 @@ export const SYMBOL = {
     IAuthRepository: Symbol.for('IAuthRepository'),
     IAuthApplicationService: Symbol.for('IAuthApplicationService'),
 
+    // Geppo
+    IGeppoRepository: Symbol.for('IGeppoRepository'),
+    IGeppoApplicationService: Symbol.for('IGeppoApplicationService'),
+
     ITaskFactory: Symbol.for('ITaskFactory'),
 }

@@ -31,6 +31,12 @@ import { AuthApplicationService } from "@/applications/auth/auth-application-ser
 import type { IAuthRepository } from "@/domains/auth/auth-service";
 import { AuthRepository } from "@/infrastructures/auth-repository";
 
+// Geppo関連
+import type { IGeppoApplicationService } from "@/applications/geppo/geppo-application-service";
+import { GeppoApplicationService } from "@/applications/geppo/geppo-application-service";
+import type { IGeppoRepository } from "@/applications/geppo/repositories/igeppo.repository";
+import { GeppoPrismaRepository } from "@/infrastructures/geppo/geppo-prisma.repository";
+
 
 const container: Container = new Container();
 // アプリケーションサービス
@@ -41,6 +47,7 @@ container.bind<IScheduleGenerateService>(SYMBOL.IScheduleGenerateService).to(Sch
 container.bind<IDashboardApplicationService>(SYMBOL.IDashboardApplicationService).to(DashboardApplicationService).inSingletonScope();
 container.bind<IPhaseApplicationService>(SYMBOL.IPhaseApplicationService).to(PhaseApplicationService).inSingletonScope();
 container.bind<IAuthApplicationService>(SYMBOL.IAuthApplicationService).to(AuthApplicationService).inSingletonScope();
+container.bind<IGeppoApplicationService>(SYMBOL.IGeppoApplicationService).to(GeppoApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
@@ -54,6 +61,7 @@ container.bind<ITaskRepository>(SYMBOL.ITaskRepository).to(TaskRepository).inSin
 container.bind<IWbsAssigneeRepository>(SYMBOL.IWbsAssigneeRepository).to(WbsAssigneeRepository).inSingletonScope();
 container.bind<IDashboardQueryRepository>(SYMBOL.IDashboardQueryRepository).to(DashboardQueryRepository).inSingletonScope();
 container.bind<IAuthRepository>(SYMBOL.IAuthRepository).to(AuthRepository).inSingletonScope();
+container.bind<IGeppoRepository>(SYMBOL.IGeppoRepository).to(GeppoPrismaRepository).inSingletonScope();
 
 // ファクトリ
 container.bind<ITaskFactory>(SYMBOL.ITaskFactory).to(TaskFactory).inSingletonScope();

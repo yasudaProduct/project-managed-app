@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS geppo;
 -- geppoテーブルの作成
 CREATE TABLE geppo (
     id VARCHAR(255) PRIMARY KEY,
+    userId VARCHAR(255),
     projectName VARCHAR(255),
     yyyyMM VARCHAR(255),
     taskName VARCHAR(255),

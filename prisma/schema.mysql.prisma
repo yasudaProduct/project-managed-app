@@ -1,56 +1,63 @@
 generator client {
-  provider = "prisma-client-js"
-  binaryTargets   = ["native", "darwin-arm64"]
+  provider      = "prisma-client-js"
+  output        = "../node_modules/.prisma/geppo-client"
+  binaryTargets = ["native", "darwin-arm64"]
 }
 
 generator markdown {
   provider = "prisma-markdown"
   output   = "../ERD.mysql.md"
-  title    = "ER図 (MySQL)"
+  title    = "ER図 (MySQL - Geppo)"
 }
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
+  url      = env("GEPPO_DATABASE_URL")
 }
 
-model geppo {
-  id          String   @id @default(uuid())
-  projectName String?
-  yyyyMM      String?
-  taskName    String?
-  wbsId       String?
-  biko        String?
-  status      String?
-  day01       Int
-  day02       Int
-  day03       Int
-  day04       Int
-  day05       Int
-  day06       Int
-  day07       Int
-  day08       Int
-  day09       Int
-  day10       Int
-  day11       Int
-  day12       Int
-  day13       Int
-  day14       Int
-  day15       Int
-  day16       Int
-  day17       Int
-  day18       Int
-  day19       Int
-  day20       Int
-  day21       Int
-  day22       Int
-  day23       Int
-  day24       Int
-  day25       Int
-  day26       Int
-  day27       Int
-  day28       Int
-  day29       Int
-  day30       Int
-  day31       Int
+model Geppo {
+  id          String  @id @default(uuid()) @db.VarChar(255)
+  userId      String? @db.VarChar(255)
+  projectName String? @db.VarChar(255)
+  yyyyMM      String? @db.VarChar(255)
+  taskName    String? @db.VarChar(255)
+  wbsId       String? @db.VarChar(255)
+  biko        String? @db.Text
+  status      String? @db.VarChar(255)
+  day01       Int?    @default(0)
+  day02       Int?    @default(0)
+  day03       Int?    @default(0)
+  day04       Int?    @default(0)
+  day05       Int?    @default(0)
+  day06       Int?    @default(0)
+  day07       Int?    @default(0)
+  day08       Int?    @default(0)
+  day09       Int?    @default(0)
+  day10       Int?    @default(0)
+  day11       Int?    @default(0)
+  day12       Int?    @default(0)
+  day13       Int?    @default(0)
+  day14       Int?    @default(0)
+  day15       Int?    @default(0)
+  day16       Int?    @default(0)
+  day17       Int?    @default(0)
+  day18       Int?    @default(0)
+  day19       Int?    @default(0)
+  day20       Int?    @default(0)
+  day21       Int?    @default(0)
+  day22       Int?    @default(0)
+  day23       Int?    @default(0)
+  day24       Int?    @default(0)
+  day25       Int?    @default(0)
+  day26       Int?    @default(0)
+  day27       Int?    @default(0)
+  day28       Int?    @default(0)
+  day29       Int?    @default(0)
+  day30       Int?    @default(0)
+  day31       Int?    @default(0)
+
+  @@index([projectName], map: "idx_projectName")
+  @@index([wbsId], map: "idx_wbsId")
+  @@index([yyyyMM], map: "idx_yyyyMM")
+  @@map("geppo")
 }
