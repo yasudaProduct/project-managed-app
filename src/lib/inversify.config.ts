@@ -36,6 +36,8 @@ import type { IGeppoApplicationService } from "@/applications/geppo/geppo-applic
 import { GeppoApplicationService } from "@/applications/geppo/geppo-application-service";
 import type { IGeppoRepository } from "@/applications/geppo/repositories/igeppo.repository";
 import { GeppoPrismaRepository } from "@/infrastructures/geppo/geppo-prisma.repository";
+import { IUserRepository } from "@/applications/user/iuser-repositroy";
+import { UserRepository } from "@/infrastructures/user-repository";
 
 
 const container: Container = new Container();
@@ -62,6 +64,7 @@ container.bind<IWbsAssigneeRepository>(SYMBOL.IWbsAssigneeRepository).to(WbsAssi
 container.bind<IDashboardQueryRepository>(SYMBOL.IDashboardQueryRepository).to(DashboardQueryRepository).inSingletonScope();
 container.bind<IAuthRepository>(SYMBOL.IAuthRepository).to(AuthRepository).inSingletonScope();
 container.bind<IGeppoRepository>(SYMBOL.IGeppoRepository).to(GeppoPrismaRepository).inSingletonScope();
+container.bind<IUserRepository>(SYMBOL.IUserRepository).to(UserRepository).inSingletonScope();
 
 // ファクトリ
 container.bind<ITaskFactory>(SYMBOL.ITaskFactory).to(TaskFactory).inSingletonScope();

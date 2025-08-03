@@ -9,6 +9,7 @@ import type {
 import { SYMBOL } from '@/types/symbol'
 import { Project } from '@/types/project'
 import { User } from '@/types/user'
+import type { IUserRepository } from '../user/iuser-repositroy'
 
 export interface IGeppoApplicationService {
   /**
@@ -40,6 +41,8 @@ export class GeppoApplicationService implements IGeppoApplicationService {
     private readonly geppoRepository: IGeppoRepository,
     @inject(SYMBOL.IProjectRepository)
     private readonly projectRepository: IProjectRepository,
+    @inject(SYMBOL.IUserRepository)
+    private readonly userRepository: IUserRepository
   ) { }
 
   async searchWorkEntries(

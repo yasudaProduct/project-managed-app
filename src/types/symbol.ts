@@ -18,6 +18,7 @@ export const SYMBOL = {
     IPhaseRepository: Symbol.for('IPhaseRepository'),
     ITaskRepository: Symbol.for('ITaskRepository'),
     IDashboardQueryRepository: Symbol.for('IDashboardQueryRepository'),
+    IUserRepository: Symbol.for('IUserRepository'),
 
     // CQRS
     IQueryBus: Symbol.for('IQueryBus'),
