@@ -7,6 +7,7 @@ const execAsync = promisify(exec)
 const sampleGeppoData = [
     {
         projectName: "Webアプリケーション開発",
+        yyyyMM: "2024/12",
         taskName: "フロントエンド開発",
         wbsId: "WBS-001",
         biko: "React コンポーネント実装",
@@ -21,6 +22,7 @@ const sampleGeppoData = [
     },
     {
         projectName: "Webアプリケーション開発",
+        yyyyMM: "2024/12",
         taskName: "バックエンドAPI開発",
         wbsId: "WBS-002",
         biko: "REST API実装とテスト",
@@ -35,6 +37,7 @@ const sampleGeppoData = [
     },
     {
         projectName: "データベース設計",
+        yyyyMM: "2024/11",
         taskName: "スキーマ設計",
         wbsId: "WBS-003",
         biko: "ER図作成とテーブル設計",
@@ -49,6 +52,7 @@ const sampleGeppoData = [
     },
     {
         projectName: "システムテスト",
+        yyyyMM: "2025/01",
         taskName: "結合テスト",
         wbsId: "WBS-004",
         biko: "各モジュール間のテスト実施",
@@ -63,6 +67,7 @@ const sampleGeppoData = [
     },
     {
         projectName: "ドキュメント作成",
+        yyyyMM: "2024/12",
         taskName: "技術仕様書作成",
         wbsId: "WBS-005",
         biko: "システム仕様書の作成",
@@ -92,13 +97,14 @@ async function insertSeedData() {
 
             const insertSQL = `
         INSERT INTO geppo (
-          id, projectName, taskName, wbsId, biko, status,
+          id, projectName, yyyyMM, taskName, wbsId, biko, status,
           day01, day02, day03, day04, day05, day06, day07, day08, day09, day10,
           day11, day12, day13, day14, day15, day16, day17, day18, day19, day20,
           day21, day22, day23, day24, day25, day26, day27, day28, day29, day30, day31
         ) VALUES (
           '${uuid}', 
           ${data.projectName ? `'${data.projectName.replace(/'/g, "\\'")}'` : 'NULL'},
+          ${data.yyyyMM ? `'${data.yyyyMM}'` : 'NULL'},
           ${data.taskName ? `'${data.taskName.replace(/'/g, "\\'")}'` : 'NULL'},
           ${data.wbsId ? `'${data.wbsId}'` : 'NULL'},
           ${data.biko ? `'${data.biko.replace(/'/g, "\\'")}'` : 'NULL'},

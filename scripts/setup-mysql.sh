@@ -41,51 +41,18 @@ else
     echo "✅ MySQLコンテナは既に起動しています"
 fi
 
-# 2. geppoテーブルの作成
+# 2. geppoテーブルの作成（既存テーブルがあれば削除して再作成）
 echo "🏗️  geppoテーブルを作成しています..."
-docker exec -i project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test << 'EOF'
-CREATE TABLE IF NOT EXISTS geppo (
-    id VARCHAR(255) PRIMARY KEY,
-    projectName VARCHAR(255),
-    taskName VARCHAR(255),
-    wbsId VARCHAR(255),
-    biko TEXT,
-    status VARCHAR(255),
-    day01 INT DEFAULT 0,
-    day02 INT DEFAULT 0,
-    day03 INT DEFAULT 0,
-    day04 INT DEFAULT 0,
-    day05 INT DEFAULT 0,
-    day06 INT DEFAULT 0,
-    day07 INT DEFAULT 0,
-    day08 INT DEFAULT 0,
-    day09 INT DEFAULT 0,
-    day10 INT DEFAULT 0,
-    day11 INT DEFAULT 0,
-    day12 INT DEFAULT 0,
-    day13 INT DEFAULT 0,
-    day14 INT DEFAULT 0,
-    day15 INT DEFAULT 0,
-    day16 INT DEFAULT 0,
-    day17 INT DEFAULT 0,
-    day18 INT DEFAULT 0,
-    day19 INT DEFAULT 0,
-    day20 INT DEFAULT 0,
-    day21 INT DEFAULT 0,
-    day22 INT DEFAULT 0,
-    day23 INT DEFAULT 0,
-    day24 INT DEFAULT 0,
-    day25 INT DEFAULT 0,
-    day26 INT DEFAULT 0,
-    day27 INT DEFAULT 0,
-    day28 INT DEFAULT 0,
-    day29 INT DEFAULT 0,
-    day30 INT DEFAULT 0,
-    day31 INT DEFAULT 0
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-EOF
+echo "   ↳ 既存テーブルがある場合は削除して再作成します"
 
-echo "✅ geppoテーブルが作成されました"
+# 外部SQLファイルを実行
+if [ -f "mysql/init/create-geppo-table.sql" ]; then
+    docker exec -i project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test < mysql/init/create-geppo-table.sql
+    echo "✅ geppoテーブルが作成されました（外部SQLファイルから）"
+else
+    echo "❌ SQLファイルが見つかりません: mysql/init/create-geppo-table.sql"
+    exit 1
+fi
 
 # 3. シードデータの投入
 echo "🌱 シードデータを投入しています..."

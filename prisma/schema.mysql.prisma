@@ -17,6 +17,7 @@ datasource db {
 model geppo {
   id          String   @id @default(uuid())
   projectName String?
+  yyyyMM      String?
   taskName    String?
   wbsId       String?
   biko        String?
