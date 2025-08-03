@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets   = ["native", "darwin-arm64"]
+}
+
+generator markdown {
+  provider = "prisma-markdown"
+  output   = "../ERD.mysql.md"
+  title    = "ER図 (MySQL)"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Projects {
+  id          String   @id @default(uuid())
+  name        String
+  status      ProjectStatus @default(ACTIVE)
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // リレーション
+  wbsItems    WbsItems[]
+  phases      Phases[]
+  assignees   WbsAssignees[]
+
+  @@map("projects")
+}
+
+model Phases {
+  id          String   @id @default(uuid())
+  projectId   String
+  phaseCode   String
+  phaseName   String
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // リレーション
+  project     Projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  wbsItems    WbsItems[]
+
+  @@unique([projectId, phaseCode])
+  @@map("phases")
+}
+
+model WbsItems {
+  id              String    @id @default(uuid())
+  projectId       String
+  phaseId         String
+  taskNo          Int       @unique @default(autoincrement())
+  wbsCode         String
+  taskName        String
+  abbreviatedName String?
+  displayName     String?
+  parentId        String?
+  level           Int       @default(1)
+  sortOrder       Int       @default(0)
+  plannedStartDate DateTime?
+  plannedEndDate  DateTime?
+  actualStartDate DateTime?
+  actualEndDate   DateTime?
+  progress        Int       @default(0)
+  plannedHours    Float?
+  actualHours     Float?
+  status          TaskStatus @default(NOT_STARTED)
+  description     String?   @db.Text
+  isMilestone     Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // リレーション
+  project         Projects     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase           Phases       @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  parent          WbsItems?    @relation("WbsHierarchy", fields: [parentId], references: [id])
+  children        WbsItems[]   @relation("WbsHierarchy")
+  assignees       WbsAssignees[]
+  workRecords     WorkRecords[]
+
+  @@unique([projectId, wbsCode])
+  @@map("wbs_items")
+}
+
+model WbsAssignees {
+  id        String   @id @default(uuid())
+  wbsId     String
+  userId    String
+  assigneeRate Float @default(1.0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // リレーション
+  wbsItem   WbsItems @relation(fields: [wbsId], references: [id], onDelete: Cascade)
+  user      Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Projects @relation(fields: [wbsId], references: [id])
+
+  @@unique([wbsId, userId])
+  @@map("wbs_assignees")
+}
+
+model Users {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  name        String
+  password    String?
+  role        UserRole @default(USER)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // リレーション
+  assignees   WbsAssignees[]
+  workRecords WorkRecords[]
+  userSchedules UserSchedules[]
+
+  @@map("users")
+}
+
+model UserSchedules {
+  id         String   @id @default(uuid())
+  userId     String
+  scheduleDate DateTime
+  scheduleType ScheduleType
+  startTime  DateTime?
+  endTime    DateTime?
+  description String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // リレーション
+  user       Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scheduleDate, scheduleType])
+  @@map("user_schedules")
+}
+
+model WorkRecords {
+  id          String    @id @default(uuid())
+  userId      String
+  wbsId       String?
+  workDate    DateTime
+  startTime   DateTime?
+  endTime     DateTime?
+  workHours   Float
+  description String?   @db.Text
+  source      String    @default("manual") // manual, import, etc.
+  importBatchId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // リレーション
+  user        Users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wbsItem     WbsItems? @relation(fields: [wbsId], references: [id], onDelete: SetNull)
+
+  @@map("work_records")
+}
+
+// Enum定義
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  SUSPENDED
+  CANCELLED
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  GUEST
+}
+
+enum ScheduleType {
+  WORK
+  VACATION
+  SICK_LEAVE
+  TRAINING
+  MEETING
+  OTHER
+} 
