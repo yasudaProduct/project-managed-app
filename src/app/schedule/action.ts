@@ -35,6 +35,48 @@ export async function getSchedules(): Promise<ScheduleEntry[]> {
     }));
 }
 
+export async function getUsers(): Promise<Array<{id: string, name: string, email: string}>> {
+    const users = await prisma.users.findMany({
+        select: {
+            id: true,
+            name: true,
+            email: true,
+        },
+    });
+
+    return users.map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+    }));
+}
+
+export async function getSchedulesByDateRange(startDate: Date, endDate: Date): Promise<ScheduleEntry[]> {
+    const schedules = await prisma.userSchedule.findMany({
+        where: {
+            date: {
+                gte: startDate,
+                lte: endDate,
+            },
+        },
+        include: {
+            user: true,
+        },
+    });
+
+    return schedules.map((schedule) => ({
+        id: schedule.id,
+        userId: schedule.userId,
+        name: schedule.user.name,
+        date: schedule.date,
+        startTime: schedule.startTime,
+        endTime: schedule.endTime,
+        title: schedule.title,
+        location: schedule.location ?? "",
+        description: schedule.description ?? "",
+    }));
+}
+
 export async function importSchedule(csv: scheduleCsvData[]): Promise<{
     success: boolean;
     error?: string;

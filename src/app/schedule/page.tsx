@@ -1,24 +1,15 @@
-import { UserScheduleCalendar } from "@/components/user-schedule-calendar";
-import { getSchedules } from "./action";
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
-import Link from "next/link";
+import { ModernCalendar } from "@/components/modern-calendar";
+import { getSchedules, getUsers } from "./action";
 
 export default async function SchedulePage() {
-  const schedules = await getSchedules();
+  const [schedules, users] = await Promise.all([
+    getSchedules(),
+    getUsers()
+  ]);
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">スケジュール</h1>
-        <Link href="/schedule/import">
-          <Button>
-            <PlusIcon className="w-4 h-4" />
-            スケジュール追加
-          </Button>
-        </Link>
-      </div>
-      <UserScheduleCalendar schedules={schedules} />
+    <div className="h-screen">
+      <ModernCalendar schedules={schedules} users={users} />
     </div>
   );
 }
