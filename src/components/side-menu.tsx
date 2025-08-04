@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, Home, Menu, PlusCircle, Target, Trello, Users } from "lucide-react";
+import {
+  Calendar,
+  Home,
+  Menu,
+  PlusCircle,
+  Target,
+  Trello,
+  Users,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Sheet,
@@ -69,7 +77,14 @@ export function SideMenu() {
             className="text-lg flex items-center gap-2"
           >
             <Calendar className="h-4 w-4" />
-            🚧作業実績取込
+            作業実績
+          </Link>
+          <Link
+            href="/work-records/geppo"
+            className="text-lg flex items-center gap-2"
+          >
+            <Calendar className="h-4 w-4" />
+            月報
           </Link>
           <Link href="/schedule/" className="text-lg flex items-center gap-2">
             <Calendar className="h-4 w-4" />
@@ -129,7 +144,7 @@ export function SideMenu() {
             </>
           )}
         </nav>
-        
+
         {/* ログイン状況表示 */}
         <AuthStatus />
       </SheetContent>

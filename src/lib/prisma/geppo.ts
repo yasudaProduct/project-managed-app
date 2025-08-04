@@ -6,8 +6,8 @@ declare global {
 }
 
 // Geppo専用のPrismaクライアント（MySQLデータベース用）
-export const geppoPrisma = 
-  globalThis.__geppo_prisma ?? 
+export const geppoPrisma =
+  globalThis.__geppo_prisma ??
   new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     datasourceUrl: process.env.GEPPO_DATABASE_URL,

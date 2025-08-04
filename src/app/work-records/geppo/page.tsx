@@ -41,12 +41,13 @@ import {
   Users,
   AlertTriangle,
   Loader2,
+  Upload,
 } from "lucide-react";
 import { Project } from "@/types/project";
 import { User } from "@/types/user";
 import { Geppo } from "@/domains/geppo/types";
 import { MonthPicker } from "@/components/month-picker";
-
+import Link from "next/link";
 
 interface SearchFilters {
   PROJECT_ID: string;
@@ -211,22 +212,32 @@ export default function GeppoPage() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Geppo月報データ</h1>
         <div className="flex items-center space-x-4">
-          <p className="text-muted-foreground">
-            MySQLのgeppoデータベースから作業実績データを検索・表示します
-          </p>
-          {connectionStatus !== null && (
-            <Badge
-              variant={connectionStatus ? "default" : "destructive"}
-              className="flex items-center space-x-1"
-            >
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  connectionStatus ? "bg-green-500" : "bg-red-500"
-                }`}
-              />
-              <span>{connectionStatus ? "接続済み" : "接続エラー"}</span>
-            </Badge>
-          )}
+          <div className="flex items-center space-x-4">
+            <p className="text-muted-foreground">
+              MySQLのgeppoデータベースから作業実績データを検索・表示します
+            </p>
+            {connectionStatus !== null && (
+              <Badge
+                variant={connectionStatus ? "default" : "destructive"}
+                className="flex items-center space-x-1"
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    connectionStatus ? "bg-green-500" : "bg-red-500"
+                  }`}
+                />
+                <span>{connectionStatus ? "接続済み" : "接続エラー"}</span>
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center space-x-4">
+            <Link href="/work-records/import">
+              <Button>
+                <Upload className="h-4 w-4" />
+                月報データ取込
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
