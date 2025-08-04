@@ -20,13 +20,12 @@ export async function getWorkRecords() {
         },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const formattedWorkRecords = workRecords.map((workRecord: any) => ({
+    const formattedWorkRecords = workRecords.map((workRecord) => ({
         id: workRecord.id,
         userId: workRecord.userId,
         userName: workRecord.user.name,
         taskId: workRecord.taskId,
-        taskName: workRecord.task.name,
+        taskName: workRecord.task?.name,
         date: workRecord.date,
         hours_worked: workRecord.hours_worked,
     }));

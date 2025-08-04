@@ -1,0 +1,1 @@
+// export type { IWorkRecordRepository } from './iwork-record.repository'

@@ -39,6 +39,22 @@ import { GeppoPrismaRepository } from "@/infrastructures/geppo/geppo-prisma.repo
 import { IUserRepository } from "@/applications/user/iuser-repositroy";
 import { UserRepository } from "@/infrastructures/user-repository";
 
+// Work Records関連
+import type { IWorkRecordRepository } from "@/applications/work-record/repositories/iwork-record.repository";
+import { WorkRecordPrismaRepository } from "@/infrastructures/work-record/work-record-prisma.repository";
+import type { IWorkRecordApplicationService } from "@/applications/work-record/work-record-application-service";
+import { WorkRecordApplicationService } from "@/applications/work-record/work-record-application-service";
+
+// Geppo Import関連
+import type { IGeppoImportApplicationService } from "@/applications/geppo-import/geppo-import-application-service";
+import { GeppoImportApplicationService } from "@/applications/geppo-import/geppo-import-application-service";
+import { ProjectMappingService } from "@/infrastructures/geppo-import/project-mapping.service";
+import { UserMappingService } from "@/infrastructures/geppo-import/user-mapping.service";
+import { TaskMappingService } from "@/infrastructures/geppo-import/task-mapping.service";
+
+// Prisma
+import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 
 const container: Container = new Container();
 // アプリケーションサービス
@@ -50,6 +66,8 @@ container.bind<IDashboardApplicationService>(SYMBOL.IDashboardApplicationService
 container.bind<IPhaseApplicationService>(SYMBOL.IPhaseApplicationService).to(PhaseApplicationService).inSingletonScope();
 container.bind<IAuthApplicationService>(SYMBOL.IAuthApplicationService).to(AuthApplicationService).inSingletonScope();
 container.bind<IGeppoApplicationService>(SYMBOL.IGeppoApplicationService).to(GeppoApplicationService).inSingletonScope();
+container.bind<IWorkRecordApplicationService>(SYMBOL.IWorkRecordApplicationService).to(WorkRecordApplicationService).inSingletonScope();
+container.bind<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService).to(GeppoImportApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
@@ -65,6 +83,15 @@ container.bind<IDashboardQueryRepository>(SYMBOL.IDashboardQueryRepository).to(D
 container.bind<IAuthRepository>(SYMBOL.IAuthRepository).to(AuthRepository).inSingletonScope();
 container.bind<IGeppoRepository>(SYMBOL.IGeppoRepository).to(GeppoPrismaRepository).inSingletonScope();
 container.bind<IUserRepository>(SYMBOL.IUserRepository).to(UserRepository).inSingletonScope();
+container.bind<IWorkRecordRepository>(SYMBOL.IWorkRecordRepository).to(WorkRecordPrismaRepository).inSingletonScope();
+
+// Geppo Import関連サービス
+container.bind<ProjectMappingService>(SYMBOL.ProjectMappingService).to(ProjectMappingService).inSingletonScope();
+container.bind<UserMappingService>(SYMBOL.UserMappingService).to(UserMappingService).inSingletonScope();
+container.bind<TaskMappingService>(SYMBOL.TaskMappingService).to(TaskMappingService).inSingletonScope();
+
+// インフラストラクチャ
+container.bind<PrismaClient>(SYMBOL.PrismaClient).toConstantValue(prisma);
 
 // ファクトリ
 container.bind<ITaskFactory>(SYMBOL.ITaskFactory).to(TaskFactory).inSingletonScope();

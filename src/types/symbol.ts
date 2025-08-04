@@ -32,5 +32,19 @@ export const SYMBOL = {
     IGeppoRepository: Symbol.for('IGeppoRepository'),
     IGeppoApplicationService: Symbol.for('IGeppoApplicationService'),
 
+    // Work Records
+    IWorkRecordRepository: Symbol.for('IWorkRecordRepository'),
+    IWorkRecordApplicationService: Symbol.for('IWorkRecordApplicationService'),
+
+    // Geppo Import
+    IGeppoImportApplicationService: Symbol.for('IGeppoImportApplicationService'),
+    ProjectMappingService: Symbol.for('ProjectMappingService'),
+    UserMappingService: Symbol.for('UserMappingService'),
+    TaskMappingService: Symbol.for('TaskMappingService'),
+
+
     ITaskFactory: Symbol.for('ITaskFactory'),
+
+    // Infrastructure
+    PrismaClient: Symbol.for('PrismaClient'),
 }

@@ -1,6 +1,7 @@
 import { IUserRepository } from "@/applications/user/iuser-repositroy";
 import { User } from "@/domains/user/user";
 import { injectable } from "inversify";
+import prisma from "@/lib/prisma";
 
 @injectable()
 export class UserRepository implements IUserRepository {
