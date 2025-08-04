@@ -39,44 +39,75 @@ export async function importSchedule(csv: scheduleCsvData[]): Promise<{
     success: boolean;
     error?: string;
 }> {
+    try {
+        // トランザクション
+        await prisma.$transaction(async (tx) => {
+            console.log(csv)
 
-    // トランザクション
-    await prisma.$transaction(async (tx) => {
+            // userSchedule を削除
+            await tx.userSchedule.deleteMany();
 
-        // userSchedule を削除
-        await tx.userSchedule.deleteMany();
-
-        for (const schedule of csv) {
-            const user = await tx.users.findFirst({
-                where: {
-                    id: schedule.userId,
+            for (const schedule of csv) {
+                // データの検証
+                if (!schedule.userId || !schedule.date) {
+                    console.warn(`無効なスケジュールデータをスキップ: ${JSON.stringify(schedule)}`);
+                    continue;
                 }
-            });
 
-            if (!user) {
-                // ユーザーが見つからない場合はスキップ
-                continue;
-            }
+                const user = await tx.users.findFirst({
+                    where: {
+                        id: schedule.userId,
+                    }
+                });
 
-            const schedules = await tx.userSchedule.createMany({
-                data: {
-                    userId: schedule.userId,
-                    date: new Date(schedule.date),
-                    startTime: schedule.startTime,
-                    endTime: schedule.endTime,
-                    title: schedule.title,
-                    location: schedule.location,
-                    description: schedule.description,
+                if (!user) {
+                    console.warn(`ユーザーが見つかりません: ${schedule.userId}`);
+                    continue;
                 }
-            });
 
-            if (!schedules) {
-                throw new Error(`スケジュールの作成に失敗しました: ${schedule.userId}`);
+                // 日付の検証と変換
+                const dateStr = schedule.date.trim();
+                if (!dateStr) {
+                    console.warn(`無効な日付: ${schedule.date}`);
+                    continue;
+                }
+
+                // 日付文字列の形式を確認（YYYY-MM-DD形式を想定）
+                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                if (!dateRegex.test(dateStr)) {
+                    console.warn(`無効な日付形式: ${dateStr}`);
+                    continue;
+                }
+
+                const scheduleDate = new Date(dateStr + 'T00:00:00');
+                if (isNaN(scheduleDate.getTime())) {
+                    console.warn(`無効な日付: ${dateStr}`);
+                    continue;
+                }
+
+                // 単一レコードを作成（createを使用）
+                await tx.userSchedule.create({
+                    data: {
+                        userId: schedule.userId,
+                        date: scheduleDate,
+                        startTime: schedule.startTime || '',
+                        endTime: schedule.endTime || '',
+                        title: schedule.title || '',
+                        location: schedule.location || '',
+                        description: schedule.description || '',
+                    }
+                });
             }
-        }
-    });
+        });
 
-    return {
-        success: true,
-    };
+        return {
+            success: true,
+        };
+    } catch (error) {
+        console.error('スケジュールインポートエラー:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+        };
+    }
 }
