@@ -6,14 +6,17 @@ DROP TABLE IF EXISTS geppo;
 
 -- geppoテーブルの作成
 CREATE TABLE geppo (
-    id VARCHAR(255) PRIMARY KEY,
-    userId VARCHAR(255),
-    projectName VARCHAR(255),
-    yyyyMM VARCHAR(255),
-    taskName VARCHAR(255),
-    wbsId VARCHAR(255),
-    biko TEXT,
-    status VARCHAR(255),
+    MEMBER_ID varchar(15),
+    GEPPO_YYYYMM varchar(6),
+    ROW_NO int,
+    COMPANY_NAME varchar(50),
+    MEMBER_NAME varchar(20),
+    PROJECT_ID varchar(50),
+    PROJECT_SUB_ID varchar(20),
+    WBS_NO varchar(20),
+    WBS_NAME varchar(100),
+    WORK_NAME varchar(100),
+    WORK_STATUS varchar(20),
     day01 INT DEFAULT 0,
     day02 INT DEFAULT 0,
     day03 INT DEFAULT 0,
@@ -45,9 +48,11 @@ CREATE TABLE geppo (
     day29 INT DEFAULT 0,
     day30 INT DEFAULT 0,
     day31 INT DEFAULT 0,
-    INDEX idx_yyyyMM (yyyyMM),
-    INDEX idx_projectName (projectName),
-    INDEX idx_wbsId (wbsId)
+    PRIMARY KEY (
+        MEMBER_ID,
+        GEPPO_YYYYMM,
+        ROW_NO
+    )
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- テーブル作成完了の確認

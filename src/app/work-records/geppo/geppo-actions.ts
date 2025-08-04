@@ -113,7 +113,7 @@ export async function exportGeppoToCsv(filters: GeppoSearchFilters) {
     const pagination: GeppoPaginationOptions = {
       page: 1,
       limit: 10000,
-      sortBy: 'yyyyMM',
+      sortBy: 'GEPPO_YYYYMM',
       sortOrder: 'desc'
     }
 
@@ -122,33 +122,34 @@ export async function exportGeppoToCsv(filters: GeppoSearchFilters) {
     // CSVヘッダー
     const csvHeaders = [
       'ID',
-      '作業日',
-      'プロジェクトコード',
-      'プロジェクト名',
-      'ユーザーID',
-      'ユーザー名（漢字）',
-      'ユーザー名（カナ）',
-      '開始時刻',
-      '終了時刻',
-      '休憩時間（分）',
-      '作業時間',
-      '作業内容',
-      'タスクカテゴリ',
-      '登録日時',
-      '更新日時'
+      '年月',
+      'プロジェクトID',
+      '会社名',
+      'メンバーID',
+      'メンバー名',
+      'プロジェクトサブID',
+      'WBS番号',
+      'WBS名',
+      '作業名',
+      '作業ステータス',
+      '1日', '2日', '3日', '4日', '5日', '6日', '7日', '8日', '9日', '10日',
+      '11日', '12日', '13日', '14日', '15日', '16日', '17日', '18日', '19日', '20日',
+      '21日', '22日', '23日', '24日', '25日', '26日', '27日', '28日', '29日', '30日', '31日'
     ]
 
     // CSVデータの生成
     const csvRows = result.geppos.map(entry => [
-      entry.id,
-      new Date(entry.yyyyMM).toLocaleDateString('ja-JP'),
-      entry.projectName,
-      entry.projectName,
-      entry.userId,
-      entry.taskName,
-      entry.wbsId,
-      entry.biko,
-      entry.status,
+      `${entry.MEMBER_ID}-${entry.GEPPO_YYYYMM}-${entry.ROW_NO}`,
+      entry.GEPPO_YYYYMM,
+      entry.PROJECT_ID,
+      entry.COMPANY_NAME,
+      entry.MEMBER_ID,
+      entry.MEMBER_NAME,
+      entry.PROJECT_SUB_ID,
+      entry.WBS_NO,
+      entry.WBS_NAME,
+      entry.WORK_NAME,
+      entry.WORK_STATUS,
       entry.day01,
       entry.day02,
       entry.day03,

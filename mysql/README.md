@@ -74,6 +74,9 @@ npm run mysql:stop
 MySQLを使用する場合は、専用のスキーマファイルを使用してください：
 
 ```bash
+# スキーマをプル
+npx prisma db pull --schema=prisma/schema.mysql.prisma
+
 # MySQL用Prismaクライアントの生成
 npx prisma generate --schema=./prisma/schema.mysql.prisma
 

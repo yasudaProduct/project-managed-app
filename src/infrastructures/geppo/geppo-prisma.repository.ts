@@ -24,58 +24,77 @@ export class GeppoPrismaRepository implements IGeppoRepository {
       // WHERE条件の構築
       const where: Record<string, unknown> = {}
 
-      if (filters.projectName) {
-        where.projectName = filters.projectName
+      if (filters.PROJECT_ID) {
+        where.PROJECT_ID = filters.PROJECT_ID
       }
 
-      if (filters.userId) {
-        where.userId = filters.userId
+      if (filters.MEMBER_ID) {
+        where.MEMBER_ID = filters.MEMBER_ID
+      }
+
+      if (filters.dateFrom || filters.dateTo) {
+        const dateFilter: { gte?: string; lte?: string } = {}
+        if (filters.dateFrom) {
+          const fromStr = filters.dateFrom instanceof Date
+            ? filters.dateFrom.toISOString().slice(0, 7).replace('-', '')
+            : filters.dateFrom.toString().replace('-', '')
+          dateFilter.gte = fromStr
+        }
+        if (filters.dateTo) {
+          const toStr = filters.dateTo instanceof Date
+            ? filters.dateTo.toISOString().slice(0, 7).replace('-', '')
+            : filters.dateTo.toString().replace('-', '')
+          dateFilter.lte = toStr
+        }
+        where.GEPPO_YYYYMM = dateFilter
       }
 
       // ソート条件の構築
       const orderBy: Record<string, string> = {}
-      const sortBy = pagination.sortBy || 'yyyyMM'
+      const sortBy = pagination.sortBy || 'GEPPO_YYYYMM'
       const sortOrder = pagination.sortOrder || 'desc'
 
       switch (sortBy) {
-        case 'yyyyMM':
-          orderBy.yyyyMM = sortOrder
+        case 'GEPPO_YYYYMM':
+          orderBy.GEPPO_YYYYMM = sortOrder
           break
-        case 'projectName':
-          orderBy.projectName = sortOrder
+        case 'PROJECT_ID':
+          orderBy.PROJECT_ID = sortOrder
           break
-        case 'userId':
-          orderBy.userId = sortOrder
+        case 'MEMBER_ID':
+          orderBy.MEMBER_ID = sortOrder
           break
         default:
-          orderBy.workDate = sortOrder
+          orderBy.GEPPO_YYYYMM = sortOrder
       }
 
       // 総件数の取得
       const total = await geppoPrisma.geppo.count({ where })
 
       // データの取得
-      // const skip = (pagination.page - 1) * pagination.limit
-      // const geppos = await geppoPrisma.geppo.findMany({
-      //   where,
-      //   orderBy,
-      //   skip,
-      //   take: pagination.limit
-      // })
-      const geppos = await geppoPrisma.geppo.findMany()
+      const skip = (pagination.page - 1) * pagination.limit
+      const geppos = await geppoPrisma.geppo.findMany({
+        where,
+        orderBy,
+        skip,
+        take: pagination.limit
+      })
 
       const totalPages = Math.ceil(total / pagination.limit)
 
       return {
         geppos: geppos.map(g => ({
-          id: Number(g.id),
-          userId: g.userId || '',
-          projectName: g.projectName || '',
-          yyyyMM: g.yyyyMM || '',
-          taskName: g.taskName || '',
-          wbsId: g.wbsId || '',
-          biko: g.biko || '',
-          status: g.status || '',
+          MEMBER_ID: g.MEMBER_ID || '',
+          GEPPO_YYYYMM: g.GEPPO_YYYYMM || '',
+          ROW_NO: g.ROW_NO || 0,
+          COMPANY_NAME: g.COMPANY_NAME || '',
+          MEMBER_NAME: g.MEMBER_NAME || '',
+          PROJECT_ID: g.PROJECT_ID || '',
+          PROJECT_SUB_ID: g.PROJECT_SUB_ID || '',
+          WBS_NO: g.WBS_NO || '',
+          WBS_NAME: g.WBS_NAME || '',
+          WORK_NAME: g.WORK_NAME || '',
+          WORK_STATUS: g.WORK_STATUS || '',
           day01: g.day01 || 0,
           day02: g.day02 || 0,
           day03: g.day03 || 0,

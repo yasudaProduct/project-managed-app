@@ -15,7 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -45,52 +44,13 @@ import {
 } from "lucide-react";
 import { Project } from "@/types/project";
 import { User } from "@/types/user";
+import { Geppo } from "@/domains/geppo/types";
+import { MonthPicker } from "@/components/month-picker";
 
-interface Geppo {
-  id: number;
-  userId: string;
-  projectName: string;
-  yyyyMM: string;
-  taskName: string;
-  wbsId: string;
-  biko: string;
-  status: string;
-  day01: number;
-  day02: number;
-  day03: number;
-  day04: number;
-  day05: number;
-  day06: number;
-  day07: number;
-  day08: number;
-  day09: number;
-  day10: number;
-  day11: number;
-  day12: number;
-  day13: number;
-  day14: number;
-  day15: number;
-  day16: number;
-  day17: number;
-  day18: number;
-  day19: number;
-  day20: number;
-  day21: number;
-  day22: number;
-  day23: number;
-  day24: number;
-  day25: number;
-  day26: number;
-  day27: number;
-  day28: number;
-  day29: number;
-  day30: number;
-  day31: number;
-}
 
 interface SearchFilters {
-  projectName: string;
-  userId: string;
+  PROJECT_ID: string;
+  MEMBER_ID: string;
   dateFrom: string;
   dateTo: string;
 }
@@ -114,8 +74,8 @@ export default function GeppoPage() {
   );
 
   const [filters, setFilters] = useState<SearchFilters>({
-    projectName: "",
-    userId: "",
+    PROJECT_ID: "",
+    MEMBER_ID: "",
     dateFrom: "",
     dateTo: "",
   });
@@ -170,17 +130,12 @@ export default function GeppoPage() {
       const result = await searchGeppoWorkEntries(filters, {
         page: pagination.page,
         limit: pagination.limit,
-        sortBy: "yyyyMM",
+        sortBy: "GEPPO_YYYYMM",
         sortOrder: "desc",
       });
 
       if (result.success) {
-        setEntries(
-          result.result.geppos.map((entry: Geppo) => ({
-            ...entry,
-            workDate: new Date(entry.yyyyMM),
-          }))
-        );
+        setEntries(result.result.geppos);
         setPagination((prev) => ({
           ...prev,
           total: result.result.total,
@@ -214,8 +169,8 @@ export default function GeppoPage() {
   // フィルタリセット
   const resetFilters = () => {
     setFilters({
-      projectName: "",
-      userId: "",
+      PROJECT_ID: "",
+      MEMBER_ID: "",
       dateFrom: "",
       dateTo: "",
     });
@@ -298,11 +253,11 @@ export default function GeppoPage() {
                 <div className="space-y-2">
                   <Label>プロジェクト</Label>
                   <Select
-                    value={filters.projectName || "_all"}
+                    value={filters.PROJECT_ID || "_all"}
                     onValueChange={(value) =>
                       setFilters((prev) => ({
                         ...prev,
-                        projectName: value === "_all" ? "" : value,
+                        PROJECT_ID: value === "_all" ? "" : value,
                       }))
                     }
                   >
@@ -323,11 +278,11 @@ export default function GeppoPage() {
                 <div className="space-y-2">
                   <Label>ユーザー</Label>
                   <Select
-                    value={filters.userId || "_all"}
+                    value={filters.MEMBER_ID || "_all"}
                     onValueChange={(value) =>
                       setFilters((prev) => ({
                         ...prev,
-                        userId: value === "_all" ? "" : value,
+                        MEMBER_ID: value === "_all" ? "" : value,
                       }))
                     }
                   >
@@ -348,30 +303,30 @@ export default function GeppoPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>開始日</Label>
-                  <Input
-                    type="date"
+                  <Label>開始月</Label>
+                  <MonthPicker
                     value={filters.dateFrom}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setFilters((prev) => ({
                         ...prev,
-                        dateFrom: e.target.value,
+                        dateFrom: value,
                       }))
                     }
+                    placeholder="開始月を選択"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>終了日</Label>
-                  <Input
-                    type="date"
+                  <Label>終了月</Label>
+                  <MonthPicker
                     value={filters.dateTo}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setFilters((prev) => ({
                         ...prev,
-                        dateTo: e.target.value,
+                        dateTo: value,
                       }))
                     }
+                    placeholder="終了月を選択"
                   />
                 </div>
               </div>
@@ -588,18 +543,18 @@ export default function GeppoPage() {
                 <TableBody>
                   {entries.map((entry, index) => (
                     <TableRow
-                      key={`${entry.id}-${entry.userId}-${entry.yyyyMM}-${index}`}
+                      key={`${entry.MEMBER_ID}-${entry.GEPPO_YYYYMM}-${entry.ROW_NO}-${index}`}
                     >
                       <TableCell className="font-mono whitespace-nowrap">
-                        {entry.yyyyMM}
+                        {entry.GEPPO_YYYYMM}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div className="min-w-[200px]">
                           <div
                             className="font-medium truncate"
-                            title={entry.projectName}
+                            title={entry.PROJECT_ID}
                           >
-                            {entry.projectName}
+                            {entry.PROJECT_ID}
                           </div>
                         </div>
                       </TableCell>
@@ -607,37 +562,37 @@ export default function GeppoPage() {
                         <div className="min-w-[120px]">
                           <div
                             className="font-medium truncate"
-                            title={entry.userId}
+                            title={entry.MEMBER_NAME || entry.MEMBER_ID}
                           >
-                            {entry.userId}
+                            {entry.MEMBER_NAME || entry.MEMBER_ID}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div
                           className="min-w-[200px] truncate"
-                          title={entry.taskName}
+                          title={entry.WORK_NAME}
                         >
-                          {entry.taskName}
+                          {entry.WORK_NAME}
                         </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div
                           className="min-w-[200px] truncate"
-                          title={entry.wbsId}
+                          title={entry.WBS_NO}
                         >
-                          {entry.wbsId}
+                          {entry.WBS_NO}
                         </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        <Badge variant="outline">{entry.status}</Badge>
+                        <Badge variant="outline">{entry.WORK_STATUS}</Badge>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div
                           className="min-w-[200px] truncate"
-                          title={entry.biko}
+                          title={entry.WBS_NAME}
                         >
-                          {entry.biko}
+                          {entry.WBS_NAME}
                         </div>
                       </TableCell>
                       <TableCell className="font-mono whitespace-nowrap text-center">

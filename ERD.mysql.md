@@ -7,14 +7,17 @@
 ```mermaid
 erDiagram
 "geppo" {
-  String id PK
-  String userId "nullable"
-  String projectName "nullable"
-  String yyyyMM "nullable"
-  String taskName "nullable"
-  String wbsId "nullable"
-  String biko "nullable"
-  String status "nullable"
+  String MEMBER_ID
+  String GEPPO_YYYYMM
+  Int ROW_NO
+  String COMPANY_NAME "nullable"
+  String MEMBER_NAME "nullable"
+  String PROJECT_ID "nullable"
+  String PROJECT_SUB_ID "nullable"
+  String WBS_NO "nullable"
+  String WBS_NAME "nullable"
+  String WORK_NAME "nullable"
+  String WORK_STATUS "nullable"
   Int day01 "nullable"
   Int day02 "nullable"
   Int day03 "nullable"
@@ -52,14 +55,17 @@ erDiagram
 ### `geppo`
 
 **Properties**
-  - `id`: 
-  - `userId`: 
-  - `projectName`: 
-  - `yyyyMM`: 
-  - `taskName`: 
-  - `wbsId`: 
-  - `biko`: 
-  - `status`: 
+  - `MEMBER_ID`: 
+  - `GEPPO_YYYYMM`: 
+  - `ROW_NO`: 
+  - `COMPANY_NAME`: 
+  - `MEMBER_NAME`: 
+  - `PROJECT_ID`: 
+  - `PROJECT_SUB_ID`: 
+  - `WBS_NO`: 
+  - `WBS_NAME`: 
+  - `WORK_NAME`: 
+  - `WORK_STATUS`: 
   - `day01`: 
   - `day02`: 
   - `day03`: 
