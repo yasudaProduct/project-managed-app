@@ -14,9 +14,15 @@ import {
   isSameMonth,
 } from "date-fns";
 import { ja } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Calendar, Clock, MapPin, User, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Link from "next/link";
 
 interface User {
@@ -76,6 +82,8 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
   const [visibleUsers, setVisibleUsers] = useState<Set<string>>(
     new Set(users.map((u) => u.id))
   );
+  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleEntry | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Create user color mapping
   const userColorMap = useMemo(() => {
@@ -130,6 +138,11 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
     setCurrentMonth((prev) =>
       direction === "prev" ? subMonths(prev, 1) : addMonths(prev, 1)
     );
+  };
+
+  const handleScheduleClick = (schedule: ScheduleEntry) => {
+    setSelectedSchedule(schedule);
+    setIsDialogOpen(true);
   };
 
   return (
@@ -281,6 +294,7 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
                               colors?.lightColor || "bg-gray-100 text-gray-800"
                             }`}
                             title={`${schedule.title} (${schedule.name})`}
+                            onClick={() => handleScheduleClick(schedule)}
                           >
                             {schedule.startTime && (
                               <span className="mr-1">{schedule.startTime}</span>
@@ -302,6 +316,86 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
           </div>
         </div>
       </div>
+
+      {/* Schedule Detail Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              {selectedSchedule?.title}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedSchedule && (
+            <div className="mt-4 space-y-4">
+              {/* Date and Time */}
+              <div className="flex items-start space-x-3">
+                <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
+                <div>
+                  <p className="font-medium text-gray-900">
+                    {format(new Date(selectedSchedule.date), "yyyy年M月d日（E）", { locale: ja })}
+                  </p>
+                  {selectedSchedule.startTime && selectedSchedule.endTime && (
+                    <div className="flex items-center space-x-1 text-sm text-gray-600 mt-1">
+                      <Clock className="w-4 h-4" />
+                      <span>{selectedSchedule.startTime} - {selectedSchedule.endTime}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* User */}
+              <div className="flex items-center space-x-3">
+                <User className="w-5 h-5 text-gray-500" />
+                <div>
+                  <p className="font-medium text-gray-900">{selectedSchedule.name}</p>
+                  <p className="text-sm text-gray-600">
+                    {users.find(u => u.id === selectedSchedule.userId)?.email}
+                  </p>
+                </div>
+              </div>
+
+              {/* Location */}
+              {selectedSchedule.location && (
+                <div className="flex items-start space-x-3">
+                  <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-gray-900">場所</p>
+                    <p className="text-sm text-gray-600">{selectedSchedule.location}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Description */}
+              {selectedSchedule.description && (
+                <div className="flex items-start space-x-3">
+                  <FileText className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900 mb-1">内容</p>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                      {selectedSchedule.description}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* User Color Indicator */}
+              <div className="pt-2 border-t">
+                <div className="flex items-center space-x-2">
+                  <div 
+                    className={`w-3 h-3 rounded-full ${
+                      userColorMap.get(selectedSchedule.userId)?.color || "bg-gray-400"
+                    }`} 
+                  />
+                  <span className="text-sm text-gray-600">
+                    {selectedSchedule.name}のスケジュール
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
