@@ -8,13 +8,12 @@ import { SYMBOL } from "@/types/symbol";
 @injectable()
 export class GetDashboardStatsHandler implements IQueryHandler<GetDashboardStatsQuery, GetDashboardStatsResult> {
     constructor(
-        @inject(SYMBOL.IDashboardQueryRepository) 
+        @inject(SYMBOL.IDashboardQueryRepository)
         private readonly dashboardQueryRepository: IDashboardQueryRepository
-    ) {}
+    ) { }
 
     async execute(query: GetDashboardStatsQuery): Promise<GetDashboardStatsResult> {
-        void query; // Explicitly mark as unused
-        // 基本統計情報の取得
+        void query;
         const [
             projectStats,
             taskStats,
@@ -24,19 +23,14 @@ export class GetDashboardStatsHandler implements IQueryHandler<GetDashboardStats
         ] = await Promise.all([
             this.dashboardQueryRepository.getProjectStatistics(),
             this.dashboardQueryRepository.getTaskStatistics(),
-            this.dashboardQueryRepository.getActiveProjects(5), // 上位5件
-            this.dashboardQueryRepository.getUpcomingDeadlines(7), // 7日以内
+            this.dashboardQueryRepository.getActiveProjects(5),
+            this.dashboardQueryRepository.getUpcomingDeadlines(7),
             this.dashboardQueryRepository.getOverdueProjects()
         ]);
 
-        // 完了率の計算
-        const completionRate = taskStats.totalTasks > 0 
-            ? Math.round((taskStats.completedTasks / taskStats.totalTasks) * 100) 
-            : 0;
-
         // プロジェクトステータス別の割合計算
         const projectsByStatus = this.calculatePercentages(projectStats.byStatus);
-        
+
         // タスクステータス別の割合計算
         const tasksByStatus = this.calculatePercentages(taskStats.byStatus);
 
@@ -44,10 +38,6 @@ export class GetDashboardStatsHandler implements IQueryHandler<GetDashboardStats
             overview: {
                 totalProjects: projectStats.total,
                 activeProjects: projectStats.active,
-                totalTasks: taskStats.totalTasks,
-                completedTasks: taskStats.completedTasks,
-                totalWbs: projectStats.totalWbs,
-                completionRate,
                 overdueCount: overdueProjects.length
             },
             projectsByStatus,
@@ -64,7 +54,7 @@ export class GetDashboardStatsHandler implements IQueryHandler<GetDashboardStats
         statusCounts: Array<{ status: string; count: number }>
     ): Array<{ status: string; count: number; percentage: number }> {
         const total = statusCounts.reduce((sum, item) => sum + item.count, 0);
-        
+
         return statusCounts.map(item => ({
             ...item,
             percentage: total > 0 ? Math.round((item.count / total) * 100) : 0

@@ -7,10 +7,8 @@ import { GetDashboardStatsQuery } from "@/applications/dashboard/queries/get-das
 import { GetDashboardStatsResult } from "@/applications/dashboard/queries/get-dashboard-stats/get-dashboard-stats.result";
 
 export async function getDashboardStats(): Promise<GetDashboardStatsResult> {
-    // DIコンテナからQueryBusを取得
     const queryBus = container.get<IQueryBus>(SYMBOL.IQueryBus);
-    
-    // CQRSクエリを使用してダッシュボードデータを取得
+
     const query = new GetDashboardStatsQuery();
     return await queryBus.execute<GetDashboardStatsResult>(query);
 }

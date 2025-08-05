@@ -1,5 +1,5 @@
 import { injectable } from "inversify";
-import type { 
+import type {
     IDashboardQueryRepository,
     ProjectStatistics,
     TaskStatistics,
@@ -7,19 +7,19 @@ import type {
     DeadlineInfo,
     OverdueInfo
 } from "@/applications/dashboard/repositories/idashboard-query.repository";
+import prisma from "@/lib/prisma";
 
 @injectable()
 export class DashboardQueryRepository implements IDashboardQueryRepository {
     async getProjectStatistics(): Promise<ProjectStatistics> {
-        // TODO: 実際の実装では、Prismaを使用してデータベースから統計情報を取得
+        const projects = await prisma.projects.findMany();
         return {
-            total: 10,
-            active: 5,
-            totalWbs: 25,
+            total: projects.length,
+            active: projects.filter(project => project.status === "ACTIVE").length,
             byStatus: [
-                { status: "PLANNED", count: 2 },
-                { status: "ACTIVE", count: 5 },
-                { status: "COMPLETED", count: 3 }
+                { status: "PLANNED", count: projects.filter(project => project.status === "INACTIVE").length },
+                { status: "ACTIVE", count: projects.filter(project => project.status === "ACTIVE").length },
+                { status: "COMPLETED", count: projects.filter(project => project.status === "DONE").length }
             ]
         };
     }
@@ -39,68 +39,101 @@ export class DashboardQueryRepository implements IDashboardQueryRepository {
 
     async getActiveProjects(limit: number): Promise<ActiveProjectInfo[]> {
         // TODO: 実際の実装では、Prismaを使用してアクティブプロジェクトを取得
-        const mockProjects: ActiveProjectInfo[] = [
-            {
-                projectId: "1",
-                projectName: "Webアプリケーション開発",
-                startDate: new Date("2024-01-01"),
-                endDate: new Date("2024-06-30"),
-                progress: 65,
-                taskStats: {
-                    total: 20,
-                    completed: 13,
-                    inProgress: 5
-                }
+        const activeProjects = await prisma.projects.findMany({
+            where: {
+                status: "ACTIVE"
             },
-            {
-                projectId: "2",
-                projectName: "モバイルアプリ開発",
-                startDate: new Date("2024-02-01"),
-                endDate: new Date("2024-07-31"),
-                progress: 40,
-                taskStats: {
-                    total: 30,
-                    completed: 12,
-                    inProgress: 8
+            include: {
+                wbs: true
+            },
+            take: limit
+        });
+
+        // プロジェクトの進捗率を計算
+        const progress: { projectId: string; progress: number }[] = [];
+        for (const project of activeProjects) {
+
+            let totalTasks = 0;
+            let completedTasks = 0;
+            for (const wbs of project.wbs) {
+                const tasks = await prisma.wbsTask.findMany({
+                    where: {
+                        wbsId: wbs.id
+                    }
+                });
+                totalTasks += tasks.length;
+                completedTasks += tasks.filter(task => task.status === "COMPLETED").length;
+            }
+            progress.push({
+                projectId: project.id,
+                progress: completedTasks / totalTasks
+            });
+        }
+
+        const tasks = await prisma.wbsTask.findMany({
+            where: {
+                wbsId: {
+                    in: activeProjects.flatMap(project => project.wbs.map(wbs => wbs.id))
                 }
             }
-        ];
-        
-        return mockProjects.slice(0, limit);
+        });
+        const taskStats = {
+            total: tasks.length,
+            completed: tasks.filter(task => task.status === "COMPLETED").length,
+            inProgress: tasks.filter(task => task.status === "IN_PROGRESS").length
+        };
+
+        return activeProjects.map(project => ({
+            projectId: project.id,
+            projectName: project.name,
+            startDate: project.startDate,
+            endDate: project.endDate,
+            progress: progress.find(p => p.projectId === project.id)?.progress || 0,
+            taskStats: {
+                total: taskStats.total,
+                completed: taskStats.completed,
+                inProgress: taskStats.inProgress
+            }
+        }));
     }
 
     async getUpcomingDeadlines(daysAhead: number): Promise<DeadlineInfo[]> {
-        // TODO: 実際の実装では、Prismaを使用して期限が近いプロジェクトを取得
         const today = new Date();
-        const futureDate = new Date();
-        futureDate.setDate(today.getDate() + daysAhead);
-        
-        return [
-            {
-                projectId: "3",
-                projectName: "API統合プロジェクト",
-                endDate: new Date("2024-03-15"),
-                daysRemaining: 3
-            },
-            {
-                projectId: "4",
-                projectName: "データベース移行",
-                endDate: new Date("2024-03-18"),
-                daysRemaining: 6
+        const futureDate = new Date().setDate(today.getDate() + daysAhead);
+
+        const projects = await prisma.projects.findMany({
+            where: {
+                endDate: {
+                    gte: new Date(futureDate),
+                    lte: new Date(futureDate)
+                }
             }
-        ];
+        });
+
+        return projects.map(project => ({
+            projectId: project.id,
+            projectName: project.name,
+            endDate: project.endDate,
+            daysRemaining: Math.ceil((project.endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+        }));
     }
 
     async getOverdueProjects(): Promise<OverdueInfo[]> {
-        // TODO: 実際の実装では、Prismaを使用して期限超過プロジェクトを取得
-        return [
-            {
-                projectId: "5",
-                projectName: "レガシーシステム更新",
-                endDate: new Date("2024-02-28"),
-                daysOverdue: 10
+        const today = new Date();
+        const overdueProjects = await prisma.projects.findMany({
+            where: {
+                endDate: {
+                    lt: today
+                }
             }
-        ];
+        });
+
+        return overdueProjects.map(project => ({
+            projectId: project.id,
+            projectName: project.name,
+            endDate: project.endDate,
+            daysOverdue: Math.ceil((today.getTime() - project.endDate.getTime()) / (1000 * 60 * 60 * 24))
+        }));
     }
 
     async getRecentActivities?(limit: number): Promise<Array<{

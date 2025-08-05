@@ -2,10 +2,6 @@ export interface GetDashboardStatsResult {
     overview: {
         totalProjects: number;
         activeProjects: number;
-        totalTasks: number;
-        completedTasks: number;
-        totalWbs: number;
-        completionRate: number;
         overdueCount: number;
     };
     projectsByStatus: Array<{
