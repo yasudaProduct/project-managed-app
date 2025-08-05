@@ -34,9 +34,7 @@ export default function RootLayout({
         <ProgressBar>
           <SideMenu />
           <Header />
-          <main className="pt-16">
-            {children}
-          </main>
+          <main className="pt-12">{children}</main>
           <Toaster />
         </ProgressBar>
       </body>

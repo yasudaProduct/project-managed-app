@@ -7,6 +7,7 @@ import { AuthStatusHeader } from "./auth/auth-status-header";
 interface WbsInfo {
   id: string;
   name: string;
+  projectName: string;
 }
 
 export function Header() {
@@ -29,14 +30,26 @@ export function Header() {
         getWbsById(wbsId)
           .then((data) => {
             if (data && data.name) {
-              setWbsInfo({ id: wbsId, name: data.name });
+              setWbsInfo({
+                id: wbsId,
+                name: data.name,
+                projectName: data.projectName,
+              });
             } else {
-              setWbsInfo({ id: wbsId, name: `WBS: ${wbsId}` });
+              setWbsInfo({
+                id: wbsId,
+                name: `WBS: ${wbsId}`,
+                projectName: `プロジェクト: ${wbsId}`,
+              });
             }
           })
           .catch((error) => {
             console.error("Failed to fetch WBS info:", error);
-            setWbsInfo({ id: wbsId, name: `WBS: ${wbsId}` });
+            setWbsInfo({
+              id: wbsId,
+              name: `WBS: ${wbsId}`,
+              projectName: `プロジェクト: ${wbsId}`,
+            });
           })
           .finally(() => {
             setLoading(false);
@@ -80,7 +93,7 @@ export function Header() {
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">プロジェクト:</span>
                 <span className="text-sm font-medium text-gray-900">
-                  {wbsInfo.name}
+                  {wbsInfo.projectName}
                 </span>
               </div>
             </>

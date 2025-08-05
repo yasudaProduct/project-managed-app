@@ -5,11 +5,17 @@ import prisma from "@/lib/prisma";
 export async function getWbsById(id: string) {
   try {
     const wbs = await prisma.wbs.findUnique({
-      where: {
-        id: id,
+      select: {
+        id: true,
+        name: true,
+        project: {
+          select: {
+            name: true,
+          },
+        },
       },
-      include: {
-        project: true,
+      where: {
+        id: Number(id),
       },
     });
 
