@@ -3,9 +3,9 @@
 import Link from "next/link";
 import {
   Calendar,
+  FolderKanban,
   Home,
   Menu,
-  PlusCircle,
   Target,
   Trello,
   Users,
@@ -53,16 +53,9 @@ export function SideMenu() {
             <Home className="h-4 w-4" />
             ホーム
           </Link>
-          <Link href="/dashboard" className="text-lg flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            ダッシュボード
-          </Link>
-          <Link
-            href="/projects/new"
-            className="text-lg flex items-center gap-2"
-          >
-            <PlusCircle className="h-4 w-4" />
-            プロジェクト追加
+          <Link href="/projects" className="text-lg flex items-center gap-2">
+            <FolderKanban className="h-4 w-4" />
+            プロジェクト
           </Link>
           <Link href="/users" className="text-lg flex items-center gap-2">
             <Users className="h-4 w-4" />

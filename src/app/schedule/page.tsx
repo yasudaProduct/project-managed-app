@@ -8,7 +8,7 @@ export default async function SchedulePage() {
   ]);
 
   return (
-    <div className="h-screen">
+    <div className="h-[calc(100vh-4rem)]">
       <ModernCalendar schedules={schedules} users={users} />
     </div>
   );
