@@ -6,7 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { parse } from "csv-parse/sync";
 import { useState } from "react";
-import { importSchedule } from "../action";
+import { importScheduleTsv } from "../action";
 
 export default function ScheduleImportPage() {
   const router = useRouter();
@@ -17,19 +17,35 @@ export default function ScheduleImportPage() {
     if (!files || files.length === 0) return;
 
     setIsLoading(true);
+    const file = files[0];
+    const fileName = file.name.toLowerCase();
 
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
-        const text = event.target?.result;
-        const csv = parse(text as string, {
+        const text = event.target?.result as string;
+
+        // ファイル形式の判定
+        if (!fileName.endsWith(".txt") || !text.includes("\t")) {
+          toast({
+            title: "スケジュールのインポートに失敗しました",
+            description: "ファイルの形式が正しくありません",
+            variant: "destructive",
+          });
+        }
+
+        // TSV形式として処理
+        const tsvData = parse(text, {
           columns: true,
           skip_empty_lines: true,
+          delimiter: "\t", // タブ区切り
+          quote: '"',
+          escape: '"',
+          relax_column_count: true, // 列数の不整合を許可
         });
-        const { success, error } = await importSchedule(csv);
+        const result = await importScheduleTsv(tsvData);
 
-        if (success) {
-          setIsLoading(false);
+        if (result.success) {
           toast({
             title: "スケジュールのインポートに成功しました",
             description: "スケジュールをインポートしました",
@@ -38,22 +54,22 @@ export default function ScheduleImportPage() {
         } else {
           toast({
             title: "スケジュールのインポートに失敗しました",
-            description: error,
+            description: result.error,
             variant: "destructive",
           });
         }
       } catch (error) {
-        console.error(error);
+        console.error("Import error:", error);
         toast({
           title: "スケジュールのインポートに失敗しました",
-          description: "スケジュールのインポートに失敗しました",
+          description: error as string,
           variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     };
-    reader.readAsText(files[0]);
+    reader.readAsText(file, "UTF-8"); // 日本語対応のためUTF-8指定
   };
 
   return (
@@ -66,8 +82,9 @@ export default function ScheduleImportPage() {
             type="file"
             onChange={handleFileChange}
             disabled={isLoading}
-            accept=".csv"
+            accept=".txt"
           />
+          {isLoading && <div className="text-blue-600">インポート中...</div>}
         </div>
       </div>
     </div>
