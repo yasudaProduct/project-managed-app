@@ -5,7 +5,7 @@ import prisma from "../src/lib/prisma";
 import { ProjectStatus, TaskStatus, BufferType } from "@prisma/client";
 
 async function main() {
-    console.log("seed start");
+    console.log("▶️シードデータの挿入を開始します");
 
     // 初期データ挿入
     for (const user of users.users) {
@@ -74,16 +74,16 @@ async function main() {
             name: mockData.project.name,
             status: mockData.project.status as ProjectStatus,
             description: mockData.project.description,
-            startDate: new Date(),
-            endDate: new Date(new Date().setDate(new Date().getDate() + 30)),
+            startDate: mockData.project.startDate,
+            endDate: mockData.project.endDate,
         },
         create: {
             id: mockData.project.id.toString(),
             name: mockData.project.name,
             status: mockData.project.status as ProjectStatus,
             description: mockData.project.description,
-            startDate: new Date(),
-            endDate: new Date(new Date().setDate(new Date().getDate() + 30)),
+            startDate: mockData.project.startDate,
+            endDate: mockData.project.endDate,
         },
     })
 
@@ -136,7 +136,7 @@ async function main() {
     }
 
     for (const task of mockData.wbsTask) {
-        await prisma.wbsTask.upsert({
+        const taskData = await prisma.wbsTask.upsert({
             where: { id: task.id },
             update: {
                 wbsId: task.wbsId,
@@ -153,6 +153,35 @@ async function main() {
                 name: task.name,
                 assigneeId: task.assigneeId,
                 status: task.status as TaskStatus,
+            },
+        })
+
+        const taskPeriod = await prisma.taskPeriod.upsert({
+            where: { id: taskData.id },
+            update: {
+                taskId: taskData.id,
+                startDate: task.startDate,
+                endDate: task.endDate,
+                type: 'YOTEI',
+            },
+            create: {
+                taskId: taskData.id,
+                startDate: task.startDate,
+                endDate: task.endDate,
+                type: 'YOTEI'
+            },
+        })
+
+        await prisma.taskKosu.upsert({
+            where: { id: taskPeriod.id },
+            update: {
+                kosu: task.kosu,
+            },
+            create: {
+                wbsId: task.wbsId,
+                periodId: taskPeriod.id,
+                kosu: task.kosu,
+                type: 'NORMAL',
             },
         })
     }
@@ -210,6 +239,8 @@ async function main() {
             },
         })
     }
+
+    console.log("✅シードデータの挿入が完了しました");
 
 }
 

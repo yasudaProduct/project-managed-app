@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   List,
   Loader2,
+  Table,
   Trello,
   Users,
 } from "lucide-react";
@@ -25,6 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GanttV2Wrapper from "@/components/ganttv2/gantt-v2-wrapper";
 import { getMilestones } from "./milestone-actions";
 import MilestoneManagement from "@/components/milestone/milestone-management";
+import { WbsSummaryTables } from "@/components/wbs/wbs-summary-tables";
 
 export default async function WbsManagementPage({
   params,
@@ -93,9 +95,8 @@ export default async function WbsManagementPage({
             </div>
           }
         >
-          <Tabs defaultValue="list" className="w-full mt-4">
-            {/* TabsListの幅をw-fullにし、grid-cols-4で均等に4分割 */}
-            <TabsList className="grid w-full grid-cols-4">
+          <Tabs defaultValue="summary" className="w-full mt-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger
                 value="summary"
                 className="flex items-center gap-2 w-full justify-center"
@@ -123,6 +124,13 @@ export default async function WbsManagementPage({
               >
                 <CalendarCheck className="h-4 w-4" />
                 マイルストーン
+              </TabsTrigger>
+              <TabsTrigger
+                value="table"
+                className="flex items-center gap-2 w-full justify-center"
+              >
+                <Table className="h-4 w-4" />
+                集計表
               </TabsTrigger>
             </TabsList>
             <TabsContent value="summary">
@@ -155,6 +163,13 @@ export default async function WbsManagementPage({
               <MilestoneManagement
                 wbsId={wbs.id}
                 initialMilestones={milestones}
+              />
+            </TabsContent>
+            <TabsContent value="table">
+              <WbsSummaryTables
+                tasks={tasks}
+                phases={phases}
+                assignees={assignees || []}
               />
             </TabsContent>
           </Tabs>

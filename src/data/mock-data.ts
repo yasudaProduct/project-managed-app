@@ -1,9 +1,18 @@
+const baseDate = new Date();
+const addDays = (days: number): Date => {
+    const date = new Date(baseDate);
+    date.setDate(date.getDate() + days);
+    return date;
+};
+
 export const mockData = {
     project: {
         id: 1,
         name: "新規機能開発",
         status: "ACTIVE",
         description: "テストプロジェクト",
+        startDate: baseDate,
+        endDate: addDays(90),
     },
     wbs: [
         {
@@ -29,6 +38,12 @@ export const mockData = {
             wbsId: 1,
             assigneeId: "dummy03",
         },
+        {
+            id: 4,
+            wbsId: 1,
+            assigneeId: "dummy04",
+        },
+
     ],
     wbsPhase: [
         {
@@ -69,6 +84,9 @@ export const mockData = {
             name: "機能A設計書",
             assigneeId: 1,
             status: "NOT_STARTED",
+            startDate: baseDate,
+            endDate: addDays(5),
+            kosu: 15,
         },
         {
             id: 2,
@@ -78,6 +96,9 @@ export const mockData = {
             name: "機能B設計書",
             assigneeId: 2,
             status: "NOT_STARTED",
+            startDate: addDays(1),
+            endDate: addDays(7),
+            kosu: 20,
         },
         {
             id: 3,
@@ -87,6 +108,9 @@ export const mockData = {
             name: "機能C設計書",
             assigneeId: 3,
             status: "NOT_STARTED",
+            startDate: addDays(2),
+            endDate: addDays(9),
+            kosu: 25,
         },
         {
             id: 4,
@@ -96,6 +120,9 @@ export const mockData = {
             name: "機能A開発",
             assigneeId: 1,
             status: "NOT_STARTED",
+            startDate: addDays(10),
+            endDate: addDays(45),
+            kosu: 40,
         },
         {
             id: 5,
@@ -105,6 +132,9 @@ export const mockData = {
             name: "機能B開発",
             assigneeId: 2,
             status: "NOT_STARTED",
+            startDate: addDays(12),
+            endDate: addDays(30),
+            kosu: 30,
         },
         {
             id: 6,
@@ -114,6 +144,9 @@ export const mockData = {
             name: "機能C開発",
             assigneeId: 3,
             status: "NOT_STARTED",
+            startDate: addDays(15),
+            endDate: addDays(50),
+            kosu: 35,
         },
         {
             id: 7,
@@ -123,6 +156,9 @@ export const mockData = {
             name: "機能A単体テスト",
             assigneeId: 1,
             status: "NOT_STARTED",
+            startDate: addDays(46),
+            endDate: addDays(55),
+            kosu: 15,
         },
         {
             id: 8,
@@ -132,6 +168,57 @@ export const mockData = {
             name: "機能B単体テスト",
             assigneeId: 2,
             status: "NOT_STARTED",
+            startDate: addDays(51),
+            endDate: addDays(60),
+            kosu: 15,
+        },
+        {
+            id: 9,
+            taskNo: "D5-0001",
+            wbsId: 1,
+            phaseId: 4,
+            name: "機能Aユーザーテスト",
+            assigneeId: 1,
+            status: "NOT_STARTED",
+            startDate: addDays(61),
+            endDate: addDays(65),
+            kosu: 10,
+        },
+        {
+            id: 10,
+            taskNo: "D5-0002",
+            wbsId: 1,
+            phaseId: 4,
+            name: "機能Bユーザーテスト",
+            assigneeId: 2,
+            status: "NOT_STARTED",
+            startDate: addDays(61),
+            endDate: addDays(65),
+            kosu: 10,
+        },
+        {
+            id: 11,
+            taskNo: "D5-0003",
+            wbsId: 1,
+            phaseId: 4,
+            name: "機能Cユーザーテスト",
+            assigneeId: 3,
+            status: "NOT_STARTED",
+            startDate: addDays(61),
+            endDate: addDays(65),
+            kosu: 10,
+        },
+        {
+            id: 12,
+            taskNo: "D2-0004",
+            wbsId: 1,
+            phaseId: 1,
+            name: "機能D設計書",
+            assigneeId: 4,
+            status: "NOT_STARTED",
+            startDate: addDays(1),
+            endDate: addDays(40),
+            kosu: 50,
         },
     ],
     wbsBuffer: [
@@ -143,62 +230,103 @@ export const mockData = {
             bufferType: "RISK",
         },
     ],
+
     workRecords: [
         {
             id: 1,
             userId: "dummy01",
             taskId: 1,
-            date: "2025-01-01",
-            hours_worked: 8,
+            date: addDays(0),
+            hours_worked: 7.5,
         },
         {
             id: 2,
             userId: "dummy01",
             taskId: 1,
-            date: "2025-01-02",
-            hours_worked: 8,
+            date: addDays(1),
+            hours_worked: 7.5,
         },
         {
             id: 3,
             userId: "dummy01",
-            taskId: 2,
-            date: "2025-01-03",
-            hours_worked: 2,
+            taskId: 4,
+            date: addDays(11),
+            hours_worked: 8,
         },
         {
             id: 4,
             userId: "dummy01",
-            taskId: 2,
-            date: "2025-01-04",
-            hours_worked: 2,
+            taskId: 4,
+            date: addDays(12),
+            hours_worked: 8,
         },
         {
             id: 5,
-            userId: "dummy01",
+            userId: "dummy02",
+            taskId: 2,
+            date: addDays(2),
+            hours_worked: 8,
+        },
+        {
+            id: 6,
+            userId: "dummy02",
+            taskId: 2,
+            date: addDays(3),
+            hours_worked: 8,
+        },
+        {
+            id: 7,
+            userId: "dummy02",
+            taskId: 5,
+            date: addDays(13),
+            hours_worked: 8,
+        },
+        {
+            id: 8,
+            userId: "dummy02",
+            taskId: 5,
+            date: addDays(14),
+            hours_worked: 8,
+        },
+        {
+            id: 9,
+            userId: "dummy03",
             taskId: 3,
-            date: "2025-01-04",
-            hours_worked: 2,
+            date: addDays(4),
+            hours_worked: 8,
+        },
+        {
+            id: 10,
+            userId: "dummy03",
+            taskId: 6,
+            date: addDays(16),
+            hours_worked: 8,
         },
     ],
-
     milestone: [
         {
             id: 1,
             wbsId: 1,
             name: "キックオフ",
-            date: "2025-01-01",
+            date: addDays(0),
         },
         {
             id: 2,
             wbsId: 1,
-            name: "定例会",
-            date: "2025-02-18",
+            name: "設計完了",
+            date: addDays(9),
         },
         {
             id: 3,
             wbsId: 1,
+            name: "開発完了",
+            date: addDays(50),
+        },
+        {
+            id: 4,
+            wbsId: 1,
             name: "リリース",
-            date: "2025-03-20",
+            date: addDays(70),
         },
     ],
 };
