@@ -1,32 +1,37 @@
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient({
-    log: // https://www.prisma.io/docs/orm/prisma-client/observability-and-logging/logging
-        [
-            // {
-            //     emit: 'stdout',
-            //     level: 'query',
-            // },
-            {
-                emit: 'stdout',
-                level: 'info',
-            },
-            {
-                emit: 'stdout',
-                level: 'warn',
-            },
-            {
-                emit: 'stdout',
-                level: 'error',
-            },
-        ],
-});
+const prismaClientSingleton = () => {
+    return new PrismaClient({
+        log: // https://www.prisma.io/docs/orm/prisma-client/observability-and-logging/logging
+            [
+                // {
+                //     emit: 'stdout',
+                //     level: 'query',
+                // },
+                {
+                    emit: 'stdout',
+                    level: 'info',
+                },
+                {
+                    emit: 'stdout',
+                    level: 'warn',
+                },
+                {
+                    emit: 'stdout',
+                    level: 'error',
+                },
+            ],
+    });
+};
 
-// prisma.$on("query", (e: Prisma.QueryEvent) => {
-//     console.log("Query: " + e.query);
-//     console.log("Params: " + e.params);
-//     console.log("Duration: " + e.duration + "ms");
-//     console.log("Target: " + e.target);
-// });
+type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>;
+
+const globalForPrisma = globalThis as unknown as {
+    prisma: PrismaClientSingleton | undefined;
+};
+
+const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 
 export default prisma;
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
