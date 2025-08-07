@@ -72,6 +72,10 @@ export class TaskRepository implements ITaskRepository {
 
     // async findAll(): Promise<Task[]>;
     // async findAll(wbsId: number): Promise<Task[]>;
+    async findByWbsId(wbsId: number): Promise<Task[]> {
+        return this.findAll(wbsId);
+    }
+
     async findAll(wbsId?: number): Promise<Task[]> {
         const whereClause = wbsId ? { wbsId: wbsId } : {};
         const tasksDb = await prisma.wbsTask.findMany({

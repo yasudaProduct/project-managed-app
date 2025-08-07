@@ -12,7 +12,8 @@
       "Bash(npm run dev:*)",
       "Bash(npx prisma generate:*)",
       "Bash(grep:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm test:*)"
     ],
     "deny": []
   }

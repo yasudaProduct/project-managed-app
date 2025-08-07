@@ -9,6 +9,7 @@ import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";
 import { ManHourType } from "@/domains/task/value-object/man-hour-type";
 import type { ITaskFactory } from "@/domains/task/interfaces/task-factory";
+import type { IProgressHistoryApplicationService } from "@/applications/wbs-progress-history/progress-history-application-service";
 
 export interface CreateTaskCommand {
     id: string;  // IDを追加
@@ -35,7 +36,8 @@ export class TaskApplicationService implements ITaskApplicationService {
 
     constructor(
         @inject(SYMBOL.ITaskRepository) private readonly taskRepository: ITaskRepository,
-        @inject(SYMBOL.ITaskFactory) private readonly taskFactory: ITaskFactory
+        @inject(SYMBOL.ITaskFactory) private readonly taskFactory: ITaskFactory,
+        @inject(SYMBOL.IProgressHistoryApplicationService) private readonly progressHistoryService: IProgressHistoryApplicationService
     ) {
     }
 
@@ -170,6 +172,15 @@ export class TaskApplicationService implements ITaskApplicationService {
         if (updateTask.yoteiStart) task.updateYotei({ startDate: updateTask.yoteiStart, endDate: updateTask.yoteiEnd ?? updateTask.yoteiStart, kosu: updateTask.yoteiKosu ?? 0 });
 
         const result = await this.taskRepository.update(wbsId, task);
+        
+        // タスク更新後に進捗履歴を自動記録
+        try {
+            await this.progressHistoryService.recordTaskUpdate(wbsId);
+        } catch (error) {
+            // 進捗履歴の記録に失敗してもタスク更新は成功とする
+            console.warn('進捗履歴の記録に失敗しました:', error);
+        }
+        
         return { success: true, id: result.taskNo!.getValue() };
 
     }

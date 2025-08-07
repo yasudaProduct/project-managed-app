@@ -230,11 +230,11 @@ export async function getKosuSummary(wbsId: number) {
         task.periods.forEach(period => {
             period.kosus.forEach(kosu => {
                 if (kosu.type === 'KIJUN' as KosuType) {
-                    acc[phaseName].kijun += kosu.kosu;
+                    acc[phaseName].kijun += kosu.kosu.toNumber();
                 } else if (kosu.type === 'YOTEI' as KosuType) {
-                    acc[phaseName].yotei += kosu.kosu;
+                    acc[phaseName].yotei += kosu.kosu.toNumber();
                 } else if (kosu.type === 'JISSEKI' as KosuType) {
-                    acc[phaseName].jisseki += kosu.kosu;
+                    acc[phaseName].jisseki += kosu.kosu.toNumber();
                 }
             });
         });

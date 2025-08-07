@@ -67,6 +67,7 @@ model Wbs {
   kosus     TaskKosu[]
   buffers   WbsBuffer[]
   milestones Milestone[]
+  progressHistories WbsProgressHistory[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -259,4 +260,61 @@ enum PeriodType {
 enum KosuType {
   NORMAL
   RISK
+}
+
+model WbsProgressHistory {
+  id               Int      @id @default(autoincrement())
+  wbsId            Int
+  recordedAt       DateTime @default(now())
+  recordType       RecordType
+  snapshotName     String?
+  totalTaskCount   Int
+  completedCount   Int
+  inProgressCount  Int
+  notStartedCount  Int
+  completionRate   Decimal
+  plannedManHours  Decimal
+  actualManHours   Decimal
+  varianceManHours Decimal
+  metadata         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  wbs              Wbs      @relation(fields: [wbsId], references: [id])
+  taskHistories    TaskProgressHistory[]
+  
+  @@index([wbsId, recordedAt])
+  @@map("wbs_progress_history")
+}
+
+model TaskProgressHistory {
+  id                    Int      @id @default(autoincrement())
+  wbsProgressHistoryId  Int
+  taskId                Int
+  taskNo                String
+  taskName              String
+  status                String
+  assigneeId            Int?
+  assigneeName          String?
+  phaseId               Int?
+  phaseName             String?
+  plannedStartDate      DateTime?
+  plannedEndDate        DateTime?
+  actualStartDate       DateTime?
+  actualEndDate         DateTime?
+  plannedManHours       Decimal
+  actualManHours        Decimal
+  progressRate          Decimal
+  createdAt             DateTime @default(now())
+  
+  wbsProgressHistory    WbsProgressHistory @relation(fields: [wbsProgressHistoryId], references: [id])
+  
+  @@index([wbsProgressHistoryId])
+  @@index([taskId])
+  @@map("task_progress_history")
+}
+
+enum RecordType {
+  AUTO
+  MANUAL_SNAPSHOT
 }

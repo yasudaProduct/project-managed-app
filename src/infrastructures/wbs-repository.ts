@@ -80,6 +80,21 @@ export class WbsRepository implements IWbsRepository {
         });
     }
 
+    async save(wbs: Wbs): Promise<Wbs> {
+        if (wbs.id) {
+            return this.update(wbs);
+        } else {
+            return this.create(wbs);
+        }
+    }
+
+    async exists(id: number): Promise<boolean> {
+        const wbs = await prisma.wbs.findUnique({
+            where: { id },
+        });
+        return wbs !== null;
+    }
+
     async delete(id: number): Promise<void> {
         await prisma.wbs.delete({
             where: { id },

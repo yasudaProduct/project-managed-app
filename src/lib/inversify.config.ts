@@ -56,6 +56,12 @@ import { ProjectMappingService } from "@/infrastructures/geppo-import/project-ma
 import { UserMappingService } from "@/infrastructures/geppo-import/user-mapping.service";
 import { TaskMappingService } from "@/infrastructures/geppo-import/task-mapping.service";
 
+// Progress History関連
+import type { IProgressHistoryRepository } from "@/applications/wbs-progress-history/iprogress-history-repository";
+import { ProgressHistoryRepository } from "@/infrastructures/wbs-progress-history/progress-history-repository";
+import { ProgressHistoryApplicationService } from "@/applications/wbs-progress-history/progress-history-application-service";
+import type { IProgressHistoryApplicationService } from "@/applications/wbs-progress-history/progress-history-application-service";
+
 // Prisma
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma';
@@ -72,6 +78,7 @@ container.bind<IAuthApplicationService>(SYMBOL.IAuthApplicationService).to(AuthA
 container.bind<IGeppoApplicationService>(SYMBOL.IGeppoApplicationService).to(GeppoApplicationService).inSingletonScope();
 container.bind<IWorkRecordApplicationService>(SYMBOL.IWorkRecordApplicationService).to(WorkRecordApplicationService).inSingletonScope();
 container.bind<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService).to(GeppoImportApplicationService).inSingletonScope();
+container.bind<IProgressHistoryApplicationService>(SYMBOL.IProgressHistoryApplicationService).to(ProgressHistoryApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
@@ -89,6 +96,7 @@ container.bind<IWbsQueryRepository>(SYMBOL.IWbsQueryRepository).to(WbsQueryRepos
 container.bind<IGeppoRepository>(SYMBOL.IGeppoRepository).to(GeppoPrismaRepository).inSingletonScope();
 container.bind<IUserRepository>(SYMBOL.IUserRepository).to(UserRepository).inSingletonScope();
 container.bind<IWorkRecordRepository>(SYMBOL.IWorkRecordRepository).to(WorkRecordPrismaRepository).inSingletonScope();
+container.bind<IProgressHistoryRepository>(SYMBOL.IProgressHistoryRepository).to(ProgressHistoryRepository).inSingletonScope();
 
 // Geppo Import関連サービス
 container.bind<ProjectMappingService>(SYMBOL.ProjectMappingService).to(ProjectMappingService).inSingletonScope();

@@ -145,7 +145,7 @@ export class ProjectMappingService {
 
   async validateProjectMapping(geppoRecords: Geppo[]): Promise<ProjectMappingValidation> {
     try {
-      const uniqueProjectIds = [...new Set(geppoRecords.map(g => g.PROJECT_ID).filter(Boolean))]
+      const uniqueProjectIds = [...new Set(geppoRecords.map(g => g.PROJECT_ID).filter(Boolean))] as string[]
       const projectMap = await this.createProjectMap(uniqueProjectIds)
 
       const mappedProjects = uniqueProjectIds.filter(id => projectMap.has(id))

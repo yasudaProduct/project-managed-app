@@ -32,7 +32,7 @@ export class WorkRecordPrismaRepository implements IWorkRecordRepository {
           taskId: record.taskId || undefined,
           startDate: record.date,
           endDate: record.date,
-          manHours: record.hours_worked
+          manHours: record.hours_worked.toNumber()
         })
       )
     } catch (error) {

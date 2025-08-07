@@ -23,7 +23,7 @@ export class UserMappingService {
         )
 
         if (matchedUser) {
-          userMap.set(memberId, matchedUser.id)
+          userMap.set(memberId, matchedUser.id!)
         } else {
           console.warn(`User mapping not found: ${memberId}`)
         }

@@ -141,6 +141,44 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"wbs_progress_history" {
+  Int id PK
+  Int wbsId FK
+  DateTime recordedAt
+  RecordType recordType
+  String snapshotName "nullable"
+  Int totalTaskCount
+  Int completedCount
+  Int inProgressCount
+  Int notStartedCount
+  Decimal completionRate
+  Decimal plannedManHours
+  Decimal actualManHours
+  Decimal varianceManHours
+  Json metadata "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"task_progress_history" {
+  Int id PK
+  Int wbsProgressHistoryId FK
+  Int taskId
+  String taskNo
+  String taskName
+  String status
+  Int assigneeId "nullable"
+  String assigneeName "nullable"
+  Int phaseId "nullable"
+  String phaseName "nullable"
+  DateTime plannedStartDate "nullable"
+  DateTime plannedEndDate "nullable"
+  DateTime actualStartDate "nullable"
+  DateTime actualEndDate "nullable"
+  Decimal plannedManHours
+  Decimal actualManHours
+  Decimal progressRate
+  DateTime createdAt
+}
 "user_sessions" }o--|| "users" : user
 "wbs" }o--|| "projects" : project
 "wbs_assignee" }o--|| "wbs" : wbs
@@ -159,6 +197,8 @@ erDiagram
 "work_records" }o--|| "users" : user
 "work_records" }o--o| "wbs_task" : task
 "user_schedule" }o--|| "users" : user
+"wbs_progress_history" }o--|| "wbs" : wbs
+"task_progress_history" }o--|| "wbs_progress_history" : wbsProgressHistory
 ```
 
 ### `projects`
@@ -325,3 +365,45 @@ erDiagram
   - `description`: 
   - `createdAt`: 
   - `updatedAt`: 
+
+### `wbs_progress_history`
+
+**Properties**
+  - `id`: 
+  - `wbsId`: 
+  - `recordedAt`: 
+  - `recordType`: 
+  - `snapshotName`: 
+  - `totalTaskCount`: 
+  - `completedCount`: 
+  - `inProgressCount`: 
+  - `notStartedCount`: 
+  - `completionRate`: 
+  - `plannedManHours`: 
+  - `actualManHours`: 
+  - `varianceManHours`: 
+  - `metadata`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `task_progress_history`
+
+**Properties**
+  - `id`: 
+  - `wbsProgressHistoryId`: 
+  - `taskId`: 
+  - `taskNo`: 
+  - `taskName`: 
+  - `status`: 
+  - `assigneeId`: 
+  - `assigneeName`: 
+  - `phaseId`: 
+  - `phaseName`: 
+  - `plannedStartDate`: 
+  - `plannedEndDate`: 
+  - `actualStartDate`: 
+  - `actualEndDate`: 
+  - `plannedManHours`: 
+  - `actualManHours`: 
+  - `progressRate`: 
+  - `createdAt`: 

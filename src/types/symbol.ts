@@ -38,6 +38,10 @@ export const SYMBOL = {
     IWorkRecordRepository: Symbol.for('IWorkRecordRepository'),
     IWorkRecordApplicationService: Symbol.for('IWorkRecordApplicationService'),
 
+    // Progress History
+    IProgressHistoryRepository: Symbol.for('IProgressHistoryRepository'),
+    IProgressHistoryApplicationService: Symbol.for('IProgressHistoryApplicationService'),
+
     // Geppo Import
     IGeppoImportApplicationService: Symbol.for('IGeppoImportApplicationService'),
     ProjectMappingService: Symbol.for('ProjectMappingService'),

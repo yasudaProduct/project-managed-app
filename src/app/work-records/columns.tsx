@@ -10,15 +10,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import { Decimal } from "@prisma/client/runtime/library";
 
 export type WorkRecord = {
-  id: string;
+  id: number;
   userId: string;
   userName: string;
-  taskId: string;
-  taskName: string;
-  date: string;
-  hours_worked: number;
+  taskId: number | null;
+  taskName: string | undefined;
+  date: Date;
+  hours_worked: Decimal;
 };
 
 export const columns: ColumnDef<WorkRecord & { link?: string }>[] = [
@@ -41,10 +42,22 @@ export const columns: ColumnDef<WorkRecord & { link?: string }>[] = [
   {
     accessorKey: "date",
     header: "日付",
+    cell: ({ row }) => {
+      const date = row.getValue("date") as Date;
+      return date.toLocaleDateString("ja-JP");
+    },
   },
   {
     accessorKey: "hours_worked",
     header: "工数",
+    cell: ({ row }) => {
+      const hours = row.getValue("hours_worked");
+      if (typeof hours === 'number') return hours;
+      if (hours && typeof hours === 'object' && 'toNumber' in hours) {
+        return (hours as Decimal).toNumber();
+      }
+      return 0;
+    },
   },
 
   {
