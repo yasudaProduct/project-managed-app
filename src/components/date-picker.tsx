@@ -25,10 +25,13 @@ export function DatePicker({ field }: DatePickerProp) {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInputValue(value);
-    
+
     // 自動フォーマット: YYYYMMDD -> YYYY/MM/DD
     if (/^\d{8}$/.test(value)) {
-      const formatted = `${value.slice(0, 4)}/${value.slice(4, 6)}/${value.slice(6, 8)}`;
+      const formatted = `${value.slice(0, 4)}/${value.slice(
+        4,
+        6
+      )}/${value.slice(6, 8)}`;
       setInputValue(formatted);
       field.onChange(formatted);
     } else if (/^\d{4}\/\d{2}\/\d{2}$/.test(value)) {
@@ -60,19 +63,22 @@ export function DatePicker({ field }: DatePickerProp) {
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedText = e.clipboardData.getData("text");
-    
+
     // ペーストされたテキストの処理
     const cleaned = pastedText.trim();
-    
+
     // YYYY-MM-DD形式をYYYY/MM/DD形式に変換
     if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
       const formatted = cleaned.replace(/-/g, "/");
       setInputValue(formatted);
       field.onChange(formatted);
-    } 
+    }
     // YYYYMMDD形式をYYYY/MM/DD形式に変換
     else if (/^\d{8}$/.test(cleaned)) {
-      const formatted = `${cleaned.slice(0, 4)}/${cleaned.slice(4, 6)}/${cleaned.slice(6, 8)}`;
+      const formatted = `${cleaned.slice(0, 4)}/${cleaned.slice(
+        4,
+        6
+      )}/${cleaned.slice(6, 8)}`;
       setInputValue(formatted);
       field.onChange(formatted);
     }
@@ -114,17 +120,13 @@ export function DatePicker({ field }: DatePickerProp) {
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0 z-50" align="end">
-            <div className="p-3 border-b bg-muted/30">
-              <p className="text-xs text-muted-foreground">
-                カレンダーから日付を選択するか、入力欄に直接入力してください
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                対応形式: YYYY/MM/DD, YYYYMMDD, YYYY-MM-DD
-              </p>
-            </div>
             <Calendar
               mode="single"
-              selected={field.value ? new Date(field.value.replace(/\//g, "-")) : undefined}
+              selected={
+                field.value
+                  ? new Date(field.value.replace(/\//g, "-"))
+                  : undefined
+              }
               onSelect={(date) => {
                 field.onChange(date ? formatDateToLocalString(date) : "");
                 setIsOpen(false);

@@ -63,7 +63,7 @@ export class TaskRepository implements ITaskRepository {
                 type: new PeriodType({ type: period.type }),
                 manHours: period.kosus.map(kosu => ManHour.createFromDb({
                     id: kosu.id,
-                    kosu: kosu.kosu,
+                    kosu: Number(kosu.kosu),
                     type: new ManHourType({ type: kosu.type }),
                 })),
             })),
@@ -123,7 +123,7 @@ export class TaskRepository implements ITaskRepository {
                 type: new PeriodType({ type: period.type }),
                 manHours: period.kosus.map(kosu => ManHour.createFromDb({
                     id: kosu.id,
-                    kosu: kosu.kosu,
+                    kosu: Number(kosu.kosu),
                     type: new ManHourType({ type: kosu.type }),
                 })),
             })),
@@ -137,7 +137,7 @@ export class TaskRepository implements ITaskRepository {
                             taskId: workRecordDb.taskId!,
                             startDate: workRecordDb.date,
                             endDate: workRecordDb.date,
-                            manHours: workRecordDb.hours_worked,
+                            manHours: Number(workRecordDb.hours_worked),
                         })
                     ),
             status: new TaskStatus({ status: taskDb.status }),
@@ -198,7 +198,7 @@ export class TaskRepository implements ITaskRepository {
                 type: new PeriodType({ type: period.type }),
                 manHours: period.kosus.map(kosu => ManHour.createFromDb({
                     id: kosu.id,
-                    kosu: kosu.kosu,
+                    kosu: Number(kosu.kosu),
                     type: new ManHourType({ type: kosu.type }),
                 })),
             })),
@@ -212,7 +212,7 @@ export class TaskRepository implements ITaskRepository {
                             taskId: workRecordDb.taskId!,
                             startDate: workRecordDb.date,
                             endDate: workRecordDb.date,
-                            manHours: workRecordDb.hours_worked,
+                            manHours: Number(workRecordDb.hours_worked),
                         })
                     ),
             status: new TaskStatus({ status: taskDb.status }),
@@ -248,7 +248,7 @@ export class TaskRepository implements ITaskRepository {
                 await prisma.taskKosu.create({
                     data: {
                         periodId: periodDb.id,
-                        kosu: manHour.kosu,
+                        kosu: Number(manHour.kosu),
                         type: manHour.type.type,
                         wbsId: task.wbsId,
                     },
@@ -307,7 +307,7 @@ export class TaskRepository implements ITaskRepository {
                     create: {
                         periodId: periodId,
                         wbsId: wbsId,
-                        kosu: manHour.kosu,
+                        kosu: Number(manHour.kosu),
                         type: manHour.type.type,
                     },
                 })
