@@ -5,6 +5,7 @@ import { SideMenu } from "@/components/side-menu";
 import { Header } from "@/components/header";
 import { Toaster } from "@/components/ui/toaster";
 import ProgressBar from "@/components/progress-bar";
+import { Providers } from "@/components/providers/query-client-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,12 +32,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ProgressBar>
-          <SideMenu />
-          <Header />
-          <main className="pt-12">{children}</main>
-          <Toaster />
-        </ProgressBar>
+        <Providers>
+          <ProgressBar>
+            <SideMenu />
+            <Header />
+            <main className="pt-12">{children}</main>
+            <Toaster />
+          </ProgressBar>
+        </Providers>
       </body>
     </html>
   );

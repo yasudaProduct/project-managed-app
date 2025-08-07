@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -11,65 +10,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Calendar, Users } from "lucide-react";
-import { WbsTask } from "@/types/wbs";
 import React from "react";
+import { MonthlyAssigneeSummary as MonthlyAssigneeSummaryData } from "@/applications/wbs/query/wbs-summary-result";
 
 interface MonthlyAssigneeSummaryProps {
-  tasks: WbsTask[];
+  monthlyData: MonthlyAssigneeSummaryData;
 }
 
-interface MonthlyData {
-  [yearMonth: string]: {
-    [assignee: string]: {
-      planned: number;
-      actual: number;
-      taskCount: number;
-    };
-  };
-}
-
-export function MonthlyAssigneeSummary({ tasks }: MonthlyAssigneeSummaryProps) {
-  // 月別・担当者別に集計
-  const monthlySummary = useMemo(() => {
-    const data: MonthlyData = {};
-    const assignees = new Set<string>();
-    const months = new Set<string>();
-
-    tasks.forEach((task) => {
-      if (!task.assignee?.displayName) return;
-
-      const assigneeName = task.assignee.displayName;
-      assignees.add(assigneeName);
-
-      // 予定期間で月を判定
-      if (task.yoteiStart) {
-        const date = new Date(task.yoteiStart);
-        const yearMonth = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
-        months.add(yearMonth);
-
-        if (!data[yearMonth]) {
-          data[yearMonth] = {};
-        }
-        if (!data[yearMonth][assigneeName]) {
-          data[yearMonth][assigneeName] = { planned: 0, actual: 0, taskCount: 0 };
-        }
-
-        data[yearMonth][assigneeName].planned += task.yoteiKosu ?? 0;
-        data[yearMonth][assigneeName].actual += task.jissekiKosu ?? 0;
-        data[yearMonth][assigneeName].taskCount += 1;
-      }
-    });
-
-    // ソートされた月のリストを作成
-    const sortedMonths = Array.from(months).sort();
-    const sortedAssignees = Array.from(assignees).sort();
-
-    return {
-      data,
-      months: sortedMonths,
-      assignees: sortedAssignees,
-    };
-  }, [tasks]);
+export function MonthlyAssigneeSummary({ monthlyData }: MonthlyAssigneeSummaryProps) {
 
   const formatNumber = (num: number) => {
     return num.toLocaleString("ja-JP", {
@@ -84,53 +32,8 @@ export function MonthlyAssigneeSummary({ tasks }: MonthlyAssigneeSummaryProps) {
     return "text-blue-600";
   };
 
-  // 各月の合計を計算
-  const monthlyTotals = useMemo(() => {
-    const totals: { [month: string]: { planned: number; actual: number; taskCount: number } } = {};
-    
-    monthlySummary.months.forEach(month => {
-      totals[month] = { planned: 0, actual: 0, taskCount: 0 };
-      Object.values(monthlySummary.data[month] || {}).forEach(data => {
-        totals[month].planned += data.planned;
-        totals[month].actual += data.actual;
-        totals[month].taskCount += data.taskCount;
-      });
-    });
-    
-    return totals;
-  }, [monthlySummary]);
 
-  // 各担当者の合計を計算
-  const assigneeTotals = useMemo(() => {
-    const totals: { [assignee: string]: { planned: number; actual: number; taskCount: number } } = {};
-    
-    monthlySummary.assignees.forEach(assignee => {
-      totals[assignee] = { planned: 0, actual: 0, taskCount: 0 };
-      monthlySummary.months.forEach(month => {
-        const data = monthlySummary.data[month]?.[assignee];
-        if (data) {
-          totals[assignee].planned += data.planned;
-          totals[assignee].actual += data.actual;
-          totals[assignee].taskCount += data.taskCount;
-        }
-      });
-    });
-    
-    return totals;
-  }, [monthlySummary]);
-
-  // 全体の合計
-  const grandTotal = useMemo(() => {
-    const total = { planned: 0, actual: 0, taskCount: 0 };
-    Object.values(assigneeTotals).forEach(data => {
-      total.planned += data.planned;
-      total.actual += data.actual;
-      total.taskCount += data.taskCount;
-    });
-    return total;
-  }, [assigneeTotals]);
-
-  if (monthlySummary.months.length === 0 || monthlySummary.assignees.length === 0) {
+  if (monthlyData.months.length === 0 || monthlyData.assignees.length === 0) {
     return (
       <Card className="rounded-none shadow-none">
         <CardHeader>
@@ -164,7 +67,7 @@ export function MonthlyAssigneeSummary({ tasks }: MonthlyAssigneeSummaryProps) {
                 <TableHead className="font-semibold sticky left-0 bg-gray-50 z-10">
                   担当者
                 </TableHead>
-                {monthlySummary.months.map((month) => (
+                {monthlyData.months.map((month) => (
                   <TableHead key={month} className="text-center font-semibold min-w-[120px]" colSpan={3}>
                     {month}
                   </TableHead>
@@ -175,7 +78,7 @@ export function MonthlyAssigneeSummary({ tasks }: MonthlyAssigneeSummaryProps) {
               </TableRow>
               <TableRow className="bg-gray-50">
                 <TableHead className="sticky left-0 bg-gray-50 z-10"></TableHead>
-                {[...monthlySummary.months, '合計'].map((period) => (
+                {[...monthlyData.months, '合計'].map((period) => (
                   <React.Fragment key={period}>
                     <TableHead className="text-right text-xs">予定</TableHead>
                     <TableHead className="text-right text-xs">実績</TableHead>
@@ -185,37 +88,39 @@ export function MonthlyAssigneeSummary({ tasks }: MonthlyAssigneeSummaryProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {monthlySummary.assignees.map((assignee) => (
+              {monthlyData.assignees.map((assignee) => (
                 <TableRow key={assignee}>
                   <TableCell className="font-medium sticky left-0 bg-white z-10">
                     {assignee}
                   </TableCell>
-                  {monthlySummary.months.map((month) => {
-                    const data = monthlySummary.data[month]?.[assignee] || { planned: 0, actual: 0, taskCount: 0 };
-                    const difference = data.actual - data.planned;
+                  {monthlyData.months.map((month) => {
+                    const data = monthlyData.data.find(d => d.month === month && d.assignee === assignee);
+                    const plannedHours = data?.plannedHours || 0;
+                    const actualHours = data?.actualHours || 0;
+                    const difference = data?.difference || 0;
                     return (
                       <React.Fragment key={month}>
                         <TableCell className="text-right text-sm">
-                          {data.planned > 0 ? formatNumber(data.planned) : '-'}
+                          {plannedHours > 0 ? formatNumber(plannedHours) : '-'}
                         </TableCell>
                         <TableCell className="text-right text-sm">
-                          {data.actual > 0 ? formatNumber(data.actual) : '-'}
+                          {actualHours > 0 ? formatNumber(actualHours) : '-'}
                         </TableCell>
                         <TableCell className={`text-right text-sm ${getDifferenceColor(difference)}`}>
-                          {data.planned > 0 || data.actual > 0 ? formatNumber(difference) : '-'}
+                          {plannedHours > 0 || actualHours > 0 ? formatNumber(difference) : '-'}
                         </TableCell>
                       </React.Fragment>
                     );
                   })}
                   {/* 担当者合計 */}
                   <TableCell className="text-right text-sm font-semibold bg-gray-50">
-                    {formatNumber(assigneeTotals[assignee].planned)}
+                    {formatNumber(monthlyData.assigneeTotals[assignee].plannedHours)}
                   </TableCell>
                   <TableCell className="text-right text-sm font-semibold bg-gray-50">
-                    {formatNumber(assigneeTotals[assignee].actual)}
+                    {formatNumber(monthlyData.assigneeTotals[assignee].actualHours)}
                   </TableCell>
-                  <TableCell className={`text-right text-sm font-semibold bg-gray-50 ${getDifferenceColor(assigneeTotals[assignee].actual - assigneeTotals[assignee].planned)}`}>
-                    {formatNumber(assigneeTotals[assignee].actual - assigneeTotals[assignee].planned)}
+                  <TableCell className={`text-right text-sm font-semibold bg-gray-50 ${getDifferenceColor(monthlyData.assigneeTotals[assignee].difference)}`}>
+                    {formatNumber(monthlyData.assigneeTotals[assignee].difference)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -224,16 +129,16 @@ export function MonthlyAssigneeSummary({ tasks }: MonthlyAssigneeSummaryProps) {
                 <TableCell className="sticky left-0 bg-gray-100 z-10">
                   合計
                 </TableCell>
-                {monthlySummary.months.map((month) => {
-                  const total = monthlyTotals[month];
-                  const difference = total.actual - total.planned;
+                {monthlyData.months.map((month) => {
+                  const total = monthlyData.monthlyTotals[month];
+                  const difference = total.difference;
                   return (
                     <React.Fragment key={month}>
                       <TableCell className="text-right text-sm">
-                        {formatNumber(total.planned)}
+                        {formatNumber(total.plannedHours)}
                       </TableCell>
                       <TableCell className="text-right text-sm">
-                        {formatNumber(total.actual)}
+                        {formatNumber(total.actualHours)}
                       </TableCell>
                       <TableCell className={`text-right text-sm ${getDifferenceColor(difference)}`}>
                         {formatNumber(difference)}
@@ -243,13 +148,13 @@ export function MonthlyAssigneeSummary({ tasks }: MonthlyAssigneeSummaryProps) {
                 })}
                 {/* 全体合計 */}
                 <TableCell className="text-right text-sm bg-gray-200">
-                  {formatNumber(grandTotal.planned)}
+                  {formatNumber(monthlyData.grandTotal.plannedHours)}
                 </TableCell>
                 <TableCell className="text-right text-sm bg-gray-200">
-                  {formatNumber(grandTotal.actual)}
+                  {formatNumber(monthlyData.grandTotal.actualHours)}
                 </TableCell>
-                <TableCell className={`text-right text-sm bg-gray-200 ${getDifferenceColor(grandTotal.actual - grandTotal.planned)}`}>
-                  {formatNumber(grandTotal.actual - grandTotal.planned)}
+                <TableCell className={`text-right text-sm bg-gray-200 ${getDifferenceColor(monthlyData.grandTotal.difference)}`}>
+                  {formatNumber(monthlyData.grandTotal.difference)}
                 </TableCell>
               </TableRow>
             </TableBody>

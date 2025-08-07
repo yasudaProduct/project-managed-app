@@ -26,6 +26,10 @@ import { GetDashboardStatsHandler } from "@/applications/dashboard/queries/get-d
 import { GetDashboardStatsQuery } from "@/applications/dashboard/queries/get-dashboard-stats/get-dashboard-stats.query";
 import type { IDashboardQueryRepository } from "@/applications/dashboard/repositories/idashboard-query.repository";
 import { DashboardQueryRepository } from "@/infrastructures/dashboard-query.repository";
+import { GetWbsSummaryHandler } from "@/applications/wbs/query/get-wbs-summary-handler";
+import { GetWbsSummaryQuery } from "@/applications/wbs/query/get-wbs-summary-query";
+import type { IWbsQueryRepository } from "@/applications/wbs/query/wbs-query-repository";
+import { WbsQueryRepository } from "@/infrastructures/wbs/wbs-query-repository";
 import type { IAuthApplicationService } from "@/applications/auth/auth-application-service";
 import { AuthApplicationService } from "@/applications/auth/auth-application-service";
 import type { IAuthRepository } from "@/domains/auth/auth-service";
@@ -81,6 +85,7 @@ container.bind<ITaskRepository>(SYMBOL.ITaskRepository).to(TaskRepository).inSin
 container.bind<IWbsAssigneeRepository>(SYMBOL.IWbsAssigneeRepository).to(WbsAssigneeRepository).inSingletonScope();
 container.bind<IDashboardQueryRepository>(SYMBOL.IDashboardQueryRepository).to(DashboardQueryRepository).inSingletonScope();
 container.bind<IAuthRepository>(SYMBOL.IAuthRepository).to(AuthRepository).inSingletonScope();
+container.bind<IWbsQueryRepository>(SYMBOL.IWbsQueryRepository).to(WbsQueryRepository).inSingletonScope();
 container.bind<IGeppoRepository>(SYMBOL.IGeppoRepository).to(GeppoPrismaRepository).inSingletonScope();
 container.bind<IUserRepository>(SYMBOL.IUserRepository).to(UserRepository).inSingletonScope();
 container.bind<IWorkRecordRepository>(SYMBOL.IWorkRecordRepository).to(WorkRecordPrismaRepository).inSingletonScope();
@@ -99,10 +104,14 @@ container.bind<ITaskFactory>(SYMBOL.ITaskFactory).to(TaskFactory).inSingletonSco
 // CQRS
 container.bind<IQueryBus>(SYMBOL.IQueryBus).to(QueryBus).inSingletonScope();
 container.bind<GetDashboardStatsHandler>(SYMBOL.GetDashboardStatsHandler).to(GetDashboardStatsHandler).inSingletonScope();
+container.bind<GetWbsSummaryHandler>(SYMBOL.GetWbsSummaryHandler).to(GetWbsSummaryHandler).inSingletonScope();
 
 // QueryBusの初期化（ハンドラーの登録）
 const queryBus = container.get<QueryBus>(SYMBOL.IQueryBus);
 const dashboardStatsHandler = container.get<GetDashboardStatsHandler>(SYMBOL.GetDashboardStatsHandler);
 queryBus.register(GetDashboardStatsQuery as new (...args: unknown[]) => GetDashboardStatsQuery, dashboardStatsHandler);
+
+const wbsSummaryHandler = container.get<GetWbsSummaryHandler>(SYMBOL.GetWbsSummaryHandler);
+queryBus.register(GetWbsSummaryQuery as new (...args: unknown[]) => GetWbsSummaryQuery, wbsSummaryHandler);
 
 export { container };

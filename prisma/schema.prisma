@@ -164,7 +164,7 @@ model TaskKosu{
   id        Int        @id @default(autoincrement())
   wbsId     Int
   periodId  Int
-  kosu      Int
+  kosu      Decimal
   type      KosuType
   period    TaskPeriod @relation("TaskPeriodKosu", fields: [periodId], references: [id], onDelete: Cascade)
   wbs       Wbs        @relation(fields: [wbsId], references: [id])
@@ -205,7 +205,7 @@ model WorkRecord {
   userId            String
   taskId            Int?
   date              DateTime
-  hours_worked      Int
+  hours_worked      Decimal
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
   user              Users      @relation(fields: [userId], references: [id])

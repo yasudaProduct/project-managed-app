@@ -98,7 +98,7 @@ erDiagram
   Int id PK
   Int wbsId FK
   Int periodId FK
-  Int kosu
+  Decimal kosu
   KosuType type
   DateTime createdAt
   DateTime updatedAt
@@ -125,7 +125,7 @@ erDiagram
   String userId FK
   Int taskId FK "nullable"
   DateTime date
-  Int hours_worked
+  Decimal hours_worked
   DateTime createdAt
   DateTime updatedAt
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -11,100 +10,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Layers, Users } from "lucide-react";
-import { WbsTask } from "@/types/wbs";
 import { MonthlyAssigneeSummary } from "./monthly-assignee-summary";
+import { useWbsSummary } from "@/hooks/use-wbs-summary";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface WbsSummaryTablesProps {
-  tasks: WbsTask[];
-  phases: Array<{ name: string }>;
-  assignees: Array<{ assignee: { displayName: string } | null }> | null;
+  projectId: string;
+  wbsId: string;
 }
 
-export function WbsSummaryTables({
-  tasks,
-  phases,
-}: WbsSummaryTablesProps) {
-  // 工程別集計
-  const phasesSummary = useMemo(() => {
-    const summary = new Map<
-      string,
-      { planned: number; actual: number; taskCount: number }
-    >();
-
-    // 初期化
-    phases.forEach((phase) => {
-      summary.set(phase.name, { planned: 0, actual: 0, taskCount: 0 });
-    });
-
-    // タスクを集計
-    tasks.forEach((task) => {
-      const phaseName =
-        task.phase?.name ||
-        (typeof task.phase === "string" ? task.phase : null);
-      if (phaseName && summary.has(phaseName)) {
-        const current = summary.get(phaseName)!;
-        summary.set(phaseName, {
-          planned: current.planned + (task.yoteiKosu ?? 0),
-          actual: current.actual + (task.jissekiKosu ?? 0),
-          taskCount: current.taskCount + 1,
-        });
-      }
-    });
-
-    return Array.from(summary.entries()).map(([phase, data]) => ({
-      phase,
-      ...data,
-    }));
-  }, [tasks, phases]);
-
-  // 担当者別集計
-  const assigneesSummary = useMemo(() => {
-    const summary = new Map<
-      string,
-      { planned: number; actual: number; taskCount: number }
-    >();
-
-    // タスクを集計
-    tasks.forEach((task) => {
-      if (task.assignee && task.assignee.displayName) {
-        const key = task.assignee.displayName;
-        const current = summary.get(key) || {
-          planned: 0,
-          actual: 0,
-          taskCount: 0,
-        };
-        summary.set(key, {
-          planned: current.planned + (task.yoteiKosu ?? 0),
-          actual: current.actual + (task.jissekiKosu ?? 0),
-          taskCount: current.taskCount + 1,
-        });
-      }
-    });
-
-    return Array.from(summary.entries()).map(([assignee, data]) => ({
-      assignee,
-      ...data,
-    }));
-  }, [tasks]);
-
-  // 合計計算
-  const phasesTotal = phasesSummary.reduce(
-    (acc, item) => ({
-      planned: acc.planned + item.planned,
-      actual: acc.actual + item.actual,
-      taskCount: acc.taskCount + item.taskCount,
-    }),
-    { planned: 0, actual: 0, taskCount: 0 }
-  );
-
-  const assigneesTotal = assigneesSummary.reduce(
-    (acc, item) => ({
-      planned: acc.planned + item.planned,
-      actual: acc.actual + item.actual,
-      taskCount: acc.taskCount + item.taskCount,
-    }),
-    { planned: 0, actual: 0, taskCount: 0 }
-  );
+export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
+  const { data: summary, isLoading, error } = useWbsSummary(projectId, wbsId);
 
   const formatNumber = (num: number) => {
     return num.toLocaleString("ja-JP", {
@@ -118,6 +34,52 @@ export function WbsSummaryTables({
     if (difference === 0) return "text-green-600";
     return "text-blue-600";
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="rounded-none shadow-none">
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-64 w-full" />
+            </CardContent>
+          </Card>
+          <Card className="rounded-none shadow-none">
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-64 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+        <Card className="rounded-none shadow-none">
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-96 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-600 py-8">
+        集計データの取得に失敗しました <br />
+        {error.message}
+      </div>
+    );
+  }
+
+  if (!summary) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">
@@ -150,44 +112,44 @@ export function WbsSummaryTables({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {phasesSummary.map((item, index) => (
+                {summary.phaseSummaries.map((item, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">{item.phase}</TableCell>
                     <TableCell className="text-center">
                       {item.taskCount}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatNumber(item.planned)}
+                      {formatNumber(item.plannedHours)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatNumber(item.actual)}
+                      {formatNumber(item.actualHours)}
                     </TableCell>
                     <TableCell
                       className={`text-right ${getDifferenceColor(
-                        item.actual - item.planned
+                        item.difference
                       )}`}
                     >
-                      {formatNumber(item.actual - item.planned)}
+                      {formatNumber(item.difference)}
                     </TableCell>
                   </TableRow>
                 ))}
                 <TableRow className="bg-gray-50 font-semibold">
                   <TableCell>合計</TableCell>
                   <TableCell className="text-center">
-                    {phasesTotal.taskCount}
+                    {summary.phaseTotal.taskCount}
                   </TableCell>
                   <TableCell className="text-right">
-                    {formatNumber(phasesTotal.planned)}
+                    {formatNumber(summary.phaseTotal.plannedHours)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {formatNumber(phasesTotal.actual)}
+                    {formatNumber(summary.phaseTotal.actualHours)}
                   </TableCell>
                   <TableCell
                     className={`text-right ${getDifferenceColor(
-                      phasesTotal.actual - phasesTotal.planned
+                      summary.phaseTotal.difference
                     )}`}
                   >
-                    {formatNumber(phasesTotal.actual - phasesTotal.planned)}
+                    {formatNumber(summary.phaseTotal.difference)}
                   </TableCell>
                 </TableRow>
               </TableBody>
@@ -223,28 +185,30 @@ export function WbsSummaryTables({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assigneesSummary.map((item, index) => (
+                {summary.assigneeSummaries.map((item, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium">{item.assignee}</TableCell>
+                    <TableCell className="font-medium">
+                      {item.assignee}
+                    </TableCell>
                     <TableCell className="text-center">
                       {item.taskCount}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatNumber(item.planned)}
+                      {formatNumber(item.plannedHours)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatNumber(item.actual)}
+                      {formatNumber(item.actualHours)}
                     </TableCell>
                     <TableCell
                       className={`text-right ${getDifferenceColor(
-                        item.actual - item.planned
+                        item.difference
                       )}`}
                     >
-                      {formatNumber(item.actual - item.planned)}
+                      {formatNumber(item.difference)}
                     </TableCell>
                   </TableRow>
                 ))}
-                {assigneesSummary.length === 0 && (
+                {summary.assigneeSummaries.length === 0 && (
                   <TableRow>
                     <TableCell
                       colSpan={5}
@@ -254,24 +218,24 @@ export function WbsSummaryTables({
                     </TableCell>
                   </TableRow>
                 )}
-                {assigneesSummary.length > 0 && (
+                {summary.assigneeSummaries.length > 0 && (
                   <TableRow className="bg-gray-50 font-semibold">
                     <TableCell>合計</TableCell>
                     <TableCell className="text-center">
-                      {assigneesTotal.taskCount}
+                      {summary.assigneeTotal.taskCount}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatNumber(assigneesTotal.planned)}
+                      {formatNumber(summary.assigneeTotal.plannedHours)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatNumber(assigneesTotal.actual)}
+                      {formatNumber(summary.assigneeTotal.actualHours)}
                     </TableCell>
                     <TableCell
                       className={`text-right ${getDifferenceColor(
-                        assigneesTotal.actual - assigneesTotal.planned
+                        summary.assigneeTotal.difference
                       )}`}
                     >
-                      {formatNumber(assigneesTotal.actual - assigneesTotal.planned)}
+                      {formatNumber(summary.assigneeTotal.difference)}
                     </TableCell>
                   </TableRow>
                 )}
@@ -282,7 +246,7 @@ export function WbsSummaryTables({
       </div>
 
       {/* 月別・担当者別集計表 */}
-      <MonthlyAssigneeSummary tasks={tasks} />
+      <MonthlyAssigneeSummary monthlyData={summary.monthlyAssigneeSummary} />
     </div>
   );
 }

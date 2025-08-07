@@ -18,21 +18,21 @@ export class QueryBus implements IQueryBus {
         if (this.handlers.has(queryName)) {
             throw new Error(`Handler for ${queryName} is already registered`);
         }
-        
-        this.handlers.set(queryName, { 
-            queryType: queryType as new (...args: unknown[]) => IQuery, 
-            handler: handler as IQueryHandler<IQuery, unknown> 
+
+        this.handlers.set(queryName, {
+            queryType: queryType as new (...args: unknown[]) => IQuery,
+            handler: handler as IQueryHandler<IQuery, unknown>
         });
     }
 
     async execute<TResult>(query: IQuery): Promise<TResult> {
         const queryName = query.constructor.name;
         const metadata = this.handlers.get(queryName);
-        
+
         if (!metadata) {
             throw new Error(`No handler registered for query ${queryName}`);
         }
-        
+
         return metadata.handler.execute(query) as Promise<TResult>;
     }
 

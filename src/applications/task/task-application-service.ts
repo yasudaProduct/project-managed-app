@@ -111,6 +111,7 @@ export class TaskApplicationService implements ITaskApplicationService {
     public async createTask(command: CreateTaskCommand): Promise<{ success: boolean; id?: number; error?: string }> {
         console.log("service: createTask")
         const { name, wbsId, phaseId, yoteiStartDate, yoteiEndDate, yoteiKosu, assigneeId, status } = command;
+        console.log(yoteiKosu);
 
         const task = Task.create(
             {

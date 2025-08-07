@@ -23,6 +23,8 @@ export const SYMBOL = {
     // CQRS
     IQueryBus: Symbol.for('IQueryBus'),
     GetDashboardStatsHandler: Symbol.for('GetDashboardStatsHandler'),
+    GetWbsSummaryHandler: Symbol.for('GetWbsSummaryHandler'),
+    IWbsQueryRepository: Symbol.for('IWbsQueryRepository'),
 
     // Auth
     IAuthRepository: Symbol.for('IAuthRepository'),
