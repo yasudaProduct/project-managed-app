@@ -133,6 +133,7 @@ export class TaskRepository implements ITaskRepository {
                     .map(workRecordDb =>
                         WorkRecord.createFromDb({
                             id: workRecordDb.id,
+                            userId: workRecordDb.userId,
                             taskId: workRecordDb.taskId!,
                             startDate: workRecordDb.date,
                             endDate: workRecordDb.date,
@@ -207,6 +208,7 @@ export class TaskRepository implements ITaskRepository {
                     .map(workRecordDb =>
                         WorkRecord.createFromDb({
                             id: workRecordDb.id,
+                            userId: workRecordDb.userId,
                             taskId: workRecordDb.taskId!,
                             startDate: workRecordDb.date,
                             endDate: workRecordDb.date,
@@ -221,7 +223,6 @@ export class TaskRepository implements ITaskRepository {
 
     async create(task: Task): Promise<Task> {
         console.log("repository: create")
-        console.log(task)
         const taskDb = await prisma.wbsTask.create({
             data: {
                 taskNo: task.taskNo?.getValue(),

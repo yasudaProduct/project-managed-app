@@ -65,12 +65,9 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       });
     });
 
-    console.log(tasks);
-
     // タスクを集計
     tasks.forEach(task => {
       const phaseName = task.phase?.name || (typeof task.phase === "string" ? task.phase : null);
-      console.log(phaseName);
       if (phaseName && summaryMap.has(phaseName)) {
         const summary = summaryMap.get(phaseName)!;
         summary.taskCount += 1;

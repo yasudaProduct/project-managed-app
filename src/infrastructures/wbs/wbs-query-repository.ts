@@ -50,7 +50,11 @@ export class WbsQueryRepository implements IWbsQueryRepository {
         t."taskNo" ASC;
     `;
 
-    return tasks
+    return tasks.map(task => ({
+      ...task,
+      yoteiKosu: task.yoteiKosu ? Number(task.yoteiKosu) : null,
+      jissekiKosu: task.jissekiKosu ? Number(task.jissekiKosu) : null,
+    }))
   }
 
   async getPhases(wbsId: string): Promise<PhaseData[]> {
