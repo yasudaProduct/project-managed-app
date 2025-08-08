@@ -53,4 +53,5 @@ export const SYMBOL = {
 
     // Infrastructure
     PrismaClient: Symbol.for('PrismaClient'),
+    Logger: Symbol.for('Logger'),
 }

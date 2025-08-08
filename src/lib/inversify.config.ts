@@ -65,6 +65,8 @@ import type { IProgressHistoryApplicationService } from "@/applications/wbs-prog
 // Prisma
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
+import type { Logger } from 'pino';
 
 const container: Container = new Container();
 // アプリケーションサービス
@@ -105,6 +107,7 @@ container.bind<TaskMappingService>(SYMBOL.TaskMappingService).to(TaskMappingServ
 
 // インフラストラクチャ
 container.bind<PrismaClient>(SYMBOL.PrismaClient).toConstantValue(prisma);
+container.bind<Logger>(SYMBOL.Logger).toConstantValue(logger);
 
 // ファクトリ
 container.bind<ITaskFactory>(SYMBOL.ITaskFactory).to(TaskFactory).inSingletonScope();

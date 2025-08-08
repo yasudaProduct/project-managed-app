@@ -6,8 +6,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
 import type { IProgressHistoryApplicationService } from '@/applications/wbs-progress-history/progress-history-application-service';
+import logger from '@/lib/logger'
+import { withRequestContext } from '@/lib/api-handler'
 
-export async function POST(
+export const POST = withRequestContext(async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -45,10 +47,10 @@ export async function POST(
       varianceManHours: snapshot.varianceManHours,
     });
   } catch (error) {
-    console.error('Failed to create snapshot:', error);
+    logger.error({ err: error }, 'Failed to create snapshot');
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal Server Error' },
       { status: 500 }
     );
   }
-}
+})

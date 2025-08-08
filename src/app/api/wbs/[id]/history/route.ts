@@ -6,8 +6,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
 import type { IProgressHistoryApplicationService } from '@/applications/wbs-progress-history/progress-history-application-service';
+import logger from '@/lib/logger'
+import { withRequestContext } from '@/lib/api-handler'
 
-export async function GET(
+export const GET = withRequestContext(async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -73,10 +75,10 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Failed to get progress histories:', error);
+    logger.error({ err: error }, 'Failed to get progress histories');
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
     );
   }
-}
+})
