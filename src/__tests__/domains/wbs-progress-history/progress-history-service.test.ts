@@ -1,60 +1,141 @@
-import { ProgressHistoryService, WbsTaskData, RecordType } from '../../../domains/wbs-progress-history';
+import { ProgressHistoryService, RecordType } from '../../../domains/wbs-progress-history';
+import { Task } from '../../../domains/task/task';
+import { TaskNo } from '../../../domains/task/value-object/task-id';
+import { TaskStatus } from '../../../domains/task/value-object/project-status';
+import { Assignee } from '../../../domains/task/assignee';
+import { Phase } from '../../../domains/phase/phase';
+import { Period } from '../../../domains/task/period';
+import { PeriodType } from '../../../domains/task/value-object/period-type';
+import { ManHour } from '../../../domains/task/man-hour';
+import { ManHourType } from '../../../domains/task/value-object/man-hour-type';
+import { WorkRecord } from '../../../domains/work-records/work-recoed';
+import { PhaseCode } from '../../../domains/phase/phase-code';
 
 describe('ProgressHistoryService', () => {
-  const sampleTasks: WbsTaskData[] = [
-    {
+  const createTestTask = (args: {
+    id: number;
+    taskNo: string;
+    name: string;
+    status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+    assigneeId?: number;
+    assigneeName?: string;
+    phaseId?: number;
+    phaseName?: string;
+    plannedStart?: Date;
+    plannedEnd?: Date;
+    plannedHours?: number;
+    actualStart?: Date;
+    actualEnd?: Date;
+    actualHours?: number;
+  }): Task => {
+    const periods: Period[] = [];
+    
+    // 予定期間を追加
+    if (args.plannedStart && args.plannedEnd && args.plannedHours !== undefined) {
+      const manHour = ManHour.create({
+        type: new ManHourType({ type: 'NORMAL' }),
+        kosu: args.plannedHours
+      });
+      periods.push(Period.create({
+        type: new PeriodType({ type: 'YOTEI' }),
+        startDate: args.plannedStart,
+        endDate: args.plannedEnd,
+        manHours: [manHour]
+      }));
+    }
+    
+    // 実績期間を追加（WorkRecordとして扱う）
+    const workRecords: WorkRecord[] = [];
+    if (args.actualStart && args.actualEnd && args.actualHours !== undefined) {
+      workRecords.push(WorkRecord.createFromDb({
+        id: 1,
+        userId: 'user1',
+        taskId: args.id,
+        startDate: args.actualStart,
+        endDate: args.actualEnd,
+        manHours: args.actualHours
+      }));
+    }
+
+    return Task.createFromDb({
+      id: args.id,
+      taskNo: TaskNo.reconstruct(args.taskNo),
+      wbsId: 1,
+      name: args.name,
+      status: new TaskStatus({ status: args.status }),
+      assigneeId: args.assigneeId,
+      assignee: args.assigneeId && args.assigneeName ? 
+        Assignee.createFromDb({
+          id: args.assigneeId,
+          name: args.assigneeName,
+          displayName: args.assigneeName
+        }) : undefined,
+      phaseId: args.phaseId,
+      phase: args.phaseId && args.phaseName ?
+        Phase.createFromDb({
+          id: args.phaseId,
+          name: args.phaseName,
+          code: new PhaseCode('P'),
+          seq: 1
+        }) : undefined,
+      periods,
+      workRecords,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+  };
+
+  const sampleTasks: Task[] = [
+    createTestTask({
       id: 1,
-      taskNo: '001',
+      taskNo: 'P1-0001',
       name: 'タスク1',
       status: 'COMPLETED',
       assigneeId: 1,
       assigneeName: '田中太郎',
       phaseId: 1,
       phaseName: '設計',
-      plannedStartDate: new Date('2024-01-01'),
-      plannedEndDate: new Date('2024-01-10'),
-      actualStartDate: new Date('2024-01-01'),
-      actualEndDate: new Date('2024-01-08'),
-      plannedManHours: 40,
-      actualManHours: 32,
-      progressRate: 100,
-    },
-    {
+      plannedStart: new Date('2024-01-01'),
+      plannedEnd: new Date('2024-01-10'),
+      plannedHours: 40,
+      actualStart: new Date('2024-01-01'),
+      actualEnd: new Date('2024-01-08'),
+      actualHours: 32
+    }),
+    createTestTask({
       id: 2,
-      taskNo: '002',
+      taskNo: 'P1-0002',
       name: 'タスク2',
       status: 'IN_PROGRESS',
       assigneeId: 2,
       assigneeName: '佐藤花子',
       phaseId: 1,
       phaseName: '設計',
-      plannedStartDate: new Date('2024-01-05'),
-      plannedEndDate: new Date('2024-01-15'),
-      actualStartDate: new Date('2024-01-05'),
-      plannedManHours: 60,
-      actualManHours: 30,
-      progressRate: 50,
-    },
-    {
+      plannedStart: new Date('2024-01-05'),
+      plannedEnd: new Date('2024-01-15'),
+      plannedHours: 60,
+      actualStart: new Date('2024-01-05'),
+      actualEnd: new Date('2024-01-10'),
+      actualHours: 30
+    }),
+    createTestTask({
       id: 3,
-      taskNo: '003',
+      taskNo: 'P2-0003',
       name: 'タスク3',
       status: 'NOT_STARTED',
       assigneeId: 1,
       assigneeName: '田中太郎',
       phaseId: 2,
       phaseName: '実装',
-      plannedStartDate: new Date('2024-01-16'),
-      plannedEndDate: new Date('2024-01-25'),
-      plannedManHours: 80,
-      actualManHours: 0,
-      progressRate: 0,
-    },
+      plannedStart: new Date('2024-01-16'),
+      plannedEnd: new Date('2024-01-25'),
+      plannedHours: 80
+    })
   ];
 
   describe('calculateAggregation', () => {
     it('タスクデータから正しい集計を計算する', () => {
-      const aggregation = ProgressHistoryService.calculateAggregation(sampleTasks);
+      const aggregation = Task.calculateAggregation(sampleTasks);
 
       expect(aggregation.totalTaskCount).toBe(3);
       expect(aggregation.completedCount).toBe(1);
@@ -67,7 +148,7 @@ describe('ProgressHistoryService', () => {
     });
 
     it('フェーズ別集計を正しく計算する', () => {
-      const aggregation = ProgressHistoryService.calculateAggregation(sampleTasks);
+      const aggregation = Task.calculateAggregation(sampleTasks);
 
       expect(aggregation.phaseAggregations).toHaveLength(2);
 
@@ -88,7 +169,7 @@ describe('ProgressHistoryService', () => {
     });
 
     it('担当者別集計を正しく計算する', () => {
-      const aggregation = ProgressHistoryService.calculateAggregation(sampleTasks);
+      const aggregation = Task.calculateAggregation(sampleTasks);
 
       expect(aggregation.assigneeAggregations).toHaveLength(2);
 
@@ -108,7 +189,7 @@ describe('ProgressHistoryService', () => {
     });
 
     it('空のタスクリストでも正しく処理する', () => {
-      const aggregation = ProgressHistoryService.calculateAggregation([]);
+      const aggregation = Task.calculateAggregation([]);
 
       expect(aggregation.totalTaskCount).toBe(0);
       expect(aggregation.completedCount).toBe(0);

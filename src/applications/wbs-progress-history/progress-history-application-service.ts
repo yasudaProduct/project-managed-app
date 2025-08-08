@@ -10,7 +10,6 @@ import type { ITaskRepository } from '../task/itask-repository';
 import {
   WbsProgressHistory,
   ProgressHistoryService,
-  WbsTaskData,
 } from '../../domains/wbs-progress-history';
 
 export interface IProgressHistoryApplicationService {
@@ -33,7 +32,7 @@ export class ProgressHistoryApplicationService implements IProgressHistoryApplic
     private readonly wbsRepository: IWbsRepository,
     @inject(SYMBOL.ITaskRepository)
     private readonly taskRepository: ITaskRepository
-  ) {}
+  ) { }
 
   /**
    * タスク更新時の自動進捗記録
@@ -45,8 +44,8 @@ export class ProgressHistoryApplicationService implements IProgressHistoryApplic
       throw new Error('WBSが見つかりません');
     }
 
-    // WBSの全タスクを取得
-    const tasks = await this.getWbsTaskData(wbsId);
+    // WBSの全タスクを取得（ドメインモデルとして）
+    const tasks = await this.taskRepository.findByWbsId(wbsId);
 
     // 自動進捗記録を作成
     const progressHistory = ProgressHistoryService.createAutoProgressRecord(wbsId, tasks);
@@ -68,8 +67,8 @@ export class ProgressHistoryApplicationService implements IProgressHistoryApplic
     // デフォルトのスナップショット名を設定
     const finalSnapshotName = snapshotName || `手動スナップショット_${new Date().toLocaleString('ja-JP')}`;
 
-    // WBSの全タスクを取得
-    const tasks = await this.getWbsTaskData(wbsId);
+    // WBSの全タスクを取得（ドメインモデルとして）
+    const tasks = await this.taskRepository.findByWbsId(wbsId);
 
     // 手動スナップショットを作成
     const progressHistory = ProgressHistoryService.createManualSnapshot(
@@ -138,48 +137,4 @@ export class ProgressHistoryApplicationService implements IProgressHistoryApplic
     return await this.progressHistoryRepository.findById(id);
   }
 
-  /**
-   * WBSのタスクデータを取得してWbsTaskData形式に変換
-   */
-  private async getWbsTaskData(wbsId: number): Promise<WbsTaskData[]> {
-    const tasks = await this.taskRepository.findByWbsId(wbsId);
-    
-    return tasks.map(task => ({
-      id: task.id!,
-      taskNo: task.taskNo!.getValue(),
-      name: task.name,
-      status: task.status.toString(),
-      assigneeId: task.assignee?.id,
-      assigneeName: task.assignee?.name,
-      phaseId: task.phaseId,
-      phaseName: task.phase?.name,
-      plannedStartDate: task.periods?.find(p => p.type.toString() === 'YOTEI')?.startDate,
-      plannedEndDate: task.periods?.find(p => p.type.toString() === 'YOTEI')?.endDate,
-      actualStartDate: task.periods?.find(p => p.type.toString() === 'JISSEKI')?.startDate,
-      actualEndDate: task.periods?.find(p => p.type.toString() === 'JISSEKI')?.endDate,
-      plannedManHours: task.periods
-        ?.filter(p => p.type.toString() === 'YOTEI')
-        .reduce((sum, p) => sum + p.manHours.reduce((s, k) => s + k.kosu, 0), 0) || 0,
-      actualManHours: task.periods
-        ?.filter(p => p.type.toString() === 'JISSEKI')
-        .reduce((sum, p) => sum + p.manHours.reduce((s, k) => s + k.kosu, 0), 0) || 0,
-      progressRate: this.calculateProgressRate(task.status.toString()),
-    }));
-  }
-
-  /**
-   * ステータスから進捗率を計算
-   */
-  private calculateProgressRate(status: string): number {
-    switch (status) {
-      case 'NOT_STARTED':
-        return 0;
-      case 'IN_PROGRESS':
-        return 50; // 仮の値、実際は別途進捗率を管理する可能性
-      case 'COMPLETED':
-        return 100;
-      default:
-        return 0;
-    }
-  }
 }

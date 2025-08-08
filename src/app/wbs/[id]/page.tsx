@@ -11,6 +11,7 @@ import {
   Table,
   Trello,
   Users,
+  History,
 } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { getWbsPhases } from "./wbs-phase-actions";
@@ -96,7 +97,7 @@ export default async function WbsManagementPage({
           }
         >
           <Tabs defaultValue="summary" className="w-full mt-4">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger
                 value="summary"
                 className="flex items-center gap-2 w-full justify-center"
@@ -131,6 +132,16 @@ export default async function WbsManagementPage({
               >
                 <Table className="h-4 w-4" />
                 集計表
+              </TabsTrigger>
+              <TabsTrigger
+                value="history"
+                className="flex items-center gap-2 w-full justify-center"
+                asChild
+              >
+                <Link href={`/wbs/${id}/history`}>
+                  <History className="h-4 w-4" />
+                  進捗履歴
+                </Link>
               </TabsTrigger>
             </TabsList>
             <TabsContent value="summary">

@@ -22,9 +22,11 @@ export class ProgressHistoryRepository implements IProgressHistoryRepository {
   constructor(
     @inject(SYMBOL.PrismaClient)
     private readonly prisma: PrismaClient
-  ) {}
+  ) { }
 
   async save(history: WbsProgressHistory): Promise<WbsProgressHistory> {
+    console.log("ProgressHistoryRepository: save", history)
+
     const result = await this.prisma.wbsProgressHistory.create({
       data: {
         wbsId: history.wbsId,
@@ -221,7 +223,7 @@ export class ProgressHistoryRepository implements IProgressHistoryRepository {
       createdAt: Date;
     }[];
   }): WbsProgressHistory {
-    const taskHistories = data.taskHistories?.map((taskHistory) => 
+    const taskHistories = data.taskHistories?.map((taskHistory) =>
       new TaskProgressHistory({
         id: taskHistory.id,
         wbsProgressHistoryId: taskHistory.wbsProgressHistoryId,

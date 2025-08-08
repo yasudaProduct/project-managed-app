@@ -15,18 +15,18 @@ export interface WbsProgressHistoryProps {
   recordedAt: Date;
   recordType: RecordType;
   snapshotName?: string;
-  totalTaskCount: number;
-  completedCount: number;
-  inProgressCount: number;
-  notStartedCount: number;
-  completionRate: number;
-  plannedManHours: number;
-  actualManHours: number;
-  varianceManHours: number;
-  metadata?: Record<string, unknown>;
-  taskHistories?: TaskProgressHistory[];
-  createdAt?: Date;
-  updatedAt?: Date;
+  totalTaskCount: number; // 総タスク数
+  completedCount: number; // 完了タスク数
+  inProgressCount: number; // 進行中タスク数
+  notStartedCount: number; // 未着手タスク数
+  completionRate: number; // 完了率
+  plannedManHours: number; // 予定工数
+  actualManHours: number; // 実績工数
+  varianceManHours: number; // 工数差異
+  metadata?: Record<string, unknown>; // メタデータ
+  taskHistories?: TaskProgressHistory[]; // タスク履歴
+  createdAt?: Date; // 作成日時
+  updatedAt?: Date; // 更新日時
 }
 
 export class WbsProgressHistory {
@@ -104,8 +104,10 @@ export class WbsProgressHistory {
     }
 
     // タスク数の整合性チェック
+    // - 完了タスク数 + 進行中タスク数 + 未着手タスク数 が 総タスク数 と一致すること
     const calculatedTotal = props.completedCount + props.inProgressCount + props.notStartedCount;
     if (calculatedTotal !== props.totalTaskCount) {
+      console.log(props.completedCount, props.inProgressCount, props.notStartedCount, props.totalTaskCount);
       throw new Error('タスク数の合計が一致しません');
     }
 

@@ -87,6 +87,9 @@ npx prisma generate
 
 # シードデータ投入
 npx prisma db seed
+
+# 
+npx prisma migrate reset
 ```
 
 ### 新しいマイグレーション作成

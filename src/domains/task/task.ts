@@ -230,4 +230,149 @@ export class Task {
     public getJissekiKosus(): number | undefined {
         return this.workRecords?.reduce((acc, workRecord) => acc + (workRecord.manHours ?? 0), 0);
     }
+
+    /**
+     * タスクの進捗率を計算
+     */
+    public getProgressRate(): number {
+        switch (this.status.getStatus()) {
+            case 'NOT_STARTED':
+                return 0;
+            case 'IN_PROGRESS':
+                return 50; // TODO: 実際の進捗率を計算
+            case 'COMPLETED':
+                return 100;
+            default:
+                return 0;
+        }
+    }
+
+    /**
+     * タスクリストから進捗集計を計算
+     */
+    public static calculateAggregation(tasks: Task[]): TaskAggregation {
+        const totalTaskCount = tasks.length;
+        const completedCount = tasks.filter(task => task.status.getStatus() === 'COMPLETED').length;
+        const inProgressCount = tasks.filter(task => task.status.getStatus() === 'IN_PROGRESS').length;
+        const notStartedCount = tasks.filter(task => task.status.getStatus() === 'NOT_STARTED').length;
+
+        const completionRate = totalTaskCount === 0 ? 0 : (completedCount / totalTaskCount) * 100;
+
+        const plannedManHours = tasks.reduce((sum, task) => sum + (task.getYoteiKosus() || 0), 0);
+        const actualManHours = tasks.reduce((sum, task) => sum + (task.getJissekiKosus() || 0), 0);
+        const varianceManHours = actualManHours - plannedManHours;
+
+        // フェーズ別集計
+        const phaseAggregations = Task.calculatePhaseAggregations(tasks);
+
+        // 担当者別集計
+        const assigneeAggregations = Task.calculateAssigneeAggregations(tasks);
+
+        return {
+            totalTaskCount,
+            completedCount,
+            inProgressCount,
+            notStartedCount,
+            completionRate,
+            plannedManHours,
+            actualManHours,
+            varianceManHours,
+            phaseAggregations,
+            assigneeAggregations,
+        };
+    }
+
+    private static calculatePhaseAggregations(tasks: Task[]): PhaseAggregation[] {
+        const phaseGroups = new Map<string, Task[]>();
+
+        tasks.forEach(task => {
+            const key = `${task.phaseId || 'undefined'}|${task.phase?.name || 'undefined'}`;
+            const group = phaseGroups.get(key) || [];
+            group.push(task);
+            phaseGroups.set(key, group);
+        });
+
+        return Array.from(phaseGroups.entries()).map(([key, phaseTasks]) => {
+            const [phaseId, phaseName] = key.split('|');
+            const taskCount = phaseTasks.length;
+            const completedCount = phaseTasks.filter(task => task.status.getStatus() === 'COMPLETED').length;
+            const plannedManHours = phaseTasks.reduce((sum, task) => sum + (task.getYoteiKosus() || 0), 0);
+            const actualManHours = phaseTasks.reduce((sum, task) => sum + (task.getJissekiKosus() || 0), 0);
+            const completionRate = taskCount === 0 ? 0 : (completedCount / taskCount) * 100;
+
+            return {
+                phaseId: phaseId === 'undefined' ? undefined : parseInt(phaseId),
+                phaseName: phaseName === 'undefined' ? undefined : phaseName,
+                taskCount,
+                completedCount,
+                plannedManHours,
+                actualManHours,
+                completionRate,
+            };
+        });
+    }
+
+    private static calculateAssigneeAggregations(tasks: Task[]): AssigneeAggregation[] {
+        const assigneeGroups = new Map<string, Task[]>();
+
+        tasks.forEach(task => {
+            const key = `${task.assigneeId || 'undefined'}|${task.assignee?.name || 'undefined'}`;
+            const group = assigneeGroups.get(key) || [];
+            group.push(task);
+            assigneeGroups.set(key, group);
+        });
+
+        return Array.from(assigneeGroups.entries()).map(([key, assigneeTasks]) => {
+            const [assigneeId, assigneeName] = key.split('|');
+            const taskCount = assigneeTasks.length;
+            const completedCount = assigneeTasks.filter(task => task.status.getStatus() === 'COMPLETED').length;
+            const plannedManHours = assigneeTasks.reduce((sum, task) => sum + (task.getYoteiKosus() || 0), 0);
+            const actualManHours = assigneeTasks.reduce((sum, task) => sum + (task.getJissekiKosus() || 0), 0);
+            const completionRate = taskCount === 0 ? 0 : (completedCount / taskCount) * 100;
+
+            return {
+                assigneeId: assigneeId === 'undefined' ? undefined : parseInt(assigneeId),
+                assigneeName: assigneeName === 'undefined' ? undefined : assigneeName,
+                taskCount,
+                completedCount,
+                plannedManHours,
+                actualManHours,
+                completionRate,
+            };
+        });
+    }
+}
+
+// 集計結果の型定義
+export interface TaskAggregation {
+    totalTaskCount: number;
+    completedCount: number;
+    inProgressCount: number;
+    notStartedCount: number;
+    completionRate: number;
+    plannedManHours: number;
+    actualManHours: number;
+    varianceManHours: number;
+    phaseAggregations: PhaseAggregation[];
+    assigneeAggregations: AssigneeAggregation[];
+}
+
+export interface PhaseAggregation {
+    phaseId?: number;
+    phaseName?: string;
+    taskCount: number;
+    completedCount: number;
+    plannedManHours: number;
+    actualManHours: number;
+    completionRate: number;
+}
+
+export interface AssigneeAggregation {
+    assigneeId?: number;
+    assigneeName?: string;
+    taskCount: number;
+    completedCount: number;
+    plannedManHours: number;
+    actualManHours: number;
+    completionRate: number;
 }

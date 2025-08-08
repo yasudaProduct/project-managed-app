@@ -240,7 +240,43 @@ async function main() {
         })
     }
 
-    console.log("✅シードデータの挿入が完了しました");
+    // 自動採番テーブルのシーケンスを MAX(id)+1 に再調整（PostgreSQL）
+    // 空テーブルは次回の nextval が 1 になるように第3引数を false、
+    // レコードがある場合は MAX(id) の次から始まるよう true を渡す
+    const autoIncrementTables = [
+        "wbs",
+        "wbs_assignee",
+        "wbs_phase",
+        "phase_template",
+        "wbs_buffer",
+        "wbs_task",
+        "task_period",
+        "task_kosu",
+        "task_status_log",
+        "milestone",
+        "work_records",
+        "user_schedule",
+        "wbs_progress_history",
+        "task_progress_history",
+    ] as const;
+
+    for (const tableName of autoIncrementTables) {
+        try {
+            // pg_get_serial_sequence で対象テーブルのシーケンス名を取得し、
+            // MAX(id) をもとに setval を設定する
+            const sql = `SELECT setval(
+                pg_get_serial_sequence('"${tableName}"', 'id'),
+                COALESCE(MAX(id), 1),
+                COALESCE(MAX(id), 0) <> 0
+            ) FROM "${tableName}";`;
+            await prisma.$executeRawUnsafe(sql);
+            console.log(`🔧 シーケンス再調整: ${tableName}`);
+        } catch (e) {
+            console.warn(`⚠️ シーケンス再調整に失敗: ${tableName}`, e);
+        }
+    }
+
+    console.log("✅シードデータの挿入とシーケンス再調整が完了しました");
 
 }
 
