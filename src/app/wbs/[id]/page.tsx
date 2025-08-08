@@ -16,7 +16,6 @@ import {
 import prisma from "@/lib/prisma";
 import { getWbsPhases } from "./wbs-phase-actions";
 import { getWbsAssignees } from "../assignee/assignee-actions";
-import WbsSummaryCard from "@/components/wbs/wbs-summary-card";
 import { getTaskAll } from "./wbs-task-actions";
 import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { Button } from "@/components/ui/button";
@@ -151,7 +150,6 @@ export default async function WbsManagementPage({
                 assignees={assignees || []}
                 buffers={buffers}
               />
-              <WbsSummaryCard wbsId={wbs.id} wbsTasks={tasks} />
             </TabsContent>
             <TabsContent value="list">
               <TaskTableViewPage wbsTasks={tasks} />
@@ -177,10 +175,7 @@ export default async function WbsManagementPage({
               />
             </TabsContent>
             <TabsContent value="table">
-              <WbsSummaryTables
-                projectId={project.id}
-                wbsId={String(wbs.id)}
-              />
+              <WbsSummaryTables projectId={project.id} wbsId={String(wbs.id)} />
             </TabsContent>
           </Tabs>
         </Suspense>

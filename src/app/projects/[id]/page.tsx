@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getProjectById } from "../project-actions";
 import { getWbsByProjectId } from "./wbs/wbs-actions";
-import { formatDateyyyymmdd } from "@/lib/utils";
 import { ProjectDetailClient } from "@/components/projects/project-detail-client";
 import {
   Calendar,
@@ -15,6 +14,7 @@ import {
   BarChart3,
   ArrowLeft,
 } from "lucide-react";
+import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
 
 export default async function ProjectPage({
   params,
@@ -32,7 +32,6 @@ export default async function ProjectPage({
 
   return (
     <div className="container mx-auto py-8 px-4">
-      {/* Header with breadcrumb and actions */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-4">
           <Link
@@ -86,7 +85,6 @@ export default async function ProjectPage({
         </div>
       </div>
 
-      {/* Project details */}
       <div className="mb-6">
         <Card>
           <CardHeader>
@@ -112,7 +110,7 @@ export default async function ProjectPage({
                 </h3>
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4" />
-                  {formatDateyyyymmdd(project.startDate.toString())}
+                  {formatUTCDateForDisplaySlash(project.startDate)}
                 </div>
               </div>
               <div>
@@ -121,7 +119,7 @@ export default async function ProjectPage({
                 </h3>
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4" />
-                  {formatDateyyyymmdd(project.endDate.toString())}
+                  {formatUTCDateForDisplaySlash(project.endDate)}
                 </div>
               </div>
               <div>
@@ -138,7 +136,6 @@ export default async function ProjectPage({
         </Card>
       </div>
 
-      {/* WBS Management Section */}
       <ProjectDetailClient wbsList={wbsList || []} projectId={project.id!} />
     </div>
   );

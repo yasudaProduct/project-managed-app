@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AuthStatusHeader } from "./auth/auth-status-header";
+import Link from "next/link";
 
 interface WbsInfo {
   id: string;
@@ -93,7 +94,7 @@ export function Header() {
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">プロジェクト:</span>
                 <span className="text-sm font-medium text-gray-900">
-                  {wbsInfo.projectName}
+                  <Link href={`/wbs/${wbsInfo.id}`}>{wbsInfo.projectName}</Link>
                 </span>
               </div>
             </>

@@ -62,9 +62,9 @@ export class TaskApplicationService implements ITaskApplicationService {
                 name: task.phase.name,
                 seq: task.phase.seq,
             } : undefined,
-            kijunStart: task.getKijunStart(),
-            kijunEnd: task.getKijunEnd(),
-            kijunKosu: task.getKijunKosus(),
+            // kijunStart: task.getKijunStart(),
+            // kijunEnd: task.getKijunEnd(),
+            // kijunKosu: task.getKijunKosus(),
             yoteiStart: task.getYoteiStart(),
             yoteiEnd: task.getYoteiEnd(),
             yoteiKosu: task.getYoteiKosus(),
@@ -96,9 +96,9 @@ export class TaskApplicationService implements ITaskApplicationService {
                 name: task.phase.name,
                 seq: task.phase.seq,
             } : undefined,
-            kijunStart: task.getKijunStart(),
-            kijunEnd: task.getKijunEnd(),
-            kijunKosu: task.getKijunKosus(),
+            // kijunStart: task.getKijunStart(),
+            // kijunEnd: task.getKijunEnd(),
+            // kijunKosu: task.getKijunKosus(),
             yoteiStart: task.getYoteiStart(),
             yoteiEnd: task.getYoteiEnd(),
             yoteiKosu: task.getYoteiKosus(),
@@ -162,17 +162,16 @@ export class TaskApplicationService implements ITaskApplicationService {
         // }
 
         task.update({
-            // id: updateTask.id,
             name: updateTask.name,
             assigneeId: updateTask.assigneeId,
             phaseId: updateTask.phaseId,
             status: new TaskStatus({ status: updateTask.status }),
         });
-        if (updateTask.kijunStart) task.updateKijun(updateTask.kijunStart, updateTask.kijunEnd ?? updateTask.kijunStart, updateTask.kijunKosu ?? 0);
+        // if (updateTask.kijunStart) task.updateKijun(updateTask.kijunStart, updateTask.kijunEnd ?? updateTask.kijunStart, updateTask.kijunKosu ?? 0);
         if (updateTask.yoteiStart) task.updateYotei({ startDate: updateTask.yoteiStart, endDate: updateTask.yoteiEnd ?? updateTask.yoteiStart, kosu: updateTask.yoteiKosu ?? 0 });
 
         const result = await this.taskRepository.update(wbsId, task);
-        
+
         // タスク更新後に進捗履歴を自動記録
         try {
             await this.progressHistoryService.recordTaskUpdate(wbsId);
@@ -180,7 +179,7 @@ export class TaskApplicationService implements ITaskApplicationService {
             // 進捗履歴の記録に失敗してもタスク更新は成功とする
             console.warn('進捗履歴の記録に失敗しました:', error);
         }
-        
+
         return { success: true, id: result.taskNo!.getValue() };
 
     }

@@ -51,9 +51,6 @@ export interface TaskTableViewPageProps {
 export type TaskTableViewProp = {
   id: string;
   name: string;
-  kijunStart?: Date;
-  kijunEnd?: Date;
-  kijunKosu?: number;
   yoteiStart?: Date;
   yoteiEnd?: Date;
   yoteiKosu?: number;
@@ -93,31 +90,6 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
     header: "担当者",
     cell: ({ row }) => (
       <div className="capitalize">{row.getValue("assignee")}</div>
-    ),
-  },
-  {
-    accessorKey: "kijunStart",
-    header: "基準開始日",
-    cell: ({ row }) => (
-      <div className="capitalize">
-        {formatUTCDateForDisplay(row.getValue("kijunStart"))}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "kijunEnd",
-    header: "基準終了日",
-    cell: ({ row }) => (
-      <div className="capitalize">
-        {formatUTCDateForDisplay(row.getValue("kijunEnd"))}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "kijunKosu",
-    header: "基準工数",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("kijunKosu")}</div>
     ),
   },
   {
@@ -195,7 +167,7 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>操作</DropdownMenuLabel>
-            <DropdownMenuItem>👷コピー</DropdownMenuItem>
+            <DropdownMenuItem>編集</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
@@ -204,7 +176,7 @@ export const columns: ColumnDef<TaskTableViewProp>[] = [
             >
               <Pencil />
             </DropdownMenuItem>
-            <DropdownMenuItem>👷詳細</DropdownMenuItem>
+            <DropdownMenuItem>詳細</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -229,9 +201,9 @@ export function TaskTableViewPage({
         ? wbsTasks.map((wbsTask) => ({
             id: wbsTask.taskNo ?? "",
             name: wbsTask.name,
-            kijunStart: wbsTask.kijunStart,
-            kijunEnd: wbsTask.kijunEnd,
-            kijunKosu: wbsTask.kijunKosu,
+            // kijunStart: wbsTask.kijunStart,
+            // kijunEnd: wbsTask.kijunEnd,
+            // kijunKosu: wbsTask.kijunKosu,
             yoteiStart: wbsTask.yoteiStart,
             yoteiEnd: wbsTask.yoteiEnd,
             yoteiKosu: wbsTask.yoteiKosu,
