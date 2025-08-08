@@ -11,9 +11,17 @@ interface WbsInfo {
   projectName: string;
 }
 
+interface WbsTasksSummary {
+  taskKosu: number;
+  taskJisseki: number;
+}
+
 export function Header() {
   const pathname = usePathname();
   const [wbsInfo, setWbsInfo] = useState<WbsInfo | null>(null);
+  const [tasksSummary, setTasksSummary] = useState<WbsTasksSummary | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
 
   const getWbsIdFromPath = (path: string): string | null => {
@@ -27,14 +35,15 @@ export function Header() {
     if (wbsId) {
       setLoading(true);
 
-      import("@/app/actions/wbs").then(({ getWbsById }) => {
-        getWbsById(wbsId)
-          .then((data) => {
-            if (data && data.name) {
+      import("@/app/actions/wbs").then(({ getWbsById, getWbsTasksSummary }) => {
+        // WBS情報とタスク集計を並列で取得
+        Promise.all([getWbsById(wbsId), getWbsTasksSummary(wbsId)])
+          .then(([wbsData, summaryData]) => {
+            if (wbsData && wbsData.name) {
               setWbsInfo({
                 id: wbsId,
-                name: data.name,
-                projectName: data.projectName,
+                name: wbsData.name,
+                projectName: wbsData.projectName,
               });
             } else {
               setWbsInfo({
@@ -42,6 +51,10 @@ export function Header() {
                 name: `WBS: ${wbsId}`,
                 projectName: `プロジェクト: ${wbsId}`,
               });
+            }
+
+            if (summaryData) {
+              setTasksSummary(summaryData);
             }
           })
           .catch((error) => {
@@ -58,6 +71,7 @@ export function Header() {
       });
     } else {
       setWbsInfo(null);
+      setTasksSummary(null);
     }
   }, [pathname]);
 
@@ -97,6 +111,38 @@ export function Header() {
                   <Link href={`/wbs/${wbsInfo.id}`}>{wbsInfo.projectName}</Link>
                 </span>
               </div>
+
+              {tasksSummary && (
+                <>
+                  <span className="text-gray-400">|</span>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm text-gray-600">予定:</span>
+                      <span className="text-sm font-medium text-blue-600">
+                        {tasksSummary.taskKosu.toFixed(1)}h
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm text-gray-600">実績:</span>
+                      <span className="text-sm font-medium text-green-600">
+                        {tasksSummary.taskJisseki.toFixed(1)}h
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm text-gray-600">進捗:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {tasksSummary.taskKosu > 0
+                          ? `${(
+                              (tasksSummary.taskJisseki /
+                                tasksSummary.taskKosu) *
+                              100
+                            ).toFixed(1)}%`
+                          : "0.0%"}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
 

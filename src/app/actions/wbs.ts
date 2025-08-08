@@ -33,3 +33,28 @@ export async function getWbsById(id: string) {
     throw new Error("Failed to fetch WBS information");
   }
 }
+
+export async function getWbsTasksSummary(wbsId: string) {
+
+  const taskKosu = await prisma.taskKosu.findMany({
+    where: {
+      wbsId: Number(wbsId)
+    },
+    select: {
+      kosu: true,
+    },
+  });
+
+  const taskJisseki = await prisma.workRecord.findMany({
+    where: {
+      task: {
+        wbsId: Number(wbsId),
+      },
+    },
+    select: {
+      hours_worked: true,
+    },
+  });
+
+  return { taskKosu: taskKosu.reduce((acc, curr) => acc + curr.kosu.toNumber(), 0), taskJisseki: taskJisseki.reduce((acc, curr) => acc + curr.hours_worked.toNumber(), 0) };
+}
