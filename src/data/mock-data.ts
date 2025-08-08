@@ -330,3 +330,65 @@ export const mockData = {
         },
     ],
 };
+
+// 大量データ
+export const mockDataLarge = {
+    project: {
+        id: 2,
+        name: "大規模開発プロジェクト",
+        status: "ACTIVE",
+        description: "大規模開発プロジェクト",
+        startDate: baseDate,
+        endDate: addDays(120),
+    },
+    wbs: [{
+        id: 2,
+        projectId: 2,
+        name: "タスク01",
+        status: "NOT_STARTED",
+    }],
+    wbsAssignee: Array.from({ length: 10 }, (_, i) => ({
+        id: i + 1,
+        wbsId: 2,
+        assigneeId: `dummy${String(Math.floor(Math.random() * 13) + 1).padStart(2, '0')}`, // 01~13のユーザーからランダムに選択（末尾2桁は0埋め）
+    })),
+    wbsPhase: [{
+        id: 1,
+        wbsId: 2,
+        name: "詳細設計",
+        code: "D2",
+        seq: 1,
+    }],
+    wbsTask: Array.from({ length: 100 }, (_, i) => ({
+        id: i + 1,
+        taskNo: `D2-${String(i + 1).padStart(4, '0')}`, // タスク番号　末尾0埋め４けた（D2-0001~D2-000100）
+        wbsId: 2,
+        phaseId: 1,
+        name: `機能${i + 1}設計書`,
+        assigneeId: 1,
+        status: "NOT_STARTED",
+        startDate: addDays(i),
+        endDate: addDays(i + 5),
+        kosu: 15,
+    })),
+    wbsBuffer: [{
+        id: 1,
+        wbsId: 1,
+        name: "リスク対策工数",
+        buffer: 50,
+        bufferType: "RISK",
+    }],
+    workRecords: Array.from({ length: 1000 }, (_, i) => ({
+        id: i + 1,
+        userId: `dummy${String(Math.floor(Math.random() * 13) + 1).padStart(2, '0')}`,
+        taskId: Math.floor(Math.random() * 100) + 1,
+        date: addDays(i),
+        hours_worked: 8,
+    })),
+    milestone: Array.from({ length: 100 }, (_, i) => ({
+        id: i + 1,
+        wbsId: 1,
+        name: `マイルストーン${i + 1} `,
+        date: addDays(i),
+    })),
+}

@@ -1,4 +1,4 @@
-import { mockData } from "../src/data/mock-data";
+import { mockData, mockDataLarge } from "../src/data/mock-data";
 import { phases } from "../src/data/phases";
 import { users } from "../src/data/users";
 import prisma from "../src/lib/prisma";
@@ -67,178 +67,183 @@ async function main() {
         })
     }
 
-    // モックデータ挿入
-    await prisma.projects.upsert({
-        where: { id: mockData.project.id.toString() },
-        update: {
-            name: mockData.project.name,
-            status: mockData.project.status as ProjectStatus,
-            description: mockData.project.description,
-            startDate: mockData.project.startDate,
-            endDate: mockData.project.endDate,
-        },
-        create: {
-            id: mockData.project.id.toString(),
-            name: mockData.project.name,
-            status: mockData.project.status as ProjectStatus,
-            description: mockData.project.description,
-            startDate: mockData.project.startDate,
-            endDate: mockData.project.endDate,
-        },
-    })
+    const mocks = [mockData, mockDataLarge]
 
-    for (const wbs of mockData.wbs) {
-        await prisma.wbs.upsert({
-            where: { id: wbs.id },
+    for (const mock of mocks) {
+        // モックデータ挿入
+        await prisma.projects.upsert({
+            where: { id: mock.project.id.toString() },
             update: {
-                name: wbs.name,
-                projectId: wbs.projectId.toString(),
+                name: mock.project.name,
+                status: mock.project.status as ProjectStatus,
+                description: mock.project.description,
+                startDate: mock.project.startDate,
+                endDate: mock.project.endDate,
             },
             create: {
-                id: wbs.id,
-                name: wbs.name,
-                projectId: wbs.projectId.toString(),
+                id: mock.project.id.toString(),
+                name: mock.project.name,
+                status: mock.project.status as ProjectStatus,
+                description: mock.project.description,
+                startDate: mock.project.startDate,
+                endDate: mock.project.endDate,
             },
         })
+
+        for (const wbs of mock.wbs) {
+            await prisma.wbs.upsert({
+                where: { id: wbs.id },
+                update: {
+                    name: wbs.name,
+                    projectId: wbs.projectId.toString(),
+                },
+                create: {
+                    id: wbs.id,
+                    name: wbs.name,
+                    projectId: wbs.projectId.toString(),
+                },
+            })
+        }
+
+        for (const phase of mock.wbsPhase) {
+            await prisma.wbsPhase.upsert({
+                where: { id: phase.id },
+                update: {
+                    wbsId: phase.wbsId,
+                    name: phase.name,
+                    code: phase.code,
+                    seq: phase.seq,
+                },
+                create: {
+                    id: phase.id,
+                    wbsId: phase.wbsId,
+                    name: phase.name,
+                    code: phase.code,
+                    seq: phase.seq,
+                },
+            })
+        }
+
+        for (const assignee of mock.wbsAssignee) {
+            await prisma.wbsAssignee.upsert({
+                where: { id: assignee.id },
+                update: {
+                    wbsId: assignee.wbsId,
+                    assigneeId: assignee.assigneeId,
+                },
+                create: {
+                    wbsId: assignee.wbsId,
+                    assigneeId: assignee.assigneeId,
+                },
+            })
+        }
+
+        for (const task of mock.wbsTask) {
+            const taskData = await prisma.wbsTask.upsert({
+                where: { id: task.id },
+                update: {
+                    wbsId: task.wbsId,
+                    phaseId: task.phaseId,
+                    name: task.name,
+                    assigneeId: task.assigneeId,
+                    status: task.status as TaskStatus,
+                },
+                create: {
+                    id: task.id,
+                    taskNo: task.taskNo,
+                    wbsId: task.wbsId,
+                    phaseId: task.phaseId,
+                    name: task.name,
+                    assigneeId: task.assigneeId,
+                    status: task.status as TaskStatus,
+                },
+            })
+
+            const taskPeriod = await prisma.taskPeriod.upsert({
+                where: { id: taskData.id },
+                update: {
+                    taskId: taskData.id,
+                    startDate: task.startDate,
+                    endDate: task.endDate,
+                    type: 'YOTEI',
+                },
+                create: {
+                    taskId: taskData.id,
+                    startDate: task.startDate,
+                    endDate: task.endDate,
+                    type: 'YOTEI'
+                },
+            })
+
+            await prisma.taskKosu.upsert({
+                where: { id: taskPeriod.id },
+                update: {
+                    kosu: task.kosu,
+                },
+                create: {
+                    wbsId: task.wbsId,
+                    periodId: taskPeriod.id,
+                    kosu: task.kosu,
+                    type: 'NORMAL',
+                },
+            })
+        }
+
+        for (const buffer of mock.wbsBuffer) {
+            await prisma.wbsBuffer.upsert({
+                where: { id: buffer.id },
+                update: {
+                    wbsId: buffer.wbsId,
+                    name: buffer.name,
+                    buffer: buffer.buffer,
+                    bufferType: buffer.bufferType as BufferType,
+                },
+                create: {
+                    id: buffer.id,
+                    wbsId: buffer.wbsId,
+                    name: buffer.name,
+                    buffer: buffer.buffer,
+                    bufferType: buffer.bufferType as BufferType,
+                },
+            })
+        }
+
+        for (const milestone of mock.milestone) {
+            await prisma.milestone.upsert({
+                where: { id: milestone.id },
+                update: {
+                    wbsId: milestone.wbsId,
+                    name: milestone.name,
+                    date: new Date(milestone.date),
+                },
+                create: {
+                    id: milestone.id,
+                    wbsId: milestone.wbsId,
+                    name: milestone.name,
+                    date: new Date(milestone.date),
+                },
+            })
+        }
+
+        for (const workRecord of mock.workRecords) {
+            await prisma.workRecord.upsert({
+                where: { id: workRecord.id },
+                update: {
+                    userId: workRecord.userId,
+                    taskId: workRecord.taskId,
+                    date: new Date(workRecord.date),
+                    hours_worked: workRecord.hours_worked,
+                },
+                create: {
+                    userId: workRecord.userId,
+                    taskId: workRecord.taskId,
+                    date: new Date(workRecord.date),
+                    hours_worked: workRecord.hours_worked,
+                },
+            })
+        }
     }
 
-    for (const phase of mockData.wbsPhase) {
-        await prisma.wbsPhase.upsert({
-            where: { id: phase.id },
-            update: {
-                wbsId: phase.wbsId,
-                name: phase.name,
-                code: phase.code,
-                seq: phase.seq,
-            },
-            create: {
-                id: phase.id,
-                wbsId: phase.wbsId,
-                name: phase.name,
-                code: phase.code,
-                seq: phase.seq,
-            },
-        })
-    }
-
-    for (const assignee of mockData.wbsAssignee) {
-        await prisma.wbsAssignee.upsert({
-            where: { id: assignee.id },
-            update: {
-                wbsId: assignee.wbsId,
-                assigneeId: assignee.assigneeId,
-            },
-            create: {
-                wbsId: assignee.wbsId,
-                assigneeId: assignee.assigneeId,
-            },
-        })
-    }
-
-    for (const task of mockData.wbsTask) {
-        const taskData = await prisma.wbsTask.upsert({
-            where: { id: task.id },
-            update: {
-                wbsId: task.wbsId,
-                phaseId: task.phaseId,
-                name: task.name,
-                assigneeId: task.assigneeId,
-                status: task.status as TaskStatus,
-            },
-            create: {
-                id: task.id,
-                taskNo: task.taskNo,
-                wbsId: task.wbsId,
-                phaseId: task.phaseId,
-                name: task.name,
-                assigneeId: task.assigneeId,
-                status: task.status as TaskStatus,
-            },
-        })
-
-        const taskPeriod = await prisma.taskPeriod.upsert({
-            where: { id: taskData.id },
-            update: {
-                taskId: taskData.id,
-                startDate: task.startDate,
-                endDate: task.endDate,
-                type: 'YOTEI',
-            },
-            create: {
-                taskId: taskData.id,
-                startDate: task.startDate,
-                endDate: task.endDate,
-                type: 'YOTEI'
-            },
-        })
-
-        await prisma.taskKosu.upsert({
-            where: { id: taskPeriod.id },
-            update: {
-                kosu: task.kosu,
-            },
-            create: {
-                wbsId: task.wbsId,
-                periodId: taskPeriod.id,
-                kosu: task.kosu,
-                type: 'NORMAL',
-            },
-        })
-    }
-
-    for (const buffer of mockData.wbsBuffer) {
-        await prisma.wbsBuffer.upsert({
-            where: { id: buffer.id },
-            update: {
-                wbsId: buffer.wbsId,
-                name: buffer.name,
-                buffer: buffer.buffer,
-                bufferType: buffer.bufferType as BufferType,
-            },
-            create: {
-                id: buffer.id,
-                wbsId: buffer.wbsId,
-                name: buffer.name,
-                buffer: buffer.buffer,
-                bufferType: buffer.bufferType as BufferType,
-            },
-        })
-    }
-
-    for (const milestone of mockData.milestone) {
-        await prisma.milestone.upsert({
-            where: { id: milestone.id },
-            update: {
-                wbsId: milestone.wbsId,
-                name: milestone.name,
-                date: new Date(milestone.date),
-            },
-            create: {
-                id: milestone.id,
-                wbsId: milestone.wbsId,
-                name: milestone.name,
-                date: new Date(milestone.date),
-            },
-        })
-    }
-
-    for (const workRecord of mockData.workRecords) {
-        await prisma.workRecord.upsert({
-            where: { id: workRecord.id },
-            update: {
-                userId: workRecord.userId,
-                taskId: workRecord.taskId,
-                date: new Date(workRecord.date),
-                hours_worked: workRecord.hours_worked,
-            },
-            create: {
-                userId: workRecord.userId,
-                taskId: workRecord.taskId,
-                date: new Date(workRecord.date),
-                hours_worked: workRecord.hours_worked,
-            },
-        })
-    }
 
     // 自動採番テーブルのシーケンスを MAX(id)+1 に再調整（PostgreSQL）
     // 空テーブルは次回の nextval が 1 になるように第3引数を false、
