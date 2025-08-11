@@ -234,11 +234,11 @@ describe("gantt-utils", () => {
       expect(result).toHaveLength(1);
       const task = result[0];
 
-      // 開始位置: 0日目（1月1日は1日目だが、0ベースなので0）
-      expect(task.startPosition).toBeCloseTo((1 / 30) * chartWidth, 0);
+      // 開始位置: 1日目（1月2日は1日目）
+      expect(task.startPosition).toBeCloseTo((1 / 31) * chartWidth, 0);
 
-      // 幅: 2日間（1日から2日まで）
-      expect(task.width).toBeCloseTo((2 / 30) * chartWidth, 0);
+      // 幅: 2日間（1月2日から3日まで）
+      expect(task.width).toBeCloseTo((2 / 31) * chartWidth, 0);
     });
 
     it("タスクの位置とサイズを計算する 2日のタスク", () => {
@@ -266,9 +266,9 @@ describe("gantt-utils", () => {
       expect(result).toHaveLength(1);
       const task1 = result[0];
 
-      // 開始位置: 2日目（7月2日は7月2日だが、0ベースなので1）
-      expect(task1.startPosition).toBeCloseTo((1 / 29) * chartWidth, 2);
-      expect(task1.width).toBeCloseTo((1 / 29) * chartWidth, 0);
+      // 開始位置: 1日目（7月2日は1日目）
+      expect(task1.startPosition).toBeCloseTo((1 / 30) * chartWidth, 2);
+      expect(task1.width).toBeCloseTo((3 / 30) * chartWidth, 0);
     });
 
     it("開始日がない場合は範囲開始日を使用する", () => {

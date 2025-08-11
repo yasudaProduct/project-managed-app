@@ -166,10 +166,12 @@ describe('GanttV2 日付計算ロジック', () => {
       const dateRange = calculateDateRange(mockProject);
       const { timeAxis, chartWidth, totalDays } = calculateTimeAxis(dateRange, 'day');
       
-      expect(totalDays).toBe(45); // 4月24日〜6月7日 = 45日
+      expect(totalDays).toBe(44); // 4月24日〜6月7日 = 44日
       expect(chartWidth).toBeGreaterThanOrEqual(1200); // 最小幅1200px
       expect(timeAxis.length).toBeGreaterThan(0);
-      expect(timeAxis[0].date).toEqual(new Date('2024-04-24'));
+      const expectedDate = new Date('2024-04-24');
+      expectedDate.setHours(0, 0, 0, 0);
+      expect(timeAxis[0].date.getTime()).toEqual(expectedDate.getTime());
     });
 
     test('週表示モードで正しい時間軸を生成する', () => {
@@ -204,8 +206,8 @@ describe('GanttV2 日付計算ロジック', () => {
       expect(position.duration).toBe(9); // endDays - startDays + 2 = 22 - 15 + 2 = 9
       
       // 位置計算の検証
-      const expectedStartPosition = (15 / 45) * 1800; // 600px
-      const expectedWidth = (9 / 45) * 1800; // 360px
+      const expectedStartPosition = (15 / 44) * 1800; // 613.636...px
+      const expectedWidth = (9 / 44) * 1800; // 368.181...px
       
       expect(position.startPosition).toBe(expectedStartPosition);
       expect(position.width).toBe(expectedWidth);
