@@ -21,6 +21,7 @@ import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TaskModal } from "@/components/wbs/task-modal";
+import { TaskDependencyModal } from "@/components/wbs/task-dependency-modal";
 import { ProjectInfoCard } from "@/components/wbs/project-info-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GanttV2Wrapper from "@/components/ganttv2/gantt-v2-wrapper";
@@ -88,6 +89,14 @@ export default async function WbsManagementPage({
             <CalendarCheck className="h-4 w-4" />
           </Button>
         </TaskModal>
+        <TaskDependencyModal 
+          wbsId={wbs.id} 
+          tasks={tasks.map(task => ({
+            id: task.id,
+            taskNo: task.taskNo || "",
+            name: task.name
+          }))} 
+        />
         <Suspense
           fallback={
             <div className="flex justify-center">

@@ -179,6 +179,14 @@ erDiagram
   Decimal progressRate
   DateTime createdAt
 }
+"task_dependencies" {
+  Int id PK
+  Int predecessorTaskId FK
+  Int successorTaskId FK
+  Int wbsId FK
+  DateTime createdAt
+  DateTime updatedAt
+}
 "user_sessions" }o--|| "users" : user
 "wbs" }o--|| "projects" : project
 "wbs_assignee" }o--|| "wbs" : wbs
@@ -199,6 +207,9 @@ erDiagram
 "user_schedule" }o--|| "users" : user
 "wbs_progress_history" }o--|| "wbs" : wbs
 "task_progress_history" }o--|| "wbs_progress_history" : wbsProgressHistory
+"task_dependencies" }o--|| "wbs_task" : predecessorTask
+"task_dependencies" }o--|| "wbs_task" : successorTask
+"task_dependencies" }o--|| "wbs" : wbs
 ```
 
 ### `projects`
@@ -407,3 +418,13 @@ erDiagram
   - `actualManHours`: 
   - `progressRate`: 
   - `createdAt`: 
+
+### `task_dependencies`
+
+**Properties**
+  - `id`: 
+  - `predecessorTaskId`: 
+  - `successorTaskId`: 
+  - `wbsId`: 
+  - `createdAt`: 
+  - `updatedAt`: 

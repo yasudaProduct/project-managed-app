@@ -38,6 +38,10 @@ export const SYMBOL = {
     IWorkRecordRepository: Symbol.for('IWorkRecordRepository'),
     IWorkRecordApplicationService: Symbol.for('IWorkRecordApplicationService'),
 
+    // Task Dependencies
+    ITaskDependencyRepository: Symbol.for('ITaskDependencyRepository'),
+    ITaskDependencyService: Symbol.for('ITaskDependencyService'),
+
     // Progress History
     IProgressHistoryRepository: Symbol.for('IProgressHistoryRepository'),
     IProgressHistoryApplicationService: Symbol.for('IProgressHistoryApplicationService'),

@@ -68,6 +68,7 @@ model Wbs {
   buffers   WbsBuffer[]
   milestones Milestone[]
   progressHistories WbsProgressHistory[]
+  taskDependencies TaskDependency[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -142,6 +143,8 @@ model WbsTask {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   workRecords      WorkRecord[]
+  predecessors     TaskDependency[] @relation("PredecessorTask")
+  successors       TaskDependency[] @relation("SuccessorTask")
 
   @@unique(fields: [taskNo,wbsId])
   @@map("wbs_task")
@@ -317,4 +320,21 @@ model TaskProgressHistory {
 enum RecordType {
   AUTO
   MANUAL_SNAPSHOT
+}
+
+model TaskDependency {
+  id                Int     @id @default(autoincrement())
+  predecessorTaskId Int
+  successorTaskId   Int
+  wbsId            Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  predecessorTask  WbsTask @relation("PredecessorTask", fields: [predecessorTaskId], references: [id], onDelete: Cascade)
+  successorTask    WbsTask @relation("SuccessorTask", fields: [successorTaskId], references: [id], onDelete: Cascade)
+  wbs              Wbs     @relation(fields: [wbsId], references: [id], onDelete: Cascade)
+  
+  @@unique([predecessorTaskId, successorTaskId])
+  @@index([wbsId])
+  @@map("task_dependencies")
 }
