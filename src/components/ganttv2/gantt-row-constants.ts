@@ -7,15 +7,15 @@ import React from "react";
 
 export const GANTT_ROW_HEIGHTS = {
   // グループヘッダーの高さ
-  GROUP_HEADER: 32, // 2rem = 32px
-  
+  GROUP_HEADER: 24, // 1.5rem = 24px
+
   // タスク行の高さ
-  TASK_COLLAPSED: 48, // 3rem = 48px
-  TASK_EXPANDED: 80,  // 5rem = 80px (タスク名+ステータス: 24px, 担当者: 16px, 日程工数: 16px, パディング: 24px)
-  
+  TASK_COLLAPSED: 32, // 2rem = 32px
+  TASK_EXPANDED: 52,  // 4rem = 64px (タスク名+ステータス: 24px, 担当者: 16px, 日程工数: 16px, パディング: 8px)
+
   // タスクバーの高さ
-  TASK_BAR: 32, // 2rem = 32px
-  
+  TASK_BAR: 24, // 2rem = 32px
+
   // パディング
   TASK_PADDING_Y: 8, // py-2 = 8px (top + bottom)
 } as const;
@@ -33,27 +33,19 @@ export function calculateTaskRowHeight(task: {
     return GANTT_ROW_HEIGHTS.TASK_COLLAPSED;
   }
 
-  // 基本の高さ（タスク名とステータス）
-  let height = 32; // タスク名とステータスバッジの行
-  
-  // 詳細情報の高さを加算
-  height += 8; // mt-2のマージン
-  
-  // 担当者情報があれば追加
-  if (task.assignee) {
-    height += 16; // 担当者行の高さ
-    height += 4; // space-y-1のマージン
+  // 基本の高さ（タスク名・担当者・工数・ステータスを含むヘッダー行）
+  let height = 24; // ヘッダー行の高さ
+
+  // 詳細情報がある場合のマージンと高さを加算
+  if (task.yoteiStart || task.yoteiEnd) {
+    height += 8; // mt-2のマージン
+    height += 16; // 日程情報行の高さ（text-xs）
   }
-  
-  // 日程・工数情報があれば追加
-  if (task.yoteiStart || task.yoteiEnd || (task.yoteiKosu && task.yoteiKosu > 0)) {
-    height += 16; // 日程・工数行の高さ
-  }
-  
+
   // 上下パディング（CSSで py-2 = 16px が適用される）
   height += 16;
-  
-  // 最小高さ
+
+  // 最小高さを保証
   return Math.max(height, GANTT_ROW_HEIGHTS.TASK_EXPANDED);
 }
 
@@ -125,7 +117,7 @@ export function getTaskBarTopDynamic(task: {
     // 折りたたみ時は標準位置
     return getTaskBarTop(isCollapsed);
   }
-  
+
   // 展開時はタスク名行の中央に配置
   const topOffset = (32 - GANTT_ROW_HEIGHTS.TASK_BAR) / 2; // タスク名行の中央
   return `${topOffset}px`;

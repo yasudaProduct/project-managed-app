@@ -18,7 +18,10 @@ import {
   Edit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getTaskRowStyleDynamic, getGroupHeaderStyle } from "./gantt-row-constants";
+import {
+  getTaskRowStyleDynamic,
+  getGroupHeaderStyle,
+} from "./gantt-row-constants";
 import { TaskModal } from "@/components/wbs/task-modal";
 
 interface TaskWithPosition extends WbsTask {
@@ -71,7 +74,7 @@ export default function GanttTaskList({
     }
   };
   return (
-    <div className="w-80 lg:w-96 border-r border-gray-200 bg-gray-50 flex-shrink-0">
+    <div className="w-60 lg:w-96 border-r border-gray-200 bg-gray-50 flex-shrink-0">
       {/* ヘッダー */}
       <div className="h-12 border-b border-gray-200 flex items-center justify-between px-4 bg-gray-100 font-semibold text-sm">
         <span>タスク詳細</span>
@@ -136,6 +139,7 @@ export default function GanttTaskList({
       <ScrollArea className="h-96">
         {groups.map((group) => (
           <div key={group.id}>
+            {/* グループヘッダー */}
             {groupBy !== "none" && (
               <div
                 className="px-4 bg-gray-100 border-b border-gray-200 flex items-center cursor-pointer hover:bg-gray-200"
@@ -174,7 +178,7 @@ export default function GanttTaskList({
                   <div
                     key={task.id}
                     className={`px-4 border-b border-gray-200 hover:bg-gray-50 transition-all duration-200 flex flex-col ${
-                      isTaskCollapsed ? 'justify-center' : 'py-2'
+                      isTaskCollapsed ? "justify-center" : "py-2"
                     }`}
                     style={getTaskRowStyleDynamic(task, isTaskCollapsed)}
                   >
@@ -200,6 +204,30 @@ export default function GanttTaskList({
                         <div className="text-sm font-medium truncate pr-2">
                           {task.name}
                         </div>
+
+                        {task.assignee && (
+                          <div className="text-xs text-gray-600 flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            <span className="truncate">
+                              {task.assignee.displayName}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* 予定工数 */}
+                        {task.yoteiKosu && task.yoteiKosu > 0 && (
+                          <>
+                            <span className="text-gray-400 hidden sm:inline">
+                              |
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3 flex-shrink-0" />
+                              <span className="whitespace-nowrap">
+                                {task.yoteiKosu}h
+                              </span>
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -215,7 +243,9 @@ export default function GanttTaskList({
                         {/* ステータスバッジ */}
                         <Badge
                           variant={
-                            task.status === "COMPLETED" ? "default" : "secondary"
+                            task.status === "COMPLETED"
+                              ? "default"
+                              : "secondary"
                           }
                           className={cn(
                             "text-xs flex-shrink-0",
@@ -235,16 +265,6 @@ export default function GanttTaskList({
                     {/* 詳細情報（折りたたみ可能） */}
                     {!isTaskCollapsed && (
                       <div className="mt-2 ml-6 space-y-1">
-                        {/* 担当者 */}
-                        {task.assignee && (
-                          <div className="text-xs text-gray-600 flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            <span className="truncate">
-                              {task.assignee.displayName}
-                            </span>
-                          </div>
-                        )}
-
                         {/* 日程と工数の行 */}
                         <div className="flex items-center gap-2 lg:gap-3 text-xs text-gray-600 flex-wrap">
                           {/* 予定開始日 */}
@@ -267,21 +287,6 @@ export default function GanttTaskList({
                               {formatDate(task.yoteiEnd)}
                             </span>
                           </div>
-
-                          {/* 予定工数 */}
-                          {task.yoteiKosu && task.yoteiKosu > 0 && (
-                            <>
-                              <span className="text-gray-400 hidden sm:inline">
-                                |
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3 flex-shrink-0" />
-                                <span className="whitespace-nowrap">
-                                  {task.yoteiKosu}h
-                                </span>
-                              </div>
-                            </>
-                          )}
                         </div>
                       </div>
                     )}
