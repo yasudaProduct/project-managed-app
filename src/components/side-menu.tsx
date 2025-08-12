@@ -21,7 +21,7 @@ export function SideMenu() {
 
   function getWbsIdFromPath(pathname: string): string | null {
     // /wbs/123, /wbs/123/xxx などにマッチ
-    const match = pathname.match(/^\/wbs\/([^\/]+)/);
+    const match = pathname.match(/^\/wbs\/([0-9]+)/);
     return match ? match[1] : null;
   }
 
@@ -32,7 +32,7 @@ export function SideMenu() {
         className="fixed top-0 left-0 w-8 h-full z-40"
         onMouseEnter={() => setIsOpen(true)}
       />
-      
+
       {/* サイドメニュー */}
       <div
         className={`fixed top-0 left-0 h-full w-[240px] sm:w-[300px] bg-background border-r shadow-lg transform transition-transform duration-200 ease-in-out z-50 ${
@@ -46,19 +46,31 @@ export function SideMenu() {
             <p className="text-sm text-muted-foreground">menu</p>
           </div>
           <nav className="flex flex-col space-y-4">
-            <Link href="/" className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors">
+            <Link
+              href="/"
+              className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
               <Home className="h-4 w-4" />
               ホーム
             </Link>
-            <Link href="/projects" className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors">
+            <Link
+              href="/projects"
+              className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
               <FolderKanban className="h-4 w-4" />
               プロジェクト
             </Link>
-            <Link href="/users" className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors">
+            <Link
+              href="/users"
+              className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
               <Users className="h-4 w-4" />
               ユーザー
             </Link>
-            <Link href="/wbs/phase" className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors">
+            <Link
+              href="/wbs/phase"
+              className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
               <Trello className="h-4 w-4" />
               工程
             </Link>
@@ -76,7 +88,10 @@ export function SideMenu() {
               <Calendar className="h-4 w-4" />
               月報
             </Link>
-            <Link href="/schedule/" className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors">
+            <Link
+              href="/schedule/"
+              className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
               <Calendar className="h-4 w-4" />
               スケジュール取込
             </Link>
@@ -93,7 +108,9 @@ export function SideMenu() {
                 <hr className="my-4" />
                 <div className="mb-4">
                   <h3 className="text-lg font-semibold">プロジェクト管理</h3>
-                  <p className="text-sm text-muted-foreground">プロジェクト管理</p>
+                  <p className="text-sm text-muted-foreground">
+                    プロジェクト管理
+                  </p>
                 </div>
                 <Link
                   href={`/wbs/${wbsId}/dashboard`}
@@ -109,11 +126,17 @@ export function SideMenu() {
                   <Trello className="h-4 w-4" />
                   🚧タスク
                 </Link>
-                <Link href="#" className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors">
+                <Link
+                  href="#"
+                  className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+                >
                   <Trello className="h-4 w-4" />
                   🚧工程別集計
                 </Link>
-                <Link href="#" className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors">
+                <Link
+                  href="#"
+                  className="text-lg flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+                >
                   <Trello className="h-4 w-4" />
                   🚧月別集計
                 </Link>

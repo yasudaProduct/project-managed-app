@@ -25,7 +25,8 @@ export function Header() {
   const [loading, setLoading] = useState(false);
 
   const getWbsIdFromPath = (path: string): string | null => {
-    const match = path.match(/^\/wbs\/([^\/]+)/);
+    // 数値以外は除外
+    const match = path.match(/^\/wbs\/([0-9]+)/);
     return match ? match[1] : null;
   };
 
