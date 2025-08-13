@@ -18,10 +18,23 @@ export default function ScheduleImportPage() {
     setIsLoading(true);
     const fileName = file.name.toLowerCase();
 
+    // ArrayBufferとして読み込む
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
-        const text = event.target?.result as string;
+        const buffer = event.target?.result as ArrayBuffer;
+        
+        // SJISからUTF-8に変換
+        let text: string;
+        try {
+          // まずSJISとしてデコードを試みる
+          const decoder = new TextDecoder("shift_jis");
+          text = decoder.decode(buffer);
+        } catch (e) {
+          // SJISのデコードに失敗した場合はUTF-8として試みる
+          const decoder = new TextDecoder("utf-8");
+          text = decoder.decode(buffer);
+        }
 
         // ファイル形式の判定
         if (!fileName.endsWith(".txt") || !text.includes("\t")) {
@@ -69,7 +82,7 @@ export default function ScheduleImportPage() {
         setIsLoading(false);
       }
     };
-    reader.readAsText(file, "UTF-8"); // 日本語対応のためUTF-8指定
+    reader.readAsArrayBuffer(file); // バイナリとして読み込む
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

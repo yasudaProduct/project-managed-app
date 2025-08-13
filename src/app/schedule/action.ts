@@ -233,6 +233,9 @@ export async function importScheduleTsv(tsvData: scheduleTsvData[]): Promise<{
                     }
                 });
             }
+        }, {
+            maxWait: 30000, // 最大待機時間: 30秒
+            timeout: 30000, // タイムアウト: 30秒
         });
 
         return {
