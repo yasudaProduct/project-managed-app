@@ -175,7 +175,7 @@ export function calculateTaskPositions(
   const totalDays = Math.ceil(
     (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
     (1000 * 60 * 60 * 24)
-  ) + 1;
+  );
 
   return tasks.map((task) => {
     // UTCで受け取った日付をローカル日付として解釈
@@ -239,11 +239,11 @@ export function groupTasks(
       // 開始日がない場合は最後に配置
       const aStart = a.yoteiStart ? utcToLocalDate(a.yoteiStart) : null;
       const bStart = b.yoteiStart ? utcToLocalDate(b.yoteiStart) : null;
-      
+
       if (!aStart && !bStart) return 0;
       if (!aStart) return 1;
       if (!bStart) return -1;
-      
+
       return aStart.getTime() - bStart.getTime();
     });
   };

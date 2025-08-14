@@ -152,15 +152,18 @@ export default function GanttChart({
     const normalizedRangeEnd = new Date(dateRange.end);
     normalizedRangeEnd.setHours(0, 0, 0, 0);
 
+    // gantt-utils.tsのcalculateTaskPositionsと同じ計算方法を使用
     const totalDays = Math.ceil(
       (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
         (1000 * 60 * 60 * 24)
     );
 
+    // 位置から日数を計算（0.5を足して正しく丸める）
     const dayPosition = (position / chartWidth) * totalDays;
 
+    // 開始日から計算した日数を加算
     const resultDate = new Date(normalizedRangeStart);
-    resultDate.setDate(resultDate.getDate() + Math.round(dayPosition));
+    resultDate.setDate(resultDate.getDate() + Math.floor(dayPosition + 0.5));
     return resultDate;
   };
 
@@ -321,12 +324,30 @@ export default function GanttChart({
 
       if (wasResizing) {
         // リサイズの場合
-        newStartDate = positionToDate(draggedTask.startPosition);
-        const endPosition = draggedTask.startPosition + draggedTask.width;
-        newEndDate = positionToDate(endPosition);
+        if (resizeDirection === "start") {
+          // 開始日のリサイズ：開始日のみ変更、終了日は固定
+          newStartDate = positionToDate(draggedTask.startPosition);
+          // 元の終了日を保持
+          newEndDate = draggedTask.yoteiEnd ? new Date(draggedTask.yoteiEnd) : new Date();
+        } else if (resizeDirection === "end") {
+          // 終了日のリサイズ：終了日のみ変更、開始日は固定
+          newStartDate = draggedTask.yoteiStart ? new Date(draggedTask.yoteiStart) : new Date();
+          // 終了位置から終了日を計算
+          const endPosition = draggedTask.startPosition + draggedTask.width;
+          newEndDate = positionToDate(endPosition);
+          // 1日引く（終了日を含む期間として調整）
+          newEndDate.setDate(newEndDate.getDate() - 1);
+        } else {
+          // その他の場合（通常は発生しない）
+          newStartDate = positionToDate(draggedTask.startPosition);
+          const endPosition = draggedTask.startPosition + draggedTask.width;
+          newEndDate = positionToDate(endPosition);
+          newEndDate.setDate(newEndDate.getDate() - 1);
+        }
       } else {
         // ドラッグ移動の場合
         newStartDate = positionToDate(draggedTask.startPosition);
+        // 元のタスクの期間を保持（終了日を含む）
         const originalDuration =
           draggedTask.yoteiEnd && draggedTask.yoteiStart
             ? Math.ceil(
@@ -334,7 +355,7 @@ export default function GanttChart({
                   draggedTask.yoteiStart.getTime()) /
                   (1000 * 60 * 60 * 24)
               )
-            : 1;
+            : 0;
         newEndDate = new Date(newStartDate);
         newEndDate.setDate(newEndDate.getDate() + originalDuration);
       }
@@ -425,6 +446,7 @@ export default function GanttChart({
     clickTask,
     hasDragStarted,
     handleTaskClick,
+    resizeDirection,
   ]);
 
   // グローバルマウスイベントの設定
