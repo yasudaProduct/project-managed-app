@@ -3,7 +3,8 @@
 import { Shield, Calendar, Clock, User, Trello } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatDateyyyymmdd, getProjectStatusName } from "@/lib/utils";
+import { getProjectStatusName } from "@/lib/utils";
+import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
 import { ProjectStatus } from "@/types/wbs";
 
 interface ProjectInfoCardProps {
@@ -73,9 +74,9 @@ export function ProjectInfoCard({
                     プロジェクト期間
                   </p>
                   <p className="text-gray-700">
-                    {formatDateyyyymmdd(project.startDate.toISOString())}
+                    {formatUTCDateForDisplaySlash(project.startDate)}
                     <span className="mx-2 text-gray-400">〜</span>
-                    {formatDateyyyymmdd(project.endDate.toISOString())}
+                    {formatUTCDateForDisplaySlash(project.endDate)}
                   </p>
                 </div>
               </div>

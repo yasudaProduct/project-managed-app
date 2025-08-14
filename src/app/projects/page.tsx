@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { getProjectAll } from "./project-actions";
 import { columns } from "./columns";
-import { formatDateyyyymmdd, getProjectStatusName } from "@/lib/utils";
+import { getProjectStatusName } from "@/lib/utils";
+import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
 
 export default async function ProjectsPage() {
   const projects = await getProjectAll();
@@ -27,8 +28,8 @@ export default async function ProjectsPage() {
             id: project.id,
             name: project.name,
             description: project.description,
-            startDate: formatDateyyyymmdd(project.startDate.toString())!,
-            endDate: formatDateyyyymmdd(project.endDate.toString())!,
+            startDate: formatUTCDateForDisplaySlash(project.startDate),
+            endDate: formatUTCDateForDisplaySlash(project.endDate),
             status: getProjectStatusName(project.status),
             link: `/projects/${project.id}`,
           };

@@ -25,9 +25,9 @@ import {
 } from "@/components/ui/select";
 import { createProject, deleteProject, updateProject } from "./project-actions";
 import { ProjectStatus } from "@prisma/client";
-import { formatDateyyyymmdd } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { DatePicker } from "@/components/date-picker";
+import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -65,8 +65,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
     defaultValues: project
       ? {
           ...project,
-          startDate: formatDateyyyymmdd(project.startDate),
-          endDate: formatDateyyyymmdd(project.endDate),
+          startDate: formatUTCDateForDisplaySlash(new Date(project.startDate)),
+          endDate: formatUTCDateForDisplaySlash(new Date(project.endDate)),
         }
       : {
           name: "",

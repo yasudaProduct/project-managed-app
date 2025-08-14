@@ -1,28 +1,6 @@
-import { formatDateyyyymmdd, getProjectStatusName, isHoliday } from "@/lib/utils";
+import { getProjectStatusName, isHoliday } from "@/lib/utils";
 
 describe("utils", () => {
-  describe("formatDateyyyymmdd", () => {
-    it("日付文字列をyyyy/mm/dd形式にフォーマットできること", () => {
-      expect(formatDateyyyymmdd("2025-05-05")).toBe("2025/05/05");
-    });
-
-    it("月と日が1桁の場合も正しくフォーマットされること", () => {
-      expect(formatDateyyyymmdd("2025-1-5")).toBe("2025/01/05");
-    });
-
-    it("空文字列の場合はundefinedを返すこと", () => {
-      expect(formatDateyyyymmdd("")).toBeUndefined();
-    });
-
-    it("無効な日付文字列の場合はundefinedを返すこと", () => {
-      expect(formatDateyyyymmdd("invalid-date")).toBeUndefined();
-    });
-
-    it("nullの場合はundefinedを返すこと", () => {
-      // @ts-expect-error - nullを渡す
-      expect(formatDateyyyymmdd(null)).toBeUndefined();
-    });
-  });
 
   describe("getProjectStatusName", () => {
     it("INACTIVEは「未開始」と表示されること", () => {

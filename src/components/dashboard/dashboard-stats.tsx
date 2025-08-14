@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { formatDateyyyymmdd } from "@/lib/utils";
+import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
 import {
   Calendar,
   Clock,
@@ -198,7 +198,7 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
                     <div>
                       <p className="font-medium">{project.projectName}</p>
                       <p className="text-sm text-muted-foreground">
-                        {formatDateyyyymmdd(project.endDate.toString())}
+                        {formatUTCDateForDisplaySlash(project.endDate)}
                       </p>
                     </div>
                     <Badge variant="outline" className="text-orange-600">
@@ -231,7 +231,7 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
                     <div>
                       <p className="font-medium">{project.projectName}</p>
                       <p className="text-sm text-muted-foreground">
-                        {formatDateyyyymmdd(project.endDate.toString())}
+                        {formatUTCDateForDisplaySlash(project.endDate)}
                       </p>
                     </div>
                     <Badge variant="destructive">

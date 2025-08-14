@@ -66,7 +66,9 @@ export default function GanttChart({
 }: GanttChartProps) {
   const [selectedTask, setSelectedTask] = useState<WbsTask | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+  const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(
+    null
+  );
   const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
 
   // ドラッグ関連の状態
@@ -201,7 +203,7 @@ export default function GanttChart({
   const handleMouseMove = React.useCallback(
     (e: MouseEvent) => {
       // ドラッグ判定のしきい値（5px移動したらドラッグとみなす）
-      const DRAG_THRESHOLD = 5;
+      const DRAG_THRESHOLD = 1;
 
       if (
         mouseDownPosition &&
@@ -515,8 +517,8 @@ export default function GanttChart({
                             "hover:shadow-md hover:z-10 relative",
                             (isDragging || isResizing) &&
                               draggedTask?.id === task.id
-                              ? "scale-105 shadow-lg z-20 opacity-80"
-                              : "hover:scale-105",
+                              ? "scale-100 shadow-lg z-20 opacity-80"
+                              : "hover:scale-100",
                             isDragging && draggedTask?.id === task.id
                               ? "cursor-grabbing"
                               : "cursor-grab",

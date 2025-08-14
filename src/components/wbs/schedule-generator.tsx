@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from "../ui/select";
 import { ProjectStatus } from "@/types/wbs";
-import { formatDateyyyymmdd, getProjectStatusName } from "@/lib/utils";
+import { getProjectStatusName } from "@/lib/utils";
+import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
 import { toast } from "@/hooks/use-toast";
 import { ScheduleGenerateResult } from "@/applications/schedule-generator/schedule-generate.service";
 
@@ -367,7 +368,7 @@ export function ScheduleGenerator({
                   開始日
                 </span>
                 <span className="text-base">
-                  {formatDateyyyymmdd(selectedProject.startDate.toString())}
+                  {formatUTCDateForDisplaySlash(selectedProject.startDate)}
                 </span>
               </div>
               <div className="flex flex-col">
@@ -375,7 +376,7 @@ export function ScheduleGenerator({
                   終了日
                 </span>
                 <span className="text-base">
-                  {formatDateyyyymmdd(selectedProject.endDate.toString())}
+                  {formatUTCDateForDisplaySlash(selectedProject.endDate)}
                 </span>
               </div>
               <div className="flex flex-col">
@@ -438,7 +439,7 @@ export function ScheduleGenerator({
                       key={date}
                       className="border border-gray-300 px-4 py-2 text-center"
                     >
-                      {formatDateyyyymmdd(date)}
+                      {formatUTCDateForDisplaySlash(new Date(date))}
                     </th>
                   ))}
                 </tr>

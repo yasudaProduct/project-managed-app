@@ -5,7 +5,8 @@ import { getTaskStatusCount, getTaskProgressByPhase, getKosuSummary, getMileston
 import { Assignee } from "@/types/wbs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { formatDateyyyymmdd, getProjectStatusName } from "@/lib/utils";
+import { getProjectStatusName } from "@/lib/utils";
+import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
 import prisma from "@/lib/prisma";
 import {
   CalendarCheck,
@@ -88,7 +89,7 @@ export default async function DashboardPage({
               <div>
                 <p className="text-xs text-gray-500 font-medium">プロジェクト期間</p>
                 <p className="text-sm text-gray-700">
-                  {formatDateyyyymmdd(project.startDate.toISOString())} ~ {formatDateyyyymmdd(project.endDate.toISOString())}
+                  {formatUTCDateForDisplaySlash(project.startDate)} ~ {formatUTCDateForDisplaySlash(project.endDate)}
                 </p>
               </div>
             </div>
@@ -288,7 +289,7 @@ export default async function DashboardPage({
                     <span className="text-sm font-medium">{milestone.name}</span>
                   </div>
                   <Badge variant="outline" className="text-xs">
-                    {formatDateyyyymmdd(milestone.date.toISOString())}
+                    {formatUTCDateForDisplaySlash(milestone.date)}
                   </Badge>
                 </div>
               ))}
