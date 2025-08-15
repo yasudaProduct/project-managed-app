@@ -6,6 +6,9 @@
 
 ## ドキュメント構成
 
+### 0. 見積→プロジェクト管理 標準フロー（たたき）
+- [見積からプロジェクト管理までの標準フロー](./estimation-to-project-management-flow.md)
+
 ### 1. [要件分析書](./gantt-v3-requirements.md)
 現在のWBS・ガントチャート機能の分析結果と改善要件の詳細
 

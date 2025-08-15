@@ -16,49 +16,231 @@ datasource db {
 }
 
 model Geppo {
-  MEMBER_ID      String  @db.VarChar(15)
-  GEPPO_YYYYMM   String  @db.VarChar(6)
-  ROW_NO         Int
-  COMPANY_NAME   String? @db.VarChar(50)
-  MEMBER_NAME    String? @db.VarChar(20)
-  PROJECT_ID     String? @db.VarChar(50)
-  PROJECT_SUB_ID String? @db.VarChar(20)
-  WBS_NO         String? @db.VarChar(20)
-  WBS_NAME       String? @db.VarChar(100)
-  WORK_NAME      String? @db.VarChar(100)
-  WORK_STATUS    String? @db.VarChar(20)
-  day01          Int?    @default(0)
-  day02          Int?    @default(0)
-  day03          Int?    @default(0)
-  day04          Int?    @default(0)
-  day05          Int?    @default(0)
-  day06          Int?    @default(0)
-  day07          Int?    @default(0)
-  day08          Int?    @default(0)
-  day09          Int?    @default(0)
-  day10          Int?    @default(0)
-  day11          Int?    @default(0)
-  day12          Int?    @default(0)
-  day13          Int?    @default(0)
-  day14          Int?    @default(0)
-  day15          Int?    @default(0)
-  day16          Int?    @default(0)
-  day17          Int?    @default(0)
-  day18          Int?    @default(0)
-  day19          Int?    @default(0)
-  day20          Int?    @default(0)
-  day21          Int?    @default(0)
-  day22          Int?    @default(0)
-  day23          Int?    @default(0)
-  day24          Int?    @default(0)
-  day25          Int?    @default(0)
-  day26          Int?    @default(0)
-  day27          Int?    @default(0)
-  day28          Int?    @default(0)
-  day29          Int?    @default(0)
-  day30          Int?    @default(0)
-  day31          Int?    @default(0)
+  MEMBER_ID        String    @default("") @db.VarChar(15)
+  GEPPO_YYYYMM     String    @default("") @db.VarChar(6)
+  ROW_NO           Int       @default(0)
+  COMPANY_NAME     String?   @db.VarChar(50)
+  MEMBER_NAME      String?   @db.VarChar(20)
+  PROJECT_ID       String?   @db.VarChar(50)
+  PROJECT_SUB_ID   String?   @db.VarChar(20)
+  WBS_NO           String?   @db.VarChar(20)
+  WBS_NAME         String?   @db.VarChar(100)
+  WORK_NAME        String?   @db.VarChar(100)
+  WORK_STATUS      String?   @db.VarChar(20)
+  TOTAL            Float?
+  DAY01            Float?
+  DAY02            Float?
+  DAY03            Float?
+  DAY04            Float?
+  DAY05            Float?
+  DAY06            Float?
+  DAY07            Float?
+  DAY08            Float?
+  DAY09            Float?
+  DAY10            Float?
+  DAY11            Float?
+  DAY12            Float?
+  DAY13            Float?
+  DAY14            Float?
+  DAY15            Float?
+  DAY16            Float?
+  DAY17            Float?
+  DAY18            Float?
+  DAY19            Float?
+  DAY20            Float?
+  DAY21            Float?
+  DAY22            Float?
+  DAY23            Float?
+  DAY24            Float?
+  DAY25            Float?
+  DAY26            Float?
+  DAY27            Float?
+  DAY28            Float?
+  DAY29            Float?
+  DAY30            Float?
+  DAY31            Float?
+  FILE_NAME        String?   @db.VarChar(100)
+  FILE_UPDATE_DATE DateTime? @db.DateTime(0)
+  UPDATE_DATE      DateTime  @default(now()) @db.Timestamp(0)
 
   @@id([MEMBER_ID, GEPPO_YYYYMM, ROW_NO])
+  @@index([MEMBER_ID, GEPPO_YYYYMM, ROW_NO, PROJECT_ID], map: "INDEX1")
   @@map("geppo")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model asteria_migration_info {
+  v1          String? @db.VarChar(10)
+  v2          String? @db.VarChar(10)
+  c1          String? @db.VarChar(200)
+  c2          String? @db.VarChar(200)
+  id          String? @db.VarChar(10)
+  fix         String? @db.VarChar(10)
+  description String? @db.VarChar(2000)
+
+  @@ignore
+}
+
+model calendar {
+  CALDATE DateTime @id @default(dbgenerated("'0000-00-00'")) @db.Date
+}
+
+model cost_table {
+  file_name    String @default("") @db.VarChar(255)
+  sheet_name   String @default("") @db.VarChar(255)
+  project_name String @default("") @db.VarChar(255)
+  type         String @default("") @db.Char(1)
+  yyyymm       String @default("") @db.Char(6)
+  row_no       Int
+  member       String @default("") @db.VarChar(50)
+  manhour      Float
+
+  @@id([file_name, sheet_name, project_name, type, yyyymm, row_no])
+}
+
+model evm_phase_sum {
+  ID         Int       @id @default(autoincrement())
+  PROJECT_ID String?   @db.VarChar(50)
+  PHASE      String?   @db.VarChar(25)
+  CALDATE    DateTime? @db.Date
+  IPV        Float?
+  IBPV       Float?
+  PV         Float?
+  EV         Float?
+  AC         Float?
+}
+
+model evm_status_rate {
+  STATUS String @id @unique(map: "STATUS") @default("") @db.VarChar(20)
+  SEQ    Int
+  RATE   Float?
+}
+
+model evm_sum {
+  ID         Int       @id @default(autoincrement())
+  PROJECT_ID String?   @db.VarChar(50)
+  PHASE      String?   @db.VarChar(25)
+  KINO_SBT   String?   @db.VarChar(20)
+  TANTO      String?   @db.VarChar(20)
+  CALDATE    DateTime? @db.Date
+  IPV        Float?
+  IBPV       Float?
+  PV         Float?
+  EV         Float?
+  AC         Float?
+  BAC        Float?
+  SV         Float?
+  CV         Float?
+  SPI        Float?
+  CPI        Float?
+  EAC        Float?
+}
+
+model geppo_day {
+  MEMBER_ID        String    @default("") @db.VarChar(71)
+  GEPPO_YYYYMM     String    @default("") @db.VarChar(6)
+  WORK_DAY         DateTime  @default(dbgenerated("'0000-00-00'")) @db.Date
+  ROW_NO           Int       @default(0)
+  COMPANY_NAME     String?   @db.VarChar(50)
+  MEMBER_NAME      String?   @db.VarChar(20)
+  PROJECT_ID       String?   @db.VarChar(50)
+  PROJECT_SUB_ID   String?   @db.VarChar(20)
+  WBS_NO           String?   @db.VarChar(20)
+  WBS_NAME         String?   @db.VarChar(100)
+  WORK_NAME        String?   @db.VarChar(100)
+  WORK_TIME        Float?
+  FILE_NAME        String?   @db.VarChar(100)
+  FILE_UPDATE_DATE DateTime? @db.DateTime(0)
+  UPDATE_DATE      DateTime  @default(now()) @db.Timestamp(0)
+
+  @@id([MEMBER_ID, GEPPO_YYYYMM, WORK_DAY, ROW_NO])
+  @@index([MEMBER_ID, GEPPO_YYYYMM, ROW_NO, PROJECT_ID], map: "INDEX1")
+}
+
+model member {
+  ID          Int     @id @default(autoincrement())
+  PERSONAL_CD String? @db.VarChar(20)
+  NAME_FIRST  String? @db.VarChar(10)
+  NAME_LAST   String? @db.VarChar(10)
+  COMPANY_ID  Int?
+}
+
+model phase {
+  ID         Int     @id @default(autoincrement())
+  NAME       String? @db.VarChar(50)
+  PHASE_TYPE String? @db.Char(1)
+  SEQ        Int?
+}
+
+model project {
+  ID   Int     @id @default(autoincrement())
+  NAME String? @db.VarChar(50)
+  SEQ  Int?
+}
+
+model routine_work {
+  member  String @default("") @db.VarChar(255)
+  task    String @default("") @db.VarChar(255)
+  manhour Float
+
+  @@id([member, task])
+}
+
+model shain_tokyu_tanka {
+  tanka_yyyy   String @default("") @db.VarChar(4)
+  tanka_ki     String @default("") @db.VarChar(2)
+  tokyu        String @default("") @db.VarChar(10)
+  tanka        Int?
+  zangyo_tanka Int?
+
+  @@id([tanka_yyyy, tanka_ki, tokyu])
+}
+
+model wbs {
+  ID                 Int       @id @default(autoincrement())
+  FILE_NAME          String?   @db.VarChar(200)
+  ROW_NO             Int?
+  PROJECT_ID         String?   @db.VarChar(50)
+  PROJECT_NAME       String?   @db.VarChar(200)
+  WBS_ID             String?   @db.VarChar(30)
+  PHASE              String?   @db.VarChar(25)
+  ACTIVITY           String?   @db.VarChar(50)
+  TASK               String?   @db.VarChar(100)
+  KINO_SBT           String?   @db.VarChar(20)
+  SUBSYSTEM          String?   @db.VarChar(50)
+  TANTO              String?   @db.VarChar(20)
+  TANTO_REV          String?   @db.VarChar(20)
+  KIJUN_START_DATE   DateTime? @db.Date
+  KIJUN_END_DATE     DateTime? @db.Date
+  KIJUN_KOSU         Float?
+  KIJUN_KOSU_BUFFER  Float?
+  YOTEI_START_DATE   DateTime? @db.Date
+  YOTEI_END_DATE     DateTime? @db.Date
+  YOTEI_KOSU         Float?
+  JISSEKI_START_DATE DateTime? @db.Date
+  JISSEKI_END_DATE   DateTime? @db.Date
+  JISSEKI_KOSU       Float?
+  STATUS             String?   @db.VarChar(20)
+  IPV_DATE           DateTime? @db.Date
+  IBPV_DATE          DateTime? @db.Date
+  PV_DATE            DateTime? @db.Date
+  EV_DATE            DateTime? @db.Date
+  AC_DATE            DateTime? @db.Date
+  IPV_KOSU           Float?
+  IBPV_KOSU          Float?
+  PV_KOSU            Float?
+  EV_KOSU            Float?
+  AC_KOSU            Float?
+  BIKO               String?   @db.Text
+  PROGRESS_RATE      Float?
+
+  @@index([PROJECT_ID, WBS_ID], map: "INDEX1")
+  @@index([PROJECT_ID, PHASE, STATUS], map: "INDEX2")
+}
+
+model wbs_member {
+  member_id         String  @id @default("") @db.Char(10)
+  member_name       String? @db.Char(20)
+  member_name_short String? @db.Char(20)
+  member_type       String? @db.Char(1)
 }
