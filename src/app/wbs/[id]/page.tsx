@@ -31,10 +31,13 @@ import { WbsSummaryTables } from "@/components/wbs/wbs-summary-tables";
 
 export default async function WbsManagementPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: number }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const { tab } = await searchParams;
 
   const wbs = await getWbsById(id);
   if (!wbs) {
@@ -89,13 +92,13 @@ export default async function WbsManagementPage({
             <CalendarCheck className="h-4 w-4" />
           </Button>
         </TaskModal>
-        <TaskDependencyModal 
-          wbsId={wbs.id} 
-          tasks={tasks.map(task => ({
+        <TaskDependencyModal
+          wbsId={wbs.id}
+          tasks={tasks.map((task) => ({
             id: task.id,
             taskNo: task.taskNo || "",
-            name: task.name
-          }))} 
+            name: task.name,
+          }))}
         />
         <Suspense
           fallback={
@@ -104,7 +107,7 @@ export default async function WbsManagementPage({
             </div>
           }
         >
-          <Tabs defaultValue="summary" className="w-full mt-4">
+          <Tabs defaultValue={tab || "summary"} className="w-full mt-4">
             <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger
                 value="summary"
