@@ -14,6 +14,7 @@ import {
   getGroupedRowModel,
   getExpandedRowModel,
   type GroupingState,
+  type PaginationState,
   useReactTable,
 } from "@tanstack/react-table";
 import {
@@ -29,6 +30,13 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -92,6 +100,10 @@ export function TaskTableViewPage({
   const [editingTask, setEditingTask] = React.useState<WbsTask | null>(null);
   const [isDropDownOpen, setIsDropDownOpen] = React.useState(false);
   const [grouping, setGrouping] = React.useState<GroupingState>([]);
+  const [pagination, setPagination] = React.useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10000,
+  });
   const handleGroupBy = React.useCallback(
     (key: "none" | "phase" | "assignee" | "status") => {
       if (key === "none") {
@@ -417,6 +429,7 @@ export function TaskTableViewPage({
     columns: columns as unknown as ColumnDef<unknown>[],
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -431,6 +444,7 @@ export function TaskTableViewPage({
       columnVisibility,
       rowSelection,
       grouping,
+      pagination,
     },
   });
 
@@ -568,6 +582,24 @@ export function TaskTableViewPage({
           <div className="flex-1 text-sm text-muted-foreground">
             {table.getFilteredSelectedRowModel().rows.length} of{" "}
             {table.getFilteredRowModel().rows.length} row(s) selected.
+          </div>
+          <div className="flex items-center gap-2 mr-2">
+            <span className="text-sm text-muted-foreground">表示件数</span>
+            <Select
+              value={String(table.getState().pagination.pageSize)}
+              onValueChange={(v) => table.setPageSize(Number(v))}
+            >
+              <SelectTrigger className="h-8 w-[90px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 20, 50, 100].map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-x-2">
             <Button
