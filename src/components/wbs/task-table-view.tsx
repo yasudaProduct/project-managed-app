@@ -11,6 +11,9 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  getGroupedRowModel,
+  getExpandedRowModel,
+  type GroupingState,
   useReactTable,
 } from "@tanstack/react-table";
 import {
@@ -34,6 +37,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Table,
@@ -86,6 +91,17 @@ export function TaskTableViewPage({
   const [rowSelection, setRowSelection] = React.useState({});
   const [editingTask, setEditingTask] = React.useState<WbsTask | null>(null);
   const [isDropDownOpen, setIsDropDownOpen] = React.useState(false);
+  const [grouping, setGrouping] = React.useState<GroupingState>([]);
+  const handleGroupBy = React.useCallback(
+    (key: "none" | "phase" | "assignee" | "status") => {
+      if (key === "none") {
+        if (grouping.length > 0) setGrouping([]);
+        return;
+      }
+      if (grouping[0] !== key) setGrouping([key]);
+    },
+    [grouping]
+  );
 
   const columns = React.useMemo<ColumnDef<TaskTableViewProp>[]>(
     () => [
@@ -116,11 +132,56 @@ export function TaskTableViewPage({
         ),
       },
       {
+        accessorKey: "phase",
+        header: "工程",
+        enableGrouping: true,
+        cell: (ctx) => {
+          const { row, getValue } = ctx;
+          const isGroupRow = row.getCanExpand?.() ?? false;
+          const isGroupedColumn = grouping[0] === "phase";
+          if (isGroupRow && isGroupedColumn) {
+            return (
+              <Button
+                variant="ghost"
+                className="p-0"
+                onClick={ctx.row.getToggleExpandedHandler()}
+              >
+                {row.getIsExpanded() ? <ChevronDown /> : <ChevronRight />} {""}
+                {getValue<string>() || "未設定"}（{row.subRows.length}）
+              </Button>
+            );
+          }
+          if (isGroupRow) {
+            return <span>-</span>;
+          }
+          return <div className="capitalize">{getValue<string>()}</div>;
+        },
+      },
+      {
         accessorKey: "assignee",
         header: "担当者",
-        cell: ({ row }) => (
-          <div className="capitalize">{row.getValue("assignee")}</div>
-        ),
+        enableGrouping: true,
+        cell: (ctx) => {
+          const { row, getValue } = ctx;
+          const isGroupRow = row.getCanExpand?.() ?? false;
+          const isGroupedColumn = grouping[0] === "assignee";
+          if (isGroupRow && isGroupedColumn) {
+            return (
+              <Button
+                variant="ghost"
+                className="p-0"
+                onClick={ctx.row.getToggleExpandedHandler()}
+              >
+                {row.getIsExpanded() ? <ChevronDown /> : <ChevronRight />} {""}
+                {getValue<string>() || "未設定"}（{row.subRows.length}）
+              </Button>
+            );
+          }
+          if (isGroupRow) {
+            return <span>-</span>;
+          }
+          return <div className="capitalize">{getValue<string>()}</div>;
+        },
       },
       {
         accessorKey: "yoteiStart",
@@ -130,6 +191,30 @@ export function TaskTableViewPage({
             {formatUTCDateForDisplaySlash(row.getValue("yoteiStart"))}
           </div>
         ),
+        aggregatedCell: ({ row }) => {
+          const leafRows = row.getLeafRows();
+          if (!leafRows.length) return <span>-</span>;
+          const starts = leafRows
+            .map((r) => (r.original as TaskTableViewProp).yoteiStart)
+            .filter(Boolean) as Date[];
+          const ends = leafRows
+            .map((r) => (r.original as TaskTableViewProp).yoteiEnd)
+            .filter(Boolean) as Date[];
+          if (starts.length === 0 && ends.length === 0) return <span>-</span>;
+          const minStart = starts.length
+            ? new Date(Math.min(...starts.map((d) => d.getTime())))
+            : undefined;
+          const maxEnd = ends.length
+            ? new Date(Math.max(...ends.map((d) => d.getTime())))
+            : undefined;
+          const left = minStart ? formatUTCDateForDisplaySlash(minStart) : "-";
+          const right = maxEnd ? formatUTCDateForDisplaySlash(maxEnd) : "-";
+          return (
+            <div className="font-medium">
+              {left} - {right}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "yoteiEnd",
@@ -139,12 +224,17 @@ export function TaskTableViewPage({
             {formatUTCDateForDisplaySlash(row.getValue("yoteiEnd"))}
           </div>
         ),
+        aggregatedCell: () => <span />,
       },
       {
         accessorKey: "yoteiKosu",
         header: "予定工数",
+        aggregationFn: "sum",
         cell: ({ row }) => (
           <div className="capitalize">{row.getValue("yoteiKosu")}</div>
+        ),
+        aggregatedCell: ({ getValue }) => (
+          <div className="font-medium">{getValue<number>()}</div>
         ),
       },
       {
@@ -155,6 +245,30 @@ export function TaskTableViewPage({
             {formatUTCDateForDisplaySlash(row.getValue("jissekiStart"))}
           </div>
         ),
+        aggregatedCell: ({ row }) => {
+          const leafRows = row.getLeafRows();
+          if (!leafRows.length) return <span>-</span>;
+          const starts = leafRows
+            .map((r) => (r.original as TaskTableViewProp).jissekiStart)
+            .filter(Boolean) as Date[];
+          const ends = leafRows
+            .map((r) => (r.original as TaskTableViewProp).jissekiEnd)
+            .filter(Boolean) as Date[];
+          if (starts.length === 0 && ends.length === 0) return <span>-</span>;
+          const minStart = starts.length
+            ? new Date(Math.min(...starts.map((d) => d.getTime())))
+            : undefined;
+          const maxEnd = ends.length
+            ? new Date(Math.max(...ends.map((d) => d.getTime())))
+            : undefined;
+          const left = minStart ? formatUTCDateForDisplaySlash(minStart) : "-";
+          const right = maxEnd ? formatUTCDateForDisplaySlash(maxEnd) : "-";
+          return (
+            <div className="font-medium">
+              {left} - {right}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "jissekiEnd",
@@ -164,28 +278,61 @@ export function TaskTableViewPage({
             {formatUTCDateForDisplaySlash(row.getValue("jissekiEnd"))}
           </div>
         ),
+        aggregatedCell: () => <span />,
       },
       {
         accessorKey: "jissekiKosu",
         header: "実績工数",
+        aggregationFn: "sum",
         cell: ({ row }) => (
           <div className="capitalize">{row.getValue("jissekiKosu")}</div>
+        ),
+        aggregatedCell: ({ getValue }) => (
+          <div className="font-medium">{getValue<number>()}</div>
         ),
       },
       {
         accessorKey: "status",
         header: "状況",
-        cell: ({ row }) => (
-          <div className="capitalize">
-            {getTaskStatusName(row.getValue("status"))}
-          </div>
-        ),
+        enableGrouping: true,
+        cell: (ctx) => {
+          const { row, getValue } = ctx;
+          const isGroupRow = row.getCanExpand?.() ?? false;
+          const isGroupedColumn = grouping[0] === "status";
+          if (isGroupRow && isGroupedColumn) {
+            const value = getValue<TaskStatus>();
+            return (
+              <Button
+                variant="ghost"
+                className="p-0"
+                onClick={ctx.row.getToggleExpandedHandler()}
+              >
+                {row.getIsExpanded() ? <ChevronDown /> : <ChevronRight />} {""}
+                {getTaskStatusName(value)}（{row.subRows.length}）
+              </Button>
+            );
+          }
+          if (isGroupRow) {
+            return <span>-</span>;
+          }
+          return (
+            <div className="capitalize">
+              {getTaskStatusName(row.getValue("status"))}
+            </div>
+          );
+        },
       },
       {
         id: "actions",
         enableHiding: false,
-        cell: ({ row }) => {
-          const task = row.original;
+        cell: (ctx) => {
+          const isAggregated = ctx.cell.getIsAggregated?.() ?? false;
+          const isPlaceholder = ctx.cell.getIsPlaceholder?.() ?? false;
+          if (ctx.row.getCanExpand?.() || isAggregated || isPlaceholder) {
+            return null;
+          }
+          const { row } = ctx;
+          const task = row.original as TaskTableViewProp;
           const originalTask = wbsTasks.find(
             (t) => t.taskNo === task.id
           ) as WbsTask;
@@ -240,11 +387,11 @@ export function TaskTableViewPage({
         },
       },
     ],
-    [wbsTasks]
+    [grouping, wbsTasks]
   );
 
-  const table = useReactTable({
-    data:
+  const tableData = React.useMemo<TaskTableViewProp[]>(
+    () =>
       wbsTasks.length > 0
         ? wbsTasks.map((wbsTask) => ({
             id: wbsTask.taskNo ?? "",
@@ -256,12 +403,17 @@ export function TaskTableViewPage({
             jissekiEnd: wbsTask.jissekiEnd,
             jissekiKosu: wbsTask.jissekiKosu,
             status: wbsTask.status,
-            assigneeId: wbsTask.assigneeId ?? "",
-            assignee: wbsTask.assignee?.displayName ?? "",
+            assigneeId: String(wbsTask.assigneeId ?? ""),
+            assignee: wbsTask.assignee?.displayName ?? "未設定",
             phaseId: wbsTask.phaseId ?? 0,
-            phase: wbsTask.phase?.name ?? "",
+            phase: wbsTask.phase?.name ?? "未設定",
           }))
         : [],
+    [wbsTasks]
+  );
+
+  const table = useReactTable({
+    data: tableData,
     columns: columns as unknown as ColumnDef<unknown>[],
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -269,6 +421,8 @@ export function TaskTableViewPage({
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     state: {
@@ -276,6 +430,7 @@ export function TaskTableViewPage({
       columnFilters,
       columnVisibility,
       rowSelection,
+      grouping,
     },
   });
 
@@ -327,6 +482,32 @@ export function TaskTableViewPage({
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="ml-2">
+                Group By <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuRadioGroup
+                value={grouping[0] ?? "none"}
+                onValueChange={(val) =>
+                  handleGroupBy(val as "none" | "phase" | "assignee" | "status")
+                }
+              >
+                <DropdownMenuRadioItem value="none">なし</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="phase">
+                  工程
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="assignee">
+                  担当者
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="status">
+                  ステータス
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         {/* テーブル */}
         <div className="rounded-md border">
@@ -350,22 +531,25 @@ export function TaskTableViewPage({
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+              {(table.getRowModel().rows ?? []).length ? (
+                (() => {
+                  const rows = table.getRowModel().rows;
+                  return rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ));
+                })()
               ) : (
                 <TableRow>
                   <TableCell
