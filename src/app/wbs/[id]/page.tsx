@@ -164,7 +164,7 @@ export default async function WbsManagementPage({
               />
             </TabsContent>
             <TabsContent value="list">
-              <TaskTableViewPage wbsTasks={tasks} />
+              <TaskTableViewPage wbsTasks={tasks} wbsId={wbs.id} />
             </TabsContent>
             <TabsContent value="gantt">
               <GanttV2Wrapper

@@ -279,7 +279,9 @@ export function TaskModal({
     } finally {
       setIsSubmitting(false);
       if (onClose) {
-        onClose();
+        requestAnimationFrame(() => {
+          onClose();
+        });
       } else {
         setInternalIsOpen(false);
       }
@@ -298,7 +300,12 @@ export function TaskModal({
 
   const handleOpenChange = (open: boolean) => {
     if (onClose && !open) {
-      onClose();
+      // ダイアログがクローズ処理（フォーカストラップの解放など）を完了する前に
+      // コンポーネントがアンマウントされることで、Radix UI のクローズ処理が壊れて固まっている
+      // Radixのクローズ処理が完了するのを待ってから親のunmountを実行する
+      requestAnimationFrame(() => {
+        onClose();
+      });
     } else {
       setInternalIsOpen(open);
     }
