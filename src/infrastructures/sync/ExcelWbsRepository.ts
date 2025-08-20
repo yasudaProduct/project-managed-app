@@ -1,7 +1,8 @@
 import { injectable } from 'inversify';
 import { IExcelWbsRepository } from '@/applications/sync/IExcelWbsRepository';
 import { ExcelWbs } from '@/domains/sync/ExcelWbs';
-
+import { geppoPrisma } from '@/lib/prisma/geppo';
+import { wbs } from '.prisma/geppo-client'
 @injectable()
 export class ExcelWbsRepository implements IExcelWbsRepository {
   constructor() {
@@ -17,7 +18,7 @@ export class ExcelWbsRepository implements IExcelWbsRepository {
     //   },
     // });
     // return records.map(this.mapToExcelWbs);
-    
+
     // 現在はモックデータを返す
     return [
       {
@@ -62,27 +63,40 @@ export class ExcelWbsRepository implements IExcelWbsRepository {
     return [];
   }
 
-  private mapToExcelWbs(record: Record<string, unknown>): ExcelWbs {
+  async findByWbsName(wbsName: string): Promise<ExcelWbs[] | null> {
+    const excelWbs = await geppoPrisma.wbs.findFirst({
+      where: {
+        PROJECT_ID: wbsName,
+      },
+    });
+    console.log("--------------------");
+    console.log(wbsName);
+    console.log(excelWbs);
+    if (!excelWbs) return null;
+    return [this.mapToExcelWbs(excelWbs)];
+  }
+
+  private mapToExcelWbs(record: wbs): ExcelWbs {
     return {
-      PROJECT_ID: record.PROJECT_ID,
-      WBS_ID: record.WBS_ID,
-      PHASE: record.PHASE || '',
-      ACTIVITY: record.ACTIVITY || '',
-      TASK: record.TASK || '',
-      TANTO: record.TANTO,
-      KIJUN_START_DATE: record.KIJUN_START_DATE,
-      KIJUN_END_DATE: record.KIJUN_END_DATE,
-      YOTEI_START_DATE: record.YOTEI_START_DATE,
-      YOTEI_END_DATE: record.YOTEI_END_DATE,
-      JISSEKI_START_DATE: record.JISSEKI_START_DATE,
-      JISSEKI_END_DATE: record.JISSEKI_END_DATE,
+      PROJECT_ID: record.PROJECT_ID as string,
+      WBS_ID: record.WBS_ID as string,
+      PHASE: record.PHASE as string,
+      ACTIVITY: record.ACTIVITY as string,
+      TASK: record.TASK as string,
+      TANTO: record.TANTO as string | null,
+      KIJUN_START_DATE: record.KIJUN_START_DATE as Date | null,
+      KIJUN_END_DATE: record.KIJUN_END_DATE as Date | null,
+      YOTEI_START_DATE: record.YOTEI_START_DATE as Date | null,
+      YOTEI_END_DATE: record.YOTEI_END_DATE as Date | null,
+      JISSEKI_START_DATE: record.JISSEKI_START_DATE as Date | null,
+      JISSEKI_END_DATE: record.JISSEKI_END_DATE as Date | null,
       KIJUN_KOSU: record.KIJUN_KOSU ? Number(record.KIJUN_KOSU) : null,
       YOTEI_KOSU: record.YOTEI_KOSU ? Number(record.YOTEI_KOSU) : null,
       JISSEKI_KOSU: record.JISSEKI_KOSU ? Number(record.JISSEKI_KOSU) : null,
       KIJUN_KOSU_BUFFER: record.KIJUN_KOSU_BUFFER ? Number(record.KIJUN_KOSU_BUFFER) : null,
-      STATUS: record.STATUS,
-      BIKO: record.BIKO,
-      PROGRESS_RATE: record.PROGRESS_RATE ? Number(record.PROGRESS_RATE) : null,
+      STATUS: record.STATUS as string,
+      BIKO: record.BIKO as string | null,
+      PROGRESS_RATE: record.PROGRESS_RATE as number | null,
     };
   }
 

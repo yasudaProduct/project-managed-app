@@ -18,7 +18,7 @@ export const mockData = {
         {
             id: 1,
             projectId: 1,
-            name: "タスク01",
+            name: "新規機能開発",
             status: "NOT_STARTED",
         },
     ],

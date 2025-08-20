@@ -8,6 +8,9 @@ import type { IExcelWbsRepository } from '@/applications/sync/IExcelWbsRepositor
 import type { ISyncLogRepository } from '@/applications/sync/ISyncLogRepository';
 import prisma from '@/lib/prisma';
 import { SYMBOL } from '@/types/symbol';
+import { Phase } from '../phase/phase';
+import { PhaseCode } from '../phase/phase-code';
+import type { IPhaseRepository } from '@/applications/task/iphase-repository';
 
 type PrismaTransaction = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];
 
@@ -15,12 +18,23 @@ type PrismaTransaction = Parameters<Parameters<PrismaClient['$transaction']>[0]>
 export class WbsSyncService implements IWbsSyncService {
   constructor(
     @inject(SYMBOL.IExcelWbsRepository) private excelWbsRepository: IExcelWbsRepository,
-    @inject(SYMBOL.ISyncLogRepository) private syncLogRepository: ISyncLogRepository
+    @inject(SYMBOL.ISyncLogRepository) private syncLogRepository: ISyncLogRepository,
+    @inject(SYMBOL.IPhaseRepository) private phaseRepository: IPhaseRepository
   ) { }
 
-  async fetchExcelData(projectId: string): Promise<ExcelWbs[]> {
+  // エクセル側のでwbsデータを取得
+  // エクセルデータはWBS名で取得する
+  async fetchExcelData(wbsName: string): Promise<ExcelWbs[]> {
     try {
-      return await this.excelWbsRepository.findByProjectId(projectId);
+      const excelWbs = await this.excelWbsRepository.findByWbsName(wbsName);
+      if (!excelWbs) {
+        throw new SyncError(
+          'Excel側のデータが見つかりません',
+          SyncErrorType.VALIDATION_ERROR,
+          { wbsName }
+        );
+      }
+      return excelWbs;
     } catch (error) {
       throw new SyncError(
         'Excel側のデータ取得に失敗しました',
@@ -35,6 +49,7 @@ export class WbsSyncService implements IWbsSyncService {
     appData: Task[]
   ): Promise<SyncChanges> {
     const changes: SyncChanges = {
+      wbsId: appData[0]?.wbsId,
       projectId: excelData[0]?.PROJECT_ID || '',
       toAdd: [],
       toUpdate: [],
@@ -83,21 +98,7 @@ export class WbsSyncService implements IWbsSyncService {
     try {
       // トランザクション内で変更を適用
       await prisma.$transaction(async (tx) => {
-        // プロジェクトに紐づくWBSを取得
-        const project = await tx.projects.findUnique({
-          where: { id: changes.projectId },
-          include: { wbs: true },
-        });
-
-        if (!project || !project.wbs[0]) {
-          throw new SyncError(
-            'プロジェクトまたはWBSが見つかりません',
-            SyncErrorType.VALIDATION_ERROR,
-            { projectId: changes.projectId }
-          );
-        }
-
-        const wbsId = project.wbs[0].id;
+        const wbsId = changes.wbsId;
 
         // フェーズの取得・作成
         const phases = await this.ensurePhases(tx as PrismaTransaction, wbsId, changes);
@@ -187,24 +188,29 @@ export class WbsSyncService implements IWbsSyncService {
     }
 
     // 新しいフェーズを作成
-    const uniquePhases = new Set<string>();
+    const uniquePhases = new Set<{ name: string, code: string }>();
     [...changes.toAdd, ...changes.toUpdate].forEach(excelWbs => {
+      // フェーズが存在しない場合は追加
       if (excelWbs.PHASE && !phaseMap.has(excelWbs.PHASE)) {
-        uniquePhases.add(excelWbs.PHASE);
+        // ExcelWbsのWBS_IDとのハイフンより左側をフェーズコードとする
+        uniquePhases.add({ name: excelWbs.PHASE, code: excelWbs.WBS_ID.split('-')[0] });
       }
     });
 
+    // フェーズを作成
     let seq = existingPhases.length + 1;
-    for (const phaseName of uniquePhases) {
-      const newPhase = await tx.wbsPhase.create({
-        data: {
-          wbsId,
-          name: phaseName,
-          code: `PHASE_${seq}`,
-          seq: seq++,
-        },
+    for (const phase of uniquePhases) {
+      // ドメインモデルを作成
+      const newPhase = Phase.create({
+        name: phase.name,
+        code: new PhaseCode(phase.code),
+        seq: seq++,
       });
-      phaseMap.set(phaseName, newPhase);
+
+      // ドメインモデルを永続化
+      await this.phaseRepository.create(newPhase);
+
+      phaseMap.set(phase.name, newPhase);
     }
 
     return phaseMap;

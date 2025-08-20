@@ -3,6 +3,23 @@ import { promisify } from 'util'
 
 const execAsync = promisify(exec)
 
+// コンテナ/DB接続の共通設定
+const CONTAINER = 'project-managed-mysql-test'
+const MYSQL_USER = 'test_user'
+const MYSQL_PASS = 'test_password'
+const MYSQL_DB = 'project_managed_test'
+
+async function ensureTableExists(tableName: string, createSqlAbsolutePath: string) {
+    try {
+        await execAsync(`docker exec ${CONTAINER} mysql -u ${MYSQL_USER} -p${MYSQL_PASS} ${MYSQL_DB} -e "SELECT 1 FROM ${tableName} LIMIT 1;"`)
+        console.log(`✅ テーブル存在確認: ${tableName}`)
+    } catch {
+        console.log(`🏗️  テーブルが存在しません。作成します: ${tableName}`)
+        await execAsync(`docker exec -i ${CONTAINER} mysql -u ${MYSQL_USER} -p${MYSQL_PASS} ${MYSQL_DB} < ${createSqlAbsolutePath}`)
+        console.log(`✅ テーブルを作成しました: ${tableName}`)
+    }
+}
+
 // MySQL geppoテーブル用のサンプルデータ
 const sampleGeppoData = [
     {
@@ -127,17 +144,173 @@ const sampleGeppoData = [
     }
 ]
 
+// MySQL wbsテーブル用のサンプルデータ
+
+const sampleWbsData = [
+    {
+        FILE_NAME: 'seed.csv',
+        ROW_NO: 1,
+        PROJECT_ID: '新規機能開発',
+        PROJECT_NAME: '新規機能開発',
+        WBS_ID: 'D2-0001',
+        PHASE: '開発',
+        ACTIVITY: 'フロントエンド',
+        TASK: 'React コンポーネント実装',
+        KINO_SBT: '機能',
+        SUBSYSTEM: 'UI',
+        TANTO: 'dummy01',
+        TANTO_REV: null,
+        KIJUN_START_DATE: '2025-07-01',
+        KIJUN_END_DATE: '2025-07-10',
+        KIJUN_KOSU: 80,
+        KIJUN_KOSU_BUFFER: 8,
+        YOTEI_START_DATE: '2025-07-01',
+        YOTEI_END_DATE: '2025-07-10',
+        YOTEI_KOSU: 80,
+        JISSEKI_START_DATE: '2025-07-01',
+        JISSEKI_END_DATE: '2025-07-09',
+        JISSEKI_KOSU: 76,
+        STATUS: '進行中',
+        IPV_DATE: null,
+        IBPV_DATE: null,
+        PV_DATE: '2025-07-05',
+        EV_DATE: '2025-07-06',
+        AC_DATE: '2025-07-06',
+        IPV_KOSU: null,
+        IBPV_KOSU: null,
+        PV_KOSU: 50,
+        EV_KOSU: 48,
+        AC_KOSU: 52,
+        BIKO: 'seed: 新規機能開発 D2-0001',
+        PROGRESS_RATE: 60,
+    },
+    {
+        FILE_NAME: 'seed.csv',
+        ROW_NO: 2,
+        PROJECT_ID: '新規機能開発',
+        PROJECT_NAME: '新規機能開発',
+        WBS_ID: 'D2-0002',
+        PHASE: '開発',
+        ACTIVITY: 'バックエンド',
+        TASK: 'REST API実装とテスト',
+        KINO_SBT: '機能',
+        SUBSYSTEM: 'API',
+        TANTO: 'dummy02',
+        TANTO_REV: null,
+        KIJUN_START_DATE: '2025-07-03',
+        KIJUN_END_DATE: '2025-07-18',
+        KIJUN_KOSU: 120,
+        KIJUN_KOSU_BUFFER: 12,
+        YOTEI_START_DATE: '2025-07-03',
+        YOTEI_END_DATE: '2025-07-18',
+        YOTEI_KOSU: 120,
+        JISSEKI_START_DATE: '2025-07-03',
+        JISSEKI_END_DATE: null,
+        JISSEKI_KOSU: 80,
+        STATUS: '進行中',
+        IPV_DATE: null,
+        IBPV_DATE: null,
+        PV_DATE: '2025-07-10',
+        EV_DATE: '2025-07-12',
+        AC_DATE: '2025-07-12',
+        IPV_KOSU: null,
+        IBPV_KOSU: null,
+        PV_KOSU: 70,
+        EV_KOSU: 65,
+        AC_KOSU: 75,
+        BIKO: 'seed: 新規機能開発 D2-0002',
+        PROGRESS_RATE: 55,
+    },
+    {
+        FILE_NAME: 'seed.csv',
+        ROW_NO: 3,
+        PROJECT_ID: '新規機能開発',
+        PROJECT_NAME: '新規機能開発',
+        WBS_ID: 'D2-0003',
+        PHASE: '設計',
+        ACTIVITY: 'DB',
+        TASK: 'スキーマ設計',
+        KINO_SBT: '設計',
+        SUBSYSTEM: 'RDB',
+        TANTO: 'dummy02',
+        TANTO_REV: null,
+        KIJUN_START_DATE: '2025-07-01',
+        KIJUN_END_DATE: '2025-07-05',
+        KIJUN_KOSU: 16,
+        KIJUN_KOSU_BUFFER: 2,
+        YOTEI_START_DATE: '2025-07-01',
+        YOTEI_END_DATE: '2025-07-05',
+        YOTEI_KOSU: 16,
+        JISSEKI_START_DATE: '2025-07-04',
+        JISSEKI_END_DATE: '2025-07-05',
+        JISSEKI_KOSU: 16,
+        STATUS: '完了',
+        IPV_DATE: null,
+        IBPV_DATE: null,
+        PV_DATE: '2025-07-03',
+        EV_DATE: '2025-07-05',
+        AC_DATE: '2025-07-05',
+        IPV_KOSU: null,
+        IBPV_KOSU: null,
+        PV_KOSU: 16,
+        EV_KOSU: 16,
+        AC_KOSU: 16,
+        BIKO: 'seed: 新規機能開発 D2-0003',
+        PROGRESS_RATE: 100,
+    },
+    {
+        FILE_NAME: 'seed.csv',
+        ROW_NO: 4,
+        PROJECT_ID: '見積もり作成',
+        PROJECT_NAME: '見積もり作成',
+        WBS_ID: 'D0-0001',
+        PHASE: '見積',
+        ACTIVITY: 'ドキュメント',
+        TASK: '見積もり作成',
+        KINO_SBT: '管理',
+        SUBSYSTEM: 'PMO',
+        TANTO: 'dummy03',
+        TANTO_REV: null,
+        KIJUN_START_DATE: '2025-07-01',
+        KIJUN_END_DATE: '2025-07-02',
+        KIJUN_KOSU: 8,
+        KIJUN_KOSU_BUFFER: 1,
+        YOTEI_START_DATE: '2025-07-01',
+        YOTEI_END_DATE: '2025-07-02',
+        YOTEI_KOSU: 8,
+        JISSEKI_START_DATE: '2025-07-01',
+        JISSEKI_END_DATE: null,
+        JISSEKI_KOSU: 2,
+        STATUS: '進行前',
+        IPV_DATE: null,
+        IBPV_DATE: null,
+        PV_DATE: null,
+        EV_DATE: null,
+        AC_DATE: null,
+        IPV_KOSU: null,
+        IBPV_KOSU: null,
+        PV_KOSU: null,
+        EV_KOSU: null,
+        AC_KOSU: null,
+        BIKO: 'seed: 見積もり作成 D0-0001',
+        PROGRESS_RATE: 0,
+    },
+]
+
 async function insertSeedData() {
     console.log('🌱 MySQL geppoテーブルのシードデータを開始します...')
 
     try {
         // 文字セットを設定
         console.log('🔧 文字セットを設定しています...')
-        await execAsync(`docker exec project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test -e "SET NAMES utf8mb4;"`)
+        await execAsync(`docker exec ${CONTAINER} mysql -u ${MYSQL_USER} -p${MYSQL_PASS} ${MYSQL_DB} -e "SET NAMES utf8mb4;"`)
 
         // 既存データをクリア
+        // テーブル存在チェック（必要時に作成）
+        await ensureTableExists('geppo', '/Users/yuta/Develop/project-managed-app/mysql/init/create-geppo-table.sql')
+
         console.log('🗑️  既存のgeppoデータをクリアしています...')
-        await execAsync(`docker exec project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test -e "DELETE FROM geppo;"`)
+        await execAsync(`docker exec ${CONTAINER} mysql -u ${MYSQL_USER} -p${MYSQL_PASS} ${MYSQL_DB} -e "DELETE FROM geppo;"`)
         console.log('✅ 既存のgeppoデータをクリアしました')
 
         // サンプルデータを挿入
@@ -170,12 +343,12 @@ async function insertSeedData() {
         );
       `
 
-            await execAsync(`docker exec project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test -e "${insertSQL}"`)
+            await execAsync(`docker exec ${CONTAINER} mysql -u ${MYSQL_USER} -p${MYSQL_PASS} ${MYSQL_DB} -e "${insertSQL}"`)
             console.log(`✅ geppoデータを作成しました: ${data.PROJECT_ID} - ${data.WORK_NAME}`)
         }
 
         // 作成されたデータの統計を表示
-        const { stdout: countResult } = await execAsync(`docker exec project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test -e "SELECT COUNT(*) as count FROM geppo;" --skip-column-names`)
+        const { stdout: countResult } = await execAsync(`docker exec ${CONTAINER} mysql -u ${MYSQL_USER} -p${MYSQL_PASS} ${MYSQL_DB} -e "SELECT COUNT(*) as count FROM geppo;" --skip-column-names`)
         const totalRecords = parseInt(countResult.trim())
         console.log(`\n📊 合計 ${totalRecords} 件のgeppoレコードが作成されました`)
 
@@ -191,7 +364,7 @@ async function insertSeedData() {
       GROUP BY PROJECT_ID;
     `
 
-        const { stdout: summaryResult } = await execAsync(`docker exec project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test -e "${summarySQL}" --skip-column-names`)
+        const { stdout: summaryResult } = await execAsync(`docker exec ${CONTAINER} mysql -u ${MYSQL_USER} -p${MYSQL_PASS} ${MYSQL_DB} -e "${summarySQL}" --skip-column-names`)
 
         summaryResult.trim().split('\n').forEach(line => {
             const [project, hours] = line.split('\t')
@@ -199,6 +372,86 @@ async function insertSeedData() {
         })
 
         console.log('\n🎉 geppoテーブルのシードデータが完了しました!')
+
+        // wbsテーブルのシード
+        console.log('\n🌱 MySQL wbsテーブルのシードデータを開始します...')
+
+        // テーブル存在チェック（必要時に作成）
+        await ensureTableExists('wbs', '/Users/yuta/Develop/project-managed-app/mysql/init/create-wbs-table.sql')
+
+        console.log('🗑️  既存のwbsデータをクリアしています...')
+        await execAsync(`docker exec ${CONTAINER} mysql -u ${MYSQL_USER} -p${MYSQL_PASS} ${MYSQL_DB} -e "DELETE FROM wbs;"`)
+        console.log('✅ 既存のwbsデータをクリアしました')
+
+        for (const data of sampleWbsData) {
+            const insertWbsSQL = `
+        INSERT INTO wbs (
+          FILE_NAME, ROW_NO, PROJECT_ID, PROJECT_NAME, WBS_ID, PHASE, ACTIVITY, TASK, KINO_SBT, SUBSYSTEM, TANTO, TANTO_REV,
+          KIJUN_START_DATE, KIJUN_END_DATE, KIJUN_KOSU, KIJUN_KOSU_BUFFER, YOTEI_START_DATE, YOTEI_END_DATE, YOTEI_KOSU,
+          JISSEKI_START_DATE, JISSEKI_END_DATE, JISSEKI_KOSU, STATUS, IPV_DATE, IBPV_DATE, PV_DATE, EV_DATE, AC_DATE,
+          IPV_KOSU, IBPV_KOSU, PV_KOSU, EV_KOSU, AC_KOSU, BIKO, PROGRESS_RATE
+        ) VALUES (
+          ${data.FILE_NAME ? `'${data.FILE_NAME}'` : 'NULL'},
+          ${data.ROW_NO ?? 'NULL'},
+          ${data.PROJECT_ID ? `'${data.PROJECT_ID}'` : 'NULL'},
+          ${data.PROJECT_NAME ? `'${data.PROJECT_NAME}'` : 'NULL'},
+          ${data.WBS_ID ? `'${data.WBS_ID}'` : 'NULL'},
+          ${data.PHASE ? `'${data.PHASE}'` : 'NULL'},
+          ${data.ACTIVITY ? `'${data.ACTIVITY}'` : 'NULL'},
+          ${data.TASK ? `'${data.TASK}'` : 'NULL'},
+          ${data.KINO_SBT ? `'${data.KINO_SBT}'` : 'NULL'},
+          ${data.SUBSYSTEM ? `'${data.SUBSYSTEM}'` : 'NULL'},
+          ${data.TANTO ? `'${data.TANTO}'` : 'NULL'},
+          ${data.TANTO_REV ? `'${data.TANTO_REV}'` : 'NULL'},
+          ${data.KIJUN_START_DATE ? `'${data.KIJUN_START_DATE}'` : 'NULL'},
+          ${data.KIJUN_END_DATE ? `'${data.KIJUN_END_DATE}'` : 'NULL'},
+          ${data.KIJUN_KOSU ?? 'NULL'},
+          ${data.KIJUN_KOSU_BUFFER ?? 'NULL'},
+          ${data.YOTEI_START_DATE ? `'${data.YOTEI_START_DATE}'` : 'NULL'},
+          ${data.YOTEI_END_DATE ? `'${data.YOTEI_END_DATE}'` : 'NULL'},
+          ${data.YOTEI_KOSU ?? 'NULL'},
+          ${data.JISSEKI_START_DATE ? `'${data.JISSEKI_START_DATE}'` : 'NULL'},
+          ${data.JISSEKI_END_DATE ? `'${data.JISSEKI_END_DATE}'` : 'NULL'},
+          ${data.JISSEKI_KOSU ?? 'NULL'},
+          ${data.STATUS ? `'${data.STATUS}'` : 'NULL'},
+          ${data.IPV_DATE ? `'${data.IPV_DATE}'` : 'NULL'},
+          ${data.IBPV_DATE ? `'${data.IBPV_DATE}'` : 'NULL'},
+          ${data.PV_DATE ? `'${data.PV_DATE}'` : 'NULL'},
+          ${data.EV_DATE ? `'${data.EV_DATE}'` : 'NULL'},
+          ${data.AC_DATE ? `'${data.AC_DATE}'` : 'NULL'},
+          ${data.IPV_KOSU ?? 'NULL'},
+          ${data.IBPV_KOSU ?? 'NULL'},
+          ${data.PV_KOSU ?? 'NULL'},
+          ${data.EV_KOSU ?? 'NULL'},
+          ${data.AC_KOSU ?? 'NULL'},
+          ${data.BIKO ? `'${data.BIKO}'` : 'NULL'},
+          ${data.PROGRESS_RATE ?? 'NULL'}
+        );
+      `
+
+            await execAsync(`docker exec ${CONTAINER} mysql -u ${MYSQL_USER} -p${MYSQL_PASS} ${MYSQL_DB} -e "${insertWbsSQL}"`)
+            console.log(`✅ wbsデータを作成しました: ${data.PROJECT_ID} - ${data.WBS_ID}`)
+        }
+
+        const { stdout: wbsCountResult } = await execAsync(`docker exec ${CONTAINER} mysql -u ${MYSQL_USER} -p${MYSQL_PASS} ${MYSQL_DB} -e "SELECT COUNT(*) as count FROM wbs;" --skip-column-names`)
+        const totalWbsRecords = parseInt(wbsCountResult.trim())
+        console.log(`\n📊 合計 ${totalWbsRecords} 件のwbsレコードが作成されました`)
+
+        console.log('\n📈 プロジェクト別WBS数:')
+        const wbsSummarySQL = `
+      SELECT 
+        PROJECT_ID,
+        COUNT(*) as taskCount
+      FROM wbs 
+      GROUP BY PROJECT_ID;
+    `
+        const { stdout: wbsSummaryResult } = await execAsync(`docker exec ${CONTAINER} mysql -u ${MYSQL_USER} -p${MYSQL_PASS} ${MYSQL_DB} -e "${wbsSummarySQL}" --skip-column-names`)
+        wbsSummaryResult.trim().split('\n').forEach(line => {
+            const [project, count] = line.split('\t')
+            console.log(`  - ${project || '未設定'}: ${count}件`)
+        })
+
+        console.log('\n🎉 wbsテーブルのシードデータが完了しました!')
 
     } catch (error) {
         console.error('❌ シードデータの実行中にエラーが発生しました:', error)

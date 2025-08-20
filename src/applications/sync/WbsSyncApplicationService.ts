@@ -7,6 +7,7 @@ import type { ITaskRepository } from '@/applications/task/itask-repository';
 import { SyncResult, SyncError, SyncErrorType } from '@/domains/sync/ExcelWbs';
 import type { SyncLog } from './ISyncLogRepository';
 import { SYMBOL } from '@/types/symbol';
+import type { IProjectRepository } from '../projects/iproject-repository';
 
 @injectable()
 export class WbsSyncApplicationService implements IWbsSyncApplicationService {
@@ -14,24 +15,24 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
     @inject(SYMBOL.IWbsSyncService) private wbsSyncService: IWbsSyncService,
     @inject(SYMBOL.ISyncLogRepository) private syncLogRepository: ISyncLogRepository,
     @inject(SYMBOL.IWbsRepository) private wbsRepository: IWbsRepository,
-    @inject(SYMBOL.ITaskRepository) private taskRepository: ITaskRepository
+    @inject(SYMBOL.ITaskRepository) private taskRepository: ITaskRepository,
+    @inject(SYMBOL.IProjectRepository) private projectRepository: IProjectRepository
   ) { }
 
-  async executeSync(projectId: string): Promise<SyncResult> {
+  async executeSync(wbsId: number): Promise<SyncResult> {
     try {
       // WBSを取得
-      const wbsList = await this.wbsRepository.findByProjectId(projectId);
-      if (!wbsList || wbsList.length === 0) {
+      const wbs = await this.wbsRepository.findById(wbsId);
+      if (!wbs) {
         throw new SyncError(
           'プロジェクトに紐づくWBSが見つかりません',
           SyncErrorType.VALIDATION_ERROR,
-          { projectId }
+          { wbsId }
         );
       }
-      const wbs = wbsList[0];
 
       // Excel側のデータを取得
-      const excelData = await this.wbsSyncService.fetchExcelData(projectId);
+      const excelData = await this.wbsSyncService.fetchExcelData(wbs.name);
 
       // アプリ側のタスクを取得
       const appTasks = await this.taskRepository.findByWbsId(wbs.id!);
@@ -49,7 +50,7 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
     }
   }
 
-  async previewSync(projectId: string): Promise<{
+  async previewSync(wbsId: number): Promise<{
     toAdd: number;
     toUpdate: number;
     toDelete: number;
@@ -61,18 +62,17 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
   }> {
     try {
       // WBSを取得
-      const wbsList = await this.wbsRepository.findByProjectId(projectId);
-      if (!wbsList || wbsList.length === 0) {
+      const wbs = await this.wbsRepository.findById(wbsId);
+      if (!wbs) {
         throw new SyncError(
           'プロジェクトに紐づくWBSが見つかりません',
           SyncErrorType.VALIDATION_ERROR,
-          { projectId }
+          { wbsId }
         );
       }
-      const wbs = wbsList[0];
 
       // Excel側のデータを取得
-      const excelData = await this.wbsSyncService.fetchExcelData(projectId);
+      const excelData = await this.wbsSyncService.fetchExcelData(wbs.name);
 
       // アプリ側のタスクを取得
       const appTasks = await this.taskRepository.findByWbsId(wbs.id!);

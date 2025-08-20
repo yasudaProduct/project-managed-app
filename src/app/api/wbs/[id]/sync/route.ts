@@ -38,7 +38,7 @@ export async function POST(
   } catch (error) {
     console.error('同期エラー:', error);
     return NextResponse.json(
-      { 
+      {
         error: '同期処理中にエラーが発生しました',
         details: error instanceof Error ? error.message : '不明なエラー',
       },
@@ -70,13 +70,14 @@ export async function GET(
       );
     }
 
+    // 同期サービスを取得
     const syncService = container.get<IWbsSyncApplicationService>(
       SYMBOL.IWbsSyncApplicationService
     );
 
     if (action === 'preview') {
       // 同期プレビュー
-      const preview = await syncService.previewSync(wbs.projectId);
+      const preview = await syncService.previewSync(wbs.id);
       return NextResponse.json({
         success: true,
         data: preview,
@@ -108,7 +109,7 @@ export async function GET(
   } catch (error) {
     console.error('同期情報取得エラー:', error);
     return NextResponse.json(
-      { 
+      {
         error: '同期情報の取得中にエラーが発生しました',
         details: error instanceof Error ? error.message : '不明なエラー',
       },

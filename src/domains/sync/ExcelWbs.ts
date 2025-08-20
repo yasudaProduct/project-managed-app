@@ -21,6 +21,7 @@ export interface ExcelWbs {
 }
 
 export interface SyncChanges {
+  wbsId: number
   projectId: string;
   toAdd: ExcelWbs[];
   toUpdate: ExcelWbs[];

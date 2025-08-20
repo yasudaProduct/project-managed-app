@@ -3,10 +3,10 @@ import { SyncLog } from './ISyncLogRepository';
 
 export interface IWbsSyncApplicationService {
   // 同期を実行
-  executeSync(projectId: string): Promise<SyncResult>;
-  
+  executeSync(wbsId: number): Promise<SyncResult>;
+
   // 同期プレビューを取得
-  previewSync(projectId: string): Promise<{
+  previewSync(wbsId: number): Promise<{
     toAdd: number;
     toUpdate: number;
     toDelete: number;
@@ -16,10 +16,10 @@ export interface IWbsSyncApplicationService {
       toDelete: string[];
     };
   }>;
-  
+
   // 同期履歴を取得
   getSyncHistory(projectId: string, limit?: number): Promise<SyncLog[]>;
-  
+
   // 最終同期情報を取得
   getLastSync(projectId: string): Promise<SyncLog | null>;
 }
