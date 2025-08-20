@@ -12,6 +12,7 @@ import {
   Trello,
   Users,
   History,
+  Import,
 } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { getWbsPhases } from "./wbs-phase-actions";
@@ -100,6 +101,11 @@ export default async function WbsManagementPage({
             name: task.name,
           }))}
         />
+        <Link href={`/wbs/${wbs.id}/import`}>
+          <Button className="bg-white text-black ml-2">
+            <Import className="h-4 w-4" />
+          </Button>
+        </Link>
         <Suspense
           fallback={
             <div className="flex justify-center">

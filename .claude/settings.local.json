@@ -15,7 +15,10 @@
       "Bash(find:*)",
       "Bash(npm test:*)",
       "Bash(npx playwright test:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npm run lint:*)",
+      "Bash(true)"
     ],
     "deny": []
   }

@@ -338,3 +338,26 @@ model TaskDependency {
   @@index([wbsId])
   @@map("task_dependencies")
 }
+
+model SyncLog {
+  id            Int       @id @default(autoincrement())
+  projectId     String
+  syncStatus    SyncStatus
+  syncedAt      DateTime  @default(now())
+  recordCount   Int       @default(0)
+  addedCount    Int       @default(0)
+  updatedCount  Int       @default(0)
+  deletedCount  Int       @default(0)
+  errorDetails  Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([projectId, syncedAt])
+  @@map("sync_logs")
+}
+
+enum SyncStatus {
+  SUCCESS
+  FAILED
+  PARTIAL
+}

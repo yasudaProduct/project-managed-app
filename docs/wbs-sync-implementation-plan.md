@@ -19,18 +19,20 @@ Excel（MySQL）からアプリケーション（PostgreSQL）へWBSデータを
 
 #### MySQL側（Excel管理）
 ```sql
--- wbsテーブル構造
-- ID: 自動採番の主キー
+-- wbsテーブル構造 関連カラムのみ抜粋
 - PROJECT_ID: プロジェクト識別子
 - WBS_ID: WBS番号
-- TASK: タスク名
 - PHASE: フェーズ
-- TANTO: 担当者
+- ACTIVITY: アクティビティ(タスク名として使用されている)
+- TASK: タスク名
+- TANTO: 担当者名
 - KIJUN_START_DATE/END_DATE: 基準日程
 - YOTEI_START_DATE/END_DATE: 予定日程
 - JISSEKI_START_DATE/END_DATE: 実績日程
 - KIJUN_KOSU/YOTEI_KOSU/JISSEKI_KOSU: 各種工数
+- KIJUN_KOSU_BUFFER: バッファ
 - STATUS: ステータス
+- BIKO: 備考
 - PROGRESS_RATE: 進捗率
 ```
 
@@ -54,12 +56,12 @@ Excel（MySQL）からアプリケーション（PostgreSQL）へWBSデータを
 | TASK | WbsTask.name | タスク名 |
 | PHASE | WbsTask.PhaseId, WbsPhase | フェーズ名(存在しない場合は作成) |
 | TANTO | WbsAssignee.assigneeId | 担当者ID（要変換 存在しない場合はスキップ） |
-| KIJUN_START_DATE/END_DATE | TaskPeriod (type=BASELINE) | 基準日程 |
-| YOTEI_START_DATE/END_DATE | TaskPeriod (type=PLANNED) | 予定日程 |
-| JISSEKI_START_DATE/END_DATE | TaskPeriod (type=ACTUAL) | 実績日程 |
-| KIJUN_KOSU | TaskKosu (type=BASELINE) | 基準工数 |
-| YOTEI_KOSU | TaskKosu (type=PLANNED) | 予定工数 |
-| JISSEKI_KOSU | TaskKosu (type=ACTUAL) | 実績工数 |
+| KIJUN_START_DATE/END_DATE | TaskPeriod (type=KIJUN) | 基準日程 |
+| YOTEI_START_DATE/END_DATE | TaskPeriod (type=YOTEI) | 予定日程 |
+| JISSEKI_START_DATE/END_DATE | TaskPeriod (type=JISSEKI) | 実績日程 |
+| KIJUN_KOSU | TaskKosu (type=NORMAL) | 基準工数 |
+| YOTEI_KOSU | TaskKosu (type=NORMAL) | 予定工数 |
+| JISSEKI_KOSU | TaskKosu (type=NORMAL) | 実績工数 |
 | STATUS | WbsTask.status | ステータス（要マッピング） |
 | PROGRESS_RATE | WbsProgressHistory | 進捗率(当アプリケーションには存在しない項目のため今後実装予定) |
 
@@ -93,33 +95,6 @@ CREATE TABLE sync_logs (
 #### 基本原則
 - **Excel側がマスター**: 常にExcel側のデータを正とする
 - **DELETE-INSERT**: アプリ側のデータを全削除し、Excel側のデータを再挿入
-
-<!-- #### 追加の検知方法
-- **WBS_NOの存在確認**: アプリ側に存在しないWBS_NOを追加対象とする
-
-#### 更新の検知方法
-- **WBS_NOの変更確認**: アプリ側に存在するWBS_NOの変更を検出し、更新対象とする
-
-#### 削除の検知方法
-1. **差分方式**: Excel側に存在しないデータを削除対象とする -->
-
-### 3.3 同期フロー
-
-```mermaid
-graph TD
-    A[同期開始] --> B[前回同期時刻取得]
-    B --> C[Excel側データ取得]
-    C --> D[アプリ側データ取得]
-    D --> E[差分検出]
-    E --> F[追加データ処理]
-    E --> G[更新データ処理]
-    E --> H[削除データ処理]
-    F --> I[アプリ側DB更新]
-    G --> I
-    H --> I
-    I --> J[同期ログ記録]
-    J --> K[同期完了]
-```
 
 ## 4. アーキテクチャ設計
 
@@ -233,34 +208,34 @@ class WbsDataMapper {
 
 ## 5. 実装計画
 
-### Phase 1: 基盤構築（1週間）
+### Phase 1: 基盤構築
 - [ ] 同期ログテーブルの作成
 - [ ] MySQL接続設定（Prisma第2データソース）
 - [ ] ExcelWbsRepositoryの実装
 - [ ] SyncLogRepositoryの実装
 - [ ] 基本的なデータマッパーの実装
 
-### Phase 2: 同期コア機能（1.5週間）
+### Phase 2: 同期コア機能
 - [ ] 変更検出アルゴリズムの実装
 - [ ] データマッピングロジックの実装
 - [ ] トランザクション管理の実装
 - [ ] エラーハンドリングとロールバック
 - [ ] 削除検知ロジックの実装
 
-### Phase 3: アプリケーションサービス（1週間）
+### Phase 3: アプリケーションサービス
 - [ ] WbsSyncApplicationServiceの実装
 - [ ] 同期実行のユースケース実装
 - [ ] バッチ処理対応
 - [ ] スケジュール実行対応
 
-### Phase 4: UI/UX実装（0.5週間）
+### Phase 4: UI/UX実装
 - [ ] 同期実行ボタンの追加
 - [ ] 同期履歴表示画面
 - [ ] プログレス表示
 - [ ] 成功/エラー通知
 - [ ] 最終同期日時の表示
 
-### Phase 5: テストと最適化（1週間）
+### Phase 5: テストと最適化
 - [ ] ユニットテストの作成
 - [ ] 統合テストの作成
 - [ ] パフォーマンステスト
@@ -276,7 +251,6 @@ class WbsDataMapper {
 
 ### 6.2 パフォーマンス最適化
 - バッチ処理による一括更新
-- インデックスの最適化
 - キャッシュの活用
 - 差分同期による転送量削減
 
@@ -299,62 +273,3 @@ enum SyncErrorType {
   TRANSACTION_ERROR = 'transaction_error',
 }
 ```
-
-### 6.4 監視とログ
-- 同期実行時間の記録
-- エラー率の監視
-- データ不整合の検知
-- アラート通知
-
-## 7. セキュリティ考慮事項
-
-- データベース接続の暗号化
-- 認証・認可の実装
-- 監査ログの記録
-- 個人情報の適切な処理
-
-## 8. 運用考慮事項
-
-### 8.1 定期同期
-- Cronジョブによる定期実行
-- 実行間隔の設定（例：1時間ごと）
-- 営業時間外の自動同期
-
-### 8.2 手動同期
-- オンデマンド実行機能
-- 特定プロジェクトのみの同期
-- 同期前の確認ダイアログ
-
-### 8.3 障害対応
-- 同期失敗時の自動リトライ
-- エスカレーション手順
-- データ復旧手順
-
-## 9. 今後の拡張性
-
-- リアルタイム同期（変更検知トリガー）
-- 他システムとの連携
-- 同期対象フィールドのカスタマイズ
-- 差分表示機能
-
-## 10. リスクと対策
-
-| リスク | 影響度 | 発生確率 | 対策 |
-|-------|--------|---------|------|
-| データ不整合 | 高 | 低 | トランザクション管理、検証ロジック |
-| パフォーマンス劣化 | 中 | 中 | バッチ処理、インデックス最適化 |
-| 同期失敗 | 高 | 低 | リトライ機構、エラー通知 |
-| 誤削除 | 高 | 低 | 論理削除、削除前確認 |
-
-## 付録A: 用語集
-
-- **WBS (Work Breakdown Structure)**: 作業分解構造
-- **同期 (Synchronization)**: Excel側のデータをアプリケーション側に反映する処理
-- **差分検出 (Diff Detection)**: 前回同期時からの変更を検出する処理
-- **マッピング (Mapping)**: 異なるデータ構造間の対応関係
-
-## 付録B: 参考資料
-
-- [Prisma Multiple Database Sources](https://www.prisma.io/docs/concepts/components/prisma-schema/data-sources)
-- [分散トランザクション管理](https://microservices.io/patterns/data/saga.html)
-- [Change Data Capture Pattern](https://debezium.io/documentation/reference/stable/tutorial.html)

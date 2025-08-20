@@ -187,6 +187,19 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"sync_logs" {
+  Int id PK
+  String projectId
+  SyncStatus syncStatus
+  DateTime syncedAt
+  Int recordCount
+  Int addedCount
+  Int updatedCount
+  Int deletedCount
+  Json errorDetails "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "user_sessions" }o--|| "users" : user
 "wbs" }o--|| "projects" : project
 "wbs_assignee" }o--|| "wbs" : wbs
@@ -426,5 +439,20 @@ erDiagram
   - `predecessorTaskId`: 
   - `successorTaskId`: 
   - `wbsId`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `sync_logs`
+
+**Properties**
+  - `id`: 
+  - `projectId`: 
+  - `syncStatus`: 
+  - `syncedAt`: 
+  - `recordCount`: 
+  - `addedCount`: 
+  - `updatedCount`: 
+  - `deletedCount`: 
+  - `errorDetails`: 
   - `createdAt`: 
   - `updatedAt`: 

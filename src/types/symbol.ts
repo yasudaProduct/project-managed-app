@@ -52,6 +52,11 @@ export const SYMBOL = {
     UserMappingService: Symbol.for('UserMappingService'),
     TaskMappingService: Symbol.for('TaskMappingService'),
 
+    // WBS Sync
+    IWbsSyncService: Symbol.for('IWbsSyncService'),
+    IExcelWbsRepository: Symbol.for('IExcelWbsRepository'),
+    ISyncLogRepository: Symbol.for('ISyncLogRepository'),
+    IWbsSyncApplicationService: Symbol.for('IWbsSyncApplicationService'),
 
     ITaskFactory: Symbol.for('ITaskFactory'),
 
