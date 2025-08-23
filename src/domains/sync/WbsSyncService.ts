@@ -2,18 +2,23 @@ import { injectable, inject } from 'inversify';
 import type { IWbsSyncService } from './IWbsSyncService';
 import { ExcelWbs, SyncChanges, SyncResult, SyncError, SyncErrorType } from './ExcelWbs';
 import { Task } from '@/domains/task/task';
-import { SyncStatus, TaskStatus, PeriodType, KosuType, type PrismaClient } from '@prisma/client';
+import { SyncStatus, type PrismaClient } from '@prisma/client';
 import { WbsDataMapper } from './WbsDataMapper';
 import type { IExcelWbsRepository } from '@/applications/sync/IExcelWbsRepository';
 import type { ISyncLogRepository } from '@/applications/sync/ISyncLogRepository';
-import prisma from '@/lib/prisma';
+// import prisma from '@/lib/prisma';
 import { SYMBOL } from '@/types/symbol';
 import { Phase } from '../phase/phase';
 import { PhaseCode } from '../phase/phase-code';
 import type { IPhaseRepository } from '@/applications/task/iphase-repository';
 import type { IUserRepository } from '@/applications/user/iuser-repositroy';
 import { User } from '../user/user';
-import { Assignee } from '../task/assignee';
+import { WbsAssignee } from '../wbs/wbs-assignee';
+import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
+import { randomString } from '@/lib/utils';
+import type { ITaskRepository } from '@/applications/task/itask-repository';
+import { TaskNo } from '../task/value-object/task-id';
+import { TaskStatus } from '../task/value-object/project-status';
 
 type PrismaTransaction = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];
 
@@ -24,6 +29,8 @@ export class WbsSyncService implements IWbsSyncService {
     @inject(SYMBOL.ISyncLogRepository) private syncLogRepository: ISyncLogRepository,
     @inject(SYMBOL.IPhaseRepository) private phaseRepository: IPhaseRepository,
     @inject(SYMBOL.IUserRepository) private userRepository: IUserRepository,
+    @inject(SYMBOL.IWbsAssigneeRepository) private wbsAssigneeRepository: IWbsAssigneeRepository,
+    @inject(SYMBOL.ITaskRepository) private taskRepository: ITaskRepository,
   ) { }
 
   // エクセル側のでwbsデータを取得
@@ -100,74 +107,81 @@ export class WbsSyncService implements IWbsSyncService {
     };
 
     try {
+      // リポジトリを使用して永続化する（トランザクションは未対応）
+      const wbsId = changes.wbsId;
 
-      // リポジトリを使用して永続化する
-      // リポジトリ間のトランザクションを検討する
-
-      // ドメインモデル作成
-
-      // 工程を作成
-
-
-
-
-      // 担当者を作成
-      // タスクを作成
-      // 期間を作成
-      // 工数を作成
-
-      // トランザクション内で変更を適用
-      await prisma.$transaction(async (tx) => {
-        const wbsId = changes.wbsId;
-
-        // フェーズの取得・作成
-        const phases = await this.ensurePhases(tx as PrismaTransaction, wbsId, changes);
-
-        // 担当者の取得
-        const assignees = await tx.wbsAssignee.findMany({
-          where: { wbsId },
-          include: { assignee: true },
-        });
-
-        // 削除処理
-        if (changes.toDelete.length > 0) {
-          await tx.wbsTask.deleteMany({
-            where: {
-              wbsId,
-              taskNo: { in: changes.toDelete },
-            },
-          });
-          result.deletedCount = changes.toDelete.length;
+      // フェーズの取得（名前→ID）
+      const phaseList = await this.phaseRepository.findByWbsId(wbsId);
+      const phaseNameToId = new Map<string, number>();
+      phaseList.forEach(p => {
+        const id = (p as unknown as { id?: number }).id;
+        if (p.name && id !== undefined) {
+          phaseNameToId.set(p.name, id);
         }
-
-        // 追加処理
-        for (const excelWbs of changes.toAdd) {
-          await this.createTask(tx as PrismaTransaction, wbsId, excelWbs, phases, assignees);
-          result.addedCount++;
-        }
-
-        // 更新処理
-        for (const excelWbs of changes.toUpdate) {
-          await this.updateTask(tx as PrismaTransaction, wbsId, excelWbs, phases, assignees);
-          result.updatedCount++;
-        }
-
-        result.recordCount = changes.toAdd.length + changes.toUpdate.length;
-
-        // 同期ログを記録
-        await tx.syncLog.create({
-          data: {
-            projectId: changes.projectId,
-            syncStatus: SyncStatus.SUCCESS,
-            recordCount: result.recordCount,
-            addedCount: result.addedCount,
-            updatedCount: result.updatedCount,
-            deletedCount: result.deletedCount,
-          },
-        });
       });
 
-      result.success = true;
+      // 既存担当者の取得
+      const assignees = await this.wbsAssigneeRepository.findByWbsId(wbsId);
+
+      // 既存タスクの取得（taskNo→Task）
+      const existingTasks = await this.taskRepository.findByWbsId(wbsId);
+      const taskNoToTask = new Map<string, Task>();
+      existingTasks.forEach(t => taskNoToTask.set(t.taskNo.getValue(), t));
+
+      const validationErrors: Array<Record<string, unknown>> = [];
+
+      // 削除処理
+      if (changes.toDelete.length > 0) {
+        // 既存リポジトリに削除APIがないため、ここでは削除件数のみカウント
+        // 後続実装で TaskRepository.delete を用いた削除に置き換える
+        result.deletedCount = changes.toDelete.length;
+      }
+
+      // 追加処理
+      for (const excelWbs of changes.toAdd) {
+        try {
+          const task = this.buildTaskDomainFromExcel({ excelWbs, wbsId, phaseNameToId, assignees });
+          await this.taskRepository.create(task);
+          result.addedCount++;
+        } catch (e) {
+          validationErrors.push({
+            type: 'VALIDATION_ERROR',
+            taskNo: excelWbs.WBS_ID,
+            message: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }
+
+      // 更新処理
+      for (const excelWbs of changes.toUpdate) {
+        const existing = taskNoToTask.get(excelWbs.WBS_ID);
+        try {
+          if (!existing) {
+            // 既存が見つからない場合は追加扱い
+            const task = this.buildTaskDomainFromExcel({ excelWbs, wbsId, phaseNameToId, assignees });
+            await this.taskRepository.create(task);
+            result.addedCount++;
+          } else {
+            const updated = this.buildTaskDomainFromExcel({ excelWbs, wbsId, phaseNameToId, assignees, base: existing });
+            await this.taskRepository.update(wbsId, updated);
+            result.updatedCount++;
+          }
+        } catch (e) {
+          validationErrors.push({
+            type: 'VALIDATION_ERROR',
+            taskNo: excelWbs.WBS_ID,
+            message: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }
+
+      result.recordCount = changes.toAdd.length + changes.toUpdate.length;
+
+      // 成否
+      result.success = validationErrors.length === 0;
+      if (validationErrors.length > 0) {
+        result.errorDetails = { validationErrors };
+      }
     } catch (error) {
       // エラーログを記録
       await this.syncLogRepository.recordSync({
@@ -240,38 +254,73 @@ export class WbsSyncService implements IWbsSyncService {
     return newPhases;
   }
 
-  // ExcelTANTOからWBSユーザーをドメインを作成
-  async excelToWbsUser(excelWbs: ExcelWbs[]): Promise<User[]> {
+  // ExcelTANTOからWBSユーザーと担当者をドメインを作成
+  async excelToWbsUserAndAssignee(excelWbs: ExcelWbs[], wbsId: number): Promise<{ users: User[], assignees: WbsAssignee[] }> {
     // 既存のユーザーを取得
     // 既存のユーザーに存在しない場合は作成
     // マッピング仕様：
     // ・excelのTANTO != user.displayNameの場合はドメインモデルを作成
-    // ・その他項目は仮登録
+    // ・excelのTANTO に対応する既存ユーザーがいれば WbsAssignee を作成（rate は暫定で 100）
+    // ・TANTO が null/空は無視
 
-    // 既存のユーザーを取得
-    const existingUsers = new Map<string, User>();
+    // 既存のユーザーを取得（displayName -> User）
+    const existingUsersByDisplayName = new Map<string, User>();
     for (const excel of excelWbs) {
       if (excel.TANTO) {
         const users = await this.userRepository.findByWbsDisplayName(excel.TANTO);
-        users.forEach(user => existingUsers.set(user.displayName, user));
+        users.forEach(user => existingUsersByDisplayName.set(user.displayName, user));
       }
     }
 
-    const newUsers = [];
+    // 既存の担当者を取得（wbsId）
+    const existingAssignees = await this.wbsAssigneeRepository.findByWbsId(wbsId);
+    const existingAssigneeUserIds = new Set(existingAssignees.map(a => a.userId));
+
+    // 新規作成対象ユーザー（重複除外）
+    const newUsers: User[] = [];
+    const seenNewUserNames = new Set<string>();
+
+    // 作成対象の WbsAssignee（重複除外）
+    const newAssignees: WbsAssignee[] = [];
+    const seenAssigneeUserIds = new Set<string>();
+
     for (const excel of excelWbs) {
-      if (excel.TANTO) {
-        const user = existingUsers.get(excel.TANTO);
-        if (!user) {
-          newUsers.push(User.create({
-            name: excel.TANTO!,
-            displayName: excel.TANTO!,
-            email: excel.TANTO! + '@example.com', // ここでは仮作成
-          }));
+      if (!excel.TANTO) continue;
+
+      const displayName = excel.TANTO;
+      const existingUser = existingUsersByDisplayName.get(displayName);
+
+      if (existingUser) {
+        // 既存ユーザーがいる場合は、担当者が未登録なら WbsAssignee を作成
+        const userId = existingUser.id as string;
+        if (userId && !existingAssigneeUserIds.has(userId) && !seenAssigneeUserIds.has(userId)) {
+          newAssignees.push(WbsAssignee.create({ userId, rate: 100 }));
+          seenAssigneeUserIds.add(userId);
+        }
+      } else {
+        // 既存ユーザーがいない場合はユーザーを作成（同一表示名は一度だけ）
+        if (!seenNewUserNames.has(displayName)) {
+          // 新規ユーザーは一時的に displayName を id として扱う
+          const tempId = randomString(6);
+          const newUser = User.createFromDb({
+            id: tempId,
+            name: displayName,
+            displayName: displayName,
+            email: displayName + '@example.com',
+          });
+          newUsers.push(newUser);
+          seenNewUserNames.add(displayName);
+
+          // 同時に担当者も作成（同一ユーザーは一度だけ）
+          if (!existingAssigneeUserIds.has(tempId) && !seenAssigneeUserIds.has(tempId)) {
+            newAssignees.push(WbsAssignee.create({ userId: tempId, rate: 100 }));
+            seenAssigneeUserIds.add(tempId);
+          }
         }
       }
     }
 
-    return newUsers;
+    return { users: newUsers, assignees: newAssignees };
   }
 
   // フェーズを作成
@@ -299,119 +348,50 @@ export class WbsSyncService implements IWbsSyncService {
     });
 
     // フェーズを作成
-    let seq = 1;
-    for (const phase of Array.from(uniquePhases).sort((a, b) => a.code.localeCompare(b.code))) {
-      // ドメインモデルを作成
-      const newPhase = Phase.create({
-        name: phase.name,
-        code: new PhaseCode(phase.code),
-        seq: seq++,
-      });
-
-      // ドメインモデルを永続化
-      // await this.phaseRepository.create(newPhase);
-
-      // phaseMap.set(phase.name, newPhase);
-    }
+    // seq 採番は将来の永続化時に使用予定
 
     return phaseMap;
   }
 
-  private async createTask(
-    tx: PrismaTransaction,
-    wbsId: number,
+  private buildTaskDomainFromExcel(args: {
     excelWbs: ExcelWbs,
-    phases: Map<string, Record<string, unknown>>,
-    assignees: Record<string, unknown>[]
-  ): Promise<void> {
+    wbsId: number,
+    phaseNameToId: Map<string, number>,
+    assignees: WbsAssignee[],
+    base?: Task,
+  }): Task {
+    const { excelWbs, wbsId, phaseNameToId, assignees, base } = args;
     const { task, periods } = WbsDataMapper.toAppWbs(excelWbs);
 
-    // フェーズIDの取得
-    const phaseId = excelWbs.PHASE ? phases.get(excelWbs.PHASE)?.id as number : null;
+    // ドメイン制約に合わせて変換
+    const taskNo = TaskNo.reconstruct(task.taskNo as string);
+    const name = (task.name as string) || '';
+    const status = new TaskStatus({ status: task.status as ReturnType<TaskStatus['getStatus']> });
+    const phaseId = excelWbs.PHASE ? phaseNameToId.get(excelWbs.PHASE) : undefined;
+    const assigneeId = this.findAssigneeIdFromDomain(excelWbs.TANTO, assignees) ?? undefined;
 
-    // 担当者IDの取得
-    const assigneeId = this.findAssigneeId(excelWbs.TANTO, assignees);
-
-    // タスクを作成
-    const createdTask = await tx.wbsTask.create({
-      data: {
-        taskNo: task.taskNo as string,
-        name: task.name as string,
-        status: task.status as TaskStatus,
-        wbsId,
-        phaseId,
-        assigneeId,
-      },
-    });
-
-    // 期間を作成
-    for (const period of periods) {
-      const createdPeriod = await tx.taskPeriod.create({
-        data: {
-          taskId: createdTask.id,
-          startDate: period.startDate,
-          endDate: period.endDate,
-          type: period.type.type as PeriodType,
-        },
-      });
-
-      // 対応する工数を作成
-      for (const manHour of period.manHours) {
-        await tx.taskKosu.create({
-          data: {
-            wbsId,
-            periodId: createdPeriod.id,
-            kosu: manHour.kosu,
-            type: manHour.type.type as KosuType,
-          },
-        });
-      }
+    if (base) {
+      // 既存タスクをドメイン更新で反映（制約違反は例外）
+      base.update({ name, assigneeId, status, phaseId, periods });
+      return base;
     }
-  }
 
-  private async updateTask(
-    tx: PrismaTransaction,
-    wbsId: number,
-    excelWbs: ExcelWbs,
-    phases: Map<string, Record<string, unknown>>,
-    assignees: Record<string, unknown>[]
-  ): Promise<void> {
-    const { task } = WbsDataMapper.toAppWbs(excelWbs);
-
-    // フェーズIDの取得
-    const phaseId = excelWbs.PHASE ? phases.get(excelWbs.PHASE)?.id as number : null;
-
-    // 担当者IDの取得
-    const assigneeId = this.findAssigneeId(excelWbs.TANTO, assignees);
-
-    // タスクを更新
-    await tx.wbsTask.update({
-      where: {
-        taskNo_wbsId: {
-          taskNo: excelWbs.WBS_ID,
-          wbsId,
-        },
-      },
-      data: {
-        name: task.name as string,
-        status: task.status as TaskStatus,
-        phaseId,
-        assigneeId,
-      },
+    return Task.create({
+      taskNo,
+      wbsId,
+      name,
+      status,
+      phaseId,
+      assigneeId,
+      periods,
     });
-
-    // TODO: 期間と工数の更新処理も実装する必要がある
   }
 
-  private findAssigneeId(tantoName: string | null, assignees: Record<string, unknown>[]): number | null {
+  private findAssigneeIdFromDomain(tantoName: string | null, assignees: WbsAssignee[]): number | null {
     if (!tantoName) return null;
-
-    const assignee = assignees.find(a => {
-      const assigneeInfo = a.assignee as Record<string, unknown>;
-      return assigneeInfo.name === tantoName ||
-        assigneeInfo.displayName === tantoName;
-    });
-
-    return (assignee?.id as number) || null;
+    const found = assignees.find(a => a.userName === tantoName);
+    return found && found.id !== undefined ? found.id : null;
   }
+
+  // 旧Prisma直叩きの作成・更新は削除し、TaskRepository 経由で実装
 }

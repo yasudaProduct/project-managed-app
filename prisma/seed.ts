@@ -67,7 +67,10 @@ async function main() {
         })
     }
 
-    const mocks = [mockData, mockDataLarge]
+    const mocks = [
+        mockData,
+        //mockDataLarge
+    ]
 
     for (const mock of mocks) {
         // モックデータ挿入

@@ -60,6 +60,7 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       toDelete: string[];
     };
   }> {
+    console.log('-------------- previewSync --------------');
     try {
       // WBSを取得
       const wbs = await this.wbsRepository.findById(wbsId);
@@ -73,9 +74,11 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
 
       // Excel側のデータを取得
       const excelData = await this.wbsSyncService.fetchExcelData(wbs.name);
+      console.log('excelData.length', excelData.length);
 
       // アプリ側のタスクを取得
-      const appTasks = await this.taskRepository.findByWbsId(wbs.id!);
+      const appTasks = await this.taskRepository.findByWbsId(wbsId);
+      console.log('appTasks.length', appTasks.length);
 
       // 変更を検出
       const changes = await this.wbsSyncService.detectChanges(excelData, appTasks);

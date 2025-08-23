@@ -64,16 +64,13 @@ export class ExcelWbsRepository implements IExcelWbsRepository {
   }
 
   async findByWbsName(wbsName: string): Promise<ExcelWbs[] | null> {
-    const excelWbs = await geppoPrisma.wbs.findFirst({
+    const excelWbs = await geppoPrisma.wbs.findMany({
       where: {
         PROJECT_ID: wbsName,
       },
     });
-    console.log("--------------------");
-    console.log(wbsName);
-    console.log(excelWbs);
     if (!excelWbs) return null;
-    return [this.mapToExcelWbs(excelWbs)];
+    return excelWbs.map(this.mapToExcelWbs);
   }
 
   private mapToExcelWbs(record: wbs): ExcelWbs {

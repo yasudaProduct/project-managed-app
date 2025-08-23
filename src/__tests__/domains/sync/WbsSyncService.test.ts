@@ -1,12 +1,18 @@
 import { WbsSyncService } from '@/domains/sync/WbsSyncService';
-import { ExcelWbs } from '@/domains/sync/ExcelWbs';
+import { ExcelWbs, SyncChanges } from '@/domains/sync/ExcelWbs';
 import { Phase } from '@/domains/phase/phase';
 import { PhaseCode } from '@/domains/phase/phase-code';
 import { IExcelWbsRepository } from '@/applications/sync/IExcelWbsRepository';
 import { ISyncLogRepository } from '@/applications/sync/ISyncLogRepository';
 import { IPhaseRepository } from '@/applications/task/iphase-repository';
 import { IUserRepository } from '@/applications/user/iuser-repositroy';
+import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { User } from '@/domains/user/user';
+import { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
+import { ITaskRepository } from '@/applications/task/itask-repository';
+import { Task } from '@/domains/task/task';
+import { TaskNo } from '@/domains/task/value-object/task-id';
+import { TaskStatus } from '@/domains/task/value-object/project-status';
 
 // モックの定義
 const mockExcelWbsRepository = {
@@ -27,6 +33,20 @@ const mockUserRepository = {
     findByWbsDisplayName: jest.fn(),
 };
 
+const mockWbsAssigneeRepository = {
+    findByWbsId: jest.fn(),
+}
+
+const mockTaskRepository = {
+    findById: jest.fn(),
+    findAll: jest.fn(),
+    findByWbsId: jest.fn(),
+    findByAssigneeId: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+};
+
 describe('WbsSyncService', () => {
     let wbsSyncService: WbsSyncService;
 
@@ -37,7 +57,9 @@ describe('WbsSyncService', () => {
             mockExcelWbsRepository as unknown as IExcelWbsRepository,
             mockSyncLogRepository as unknown as ISyncLogRepository,
             mockPhaseRepository as unknown as IPhaseRepository,
-            mockUserRepository as unknown as IUserRepository
+            mockUserRepository as unknown as IUserRepository,
+            mockWbsAssigneeRepository as unknown as IWbsAssigneeRepository,
+            mockTaskRepository as unknown as ITaskRepository
         );
     });
 
@@ -459,8 +481,8 @@ describe('WbsSyncService', () => {
         });
     });
 
-    describe('excelToWbsUser', () => {
-        it('既存のユーザーが存在しない場合、新しいユーザーを作成すること', async () => {
+    describe('excelToWbsUserAndAssignee', () => {
+        it('既存のユーザーおよび担当者が存在しない場合、新しいユーザーと担当者を作成すること', async () => {
             // Arrange
             const mockExcelWbsList: ExcelWbs[] = [
                 {
@@ -495,19 +517,33 @@ describe('WbsSyncService', () => {
                 })
             ]);
 
+            mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([
+                WbsAssignee.create({
+                    userId: 'user-1',
+                    rate: 100
+                })
+            ]);
+
+            const mockWbsId = 1;
+
             // Act
-            const result = await wbsSyncService.excelToWbsUser(mockExcelWbsList);
+            const { users, assignees } = await wbsSyncService.excelToWbsUserAndAssignee(mockExcelWbsList, mockWbsId);
 
             // Assert
-            expect(result).toHaveLength(1);
-            expect(result[0]).toBeInstanceOf(User);
-            expect(result[0].name).toBe('田中');
-            expect(result[0].displayName).toBe('田中');
-            expect(result[0].email).toBe('田中@example.com');
+            expect(users).toHaveLength(1);
+            expect(users[0]).toBeInstanceOf(User);
+            expect(users[0].id).not.toBeNull();
+            expect(users[0].name).toBe('田中');
+            expect(users[0].displayName).toBe('田中');
+            expect(users[0].email).toBe('田中@example.com');
+            expect(assignees).toHaveLength(1);
+            expect(assignees[0]).toBeInstanceOf(WbsAssignee);
+            expect(assignees[0].getRate()).toBe(100);
+            expect(assignees[0].userId).toBe(users[0].id);
             expect(mockUserRepository.findByWbsDisplayName).toHaveBeenCalledWith('田中');
         });
 
-        it('既存のユーザーが存在する場合、新しいユーザーを作成しないこと', async () => {
+        it('既存のユーザーと担当者が存在する場合、新しいユーザーと担当者を作成しないこと', async () => {
             // Arrange
             const mockExcelWbsList: ExcelWbs[] = [
                 {
@@ -533,24 +569,34 @@ describe('WbsSyncService', () => {
                 }
             ];
 
-            const existingUser = User.createFromDb({
-                id: 'user-1',
-                name: '田中太郎',
-                displayName: '田中',
-                email: 'tanaka@example.com'
-            });
+            mockUserRepository.findByWbsDisplayName.mockResolvedValue(
+                [User.createFromDb({
+                    id: 'user-1',
+                    name: '田中太郎',
+                    displayName: '田中',
+                    email: 'tanaka@example.com'
+                })]
+            );
 
-            mockUserRepository.findByWbsDisplayName.mockResolvedValue([existingUser]);
+            mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([
+                WbsAssignee.create({
+                    userId: 'user-1',
+                    rate: 100
+                })
+            ]);
+
+            const mockWbsId = 1;
 
             // Act
-            const result = await wbsSyncService.excelToWbsUser(mockExcelWbsList);
+            const { users, assignees } = await wbsSyncService.excelToWbsUserAndAssignee(mockExcelWbsList, mockWbsId);
 
             // Assert
-            expect(result).toHaveLength(0);
+            expect(users).toHaveLength(0);
+            expect(assignees).toHaveLength(0);
             expect(mockUserRepository.findByWbsDisplayName).toHaveBeenCalledWith('田中');
         });
 
-        it('TANTOがnullの場合、ユーザーが作成されないこと', async () => {
+        it('TANTOがnullの場合、ユーザーと担当者が作成されないこと', async () => {
             // Arrange
             const mockExcelWbsList: ExcelWbs[] = [
                 {
@@ -576,16 +622,21 @@ describe('WbsSyncService', () => {
                 }
             ];
 
+            mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([]);
+
+            const mockWbsId = 1;
+
             // Act
-            const result = await wbsSyncService.excelToWbsUser(mockExcelWbsList);
+            const { users, assignees } = await wbsSyncService.excelToWbsUserAndAssignee(mockExcelWbsList, mockWbsId);
 
             // Assert
             // nullのユーザーが作成されないこと
-            expect(result).toHaveLength(0);
+            expect(users).toHaveLength(0);
+            expect(assignees).toHaveLength(0);
             expect(mockUserRepository.findByWbsDisplayName).not.toHaveBeenCalled();
         });
 
-        it('複数の異なる担当者が含まれる配列の場合、それぞれのユーザーを作成すること', async () => {
+        it('複数の異なる担当者が含まれる配列の場合、それぞれのユーザーと担当者を作成すること', async () => {
             // Arrange
             const mockExcelWbsList: ExcelWbs[] = [
                 {
@@ -636,17 +687,26 @@ describe('WbsSyncService', () => {
                 .mockResolvedValueOnce([]) // 田中太郎は存在しない
                 .mockResolvedValueOnce([]); // 佐藤花子は存在しない
 
+            mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([]);
+
+            const mockWbsId = 1;
+
             // Act
-            const result = await wbsSyncService.excelToWbsUser(mockExcelWbsList);
+            const { users, assignees } = await wbsSyncService.excelToWbsUserAndAssignee(mockExcelWbsList, mockWbsId);
 
             // Assert
-            expect(result).toHaveLength(2);
-            expect(result[0].name).toBe('田中');
-            expect(result[0].displayName).toBe('田中');
-            expect(result[0].email).toBe('田中@example.com');
-            expect(result[1].name).toBe('佐藤');
-            expect(result[1].displayName).toBe('佐藤');
-            expect(result[1].email).toBe('佐藤@example.com');
+            expect(users).toHaveLength(2);
+            expect(users[0].name).toBe('田中');
+            expect(users[0].displayName).toBe('田中');
+            expect(users[0].email).toBe('田中@example.com');
+            expect(users[1].name).toBe('佐藤');
+            expect(users[1].displayName).toBe('佐藤');
+            expect(users[1].email).toBe('佐藤@example.com');
+            expect(assignees).toHaveLength(2);
+            expect(assignees[0].getRate()).toBe(100);
+            expect(assignees[0].userId).toBe(users[0].id);
+            expect(assignees[1].getRate()).toBe(100);
+            expect(assignees[1].userId).toBe(users[1].id);
             expect(mockUserRepository.findByWbsDisplayName).toHaveBeenCalledWith('田中');
             expect(mockUserRepository.findByWbsDisplayName).toHaveBeenCalledWith('佐藤');
         });
@@ -709,27 +769,95 @@ describe('WbsSyncService', () => {
                 .mockResolvedValueOnce([existingUser]) // 田中太郎は既存
                 .mockResolvedValueOnce([]); // 佐藤花子は新規
 
+            mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([
+                WbsAssignee.create({
+                    userId: 'user-1',
+                    rate: 100
+                })
+            ]);
+
+            const mockWbsId = 1;
+
             // Act
-            const result = await wbsSyncService.excelToWbsUser(mockExcelWbsList);
+            const { users, assignees } = await wbsSyncService.excelToWbsUserAndAssignee(mockExcelWbsList, mockWbsId);
 
             // Assert
-            expect(result).toHaveLength(1);
-            expect(result[0].name).toBe('佐藤');
-            expect(result[0].displayName).toBe('佐藤');
-            expect(result[0].email).toBe('佐藤@example.com');
+            expect(users).toHaveLength(1);
+            expect(users[0].name).toBe('佐藤');
+            expect(users[0].displayName).toBe('佐藤');
+            expect(users[0].email).toBe('佐藤@example.com');
+            expect(assignees).toHaveLength(1);
+            expect(assignees[0].userId).toBe(users[0].id);
+            expect(assignees[0].getRate()).toBe(100);
             expect(mockUserRepository.findByWbsDisplayName).toHaveBeenCalledWith('田中');
             expect(mockUserRepository.findByWbsDisplayName).toHaveBeenCalledWith('佐藤');
         });
+
+        it('既存のユーザーが存在するが、担当者が存在しない場合、新しい担当者を作成すること', async () => {
+            // Arrange
+            const mockExcelWbsList: ExcelWbs[] = [
+                {
+                    PROJECT_ID: 'PRJ001',
+                    WBS_ID: 'PH-001',
+                    PHASE: '設計フェーズ',
+                    ACTIVITY: '詳細設計',
+                    TASK: 'データベース設計',
+                    TANTO: '田中',
+                    KIJUN_START_DATE: new Date('2024-01-01'),
+                    KIJUN_END_DATE: new Date('2024-01-31'),
+                    YOTEI_START_DATE: new Date('2024-01-01'),
+                    YOTEI_END_DATE: new Date('2024-01-31'),
+                    JISSEKI_START_DATE: null,
+                    JISSEKI_END_DATE: null,
+                    KIJUN_KOSU: 80,
+                    YOTEI_KOSU: 80,
+                    JISSEKI_KOSU: null,
+                    KIJUN_KOSU_BUFFER: 10,
+                    STATUS: '未着手',
+                    BIKO: 'テスト用',
+                    PROGRESS_RATE: 0,
+                }
+            ];
+
+            const existingUser = User.createFromDb({
+                id: 'user-1',
+                name: '田中太郎',
+                displayName: '田中',
+                email: 'tanaka@example.com'
+            });
+
+            mockUserRepository.findByWbsDisplayName.mockResolvedValue([existingUser]);
+
+            mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([]);
+
+            const mockWbsId = 1;
+
+            // Act
+            const { users, assignees } = await wbsSyncService.excelToWbsUserAndAssignee(mockExcelWbsList, mockWbsId);
+
+            // Assert
+            expect(users).toHaveLength(0);
+            expect(assignees).toHaveLength(1);
+            expect(assignees[0].userId).toBe(existingUser.id);
+            expect(assignees[0].getRate()).toBe(100);
+            expect(mockUserRepository.findByWbsDisplayName).toHaveBeenCalledWith('田中');
+        });
+
 
         it('空の配列が渡された場合、空の配列を返すこと', async () => {
             // Arrange
             const mockExcelWbsList: ExcelWbs[] = [];
 
+            mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([]);
+
+            const mockWbsId = 1;
+
             // Act
-            const result = await wbsSyncService.excelToWbsUser(mockExcelWbsList);
+            const { users, assignees } = await wbsSyncService.excelToWbsUserAndAssignee(mockExcelWbsList, mockWbsId);
 
             // Assert
-            expect(result).toHaveLength(0);
+            expect(users).toHaveLength(0);
+            expect(assignees).toHaveLength(0);
             expect(mockUserRepository.findByWbsDisplayName).not.toHaveBeenCalled();
         });
 
@@ -762,10 +890,182 @@ describe('WbsSyncService', () => {
             const mockError = new Error('Database connection failed');
             mockUserRepository.findByWbsDisplayName.mockRejectedValue(mockError);
 
+            mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([]);
+
+            const mockWbsId = 1;
+
             // Act & Assert
-            await expect(wbsSyncService.excelToWbsUser(mockExcelWbsList))
+            await expect(wbsSyncService.excelToWbsUserAndAssignee(mockExcelWbsList, mockWbsId))
                 .rejects.toThrow('Database connection failed');
             expect(mockUserRepository.findByWbsDisplayName).toHaveBeenCalledWith('田中');
+        });
+    });
+
+    describe('applyChanges', () => {
+        const wbsId = 1;
+        const projectId = 'PRJ001';
+
+        beforeEach(() => {
+            mockPhaseRepository.findByWbsId.mockResolvedValue([]);
+            mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([]);
+            mockTaskRepository.findByWbsId.mockResolvedValue([]);
+            mockTaskRepository.create.mockResolvedValue(
+                Task.createFromDb({
+                    id: 1,
+                    taskNo: TaskNo.reconstruct('D1-0001'),
+                    wbsId,
+                    name: '作成タスク',
+                    status: new TaskStatus({ status: 'NOT_STARTED' }),
+                })
+            );
+        });
+
+        it('toAdd を TaskRepository 経由で作成し、結果が成功となること', async () => {
+            const changes = {
+                wbsId,
+                projectId,
+                toAdd: [
+                    {
+                        PROJECT_ID: projectId,
+                        WBS_ID: 'D1-0001',
+                        PHASE: '',
+                        ACTIVITY: 'A',
+                        TASK: '作成タスク',
+                        TANTO: null,
+                        KIJUN_START_DATE: null,
+                        KIJUN_END_DATE: null,
+                        YOTEI_START_DATE: null,
+                        YOTEI_END_DATE: null,
+                        JISSEKI_START_DATE: null,
+                        JISSEKI_END_DATE: null,
+                        KIJUN_KOSU: null,
+                        YOTEI_KOSU: null,
+                        JISSEKI_KOSU: null,
+                        KIJUN_KOSU_BUFFER: null,
+                        STATUS: '未着手',
+                        BIKO: null,
+                        PROGRESS_RATE: null,
+                    },
+                ],
+                toUpdate: [],
+                toDelete: ['D2-0001'],
+                timestamp: new Date(),
+            } as SyncChanges;
+
+            const result = await wbsSyncService.applyChanges(changes);
+
+            expect(mockTaskRepository.create).toHaveBeenCalledTimes(1);
+            expect(result.success).toBe(true);
+            expect(result.addedCount).toBe(1);
+            expect(result.updatedCount).toBe(0);
+            expect(result.deletedCount).toBe(1);
+            expect(result.recordCount).toBe(1);
+            expect(result.errorDetails).toBeUndefined();
+        });
+
+        it('toUpdate を TaskRepository 経由で更新し、結果が成功となること', async () => {
+            // フェーズIDと担当者IDが必要
+            mockPhaseRepository.findByWbsId.mockResolvedValue([
+                Phase.createFromDb({ id: 3, name: '開発', code: new PhaseCode('D1'), seq: 1 })
+            ]);
+            mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([
+                WbsAssignee.createFromDb({ id: 20, userId: 'user-1', userName: '田中', rate: 100 })
+            ]);
+
+            const existing = Task.createFromDb({
+                id: 11,
+                taskNo: TaskNo.reconstruct('D1-0001'),
+                wbsId,
+                name: '旧タスク',
+                status: new TaskStatus({ status: 'NOT_STARTED' }),
+                assigneeId: 20,
+                phaseId: 3,
+            });
+            mockTaskRepository.findByWbsId.mockResolvedValue([existing]);
+            mockTaskRepository.update.mockResolvedValue(existing);
+
+            const changes = {
+                wbsId,
+                projectId,
+                toAdd: [],
+                toUpdate: [
+                    {
+                        PROJECT_ID: projectId,
+                        WBS_ID: 'D1-0001',
+                        PHASE: '開発',
+                        ACTIVITY: 'A',
+                        TASK: '更新タスク',
+                        TANTO: '田中',
+                        KIJUN_START_DATE: null,
+                        KIJUN_END_DATE: null,
+                        YOTEI_START_DATE: null,
+                        YOTEI_END_DATE: null,
+                        JISSEKI_START_DATE: null,
+                        JISSEKI_END_DATE: null,
+                        KIJUN_KOSU: null,
+                        YOTEI_KOSU: null,
+                        JISSEKI_KOSU: null,
+                        KIJUN_KOSU_BUFFER: null,
+                        STATUS: '着手中',
+                        BIKO: null,
+                        PROGRESS_RATE: null,
+                    },
+                ],
+                toDelete: [],
+                timestamp: new Date(),
+            } as const;
+
+            const result = await wbsSyncService.applyChanges(changes as any);
+
+            expect(mockTaskRepository.update).toHaveBeenCalledTimes(1);
+            expect(result.success).toBe(true);
+            expect(result.addedCount).toBe(0);
+            expect(result.updatedCount).toBe(1);
+            expect(result.deletedCount).toBe(0);
+            expect(result.recordCount).toBe(1);
+        });
+
+        it('ドメイン制約違反時に validationErrors を返すこと（TaskNo フォーマット不正）', async () => {
+            const changes = {
+                wbsId,
+                projectId,
+                toAdd: [
+                    {
+                        PROJECT_ID: projectId,
+                        WBS_ID: 'BAD_FORMAT',
+                        PHASE: '',
+                        ACTIVITY: 'A',
+                        TASK: '作成タスク',
+                        TANTO: null,
+                        KIJUN_START_DATE: null,
+                        KIJUN_END_DATE: null,
+                        YOTEI_START_DATE: null,
+                        YOTEI_END_DATE: null,
+                        JISSEKI_START_DATE: null,
+                        JISSEKI_END_DATE: null,
+                        KIJUN_KOSU: null,
+                        YOTEI_KOSU: null,
+                        JISSEKI_KOSU: null,
+                        KIJUN_KOSU_BUFFER: null,
+                        STATUS: '未着手',
+                        BIKO: null,
+                        PROGRESS_RATE: null,
+                    },
+                ],
+                toUpdate: [],
+                toDelete: [],
+                timestamp: new Date(),
+            } as const;
+
+            const result = await wbsSyncService.applyChanges(changes as any);
+
+            expect(result.success).toBe(false);
+            expect(result.errorDetails).toBeDefined();
+            const errors = (result.errorDetails as any).validationErrors as Array<any>;
+            expect(errors.length).toBe(1);
+            expect(errors[0].taskNo).toBe('BAD_FORMAT');
+            expect(String(errors[0].message)).toContain('タスクID');
+            expect(mockTaskRepository.create).not.toHaveBeenCalled();
         });
     });
 });

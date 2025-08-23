@@ -5,6 +5,9 @@ import { ManHour } from '@/domains/task/man-hour';
 import { PeriodType } from '@/domains/task/value-object/period-type';
 import { ManHourType } from '@/domains/task/value-object/man-hour-type';
 
+/**
+ * Excelデータをドメインモデルに変換する
+ */
 export class WbsDataMapper {
   // Excel → App変換
   static toAppWbs(excelWbs: ExcelWbs): {

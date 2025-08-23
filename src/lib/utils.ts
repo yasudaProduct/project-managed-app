@@ -67,3 +67,13 @@ export const getHolidays = (year: number): Holiday[] => {
 export const isHoliday = (date: Date): boolean => {
   return holiday_jp.isHoliday(date) || date.getDay() === 0 || date.getDay() === 6;
 }
+
+// ランダムな文字列を生成 A-Z, a-z
+export const randomString = (length: number = 10): string => {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
