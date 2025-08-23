@@ -65,7 +65,7 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       const wbs = await this.wbsRepository.findById(wbsId);
       if (!wbs) {
         throw new SyncError(
-          'プロジェクトに紐づくWBSが見つかりません',
+          'WBSが見つかりません',
           SyncErrorType.VALIDATION_ERROR,
           { wbsId }
         );

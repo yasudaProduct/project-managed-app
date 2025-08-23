@@ -11,6 +11,9 @@ import { SYMBOL } from '@/types/symbol';
 import { Phase } from '../phase/phase';
 import { PhaseCode } from '../phase/phase-code';
 import type { IPhaseRepository } from '@/applications/task/iphase-repository';
+import type { IUserRepository } from '@/applications/user/iuser-repositroy';
+import { User } from '../user/user';
+import { Assignee } from '../task/assignee';
 
 type PrismaTransaction = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];
 
@@ -19,7 +22,8 @@ export class WbsSyncService implements IWbsSyncService {
   constructor(
     @inject(SYMBOL.IExcelWbsRepository) private excelWbsRepository: IExcelWbsRepository,
     @inject(SYMBOL.ISyncLogRepository) private syncLogRepository: ISyncLogRepository,
-    @inject(SYMBOL.IPhaseRepository) private phaseRepository: IPhaseRepository
+    @inject(SYMBOL.IPhaseRepository) private phaseRepository: IPhaseRepository,
+    @inject(SYMBOL.IUserRepository) private userRepository: IUserRepository,
   ) { }
 
   // エクセル側のでwbsデータを取得
@@ -96,6 +100,22 @@ export class WbsSyncService implements IWbsSyncService {
     };
 
     try {
+
+      // リポジトリを使用して永続化する
+      // リポジトリ間のトランザクションを検討する
+
+      // ドメインモデル作成
+
+      // 工程を作成
+
+
+
+
+      // 担当者を作成
+      // タスクを作成
+      // 期間を作成
+      // 工数を作成
+
       // トランザクション内で変更を適用
       await prisma.$transaction(async (tx) => {
         const wbsId = changes.wbsId;
@@ -175,6 +195,86 @@ export class WbsSyncService implements IWbsSyncService {
     return result;
   }
 
+  // ExcelフェーズからWBSフェーズをドメインを作成
+  async excelToWbsPhase(excelWbsList: ExcelWbs[], wbsId: number): Promise<Phase[]> {
+    // 既存のWbsPhaseに存在しない場合は作成
+    // マッピング仕様：
+    // ・excelのPHASE != wbsPhase.nameの場合はドメインモデルを作成
+    // ・excelのPHASEからWBS_IDのハイフンより左側をフェーズコードとする
+    // ・フェーズコードの昇順でseqを採番する
+
+    // 既存のフェーズを取得
+    const existingPhases = await this.phaseRepository.findByWbsId(wbsId);
+
+    const existingPhaseMap = new Map<string, Record<string, unknown>>();
+    for (const phase of existingPhases) {
+      existingPhaseMap.set(phase.name, {
+        name: phase.name,
+        code: phase.code,
+        seq: phase.seq,
+      });
+    }
+
+    // 新しいフェーズを作成
+    const uniquePhases = new Set<{ name: string, code: string }>();
+    excelWbsList.forEach(excelWbs => {
+      // フェーズが存在しない場合は追加
+      if (excelWbs.PHASE && !existingPhaseMap.has(excelWbs.PHASE)) {
+        const code = excelWbs.WBS_ID.split('-')[0];
+        const name = excelWbs.PHASE;
+        uniquePhases.add({ name, code });
+      }
+    });
+
+    // フェーズを作成
+    const newPhases = [];
+    let seq = 1;
+    for (const phase of Array.from(uniquePhases).sort((a, b) => a.code.localeCompare(b.code))) {
+      newPhases.push(Phase.create({
+        name: phase.name,
+        code: new PhaseCode(phase.code),
+        seq: seq++,
+      }));
+    }
+
+    return newPhases;
+  }
+
+  // ExcelTANTOからWBSユーザーをドメインを作成
+  async excelToWbsUser(excelWbs: ExcelWbs[]): Promise<User[]> {
+    // 既存のユーザーを取得
+    // 既存のユーザーに存在しない場合は作成
+    // マッピング仕様：
+    // ・excelのTANTO != user.displayNameの場合はドメインモデルを作成
+    // ・その他項目は仮登録
+
+    // 既存のユーザーを取得
+    const existingUsers = new Map<string, User>();
+    for (const excel of excelWbs) {
+      if (excel.TANTO) {
+        const users = await this.userRepository.findByWbsDisplayName(excel.TANTO);
+        users.forEach(user => existingUsers.set(user.displayName, user));
+      }
+    }
+
+    const newUsers = [];
+    for (const excel of excelWbs) {
+      if (excel.TANTO) {
+        const user = existingUsers.get(excel.TANTO);
+        if (!user) {
+          newUsers.push(User.create({
+            name: excel.TANTO!,
+            displayName: excel.TANTO!,
+            email: excel.TANTO! + '@example.com', // ここでは仮作成
+          }));
+        }
+      }
+    }
+
+    return newUsers;
+  }
+
+  // フェーズを作成
   private async ensurePhases(tx: PrismaTransaction, wbsId: number, changes: SyncChanges): Promise<Map<string, Record<string, unknown>>> {
     const phaseMap = new Map<string, Record<string, unknown>>();
 
@@ -193,13 +293,14 @@ export class WbsSyncService implements IWbsSyncService {
       // フェーズが存在しない場合は追加
       if (excelWbs.PHASE && !phaseMap.has(excelWbs.PHASE)) {
         // ExcelWbsのWBS_IDとのハイフンより左側をフェーズコードとする
-        uniquePhases.add({ name: excelWbs.PHASE, code: excelWbs.WBS_ID.split('-')[0] });
+        const code = excelWbs.WBS_ID.split('-')[0];
+        uniquePhases.add({ name: excelWbs.PHASE, code });
       }
     });
 
     // フェーズを作成
-    let seq = existingPhases.length + 1;
-    for (const phase of uniquePhases) {
+    let seq = 1;
+    for (const phase of Array.from(uniquePhases).sort((a, b) => a.code.localeCompare(b.code))) {
       // ドメインモデルを作成
       const newPhase = Phase.create({
         name: phase.name,
@@ -208,9 +309,9 @@ export class WbsSyncService implements IWbsSyncService {
       });
 
       // ドメインモデルを永続化
-      await this.phaseRepository.create(newPhase);
+      // await this.phaseRepository.create(newPhase);
 
-      phaseMap.set(phase.name, newPhase);
+      // phaseMap.set(phase.name, newPhase);
     }
 
     return phaseMap;

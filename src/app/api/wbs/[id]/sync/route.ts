@@ -29,7 +29,7 @@ export async function POST(
       SYMBOL.IWbsSyncApplicationService
     );
 
-    const result = await syncService.executeSync(wbs.projectId);
+    const result = await syncService.executeSync(wbsId);
 
     return NextResponse.json({
       success: result.success,
