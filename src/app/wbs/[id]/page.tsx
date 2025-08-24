@@ -11,7 +11,6 @@ import {
   Table,
   Trello,
   Users,
-  History,
   Import,
 } from "lucide-react";
 import prisma from "@/lib/prisma";
@@ -149,16 +148,6 @@ export default async function WbsManagementPage({
               >
                 <Table className="h-4 w-4" />
                 集計表
-              </TabsTrigger>
-              <TabsTrigger
-                value="history"
-                className="flex items-center gap-2 w-full justify-center"
-                asChild
-              >
-                <Link href={`/wbs/${id}/history`}>
-                  <History className="h-4 w-4" />
-                  進捗履歴
-                </Link>
               </TabsTrigger>
             </TabsList>
             <TabsContent value="summary">
