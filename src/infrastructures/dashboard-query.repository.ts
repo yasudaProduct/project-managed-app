@@ -103,8 +103,9 @@ export class DashboardQueryRepository implements IDashboardQueryRepository {
 
         const projects = await prisma.projects.findMany({
             where: {
+                status: 'ACTIVE',
                 endDate: {
-                    gte: new Date(futureDate),
+                    gte: today,
                     lte: new Date(futureDate)
                 }
             }
@@ -122,6 +123,7 @@ export class DashboardQueryRepository implements IDashboardQueryRepository {
         const today = new Date();
         const overdueProjects = await prisma.projects.findMany({
             where: {
+                status: "ACTIVE",
                 endDate: {
                     lt: today
                 }
