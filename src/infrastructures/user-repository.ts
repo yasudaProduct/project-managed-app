@@ -22,6 +22,19 @@ export class UserRepository implements IUserRepository {
 
         return usersDb.map(this.createUser);
     }
+    
+    async save(user: User): Promise<User> {
+        const userDb = await prisma.users.create({
+            data: {
+                id: user.id,
+                name: user.name,
+                displayName: user.displayName,
+                email: user.email,
+            },
+        });
+        
+        return this.createUser(userDb);
+    }
 
     private createUser(userDb: UserDb): User {
         return User.createFromDb({

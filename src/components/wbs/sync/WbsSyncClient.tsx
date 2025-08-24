@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,13 @@ interface SyncHistory {
   updatedCount: number;
   deletedCount: number;
   errorDetails?: Record<string, unknown>;
+}
+
+interface ValidationError {
+  taskNo: string;
+  field: string;
+  message: string;
+  value?: unknown;
 }
 
 interface SyncPreview {
@@ -51,6 +59,9 @@ interface SyncPreview {
     }>;
     toDelete: string[];
   };
+  validationErrors?: ValidationError[];
+  newPhases?: Array<{ name: string; code: string }>;
+  newUsers?: Array<{ name: string; email: string }>;
 }
 
 interface WbsSyncClientProps {
@@ -64,6 +75,7 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
   const [syncHistory, setSyncHistory] = useState<SyncHistory[]>([]);
   const [syncPreview, setSyncPreview] = useState<SyncPreview | null>(null);
   const [lastSync, setLastSync] = useState<SyncHistory | null>(null);
+  const [syncMode, setSyncMode] = useState<'sync' | 'replace'>('sync');
 
   const fetchSyncHistory = useCallback(async () => {
     try {
@@ -123,6 +135,10 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
     try {
       const response = await fetch(`/api/wbs/${wbsId}/sync`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ mode: syncMode }),
       });
 
       if (!response.ok) {
@@ -133,8 +149,8 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
       const result = await response.json();
 
       toast({
-        title: "同期完了",
-        description: `${result.data.recordCount}件のレコードを同期しました。（追加: ${result.data.addedCount}件、更新: ${result.data.updatedCount}件、削除: ${result.data.deletedCount}件）`,
+        title: syncMode === 'replace' ? "洗い替え完了" : "同期完了",
+        description: `${result.data.recordCount}件のレコードを${syncMode === 'replace' ? '洗い替え' : '同期'}しました。（追加: ${result.data.addedCount}件、更新: ${result.data.updatedCount}件、削除: ${result.data.deletedCount}件）`,
       });
 
       // 同期履歴を再取得
@@ -198,6 +214,49 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
           </AlertDescription>
         </Alert>
 
+        {/* 同期モードの選択 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>同期モード</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <label className="flex items-center space-x-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="syncMode"
+                  value="sync"
+                  checked={syncMode === 'sync'}
+                  onChange={() => setSyncMode('sync')}
+                  className="w-4 h-4"
+                />
+                <div className="flex-1">
+                  <p className="font-medium">差分同期</p>
+                  <p className="text-sm text-muted-foreground">
+                    変更があったタスクのみを更新します
+                  </p>
+                </div>
+              </label>
+              <label className="flex items-center space-x-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="syncMode"
+                  value="replace"
+                  checked={syncMode === 'replace'}
+                  onChange={() => setSyncMode('replace')}
+                  className="w-4 h-4"
+                />
+                <div className="flex-1">
+                  <p className="font-medium">洗い替え</p>
+                  <p className="text-sm text-muted-foreground">
+                    既存データを全て削除してから、Excelのデータを再インポートします
+                  </p>
+                </div>
+              </label>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>同期設定</CardTitle>
@@ -237,13 +296,15 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
                 )}
                 プレビュー
               </Button>
-              <Button onClick={handleSync} disabled={isLoading}>
+              <Button onClick={handleSync} disabled={isLoading || (syncPreview && syncPreview.validationErrors && syncPreview.validationErrors.length > 0)}>
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : syncMode === 'replace' ? (
+                  <RefreshCw className="h-4 w-4 mr-2" />
                 ) : (
                   <Upload className="h-4 w-4 mr-2" />
                 )}
-                同期を実行
+                {syncMode === 'replace' ? '洗い替えを実行' : '同期を実行'}
               </Button>
             </div>
           </CardContent>
@@ -356,6 +417,52 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
                       )}
                     </div>
                   </details>
+                </div>
+              )}
+              
+              {/* バリデーションエラーの表示 */}
+              {syncPreview.validationErrors && syncPreview.validationErrors.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>ドメイン制約エラー</AlertTitle>
+                  <AlertDescription>
+                    <p className="mb-2">以下のタスクでエラーが検出されました。エラーを修正してから再度実行してください。</p>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {syncPreview.validationErrors.map((error, index) => (
+                        <p key={index} className="text-sm">
+                          • {error.taskNo}: {error.message}
+                          {error.value && ` (値: ${error.value})`}
+                        </p>
+                      ))}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {/* 新規作成されるデータの表示 */}
+              {syncPreview.newPhases && syncPreview.newPhases.length > 0 && (
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium mb-2">新規作成されるフェーズ</h4>
+                  <div className="space-y-1">
+                    {syncPreview.newPhases.map((phase, index) => (
+                      <p key={index} className="text-sm text-muted-foreground">
+                        • {phase.name} (コード: {phase.code})
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {syncPreview.newUsers && syncPreview.newUsers.length > 0 && (
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium mb-2">新規作成されるユーザー</h4>
+                  <div className="space-y-1">
+                    {syncPreview.newUsers.map((user, index) => (
+                      <p key={index} className="text-sm text-muted-foreground">
+                        • {user.name} ({user.email})
+                      </p>
+                    ))}
+                  </div>
                 </div>
               )}
             </CardContent>

@@ -1,3 +1,10 @@
+export interface ValidationError {
+  taskNo: string;
+  field: string;
+  message: string;
+  value?: unknown;
+}
+
 export interface ExcelWbs {
   PROJECT_ID: string;
   WBS_ID: string;

@@ -4,7 +4,7 @@ import type { IWbsSyncService } from '@/domains/sync/IWbsSyncService';
 import type { ISyncLogRepository } from './ISyncLogRepository';
 import type { IWbsRepository } from '@/applications/wbs/iwbs-repository';
 import type { ITaskRepository } from '@/applications/task/itask-repository';
-import { SyncResult, SyncError, SyncErrorType } from '@/domains/sync/ExcelWbs';
+import { SyncResult, SyncError, SyncErrorType, ValidationError } from '@/domains/sync/ExcelWbs';
 import type { SyncLog } from './ISyncLogRepository';
 import { SYMBOL } from '@/types/symbol';
 import type { IProjectRepository } from '../projects/iproject-repository';
@@ -50,6 +50,28 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
     }
   }
 
+  async executeReplaceAll(wbsId: number): Promise<SyncResult> {
+    try {
+      // WBSを取得
+      const wbs = await this.wbsRepository.findById(wbsId);
+      if (!wbs) {
+        throw new SyncError(
+          'WBSが見つかりません',
+          SyncErrorType.VALIDATION_ERROR,
+          { wbsId }
+        );
+      }
+
+      // 洗い替え実行
+      const result = await this.wbsSyncService.replaceAll(wbsId, wbs.name);
+
+      return result;
+    } catch (error) {
+      console.error('洗い替え処理エラー:', error);
+      throw error;
+    }
+  }
+
   async previewSync(wbsId: number): Promise<{
     toAdd: number;
     toUpdate: number;
@@ -59,6 +81,9 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       toUpdate: Array<{ wbsId: string; taskName: string; phase: string; assignee: string | null }>;
       toDelete: string[];
     };
+    validationErrors: ValidationError[];
+    newPhases: Array<{ name: string; code: string }>;
+    newUsers: Array<{ name: string; email: string }>;
   }> {
     console.log('-------------- previewSync --------------');
     try {
@@ -72,36 +97,38 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
         );
       }
 
-      // Excel側のデータを取得
-      const excelData = await this.wbsSyncService.fetchExcelData(wbs.name);
-      console.log('excelData.length', excelData.length);
-
-      // アプリ側のタスクを取得
-      const appTasks = await this.taskRepository.findByWbsId(wbsId);
-      console.log('appTasks.length', appTasks.length);
-
-      // 変更を検出
-      const changes = await this.wbsSyncService.detectChanges(excelData, appTasks);
+      // プレビューを取得
+      const preview = await this.wbsSyncService.previewChanges(wbsId, wbs.name);
+      console.log('preview', preview);
 
       return {
-        toAdd: changes.toAdd.length,
-        toUpdate: changes.toUpdate.length,
-        toDelete: changes.toDelete.length,
+        toAdd: preview.changes.toAdd.length,
+        toUpdate: preview.changes.toUpdate.length,
+        toDelete: preview.changes.toDelete.length,
         details: {
-          toAdd: changes.toAdd.map(item => ({
+          toAdd: preview.changes.toAdd.map((item) => ({
             wbsId: item.WBS_ID,
             taskName: item.TASK || item.ACTIVITY,
             phase: item.PHASE,
             assignee: item.TANTO,
           })),
-          toUpdate: changes.toUpdate.map(item => ({
+          toUpdate: preview.changes.toUpdate.map((item) => ({
             wbsId: item.WBS_ID,
             taskName: item.TASK || item.ACTIVITY,
             phase: item.PHASE,
             assignee: item.TANTO,
           })),
-          toDelete: changes.toDelete,
+          toDelete: preview.changes.toDelete,
         },
+        validationErrors: preview.validationErrors,
+        newPhases: preview.newPhases.map((phase) => ({
+          name: phase.name,
+          code: phase.code.value(),
+        })),
+        newUsers: preview.newUsers.map((user) => ({
+          name: user.displayName,
+          email: user.email,
+        })),
       };
     } catch (error) {
       console.error('同期プレビューエラー:', error);

@@ -34,9 +34,7 @@ export class WbsDataMapper {
     const statusMap: Record<string, string> = {
       '未着手': 'NOT_STARTED',
       '着手中': 'IN_PROGRESS',
-      '進行中': 'IN_PROGRESS',
       '完了': 'COMPLETED',
-      '完成': 'COMPLETED',
     };
 
     return statusMap[excelStatus] || 'NOT_STARTED';

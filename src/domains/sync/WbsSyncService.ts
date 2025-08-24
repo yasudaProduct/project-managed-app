@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify';
-import type { IWbsSyncService } from './IWbsSyncService';
-import { ExcelWbs, SyncChanges, SyncResult, SyncError, SyncErrorType } from './ExcelWbs';
+import type { IWbsSyncService, PreviewResult } from './IWbsSyncService';
+import { ExcelWbs, SyncChanges, SyncResult, SyncError, SyncErrorType, ValidationError } from './ExcelWbs';
 import { Task } from '@/domains/task/task';
 import { SyncStatus, type PrismaClient } from '@prisma/client';
 import { WbsDataMapper } from './WbsDataMapper';
@@ -394,4 +394,279 @@ export class WbsSyncService implements IWbsSyncService {
   }
 
   // 旧Prisma直叩きの作成・更新は削除し、TaskRepository 経由で実装
+
+  // プレビュー機能（ドメイン制約チェック付き）
+  async previewChanges(wbsId: number, wbsName: string): Promise<PreviewResult> {
+    const validationErrors: ValidationError[] = [];
+
+    try {
+      // Excelデータを取得
+      const excelData = await this.fetchExcelData(wbsName);
+
+      // 既存タスクを取得
+      const appData = await this.taskRepository.findByWbsId(wbsId);
+
+      // 変更を検出
+      const changes = await this.detectChanges(excelData, appData);
+
+      // フェーズの準備
+      const phaseList = await this.phaseRepository.findByWbsId(wbsId);
+      const phaseNameToId = new Map<string, number>();
+      phaseList.forEach(p => {
+        const id = (p as unknown as { id?: number }).id;
+        if (p.name && id !== undefined) {
+          phaseNameToId.set(p.name, id);
+        }
+      });
+
+      // 新規フェーズを検出
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const newPhases = await this.excelToWbsPhase(excelData, wbsId);
+
+      // 新規ユーザーと担当者を検出
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { users: newUsers, assignees: newAssignees } = await this.excelToWbsUserAndAssignee(excelData, wbsId);
+
+      // 既存担当者の取得
+      const assignees = await this.wbsAssigneeRepository.findByWbsId(wbsId);
+
+      // 追加・更新タスクのドメイン制約をチェック
+      const allChangedTasks = [...changes.toAdd, ...changes.toUpdate];
+      for (const excelWbs of allChangedTasks) {
+        try {
+          // ドメインモデルを生成してバリデーション
+          this.validateTaskDomain(excelWbs, wbsId, phaseNameToId, assignees);
+        } catch (error) {
+          const field = this.getErrorField(error);
+          validationErrors.push({
+            taskNo: excelWbs.WBS_ID,
+            field,
+            message: error instanceof Error ? error.message : String(error),
+            value: this.getFieldValue(excelWbs, field)
+          });
+        }
+      }
+
+      return {
+        changes,
+        validationErrors,
+        newPhases: [],//newPhases,
+        newUsers: [],// newUsers,
+        newAssignees: []// newAssignees
+      };
+    } catch (error) {
+      if (error instanceof SyncError) {
+        throw error;
+      }
+      throw new SyncError(
+        'プレビュー処理中にエラーが発生しました',
+        SyncErrorType.TRANSACTION_ERROR,
+        { error: error instanceof Error ? error.message : String(error) }
+      );
+    }
+  }
+
+  // 洗い替え処理（全削除→全インポート）
+  async replaceAll(wbsId: number, wbsName: string): Promise<SyncResult> {
+    const result: SyncResult = {
+      success: false,
+      projectId: '',
+      recordCount: 0,
+      addedCount: 0,
+      updatedCount: 0,
+      deletedCount: 0,
+    };
+
+    try {
+      // Excelデータを取得
+      const excelData = await this.fetchExcelData(wbsName);
+      if (excelData.length === 0) {
+        throw new SyncError(
+          'インポートするデータがありません',
+          SyncErrorType.VALIDATION_ERROR,
+          { wbsName }
+        );
+      }
+
+      result.projectId = excelData[0].PROJECT_ID;
+
+      // 既存のWBS関連データを全削除
+      const existingTasks = await this.taskRepository.findByWbsId(wbsId);
+      for (const task of existingTasks) {
+        if (task.id) {
+          await this.taskRepository.delete(task.id);
+          result.deletedCount++;
+        }
+      }
+
+      // フェーズを作成
+      const newPhases = await this.excelToWbsPhase(excelData, wbsId);
+      for (const phase of newPhases) {
+        await this.phaseRepository.create(wbsId, phase);
+      }
+
+      // フェーズを再取得（IDが必要）
+      const phaseList = await this.phaseRepository.findByWbsId(wbsId);
+      const phaseNameToId = new Map<string, number>();
+      phaseList.forEach(p => {
+        const id = (p as unknown as { id?: number }).id;
+        if (p.name && id !== undefined) {
+          phaseNameToId.set(p.name, id);
+        }
+      });
+
+      // ユーザーと担当者を作成
+      const { users: newUsers, assignees: newAssignees } = await this.excelToWbsUserAndAssignee(excelData, wbsId);
+
+      // 新規ユーザーを作成
+      const userIdMap = new Map<string, string>();
+      for (const user of newUsers) {
+        const created = await this.userRepository.save(user);
+        if (created.id && user.id) {
+          userIdMap.set(user.id, created.id);
+        }
+      }
+
+      // 担当者を作成（ユーザーIDを更新）
+      for (const assignee of newAssignees) {
+        const tempId = assignee.userId;
+        const realUserId = userIdMap.get(tempId) || tempId;
+        const newAssignee = WbsAssignee.create({ userId: realUserId, rate: assignee.getRate() });
+        await this.wbsAssigneeRepository.create(wbsId, newAssignee);
+      }
+
+      // 担当者を再取得
+      const assignees = await this.wbsAssigneeRepository.findByWbsId(wbsId);
+
+      // 全タスクをインポート
+      const validationErrors: Array<Record<string, unknown>> = [];
+      for (const excelWbs of excelData) {
+        try {
+          const task = this.buildTaskDomainFromExcel({ excelWbs, wbsId, phaseNameToId, assignees });
+          await this.taskRepository.create(task);
+          result.addedCount++;
+        } catch (error) {
+          validationErrors.push({
+            type: 'VALIDATION_ERROR',
+            taskNo: excelWbs.WBS_ID,
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
+      result.recordCount = excelData.length;
+      result.success = validationErrors.length === 0;
+
+      if (validationErrors.length > 0) {
+        result.errorDetails = { validationErrors };
+      }
+
+      // 同期ログを記録
+      await this.syncLogRepository.recordSync({
+        projectId: result.projectId,
+        syncStatus: result.success ? 'SUCCESS' : 'FAILED',
+        syncedAt: new Date(),
+        recordCount: result.recordCount,
+        addedCount: result.addedCount,
+        updatedCount: result.updatedCount,
+        deletedCount: result.deletedCount,
+        errorDetails: result.errorDetails,
+      });
+
+      return result;
+    } catch (error) {
+      // エラーログを記録
+      await this.syncLogRepository.recordSync({
+        projectId: result.projectId || 'unknown',
+        syncStatus: 'FAILED',
+        syncedAt: new Date(),
+        recordCount: 0,
+        addedCount: 0,
+        updatedCount: 0,
+        deletedCount: 0,
+        errorDetails: error instanceof Error ? { message: error.message } : { message: String(error) },
+      });
+
+      if (error instanceof SyncError) {
+        throw error;
+      }
+
+      throw new SyncError(
+        '洗い替え処理中にエラーが発生しました',
+        SyncErrorType.TRANSACTION_ERROR,
+        { message: String(error) }
+      );
+    }
+  }
+
+  // ドメイン制約をチェック（生成のみ、保存しない）
+  private validateTaskDomain(excelWbs: ExcelWbs, wbsId: number, phaseNameToId: Map<string, number>, assignees: WbsAssignee[]): void {
+    const { task, periods } = WbsDataMapper.toAppWbs(excelWbs);
+
+    // 必須フィールドチェック
+    if (!task.taskNo) {
+      throw new Error('タスクNoは必須です');
+    }
+    if (!task.name) {
+      throw new Error('タスク名は必須です');
+    }
+    // if (!task.status) {
+    //   throw new Error('ステータスは必須です');
+    // }
+    // if (!excelWbs.TANTO) {
+    //   throw new Error('担当者は必須です');
+    // }
+    if (!excelWbs.PHASE) {
+      throw new Error('フェーズは必須です');
+    }
+
+    // フェーズの存在チェック
+    const phaseId = phaseNameToId.get(excelWbs.PHASE);
+    if (!phaseId) {
+      throw new Error(`フェーズ「${excelWbs.PHASE}」が見つかりません`);
+    }
+
+    // 担当者の存在チェック
+    const assigneeId = this.findAssigneeIdFromDomain(excelWbs.TANTO, assignees);
+    if (!assigneeId) {
+      throw new Error(`担当者「${excelWbs.TANTO}」が見つかりません`);
+    }
+
+    // ドメインモデルを生成（制約違反があれば例外が発生）
+    const taskNo = TaskNo.reconstruct(task.taskNo as string);
+    const status = new TaskStatus({ status: task.status as ReturnType<TaskStatus['getStatus']> });
+
+    Task.create({
+      taskNo,
+      wbsId,
+      name: task.name as string,
+      status,
+      phaseId,
+      assigneeId,
+      periods,
+    });
+  }
+
+  // エラーからフィールド名を推測
+  private getErrorField(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('タスクNo')) return 'taskNo';
+    if (message.includes('タスク名')) return 'name';
+    if (message.includes('ステータス')) return 'status';
+    if (message.includes('担当者')) return 'assignee';
+    if (message.includes('フェーズ')) return 'phase';
+    return 'unknown';
+  }
+
+  // フィールドの値を取得
+  private getFieldValue(excelWbs: ExcelWbs, field: string): unknown {
+    switch (field) {
+      case 'taskNo': return excelWbs.WBS_ID;
+      case 'name': return excelWbs.TASK;
+      case 'status': return excelWbs.STATUS;
+      case 'assignee': return excelWbs.TANTO;
+      case 'phase': return excelWbs.PHASE;
+      default: return undefined;
+    }
+  }
 }

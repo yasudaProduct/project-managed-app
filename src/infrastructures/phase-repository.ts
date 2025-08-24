@@ -107,4 +107,46 @@ export class PhaseRepository implements IPhaseRepository {
             seq: phaseDb.seq,
         });
     }
+    
+    async create(wbsId: number, phase: Phase): Promise<Phase> {
+        console.log("repository: create phase for wbs")
+        const phaseDb = await prisma.wbsPhase.create({
+            data: {
+                name: phase.name,
+                code: phase.code.value(),
+                seq: phase.seq,
+            },
+        });
+        return Phase.createFromDb({
+            id: phaseDb.id,
+            name: phaseDb.name,
+            code: new PhaseCode(phaseDb.code),
+            seq: phaseDb.seq,
+        });
+    }
+    
+    async update(wbsId: number, id: string, phase: Phase): Promise<Phase> {
+        console.log("repository: update phase")
+        const phaseDb = await prisma.wbsPhase.update({
+            where: { id: parseInt(id) },
+            data: {
+                name: phase.name,
+                code: phase.code.value(),
+                seq: phase.seq,
+            },
+        });
+        return Phase.createFromDb({
+            id: phaseDb.id,
+            name: phaseDb.name,
+            code: new PhaseCode(phaseDb.code),
+            seq: phaseDb.seq,
+        });
+    }
+    
+    async delete(id: string): Promise<void> {
+        console.log("repository: delete phase")
+        await prisma.wbsPhase.delete({
+            where: { id: parseInt(id) },
+        });
+    }
 }

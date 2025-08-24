@@ -11,6 +11,9 @@ export async function POST(
   try {
     const { id } = await params;
     const wbsId = Number(id);
+    
+    const body = await request.json();
+    const { mode = 'sync' } = body; // 'sync' or 'replace'
 
     // WBSからプロジェクトIDを取得
     const wbs = await prisma.wbs.findUnique({
@@ -29,7 +32,9 @@ export async function POST(
       SYMBOL.IWbsSyncApplicationService
     );
 
-    const result = await syncService.executeSync(wbsId);
+    const result = mode === 'replace' 
+      ? await syncService.executeReplaceAll(wbsId)
+      : await syncService.executeSync(wbsId);
 
     return NextResponse.json({
       success: result.success,
