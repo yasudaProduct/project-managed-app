@@ -71,12 +71,12 @@ import { TaskDependencyService } from "@/applications/task-dependency/task-depen
 // WBS Sync関連
 import type { IWbsSyncService } from "@/domains/sync/IWbsSyncService";
 import { WbsSyncService } from "@/domains/sync/WbsSyncService";
-import type { IExcelWbsRepository } from "@/applications/sync/IExcelWbsRepository";
+import type { IExcelWbsRepository } from "@/applications/excel-sync/IExcelWbsRepository";
 import { ExcelWbsRepository } from "@/infrastructures/sync/ExcelWbsRepository";
-import type { ISyncLogRepository } from "@/applications/sync/ISyncLogRepository";
+import type { ISyncLogRepository } from "@/applications/excel-sync/ISyncLogRepository";
 import { SyncLogRepository } from "@/infrastructures/sync/SyncLogRepository";
-import type { IWbsSyncApplicationService } from "@/applications/sync/IWbsSyncApplicationService";
-import { WbsSyncApplicationService } from "@/applications/sync/WbsSyncApplicationService";
+import type { IWbsSyncApplicationService } from "@/applications/excel-sync/IWbsSyncApplicationService";
+import { WbsSyncApplicationService } from "@/applications/excel-sync/WbsSyncApplicationService";
 
 // Prisma
 import { PrismaClient } from '@prisma/client';

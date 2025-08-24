@@ -4,8 +4,8 @@ import { ExcelWbs, SyncChanges, SyncResult, SyncError, SyncErrorType, Validation
 import { Task } from '@/domains/task/task';
 import { SyncStatus, type PrismaClient } from '@prisma/client';
 import { WbsDataMapper } from './WbsDataMapper';
-import type { IExcelWbsRepository } from '@/applications/sync/IExcelWbsRepository';
-import type { ISyncLogRepository } from '@/applications/sync/ISyncLogRepository';
+import type { IExcelWbsRepository } from '@/applications/excel-sync/IExcelWbsRepository';
+import type { ISyncLogRepository } from '@/applications/excel-sync/ISyncLogRepository';
 // import prisma from '@/lib/prisma';
 import { SYMBOL } from '@/types/symbol';
 import { Phase } from '../phase/phase';

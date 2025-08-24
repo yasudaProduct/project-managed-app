@@ -1,5 +1,5 @@
 import { injectable } from 'inversify';
-import { ISyncLogRepository, SyncLog } from '@/applications/sync/ISyncLogRepository';
+import { ISyncLogRepository, SyncLog } from '@/applications/excel-sync/ISyncLogRepository';
 import prisma from '@/lib/prisma';
 
 @injectable()

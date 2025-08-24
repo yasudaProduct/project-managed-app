@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { container } from '@/lib/inversify.config';
-import { IWbsSyncApplicationService } from '@/applications/sync/IWbsSyncApplicationService';
+import { IWbsSyncApplicationService } from '@/applications/excel-sync/IWbsSyncApplicationService';
 import { SYMBOL } from '@/types/symbol';
 import prisma from '@/lib/prisma';
 
@@ -11,7 +11,7 @@ export async function POST(
   try {
     const { id } = await params;
     const wbsId = Number(id);
-    
+
     const body = await request.json();
     const { mode = 'sync' } = body; // 'sync' or 'replace'
 
@@ -32,7 +32,7 @@ export async function POST(
       SYMBOL.IWbsSyncApplicationService
     );
 
-    const result = mode === 'replace' 
+    const result = mode === 'replace'
       ? await syncService.executeReplaceAll(wbsId)
       : await syncService.executeSync(wbsId);
 
