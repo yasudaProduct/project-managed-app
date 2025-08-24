@@ -21,6 +21,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import {
+  executeWbsSync,
+  getWbsSyncPreview,
+  getWbsSyncHistory,
+  getWbsLastSync,
+} from "@/app/wbs/[id]/import/excel-sync-action";
 
 interface SyncHistory {
   id: number;
@@ -75,16 +81,38 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
   const [syncHistory, setSyncHistory] = useState<SyncHistory[]>([]);
   const [syncPreview, setSyncPreview] = useState<SyncPreview | null>(null);
   const [lastSync, setLastSync] = useState<SyncHistory | null>(null);
-  const [syncMode, setSyncMode] = useState<'sync' | 'replace'>('sync');
+  const [syncMode, setSyncMode] = useState<"sync" | "replace">("sync");
+
+  // SyncLogをSyncHistoryに変換する関数
+  const convertSyncLogToSyncHistory = (syncLog: {
+    id: number;
+    syncedAt: Date | string;
+    syncStatus: string;
+    recordCount: number;
+    addedCount: number;
+    updatedCount: number;
+    deletedCount: number;
+    errorDetails?: Record<string, unknown>;
+  }): SyncHistory => ({
+    id: syncLog.id,
+    syncedAt:
+      syncLog.syncedAt instanceof Date
+        ? syncLog.syncedAt.toISOString()
+        : syncLog.syncedAt,
+    syncStatus: syncLog.syncStatus,
+    recordCount: syncLog.recordCount,
+    addedCount: syncLog.addedCount,
+    updatedCount: syncLog.updatedCount,
+    deletedCount: syncLog.deletedCount,
+    errorDetails: syncLog.errorDetails,
+  });
 
   const fetchSyncHistory = useCallback(async () => {
     try {
-      const response = await fetch(
-        `/api/wbs/${wbsId}/sync?action=history&limit=10`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setSyncHistory(data.data);
+      const result = await getWbsSyncHistory(wbsId, 10);
+      if (result.success) {
+        const convertedHistory = result.data.map(convertSyncLogToSyncHistory);
+        setSyncHistory(convertedHistory);
       }
     } catch (_error) {
       console.error("同期履歴の取得に失敗しました:", _error);
@@ -93,10 +121,10 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
 
   const fetchLastSync = useCallback(async () => {
     try {
-      const response = await fetch(`/api/wbs/${wbsId}/sync?action=last`);
-      if (response.ok) {
-        const data = await response.json();
-        setLastSync(data.data);
+      const result = await getWbsLastSync(wbsId);
+      if (result.success && result.data) {
+        const convertedLastSync = convertSyncLogToSyncHistory(result.data);
+        setLastSync(convertedLastSync);
       }
     } catch (_error) {
       console.error("最終同期情報の取得に失敗しました:", _error);
@@ -113,12 +141,10 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
   const handlePreview = async () => {
     setIsPreviewing(true);
     try {
-      const response = await fetch(`/api/wbs/${wbsId}/sync?action=preview`);
-      if (!response.ok) {
-        throw new Error("プレビューの取得に失敗しました");
+      const result = await getWbsSyncPreview(wbsId);
+      if (result.success) {
+        setSyncPreview(result.data);
       }
-      const data = await response.json();
-      setSyncPreview(data.data);
     } catch {
       toast({
         title: "エラー",
@@ -133,30 +159,23 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
   const handleSync = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/wbs/${wbsId}/sync`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ mode: syncMode }),
-      });
+      const result = await executeWbsSync(wbsId, syncMode);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || "同期に失敗しました");
+      if (result.success) {
+        toast({
+          title: syncMode === "replace" ? "洗い替え完了" : "同期完了",
+          description: `${result.data.recordCount}件のレコードを${
+            syncMode === "replace" ? "洗い替え" : "同期"
+          }しました。（追加: ${result.data.addedCount}件、更新: ${
+            result.data.updatedCount
+          }件、削除: ${result.data.deletedCount}件）`,
+        });
+
+        // 同期履歴を再取得
+        fetchSyncHistory();
+        fetchLastSync();
+        setSyncPreview(null);
       }
-
-      const result = await response.json();
-
-      toast({
-        title: syncMode === 'replace' ? "洗い替え完了" : "同期完了",
-        description: `${result.data.recordCount}件のレコードを${syncMode === 'replace' ? '洗い替え' : '同期'}しました。（追加: ${result.data.addedCount}件、更新: ${result.data.updatedCount}件、削除: ${result.data.deletedCount}件）`,
-      });
-
-      // 同期履歴を再取得
-      fetchSyncHistory();
-      fetchLastSync();
-      setSyncPreview(null);
     } catch (error) {
       toast({
         title: "エラー",
@@ -226,8 +245,8 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
                   type="radio"
                   name="syncMode"
                   value="sync"
-                  checked={syncMode === 'sync'}
-                  onChange={() => setSyncMode('sync')}
+                  checked={syncMode === "sync"}
+                  onChange={() => setSyncMode("sync")}
                   className="w-4 h-4"
                 />
                 <div className="flex-1">
@@ -242,8 +261,8 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
                   type="radio"
                   name="syncMode"
                   value="replace"
-                  checked={syncMode === 'replace'}
-                  onChange={() => setSyncMode('replace')}
+                  checked={syncMode === "replace"}
+                  onChange={() => setSyncMode("replace")}
                   className="w-4 h-4"
                 />
                 <div className="flex-1">
@@ -296,15 +315,22 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
                 )}
                 プレビュー
               </Button>
-              <Button onClick={handleSync} disabled={isLoading || (syncPreview && syncPreview.validationErrors && syncPreview.validationErrors.length > 0)}>
+              <Button
+                onClick={handleSync}
+                disabled={
+                  isLoading ||
+                  (syncPreview?.validationErrors &&
+                    syncPreview.validationErrors.length > 0)
+                }
+              >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : syncMode === 'replace' ? (
+                ) : syncMode === "replace" ? (
                   <RefreshCw className="h-4 w-4 mr-2" />
                 ) : (
                   <Upload className="h-4 w-4 mr-2" />
                 )}
-                {syncMode === 'replace' ? '洗い替えを実行' : '同期を実行'}
+                {syncMode === "replace" ? "洗い替えを実行" : "同期を実行"}
               </Button>
             </div>
           </CardContent>
@@ -419,30 +445,36 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
                   </details>
                 </div>
               )}
-              
+
               {/* バリデーションエラーの表示 */}
-              {syncPreview.validationErrors && syncPreview.validationErrors.length > 0 && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>ドメイン制約エラー</AlertTitle>
-                  <AlertDescription>
-                    <p className="mb-2">以下のタスクでエラーが検出されました。エラーを修正してから再度実行してください。</p>
-                    <div className="space-y-1 max-h-40 overflow-y-auto">
-                      {syncPreview.validationErrors.map((error, index) => (
-                        <p key={index} className="text-sm">
-                          • {error.taskNo}: {error.message}
-                          {error.value && ` (値: ${error.value})`}
-                        </p>
-                      ))}
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
-              
+              {syncPreview.validationErrors &&
+                syncPreview.validationErrors.length > 0 && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>ドメイン制約エラー</AlertTitle>
+                    <AlertDescription>
+                      <p className="mb-2">
+                        以下のタスクでエラーが検出されました。エラーを修正してから再度実行してください。
+                      </p>
+                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                        {syncPreview.validationErrors.map((error, index) => (
+                          <p key={index} className="text-sm">
+                            • {error.taskNo}: {error.message}
+                            {error.value !== undefined &&
+                              ` (値: ${String(error.value)})`}
+                          </p>
+                        ))}
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
               {/* 新規作成されるデータの表示 */}
               {syncPreview.newPhases && syncPreview.newPhases.length > 0 && (
                 <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium mb-2">新規作成されるフェーズ</h4>
+                  <h4 className="text-sm font-medium mb-2">
+                    新規作成されるフェーズ
+                  </h4>
                   <div className="space-y-1">
                     {syncPreview.newPhases.map((phase, index) => (
                       <p key={index} className="text-sm text-muted-foreground">
@@ -452,10 +484,12 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
                   </div>
                 </div>
               )}
-              
+
               {syncPreview.newUsers && syncPreview.newUsers.length > 0 && (
                 <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium mb-2">新規作成されるユーザー</h4>
+                  <h4 className="text-sm font-medium mb-2">
+                    新規作成されるユーザー
+                  </h4>
                   <div className="space-y-1">
                     {syncPreview.newUsers.map((user, index) => (
                       <p key={index} className="text-sm text-muted-foreground">
