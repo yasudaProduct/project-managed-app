@@ -244,35 +244,3 @@ export async function getKosuSummary(wbsId: number) {
 
     return phaseSummary;
 }
-
-export async function getMilestones(wbsId: number) {
-    const milestones = await prisma.milestone.findMany({
-        where: { wbsId: wbsId },
-        orderBy: { date: 'asc' },
-    });
-
-    return milestones;
-}
-
-// function formatTask(task: WbsTaskPrisma & { phase?: WbsPhasePrisma | null } & { assignee?: UserPrisma | null } & { periods?: (TaskPeriodPrisma & { kosus: TaskKosuPrisma[] })[] }): WbsTask {
-// function formatTask(task: Task): WbsTask {
-//     return {
-//         id: task.id!.value(),
-//         name: task.name,
-//         status: task.status.getStatus(),
-//         assigneeId: task.assigneeId ?? undefined,
-//         assignee: task.assignee ? {
-//             id: task.assignee.id!,
-//             name: task.assignee.name,
-//             displayName: task.assignee.displayName,
-//         } : undefined,
-//         phaseId: task.phaseId ?? undefined,
-//         phase: task.phase ? {
-//             id: task.phase.id!,
-//             name: task.phase.name,
-//             seq: task.phase.seq,
-//         } : undefined,
-//         createdAt: task.createdAt,
-//         updatedAt: task.updatedAt,
-//     }
-// }

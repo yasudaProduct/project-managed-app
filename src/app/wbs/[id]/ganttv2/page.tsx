@@ -13,10 +13,10 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { TaskModal } from "@/components/wbs/task-modal";
-import { getMilestones } from "../milistone/action";
 import GanttV2Wrapper from "@/components/ganttv2/gantt-v2-wrapper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProjectById } from "@/app/projects/project-actions";
+import { getMilestones } from "../milestone-actions";
 
 export default async function GanttV2Page({
   params,

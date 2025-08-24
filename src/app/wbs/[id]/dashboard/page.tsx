@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import { getAssignees, getWbsById } from "@/app/wbs/[id]/wbs-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getTaskStatusCount, getTaskProgressByPhase, getKosuSummary, getMilestones } from "../wbs-task-actions";
+import {
+  getTaskStatusCount,
+  getTaskProgressByPhase,
+  getKosuSummary,
+} from "../wbs-task-actions";
 import { Assignee } from "@/types/wbs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -27,6 +31,7 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TaskModal } from "@/components/wbs/task-modal";
+import { getMilestones } from "../milestone-actions";
 
 export default async function DashboardPage({
   params,
@@ -52,9 +57,15 @@ export default async function DashboardPage({
   const taskProgressByPhase = await getTaskProgressByPhase(Number(id));
   const kosuSummary = await getKosuSummary(Number(id));
   const milestones = await getMilestones(Number(id));
-  
-  const totalTasks = taskStatusCount.todo + taskStatusCount.inProgress + taskStatusCount.completed;
-  const completionRate = totalTasks > 0 ? Math.round((taskStatusCount.completed / totalTasks) * 100) : 0;
+
+  const totalTasks =
+    taskStatusCount.todo +
+    taskStatusCount.inProgress +
+    taskStatusCount.completed;
+  const completionRate =
+    totalTasks > 0
+      ? Math.round((taskStatusCount.completed / totalTasks) * 100)
+      : 0;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -63,8 +74,8 @@ export default async function DashboardPage({
           <h1 className="text-3xl font-bold text-gray-900">ダッシュボード</h1>
           <p className="text-gray-600 mt-1">{wbs.name}</p>
         </div>
-        <Badge 
-          variant={project.status === 'ACTIVE' ? 'default' : 'secondary'}
+        <Badge
+          variant={project.status === "ACTIVE" ? "default" : "secondary"}
           className="text-sm"
         >
           {getProjectStatusName(project.status)}
@@ -87,9 +98,12 @@ export default async function DashboardPage({
             <div className="flex items-center gap-3">
               <Calendar className="h-4 w-4 text-blue-600" />
               <div>
-                <p className="text-xs text-gray-500 font-medium">プロジェクト期間</p>
+                <p className="text-xs text-gray-500 font-medium">
+                  プロジェクト期間
+                </p>
                 <p className="text-sm text-gray-700">
-                  {formatUTCDateForDisplaySlash(project.startDate)} ~ {formatUTCDateForDisplaySlash(project.endDate)}
+                  {formatUTCDateForDisplaySlash(project.startDate)} ~{" "}
+                  {formatUTCDateForDisplaySlash(project.endDate)}
                 </p>
               </div>
             </div>
@@ -109,7 +123,6 @@ export default async function DashboardPage({
 
       {/* メインダッシュボード */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         {/* タスク状況 */}
         <Card>
           <CardHeader>
@@ -157,7 +170,10 @@ export default async function DashboardPage({
           <CardContent>
             <div className="space-y-2">
               {assignees.map((assignee) => (
-                <div key={assignee.id} className="flex items-center justify-between">
+                <div
+                  key={assignee.id}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-gray-400" />
                     <span className="text-sm">{assignee.displayName}</span>
@@ -216,7 +232,10 @@ export default async function DashboardPage({
         <CardContent>
           <div className="space-y-4">
             {taskProgressByPhase.map((phase) => {
-              const phaseCompletionRate = phase.total > 0 ? Math.round((phase.completed / phase.total) * 100) : 0;
+              const phaseCompletionRate =
+                phase.total > 0
+                  ? Math.round((phase.completed / phase.total) * 100)
+                  : 0;
               return (
                 <div key={phase.phase} className="space-y-2">
                   <div className="flex justify-between items-center">
@@ -283,10 +302,15 @@ export default async function DashboardPage({
           <CardContent>
             <div className="space-y-3">
               {milestones.map((milestone) => (
-                <div key={milestone.id} className="flex items-center justify-between">
+                <div
+                  key={milestone.id}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm font-medium">{milestone.name}</span>
+                    <span className="text-sm font-medium">
+                      {milestone.name}
+                    </span>
                   </div>
                   <Badge variant="outline" className="text-xs">
                     {formatUTCDateForDisplaySlash(milestone.date)}

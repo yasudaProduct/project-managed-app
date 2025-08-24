@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Trash } from "lucide-react";
+import { Edit, MoreHorizontal, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { deleteWbsAssignee } from "../wbs-assignee-actions";
+import Link from "next/link";
 
 export type WbsAssignee = {
   id: number;
@@ -38,7 +39,7 @@ export const columns: ColumnDef<WbsAssignee & { link?: string }>[] = [
   {
     id: "actions",
     cell: ({ row }) => {
-      const wbsPhase = row.original;
+      const wbsAssignee = row.original;
 
       const handleDelete = async (id: number) => {
         const result = await deleteWbsAssignee(id);
@@ -71,9 +72,15 @@ export const columns: ColumnDef<WbsAssignee & { link?: string }>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link href={`/wbs/assignee/${wbsAssignee.id}/edit`}>
+                <Edit className="h-4 w-4" />
+                編集
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive"
-              onClick={() => handleDelete(wbsPhase.id)}
+              onClick={() => handleDelete(wbsAssignee.id)}
             >
               <Trash className="h-4 w-4" />
               削除
