@@ -132,6 +132,13 @@ export function SideMenu() {
                   ガントチャートv2
                 </Link>
                 <Link
+                  href={`/wbs/${wbsId}/ganttv3`}
+                  className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+                >
+                  <Trello className="h-4 w-4" />
+                  ガントチャートv3
+                </Link>
+                <Link
                   href={`/wbs/${wbsId}/history`}
                   className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
                 >
