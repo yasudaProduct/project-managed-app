@@ -99,7 +99,6 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
 
       // プレビューを取得
       const preview = await this.wbsSyncService.previewChanges(wbsId, wbs.name);
-      console.log('preview', preview);
 
       return {
         toAdd: preview.changes.toAdd.length,

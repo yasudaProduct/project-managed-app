@@ -81,7 +81,7 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
   const [syncHistory, setSyncHistory] = useState<SyncHistory[]>([]);
   const [syncPreview, setSyncPreview] = useState<SyncPreview | null>(null);
   const [lastSync, setLastSync] = useState<SyncHistory | null>(null);
-  const [syncMode, setSyncMode] = useState<"sync" | "replace">("sync");
+  const [syncMode, setSyncMode] = useState<"sync" | "replace">("replace");
 
   // SyncLogをSyncHistoryに変換する関数
   const convertSyncLogToSyncHistory = (syncLog: {
@@ -240,7 +240,7 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <label className="flex items-center space-x-3 cursor-pointer">
+              {/* <label className="flex items-center space-x-3 cursor-pointer">
                 <input
                   type="radio"
                   name="syncMode"
@@ -255,7 +255,7 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
                     変更があったタスクのみを更新します
                   </p>
                 </div>
-              </label>
+              </label> */}
               <label className="flex items-center space-x-3 cursor-pointer">
                 <input
                   type="radio"
@@ -282,16 +282,6 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
             <CardDescription>プロジェクト名: {projectName}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">同期対象</h3>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• タスク情報（タスク名、フェーズ、担当者）</li>
-                <li>• 日程情報（基準日程、予定日程、実績日程）</li>
-                <li>• 工数情報（基準工数、予定工数、実績工数）</li>
-                <li>• ステータス情報</li>
-              </ul>
-            </div>
-
             <div className="space-y-2">
               <h3 className="text-sm font-medium">最終同期</h3>
               {lastSync && lastSync.syncStatus === "SUCCESS" ? (
