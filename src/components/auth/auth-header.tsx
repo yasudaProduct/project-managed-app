@@ -61,7 +61,7 @@ export function AuthHeader() {
             {user.displayName}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-56 border-none">
           <DropdownMenuLabel>アカウント情報</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <div className="px-2 py-1 text-sm text-gray-600">
@@ -87,7 +87,11 @@ export function AuthHeader() {
 
   return (
     <Link href="/login">
-      <Button variant="default" size="sm" className="flex items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="flex items-center gap-2  border-none"
+      >
         <LogIn className="h-4 w-4" />
         ログイン
       </Button>
