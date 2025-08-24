@@ -102,6 +102,62 @@ export function WbsInfoPanel({ selectedWbs }: WbsInfoPanelProps) {
         <CardDescription>WBS ID: {selectedWbs.id}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* アクション */}
+        <div className="space-y-2">
+          <div className="space-y-2">
+            <Link href={`/wbs/${selectedWbs.id}`} className="block">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-2"
+              >
+                <ExternalLink className="h-4 w-4" />
+                WBS詳細を表示
+              </Button>
+            </Link>
+            <Link href={`/wbs/${selectedWbs.id}/dashboard`} className="block">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-2"
+              >
+                <BarChart className="h-4 w-4" />
+                ダッシュボード
+              </Button>
+            </Link>
+            <Link href={`/wbs/${selectedWbs.id}/ganttv2`} className="block">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-2"
+              >
+                <Calendar className="h-4 w-4" />
+                ガントチャート
+              </Button>
+            </Link>
+            <Link href={`/wbs/${selectedWbs.id}/milestone`} className="block">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-2"
+              >
+                <Target className="h-4 w-4" />
+                マイルストーン管理
+              </Button>
+            </Link>
+            <Link href={`/wbs/${selectedWbs.id}/assignee`} className="block">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-2"
+              >
+                <Users className="h-4 w-4" />
+                担当者管理
+              </Button>
+            </Link>
+          </div>
+        </div>
+
         {/* 基本情報 */}
         <div className="space-y-3">
           <div>
@@ -112,10 +168,6 @@ export function WbsInfoPanel({ selectedWbs }: WbsInfoPanelProps) {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">WBS名</span>
                 <span className="text-sm font-medium">{selectedWbs.name}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">WBS ID</span>
-                <Badge variant="outline">{selectedWbs.id}</Badge>
               </div>
             </div>
           </div>
@@ -196,65 +248,6 @@ export function WbsInfoPanel({ selectedWbs }: WbsInfoPanelProps) {
               使用中のフェーズはありません
             </div>
           )}
-        </div>
-
-        {/* アクション */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-muted-foreground">
-            アクション
-          </h4>
-          <div className="space-y-2">
-            <Link href={`/wbs/${selectedWbs.id}`} className="block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start gap-2"
-              >
-                <ExternalLink className="h-4 w-4" />
-                WBS詳細を表示
-              </Button>
-            </Link>
-            <Link href={`/wbs/${selectedWbs.id}/dashboard`} className="block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start gap-2"
-              >
-                <BarChart className="h-4 w-4" />
-                ダッシュボード
-              </Button>
-            </Link>
-            <Link href={`/wbs/${selectedWbs.id}/ganttv2`} className="block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start gap-2"
-              >
-                <Calendar className="h-4 w-4" />
-                ガントチャート
-              </Button>
-            </Link>
-            <Link href={`/wbs/${selectedWbs.id}/milestone`} className="block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start gap-2"
-              >
-                <Target className="h-4 w-4" />
-                マイルストーン管理
-              </Button>
-            </Link>
-            <Link href={`/wbs/${selectedWbs.id}/assignee`} className="block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start gap-2"
-              >
-                <Users className="h-4 w-4" />
-                担当者管理
-              </Button>
-            </Link>
-          </div>
         </div>
       </CardContent>
     </Card>
