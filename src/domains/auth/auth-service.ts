@@ -16,16 +16,15 @@ export class AuthService {
     constructor(private authRepository: IAuthRepository) { }
 
     async login(email: string, password?: string): Promise<{ user: User; session: UserSession } | null> {
-        console.log("login", email, password);
         // メールアドレスでユーザーを検索
         const user = await this.authRepository.findUserByEmail(email);
         if (!user) {
             return null;
         }
 
-        // パスワードが設定されている場合は検証（今回は簡易実装）
-        if (user.hasPassword() && password) {
-            // 実際の実装では bcrypt などでハッシュ化されたパスワードを検証
+        // パスワードが設定されている場合は検証
+        if (user.hasPassword()) {
+            // TODO: bcrypt などでハッシュ化されたパスワードを検証
             if (user.password !== password) {
                 return null;
             }

@@ -16,7 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { loginAction } from "@/app/(auth)/login/login-actions";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 const loginSchema = z.object({
   email: z.string().email("有効なメールアドレスを入力してください"),
@@ -64,7 +63,7 @@ export default function LoginForm() {
     } catch (error) {
       console.error(error);
       toast({
-        title: "エラーが発生しました", 
+        title: "エラーが発生しました",
         description: "しばらく時間をおいてから再度お試しください",
         variant: "destructive",
       });
@@ -118,15 +117,6 @@ export default function LoginForm() {
           </Button>
         </form>
       </Form>
-
-      <div className="text-center">
-        <p className="text-sm text-gray-600">
-          アカウントをお持ちでない場合は{" "}
-          <Link href="/auth/register" className="text-blue-600 hover:underline">
-            新規登録
-          </Link>
-        </p>
-      </div>
     </div>
   );
 }

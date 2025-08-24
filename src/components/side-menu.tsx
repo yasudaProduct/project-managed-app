@@ -6,7 +6,6 @@ import {
   FolderKanban,
   Home,
   Menu,
-  Target,
   Trello,
   Users,
 } from "lucide-react";

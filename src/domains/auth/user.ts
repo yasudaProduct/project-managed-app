@@ -7,7 +7,7 @@ export class User {
         public readonly password?: string,
         public readonly createdAt?: Date,
         public readonly updatedAt?: Date
-    ) {}
+    ) { }
 
     static create(
         id: string,
@@ -33,6 +33,7 @@ export class User {
     }
 
     hasPassword(): boolean {
-        return !!this.password;
+        // パスワードが設定されている場合は true
+        return this.password ? true : false;
     }
 }

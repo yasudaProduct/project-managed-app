@@ -4,7 +4,6 @@ import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
 import type { IAuthApplicationService, LoginRequest, RegisterRequest } from "@/applications/auth/auth-application-service";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 export async function loginAction(formData: FormData) {
     const authService = container.get<IAuthApplicationService>(SYMBOL.IAuthApplicationService);
@@ -35,7 +34,7 @@ export async function loginAction(formData: FormData) {
             path: "/"
         });
 
-        // Don't redirect here - let the client handle the redirect
+        // ここでリダイレクトしないでください - クライアントにリダイレクトを処理させます
         // redirect("/dashboard");
     }
 
@@ -93,11 +92,10 @@ export async function registerAction(formData: FormData) {
             path: "/"
         });
 
-        // Don't redirect here - let the client handle the redirect
+        // ここでリダイレクトしないでください - クライアントにリダイレクトを処理させます
         // redirect("/dashboard");
     }
 
-    // Convert class instances to plain objects for Client Components
     return {
         success: result.success,
         user: result.user ? {
@@ -131,8 +129,6 @@ export async function logoutAction() {
         // Cookieから削除
         cookieStore.delete("session_token");
     }
-
-    redirect("/auth/login");
 }
 
 export async function getCurrentUser() {
@@ -150,7 +146,6 @@ export async function getCurrentUser() {
         return null;
     }
 
-    // Convert class instance to plain object for Client Components
     return {
         id: user.id,
         email: user.email,

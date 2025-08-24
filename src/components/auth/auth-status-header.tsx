@@ -26,14 +26,14 @@ export function AuthStatusHeader() {
       clearAuth();
       toast({
         title: "ログアウトしました",
-        description: "ログインページにリダイレクトします",
       });
-      router.push("/login");
+      router.push("/");
     } catch (error) {
       console.error("ログアウトエラー:", error);
       toast({
         title: "ログアウトに失敗しました",
-        description: "再度お試しください",
+        description:
+          error instanceof Error ? error.message : "再度お試しください",
         variant: "destructive",
       });
     }
