@@ -414,3 +414,63 @@ export const mockDataLarge = {
         date: addDays(i),
     })),
 }
+
+// プロジェクトデータ
+export const mockDataProjects = [
+    {
+        id: 10,
+        name: "未開始プロジェクト",
+        status: "INACTIVE",
+        description: "未開始プロジェクト",
+        startDate: addDays(10),
+        endDate: addDays(20),
+    },
+    {
+        id: 11,
+        name: "進行中プロジェクト",
+        status: "ACTIVE",
+        description: "進行中プロジェクト",
+        startDate: addDays(-10),
+        endDate: addDays(20),
+    },
+    {
+        id: 12,
+        name: "完了プロジェクト",
+        status: "DONE",
+        description: "完了プロジェクト",
+        startDate: addDays(-20),
+        endDate: addDays(-10),
+    },
+    {
+        id: 13,
+        name: "キャンセルプロジェクト",
+        status: "CANCELLED",
+        description: "キャンセルプロジェクト",
+        startDate: addDays(10),
+        endDate: addDays(20),
+    },
+    {
+        id: 14,
+        name: "保留プロジェクト",
+        status: "PENDING",
+        description: "保留プロジェクト",
+        startDate: addDays(10),
+        endDate: addDays(20),
+    },
+    {
+        id: 15,
+        name: "期限前プロジェクト",
+        status: "ACTIVE",
+        description: "期限前プロジェクト",
+        startDate: addDays(-10),
+        endDate: addDays(5),
+    },
+    {
+        id: 16,
+        name: "期限後プロジェクト",
+        status: "ACTIVE",
+        description: "期限後プロジェクト",
+        startDate: addDays(-10),
+        endDate: addDays(-1),
+    },
+]

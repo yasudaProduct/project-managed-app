@@ -1,4 +1,4 @@
-import { mockData, mockDataLarge } from "../src/data/mock-data";
+import { mockData, mockDataProjects } from "../src/data/mock-data";
 import { phases } from "../src/data/phases";
 import { users } from "../src/data/users";
 import prisma from "../src/lib/prisma";
@@ -63,6 +63,27 @@ async function main() {
                 name: phase.name,
                 code: phase.code,
                 seq: phase.seq,
+            },
+        })
+    }
+
+    for (const project of mockDataProjects) {
+        await prisma.projects.upsert({
+            where: { id: project.id.toString() },
+            update: {
+                name: project.name,
+                status: project.status as ProjectStatus,
+                description: project.description,
+                startDate: project.startDate,
+                endDate: project.endDate,
+            },
+            create: {
+                id: project.id.toString(),
+                name: project.name,
+                status: project.status as ProjectStatus,
+                description: project.description,
+                startDate: project.startDate,
+                endDate: project.endDate,
             },
         })
     }
