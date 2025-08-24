@@ -52,7 +52,7 @@ erDiagram
   Int id PK
   Int wbsId FK
   String name
-  String code UK
+  String code
   Int seq
   DateTime createdAt
   DateTime updatedAt

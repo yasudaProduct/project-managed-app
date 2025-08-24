@@ -40,7 +40,7 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
             id: wbsAssignee.id,
             userId: wbsAssignee.assignee.id,
             rate: wbsAssignee.rate,
-            userName: wbsAssignee.assignee.name,
+            userName: wbsAssignee.assignee.displayName,
         }));
 
     }

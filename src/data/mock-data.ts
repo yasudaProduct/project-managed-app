@@ -474,3 +474,218 @@ export const mockDataProjects = [
         endDate: addDays(-1),
     },
 ]
+
+export const importTestData = {
+    project: {
+        id: 20,
+        name: "インポートテスト",
+        status: "ACTIVE",
+        description: "インポートテスト",
+        startDate: baseDate,
+        endDate: addDays(10),
+    },
+    wbs: [
+        {
+            id: 20,
+            projectId: 20,
+            name: "インポートテスト",
+        },
+    ],
+    wbsAssignee: [
+        {
+            id: 20,
+            wbsId: 20,
+            assigneeId: "dummy01",
+        },
+        {
+            id: 21,
+            wbsId: 20,
+            assigneeId: "dummy02",
+        }
+    ],
+    wbsPhase: [
+        {
+            id: 20,
+            wbsId: 20,
+            name: "詳細設計",
+            code: "D2",
+            seq: 1,
+        },
+        {
+            id: 21,
+            wbsId: 20,
+            name: "単体開発",
+            code: "D3",
+            seq: 2,
+        },
+    ],
+    wbsTask: [
+        {
+            id: 20,
+            taskNo: "D2-0001",
+            wbsId: 20,
+            phaseId: 1,
+            name: "ドキュメント作成",
+            assigneeId: 20,
+            status: "NOT_STARTED",
+            startDate: baseDate,
+            endDate: addDays(5),
+            kosu: 15,
+        },
+        {
+            id: 21,
+            taskNo: "D2-0002",
+            wbsId: 20,
+            phaseId: 1,
+            name: "ドキュメント作成",
+            assigneeId: 21,
+            status: "NOT_STARTED",
+            startDate: addDays(1),
+            endDate: addDays(7),
+            kosu: 20,
+        }
+    ],
+    wbsBuffer: [
+        {
+            id: 1,
+            wbsId: 1,
+            name: "リスク対策工数",
+            buffer: 50,
+            bufferType: "RISK",
+        },
+    ],
+
+    workRecords: [
+        {
+            id: 20,
+            userId: "dummy01",
+            taskId: 20,
+            date: addDays(0),
+            hours_worked: 7.5,
+        },
+        {
+            id: 21,
+            userId: "dummy01",
+            taskId: 21,
+            date: addDays(1),
+            hours_worked: 30,
+        }
+    ],
+    milestone: [
+        {
+            id: 20,
+            wbsId: 20,
+            name: "キックオフ",
+            date: addDays(0),
+        },
+        {
+            id: 21,
+            wbsId: 20,
+            name: "設計完了",
+            date: addDays(9),
+        },
+        {
+            id: 22,
+            wbsId: 20,
+            name: "開発完了",
+            date: addDays(50),
+        },
+        {
+            id: 23,
+            wbsId: 20,
+            name: "リリース",
+            date: addDays(70),
+        },
+    ],
+}
+
+export const importTestData2 = {
+    project: {
+        id: 30,
+        name: "インポートテスト2",
+        status: "ACTIVE",
+        description: "インポートテスト2",
+        startDate: baseDate,
+        endDate: addDays(10),
+    },
+    wbs: [
+        {
+            id: 30,
+            projectId: 30,
+            name: "インポートテスト2",
+        },
+    ],
+    wbsAssignee: [
+        {
+            id: 30,
+            wbsId: 30,
+            assigneeId: "dummy01",
+        },
+        {
+            id: 31,
+            wbsId: 30,
+            assigneeId: "dummy02",
+        },
+    ],
+    wbsPhase: [
+        {
+            id: 30,
+            wbsId: 30,
+            name: "詳細設計",
+            code: "D2",
+            seq: 1,
+        },
+    ],
+    wbsTask: [
+        {
+            id: 30,
+            taskNo: "D2-0001",
+            wbsId: 30,
+            phaseId: 1,
+            name: "更新前のタスク",
+            assigneeId: 30,
+            status: "NOT_STARTED",
+            startDate: baseDate,
+            endDate: addDays(5),
+            kosu: 15,
+        },
+        {
+            id: 32,
+            taskNo: "D2-0002",
+            wbsId: 30,
+            phaseId: 1,
+            name: "削除されるタスク",
+            assigneeId: 31,
+            status: "NOT_STARTED",
+            startDate: addDays(1),
+            endDate: addDays(15),
+            kosu: 20,
+        },
+    ],
+    wbsBuffer: [
+        {
+            id: 1,
+            wbsId: 1,
+            name: "リスク対策工数",
+            buffer: 50,
+            bufferType: "RISK",
+        },
+    ],
+    workRecords: [
+        {
+            id: 30,
+            userId: "dummy01",
+            taskId: 30,
+            date: addDays(0),
+            hours_worked: 7.5,
+        },
+    ],
+    milestone: [
+        {
+            id: 30,
+            wbsId: 30,
+            name: "キックオフ",
+            date: addDays(0),
+        },
+    ],
+}

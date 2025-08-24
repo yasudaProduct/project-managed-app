@@ -14,6 +14,8 @@ export class Period {
         this.endDate = args.endDate;
         this.type = args.type;
         this.manHours = args.manHours;
+
+        this.validate();
     }
 
     public static create(args: { startDate: Date; endDate: Date; type: PeriodType; manHours: ManHour[] }): Period {
@@ -38,5 +40,11 @@ export class Period {
 
     public isEqual(period: Period) {
         return this.id === period.id;
+    }
+
+    private validate() {
+        if (this.startDate > this.endDate) {
+            throw new Error('期間が不正です');
+        }
     }
 }

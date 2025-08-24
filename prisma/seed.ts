@@ -1,4 +1,4 @@
-import { mockData, mockDataProjects } from "../src/data/mock-data";
+import { importTestData, importTestData2, mockData, mockDataProjects } from "../src/data/mock-data";
 import { phases } from "../src/data/phases";
 import { users } from "../src/data/users";
 import prisma from "../src/lib/prisma";
@@ -90,6 +90,8 @@ async function main() {
 
     const mocks = [
         mockData,
+        importTestData,
+        importTestData2,
         //mockDataLarge
     ]
 
@@ -156,6 +158,7 @@ async function main() {
                     assigneeId: assignee.assigneeId,
                 },
                 create: {
+                    id: assignee.id,
                     wbsId: assignee.wbsId,
                     assigneeId: assignee.assigneeId,
                 },

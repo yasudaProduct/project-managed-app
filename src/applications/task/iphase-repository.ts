@@ -5,6 +5,7 @@ export interface IPhaseRepository {
     findAll(): Promise<Phase[]>;
     findAllTemplates(): Promise<Phase[]>;
     findByWbsId(wbsId: number): Promise<Phase[]>;
+    findPhasesUsedInWbs(wbsId: number): Promise<Phase[]>;
     createTemplate(phase: Phase): Promise<Phase>;
     updateTemplate(phase: Phase): Promise<Phase>;
     create(wbsId: number, phase: Phase): Promise<Phase>;

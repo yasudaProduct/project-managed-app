@@ -93,7 +93,7 @@ model WbsPhase {
   id         Int       @id @default(autoincrement())
   wbsId      Int
   name       String
-  code       String    @unique
+  code       String
   seq        Int
   wbs        Wbs       @relation(fields: [wbsId], references: [id])
   tasks      WbsTask[]

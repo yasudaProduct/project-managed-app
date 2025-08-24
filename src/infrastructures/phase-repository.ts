@@ -51,7 +51,23 @@ export class PhaseRepository implements IPhaseRepository {
     }
 
     async findByWbsId(wbsId: number): Promise<Phase[]> {
-        console.log("repository: findByWbsId", wbsId)
+
+        const phasesDb = await prisma.wbsPhase.findMany({
+            where: {
+                wbsId: wbsId
+            },
+            orderBy: { seq: 'asc' },
+        });
+
+        return phasesDb.map(phaseDb => Phase.createFromDb({
+            id: phaseDb.id,
+            name: phaseDb.name,
+            code: new PhaseCode(phaseDb.code),
+            seq: phaseDb.seq,
+        }));
+    }
+
+    async findPhasesUsedInWbs(wbsId: number): Promise<Phase[]> {
 
         // WBSに関連するタスクから使用されているフェーズを取得
         const phasesDb = await prisma.wbsPhase.findMany({
@@ -107,11 +123,12 @@ export class PhaseRepository implements IPhaseRepository {
             seq: phaseDb.seq,
         });
     }
-    
+
     async create(wbsId: number, phase: Phase): Promise<Phase> {
         console.log("repository: create phase for wbs")
         const phaseDb = await prisma.wbsPhase.create({
             data: {
+                wbsId: wbsId,
                 name: phase.name,
                 code: phase.code.value(),
                 seq: phase.seq,
@@ -124,7 +141,7 @@ export class PhaseRepository implements IPhaseRepository {
             seq: phaseDb.seq,
         });
     }
-    
+
     async update(wbsId: number, id: string, phase: Phase): Promise<Phase> {
         console.log("repository: update phase")
         const phaseDb = await prisma.wbsPhase.update({
@@ -142,7 +159,7 @@ export class PhaseRepository implements IPhaseRepository {
             seq: phaseDb.seq,
         });
     }
-    
+
     async delete(id: string): Promise<void> {
         console.log("repository: delete phase")
         await prisma.wbsPhase.delete({

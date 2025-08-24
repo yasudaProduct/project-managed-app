@@ -44,6 +44,7 @@ interface ValidationError {
   field: string;
   message: string;
   value?: unknown;
+  rowNumber?: number; // Excel行番号
 }
 
 interface SyncPreview {
@@ -441,15 +442,15 @@ export function WbsSyncClient({ wbsId, projectName }: WbsSyncClientProps) {
                 syncPreview.validationErrors.length > 0 && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>ドメイン制約エラー</AlertTitle>
+                    <AlertTitle>バリデーションエラー</AlertTitle>
                     <AlertDescription>
                       <p className="mb-2">
-                        以下のタスクでエラーが検出されました。エラーを修正してから再度実行してください。
+                        以下のタスクでエラーが検出されました。フェーズ、ユーザー、担当者が存在しない場合は、既存の登録画面から作成してから再度実行してください。
                       </p>
                       <div className="space-y-1 max-h-40 overflow-y-auto">
                         {syncPreview.validationErrors.map((error, index) => (
                           <p key={index} className="text-sm">
-                            • {error.taskNo}: {error.message}
+                            • {error.rowNumber ? `[Excel行${error.rowNumber}] ` : ''}{error.taskNo}: {error.message}
                             {error.value !== undefined &&
                               ` (値: ${String(error.value)})`}
                           </p>

@@ -10,6 +10,13 @@ export interface PreviewResult {
   newPhases: Phase[];
   newUsers: User[];
   newAssignees: WbsAssignee[];
+  summary?: {
+    totalTasks: number;
+    validTasks: number;
+    errorTasks: number;
+    byPhase: Record<string, number>;
+    byAssignee: Record<string, number>;
+  };
 }
 
 export interface IWbsSyncService {

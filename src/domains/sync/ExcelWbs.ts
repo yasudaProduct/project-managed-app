@@ -3,9 +3,11 @@ export interface ValidationError {
   field: string;
   message: string;
   value?: unknown;
+  rowNumber?: number; // Excel行番号
 }
 
 export interface ExcelWbs {
+  ROW_NO: number;
   PROJECT_ID: string;
   WBS_ID: string;
   PHASE: string;

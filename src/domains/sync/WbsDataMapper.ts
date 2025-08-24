@@ -16,8 +16,8 @@ export class WbsDataMapper {
     manHours: ManHour[];
   } {
     const task: Record<string, unknown> = {
-      taskNo: excelWbs.WBS_ID,
-      name: excelWbs.TASK || excelWbs.ACTIVITY || '',
+      taskNo: excelWbs.WBS_ID || undefined,
+      name: excelWbs.TASK || excelWbs.ACTIVITY || undefined, // TODO: TASKとACTIVITYの運用を理解して、どちらを使うか決める
       status: this.mapStatus(excelWbs.STATUS),
     };
 
@@ -70,11 +70,18 @@ export class WbsDataMapper {
 
     // 予定日程
     if (excelWbs.YOTEI_START_DATE && excelWbs.YOTEI_END_DATE) {
+      const yoteiManHours: ManHour[] = [];
+      if (excelWbs.YOTEI_KOSU !== null) {
+        yoteiManHours.push(ManHour.create({
+          kosu: excelWbs.YOTEI_KOSU,
+          type: new ManHourType({ type: 'NORMAL' })
+        }));
+      }
       periods.push(Period.create({
         startDate: excelWbs.YOTEI_START_DATE,
         endDate: excelWbs.YOTEI_END_DATE,
         type: new PeriodType({ type: 'YOTEI' }),
-        manHours: [], // 予定日程には工数は含めない
+        manHours: yoteiManHours,
       }));
     }
 
