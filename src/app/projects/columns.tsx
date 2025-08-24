@@ -58,9 +58,10 @@ export const columns: ColumnDef<Project & { link?: string }>[] = [
             <Link href={`/projects/${project.id}`}>
               <DropdownMenuItem>詳細</DropdownMenuItem>
             </Link>
-            <Link href={`/projects/${project.id}/edit`}>
+            {/* WRN: 遷移が上手くいかないためコメントアウト */}
+            {/* <Link href={`/projects/${project.id}/edit`}>
               <DropdownMenuItem>編集</DropdownMenuItem>
-            </Link>
+            </Link> */}
           </DropdownMenuContent>
         </DropdownMenu>
       );

@@ -1,4 +1,4 @@
-import { ProjectForm } from "../project-form";
+import { ProjectForm } from "../[id]/edit/project-form";
 
 export default function NewProjectPage() {
   return (

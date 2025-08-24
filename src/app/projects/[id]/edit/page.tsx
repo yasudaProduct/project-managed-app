@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ProjectForm } from "../../project-form";
+import { ProjectForm } from "./project-form";
 import { Projects } from "@prisma/client";
 import { getProjectById } from "../../project-actions";
 export default async function EditProjectPage({
