@@ -278,7 +278,7 @@ export default function GeppoPage() {
                     <SelectContent>
                       <SelectItem value="_all">全て</SelectItem>
                       {filterOptions.projects.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
+                        <SelectItem key={project.name} value={project.name}>
                           {project.name}
                         </SelectItem>
                       ))}

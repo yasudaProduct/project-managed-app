@@ -4,7 +4,10 @@ export class TaskNo {
     }
 
     private validateFormat(value: string): void {
-        const pattern = /^[A-Z]\d+-\d{4}$/;
+        // const pattern = /^[A-Z]\d+-\d{4}$/;
+        // 工程コード部分: 任意の1文字以上の文字列
+        // 後半部分: 1文字以上の [0-9 または -] のみ
+        const pattern = /^.+-[0-9-A-Za-z]+$/;
         if (!pattern.test(value)) {
             throw new Error('タスクIDのフォーマットが不正です。[工程コード]-[4桁の数字]の形式である必要があります。');
         }
