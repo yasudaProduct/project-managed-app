@@ -2,12 +2,12 @@ import { Button } from "../ui/button";
 import { BarChart3, Table2 } from "lucide-react";
 
 interface ViewSwitcherProps {
-  currentView: "gantt" | "table";
+  currentView?: "gantt" | "table";
   onViewChange: (view: "gantt" | "table") => void;
 }
 
 export const ViewSwitcher = ({
-  currentView,
+  currentView = "gantt",
   onViewChange,
 }: ViewSwitcherProps) => {
   return (

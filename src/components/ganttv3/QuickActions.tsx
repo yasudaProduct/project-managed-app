@@ -30,6 +30,21 @@ interface QuickActionsProps {
   onDuplicateTasks: () => void;
 }
 
+/**
+ * クイックアクションバー
+ * @param timelineScale タイムラインスケール
+ * @param onTimelineScaleChange タイムラインスケール変更
+ * @param style ガントチャートスタイル
+ * @param onStyleChange ガントチャートスタイル変更
+ * @param selectedTasks 選択されたタスク
+ * @param onAddTask タスク追加
+ * @param onDeleteTasks タスク削除
+ * @param onDuplicateTasks タスク複製
+ * @description
+ *  クイックアクションバーは、ガントチャートの上部に配置されるバーです。
+ *  タスクの追加、削除、複製、タイムラインスケールの変更、ガントチャートスタイルの変更を行うことができます。
+ *  また、タスクの選択状態を表示することができます。
+ */
 export const QuickActions = ({
   timelineScale,
   onTimelineScaleChange,
@@ -42,7 +57,7 @@ export const QuickActions = ({
 }: QuickActionsProps) => {
   return (
     <div className="flex items-center gap-3">
-      {/* Task Actions */}
+      {/* タスク操作 */}
       <div className="flex items-center gap-1">
         <Button
           size="sm"
@@ -80,18 +95,12 @@ export const QuickActions = ({
 
       <Separator orientation="vertical" className="h-6" />
 
-      {/* Timeline Scale */}
-      <div className="flex items-center gap-2 border-l pl-2">
-        <span className="text-sm font-medium">スケール:</span>
+      {/* タイムラインスケール */}
+      <div className="flex items-center gap-2 pl-2">
+        {/* <span className="text-sm font-medium">スケール:</span> */}
         <Select
           value={timelineScale}
           onValueChange={(value: TimelineScale) => {
-            console.log(
-              "Scale selection changed from",
-              timelineScale,
-              "to",
-              value
-            );
             onTimelineScaleChange(value);
           }}
         >
@@ -109,12 +118,18 @@ export const QuickActions = ({
 
       <Separator orientation="vertical" className="h-6" />
 
-      {/* View Options */}
-      <div className="flex items-center gap-1 border-l pl-2">
+      {/* 表示オプション */}
+      <div className="flex items-center gap-1 pl-2">
         <Button
           variant={style.showGrid ? "default" : "outline"}
           size="sm"
-          onClick={() => onStyleChange({ ...style, showGrid: !style.showGrid })}
+          title="グリッド表示"
+          onClick={() =>
+            onStyleChange({
+              ...style,
+              showGrid: !style.showGrid,
+            })
+          }
         >
           <Grid3X3 className="w-4 h-4" />
         </Button>
@@ -122,6 +137,7 @@ export const QuickActions = ({
         <Button
           variant={style.showDependencies ? "default" : "outline"}
           size="sm"
+          title="依存関係表示"
           onClick={() =>
             onStyleChange({
               ...style,
@@ -135,6 +151,7 @@ export const QuickActions = ({
         <Button
           variant={style.showCriticalPath ? "default" : "outline"}
           size="sm"
+          title="クリティカルパス表示"
           onClick={() =>
             onStyleChange({
               ...style,
@@ -148,8 +165,12 @@ export const QuickActions = ({
         <Button
           variant={style.showTodayLine ? "default" : "outline"}
           size="sm"
+          title="本日ライン表示"
           onClick={() =>
-            onStyleChange({ ...style, showTodayLine: !style.showTodayLine })
+            onStyleChange({
+              ...style,
+              showTodayLine: !style.showTodayLine,
+            })
           }
         >
           <Calendar className="w-4 h-4" />

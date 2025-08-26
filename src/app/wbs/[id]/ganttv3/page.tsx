@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   Task,
   TimelineScale,
@@ -10,16 +10,17 @@ import {
   ViewSwitcher,
   QuickActions,
   GanttChart,
-} from "../../../../components/ganttv3";
+} from "@/components/ganttv3";
 import {
   sampleTasks,
   sampleCategories,
   defaultGanttStyle,
-} from "../../../../data/sampleData";
+} from "@/data/sampleData";
+import { useParams } from "next/navigation";
+import { getTasks as getGanttTasks } from "./action";
 
 export default function App() {
-  // Use sample data for demonstration
-  const [tasks, setTasks] = useState<Task[]>(sampleTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   const [categories, setCategories] = useState<Category[]>(sampleCategories);
 
@@ -29,35 +30,45 @@ export default function App() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(categories.map((c) => c.name))
   );
+  const params = useParams();
+  const wbsId = Number(params.id);
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      const tasks = await getGanttTasks(wbsId);
+      setTasks(tasks);
+    };
+    fetchTasks();
+  }, [wbsId]);
 
   // Add zoom level state
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
 
   const [ganttStyle, setGanttStyle] = useState<GanttStyle>(defaultGanttStyle);
 
-  // Calculate project statistics
-  const projectStats = useMemo(() => {
-    const projectName = "ソフトウェア開発プロジェクト";
-    const totalTasks = tasks.length;
-    const completedTasks = tasks.filter((t) => t.progress === 100).length;
-    const milestones = tasks.filter((t) => t.isMilestone).length;
-    const criticalTasks = tasks.filter((t) => t.isOnCriticalPath).length;
-    const avgProgress =
-      totalTasks > 0
-        ? Math.round(tasks.reduce((sum, t) => sum + t.progress, 0) / totalTasks)
-        : 0;
+  // プロジェクト統計を計算
+  // const projectStats = useMemo(() => {
+  //   const projectName = "ソフトウェア開発プロジェクト";
+  //   const totalTasks = tasks.length;
+  //   const completedTasks = tasks.filter((t) => t.progress === 100).length;
+  //   const milestones = tasks.filter((t) => t.isMilestone).length;
+  //   const criticalTasks = tasks.filter((t) => t.isOnCriticalPath).length;
+  //   const avgProgress =
+  //     totalTasks > 0
+  //       ? Math.round(tasks.reduce((sum, t) => sum + t.progress, 0) / totalTasks)
+  //       : 0;
 
-    return {
-      projectName,
-      totalTasks,
-      completedTasks,
-      milestones,
-      criticalTasks,
-      avgProgress,
-    };
-  }, [tasks]);
+  //   return {
+  //     projectName,
+  //     totalTasks,
+  //     completedTasks,
+  //     milestones,
+  //     criticalTasks,
+  //     avgProgress,
+  //   };
+  // }, [tasks]);
 
-  // Critical path calculation
+  // クリティカルパス計算
   const calculateCriticalPath = useCallback((updatedTasks: Task[]): Task[] => {
     const taskMap = new Map(
       updatedTasks.map((task) => [
@@ -145,7 +156,7 @@ export default function App() {
     }));
   }, []);
 
-  // Event handlers
+  // イベントハンドラ
   const handleTaskUpdate = useCallback(
     (updatedTask: Task) => {
       const newTasks = tasks.map((task) =>
@@ -313,14 +324,14 @@ export default function App() {
   return (
     <div className="h-screen bg-background flex flex-col">
       {/* Project Header */}
-      <ProjectHeader
+      {/* <ProjectHeader
         projectStats={projectStats}
         onExport={() => console.log("Export")}
         onImport={() => console.log("Import")}
-      />
+      /> */}
 
       {/* Main Navigation */}
-      <div className="border-b bg-card px-6 py-3">
+      <div className="border-b bg-card px-2 py-2">
         <div className="flex items-center justify-between">
           <ViewSwitcher
             currentView={currentView}
@@ -400,7 +411,7 @@ export default function App() {
       </div>
 
       {/* Status Bar */}
-      <div className="border-t bg-muted/30 px-6 py-2">
+      {/* <div className="border-t bg-muted/30 px-6 py-2">
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center gap-6">
             <span>{projectStats.totalTasks} tasks</span>
@@ -411,7 +422,7 @@ export default function App() {
           </div>
           <span>Auto-saved • Ready for export</span>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

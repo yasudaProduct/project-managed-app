@@ -35,7 +35,7 @@ interface GanttChartProps {
   onZoomChange?: (zoom: number) => void;
 }
 
-// SINGLE ROW TYPE - Used by both task list and timeline to ensure perfect 1:1 alignment
+// 単一行タイプ - タスクリストとタイムラインの両方で使用し、完全な1:1整列を保証する
 interface GanttRow {
   type: "category" | "task";
   id: string;
@@ -61,15 +61,20 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     },
     ref
   ) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    onTaskUpdate;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [draggedTask, setDraggedTask] = useState<string | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [dragMode, setDragMode] = useState<
       "move" | "resize-start" | "resize-end" | null
     >(null);
     const timelineScrollRef = useRef<HTMLDivElement>(null);
     const [scrollLeft, setScrollLeft] = useState(0);
 
-    // PRECISE DIMENSION CONSTANTS - No flexibility, absolute precision
+    // 厳密な寸法定数 - 可変性なし、絶対的な精度
     const TASK_HEIGHT = 16;
     const ROW_SPACING = 4;
     const ROW_HEIGHT = TASK_HEIGHT + ROW_SPACING; // 20px
@@ -77,7 +82,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     const HEADER_HEIGHT = 50;
     const TASK_LIST_WIDTH = 300;
 
-    // Calculate timeline bounds
+    // タイムラインの範囲を計算
     const timelineBounds = useMemo(() => {
       if (tasks.length === 0) {
         const now = new Date();
@@ -101,7 +106,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       };
     }, [tasks, timelineScale]);
 
-    // Handle timeline scroll synchronization
+    // タイムラインのスクロール同期を処理
     useEffect(() => {
       const handleScroll = () => {
         if (timelineScrollRef.current) {
@@ -116,7 +121,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       }
     }, []);
 
-    // Calculate column width
+    // 列幅を計算
     const getBaseColumnWidth = useCallback(() => {
       switch (timelineScale) {
         case "day":
@@ -134,7 +139,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
 
     const columnWidth = Math.round(getBaseColumnWidth() * zoomLevel);
 
-    // Group tasks by category
+    // タスクをカテゴリごとにグループ化
     const groupedTasks = useMemo(() => {
       const grouped: Record<string, Task[]> = {};
 
@@ -157,7 +162,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       return grouped;
     }, [tasks, categories]);
 
-    // BULLETPROOF ROW CALCULATION - Single source of truth for BOTH sides
+    // 堅牢な行計算 - 両側の単一の信頼できる情報源（SSOT）
     const ganttRows = useMemo(() => {
       const rows: GanttRow[] = [];
       let currentY = 0;
@@ -205,7 +210,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       ROW_HEIGHT,
     ]);
 
-    // Calculate dimensions
+    // 各種寸法を計算
     const totalDays = Math.ceil(
       (timelineBounds.end.getTime() - timelineBounds.start.getTime()) /
         (24 * 60 * 60 * 1000)
@@ -229,7 +234,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         : 100;
     const chartHeight = Math.max(totalContentHeight + 50, 400);
 
-    // Convert date to X position
+    // 日付をX座標に変換
     const dateToX = useCallback(
       (date: Date) => {
         const daysDiff =
@@ -240,7 +245,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       [timelineBounds.start, columnWidth, scaleMultiplier]
     );
 
-    // Navigation handlers
+    // ナビゲーション用ハンドラ
     const handleScrollLeft = useCallback(() => {
       if (timelineScrollRef.current) {
         timelineScrollRef.current.scrollBy({
@@ -327,7 +332,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       }
     }, [todayX]);
 
-    // Calculate category date ranges for summary bars
+    // サマリーバー用にカテゴリの期間を計算
     const categoryRanges = useMemo(() => {
       const ranges: Record<
         string,
@@ -368,7 +373,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
 
     return (
       <>
-        {/* Navigation Controls */}
+        {/* ナビゲーション操作 */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card flex-shrink-0">
           <div className="flex items-center gap-2">
             <Button
@@ -442,12 +447,12 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         </div>
         <div ref={ref} className="w-full h-full bg-background gantt-chart">
           <div className="flex h-full">
-            {/* TASK LIST COLUMN - Uses ganttRows for PERFECT alignment */}
+            {/* タスクリスト列 - 完全な整列のためにganttRowsを使用 */}
             <div
               className="border-r border-border bg-card flex-shrink-0"
               style={{ width: TASK_LIST_WIDTH }}
             >
-              {/* Header */}
+              {/* ヘッダー */}
               <div
                 className="border-b border-border px-4 py-3 bg-muted/30 flex flex-col justify-center"
                 style={{ height: HEADER_HEIGHT }}
@@ -458,7 +463,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                 </div>
               </div>
 
-              {/* Task List Content - ABSOLUTE positioning using ganttRows */}
+              {/* タスクリストの内容 - ganttRowsを用いた絶対配置 */}
               <div
                 className="overflow-y-auto relative"
                 style={{ height: `calc(100% - ${HEADER_HEIGHT}px)` }}
@@ -575,11 +580,11 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
               </div>
             </div>
 
-            {/* TIMELINE AREA - Uses SAME ganttRows for PERFECT alignment */}
+            {/* タイムライン領域 - 完全な整列のため同じganttRowsを使用 */}
             <div className="flex-1 flex flex-col min-w-0">
-              {/* Timeline Content Container */}
+              {/* タイムラインコンテンツのコンテナ */}
               <div className="flex-1 flex flex-col min-h-0">
-                {/* Timeline Header */}
+                {/* タイムラインヘッダー */}
                 <div style={{ height: HEADER_HEIGHT }}>
                   <TimelineHeader
                     start={timelineBounds.start}
@@ -592,7 +597,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                   />
                 </div>
 
-                {/* Timeline Content - Uses EXACT SAME Y coordinates as task list */}
+                {/* タイムラインコンテンツ - タスクリストと全く同じY座標を使用 */}
                 <div ref={timelineScrollRef} className="flex-1 overflow-auto">
                   <div style={{ width: chartWidth, height: chartHeight }}>
                     <svg
@@ -600,7 +605,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                       height={chartHeight}
                       className="block"
                     >
-                      {/* Background and Grid */}
+                      {/* 背景とグリッド */}
                       {style.showGrid && (
                         <GridLines
                           width={chartWidth}
@@ -614,7 +619,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                         />
                       )}
 
-                      {/* Today Line */}
+                      {/* 本日ライン */}
                       {todayX !== null && (
                         <line
                           x1={todayX}
@@ -628,10 +633,10 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                         />
                       )}
 
-                      {/* Render timeline elements using SAME ganttRows */}
+                      {/* 同じganttRowsを使ってタイムライン要素を描画 */}
                       {ganttRows.map((row) => {
                         if (row.type === "category") {
-                          // Category background stripe
+                          // カテゴリの背景ストライプ
                           const elements: JSX.Element[] = [];
 
                           elements.push(
@@ -646,7 +651,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             />
                           );
 
-                          // Category summary bar
+                          // カテゴリのサマリーバー
                           const categoryRange =
                             categoryRanges[row.categoryName!];
                           if (categoryRange) {
@@ -709,7 +714,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
 
                           return elements;
                         } else if (row.type === "task" && row.task) {
-                          // Task bar - EXACT Y positioning matching task list row
+                          // タスクバー - タスクリスト行と完全に一致するY位置
                           const task = row.task;
                           const taskBarY =
                             row.y + (row.height - TASK_HEIGHT) / 2;
