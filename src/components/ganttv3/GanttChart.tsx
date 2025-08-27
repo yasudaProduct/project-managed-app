@@ -8,7 +8,7 @@ import React, {
   JSX,
 } from "react";
 import { Task, TimelineScale, GanttStyle, GanttPhase, GroupBy } from "./gantt";
-import { groupTasksByType, TaskGroup } from "./utils/groupTasks";
+import { groupTasksByType } from "./utils/groupTasks";
 import { TimelineHeader } from "./TimelineHeader";
 import { TaskBar } from "./TaskBar";
 import { GridLines } from "./GridLines";

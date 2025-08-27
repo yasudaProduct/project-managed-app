@@ -76,23 +76,21 @@ export function groupTasksByType(
     case 'status':
       // ステータスでグループ化
       const statusLabels = {
-        notStarted: '未着手',
-        inProgress: '進行中',
-        completed: '完了',
-        delayed: '遅延',
-        onHold: '保留'
+        NOT_STARTED: '未着手',
+        IN_PROGRESS: '進行中',
+        COMPLETED: '完了',
+        ON_HOLD: '保留'
       };
 
       const statusColors = {
-        notStarted: '#9CA3AF',
-        inProgress: '#3B82F6',
-        completed: '#10B981',
-        delayed: '#EF4444',
-        onHold: '#F59E0B'
+        NOT_STARTED: '#9CA3AF',
+        IN_PROGRESS: '#3B82F6',
+        COMPLETED: '#10B981',
+        ON_HOLD: '#F59E0B'
       };
 
       tasks.forEach(task => {
-        const status = task.status || 'notStarted';
+        const status = task.status || '不明';
         if (!groups.has(status)) {
           groups.set(status, []);
         }
@@ -101,11 +99,11 @@ export function groupTasksByType(
 
       return Array.from(groups.entries()).map(([status, tasks]) => (
         {
-        id: `status-${status}`,
-        name: statusLabels[status as keyof typeof statusLabels] || status,
-        tasks,
-        color: statusColors[status as keyof typeof statusColors] || '#888888'
-      }));
+          id: `status-${status}`,
+          name: statusLabels[status as keyof typeof statusLabels] || status,
+          tasks,
+          color: statusColors[status as keyof typeof statusColors] || '#888888'
+        }));
 
     default:
       return [{ id: 'all', name: 'すべてのタスク', tasks }];
@@ -118,12 +116,12 @@ function getAssigneeColor(assignee: string): string {
     '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
     '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#84CC16'
   ];
-  
+
   // 名前から一意のインデックスを生成
   let hash = 0;
   for (let i = 0; i < assignee.length; i++) {
     hash = assignee.charCodeAt(i) + ((hash << 5) - hash);
   }
-  
+
   return colors[Math.abs(hash) % colors.length];
 }

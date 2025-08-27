@@ -52,17 +52,23 @@ function convertTask(task: WbsTask): GanttTask | undefined {
     switch (task.status) {
         case "COMPLETED":
             color = "green";
-            status = "completed";
+            status = "COMPLETED";
             break;
         case "IN_PROGRESS":
             color = "blue";
-            status = "inProgress";
+            status = "IN_PROGRESS";
             break;
         case "NOT_STARTED":
             color = "gray";
-            status = "notStarted";
+            status = "NOT_STARTED";
+            break;
+        case "ON_HOLD":
+            color = "yellow";
+            status = "ON_HOLD";
             break;
     }
+
+    console.log(task.status);
 
     if (task.yoteiStart && task.yoteiEnd && task.yoteiKosu) {
 
@@ -77,7 +83,7 @@ function convertTask(task: WbsTask): GanttTask | undefined {
             progress: 0,
             predecessors: [],
             level: 0,
-            isManuallyScheduled: false,
+            isManuallyScheduled: true,
             category: task.phase?.name,
             assignee: task.assignee?.name,
             status: status,
@@ -102,7 +108,7 @@ function convertMilestone(milestone: Milestone): GanttTask | undefined {
         level: 0,
         isManuallyScheduled: false,
         category: milestone.name,
-        assignee: undefined,
-        status: "notStarted",
+        assignee: "milestone",
+        // status: "notStarted",
     };
 }

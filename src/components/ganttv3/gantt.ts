@@ -1,24 +1,24 @@
 export interface Task {
   id: string;
-  name: string;
-  startDate: Date;
-  endDate: Date;
-  duration: number;
-  color: string;
-  isMilestone: boolean;
-  progress: number;
-  predecessors: Dependency[];
-  level: number;
-  isManuallyScheduled: boolean;
-  category?: string;
-  isOnCriticalPath?: boolean;
-  description?: string;
-  resources?: string[];
-  assignee?: string;
-  status?: TaskStatus;
+  name: string; // タスク名
+  startDate: Date; // 開始日
+  endDate: Date; // 終了日
+  duration: number; // 期間
+  color: string; // 色
+  isMilestone: boolean; // マイルストーンかどうか
+  progress: number; // 進捗
+  predecessors: Dependency[]; // 先行タスク
+  level: number; // レベル
+  isManuallyScheduled: boolean; // 手動でスケジュールされたかどうか
+  category?: string; // カテゴリ
+  isOnCriticalPath?: boolean; // クリティカルパス上かどうか
+  description?: string; // 説明
+  resources?: string[]; // リソース
+  assignee?: string; // 担当者
+  status?: TaskStatus; // ステータス
 }
 
-export type TaskStatus = 'notStarted' | 'inProgress' | 'completed' | 'delayed' | 'onHold';
+export type TaskStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD';
 
 export type GroupBy = 'none' | 'phase' | 'assignee' | 'status';
 

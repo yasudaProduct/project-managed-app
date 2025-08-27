@@ -14,11 +14,7 @@ import {
 } from "@/components/ganttv3";
 import { defaultGanttStyle } from "@/data/sampleData";
 import { useParams } from "next/navigation";
-import {
-  getGanttTasks as getGanttTasks,
-  getMilestones,
-  getPhases,
-} from "./action";
+import { getGanttTasks as getGanttTasks, getPhases } from "./action";
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -221,6 +217,7 @@ export default function App() {
     [tasks, calculateCriticalPath]
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleTaskIndent = useCallback(
     (taskId: string) => {
       const updatedTasks = tasks.map((task) =>
@@ -233,6 +230,7 @@ export default function App() {
     [tasks, calculateCriticalPath]
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleTaskOutdent = useCallback(
     (taskId: string) => {
       const updatedTasks = tasks.map((task) =>
@@ -245,12 +243,14 @@ export default function App() {
     [tasks, calculateCriticalPath]
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCategoryUpdate = useCallback((updatedCategory: Category) => {
     setCategories((prev) =>
       prev.map((cat) => (cat.id === updatedCategory.id ? updatedCategory : cat))
     );
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCategoryAdd = useCallback((newCategory: Omit<Category, "id">) => {
     const category: Category = {
       ...newCategory,
@@ -261,7 +261,7 @@ export default function App() {
     setExpandedCategories((prev) => new Set([...prev, category.name]));
   }, []);
 
-  // Category removal handler
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCategoryDelete = useCallback(
     (categoryToDelete: Category) => {
       // Find a default category to move tasks to (first available category)
@@ -296,6 +296,7 @@ export default function App() {
     [categories, tasks, calculateCriticalPath]
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleTaskMove = useCallback(
     (taskId: string, newCategory: string) => {
       const updatedTasks = tasks.map((task) =>

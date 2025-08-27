@@ -1,4 +1,4 @@
-export type TaskStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"
+export type TaskStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "ON_HOLD"
 
 export type ProjectStatus = "INACTIVE" | "ACTIVE" | "DONE" | "CANCELLED" | "PENDING"
 
