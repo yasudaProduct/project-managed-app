@@ -9,18 +9,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Calendar, Users } from "lucide-react";
+import { Calendar, Users, Download } from "lucide-react";
 import React from "react";
 import { MonthlyAssigneeSummary as MonthlyAssigneeSummaryData } from "@/applications/wbs/query/wbs-summary-result";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { exportMonthlyAssigneeSummary, copyMonthlyAssigneeSummaryToClipboard } from "@/utils/export-table";
+import { HoursUnit, convertHours, getUnitSuffix } from "@/utils/hours-converter";
+import { Copy } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface MonthlyAssigneeSummaryProps {
   monthlyData: MonthlyAssigneeSummaryData;
+  hoursUnit: HoursUnit;
 }
 
-export function MonthlyAssigneeSummary({ monthlyData }: MonthlyAssigneeSummaryProps) {
+export function MonthlyAssigneeSummary({ monthlyData, hoursUnit }: MonthlyAssigneeSummaryProps) {
 
   const formatNumber = (num: number) => {
-    return num.toLocaleString("ja-JP", {
+    const converted = convertHours(num, hoursUnit);
+    return converted.toLocaleString("ja-JP", {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     });
@@ -53,11 +66,54 @@ export function MonthlyAssigneeSummary({ monthlyData }: MonthlyAssigneeSummaryPr
   return (
     <Card className="rounded-none shadow-none">
       <CardHeader className="pb-4">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-blue-600" />
-          <Users className="h-5 w-5 text-blue-600" />
-          月別・担当者別集計表
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-blue-600" />
+            <Users className="h-5 w-5 text-blue-600" />
+            月別・担当者別集計表
+          </CardTitle>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={async () => {
+                try {
+                  await copyMonthlyAssigneeSummaryToClipboard(monthlyData, hoursUnit);
+                  toast({ description: "TSV形式でクリップボードにコピーしました" });
+                } catch (error) {
+                  toast({ 
+                    description: "コピーに失敗しました", 
+                    variant: "destructive" 
+                  });
+                }
+              }}
+            >
+              <Copy className="h-4 w-4" />
+              コピー
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  出力
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => exportMonthlyAssigneeSummary(monthlyData, 'csv', hoursUnit)}
+                >
+                  CSV形式で出力
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => exportMonthlyAssigneeSummary(monthlyData, 'tsv', hoursUnit)}
+                >
+                  TSV形式で出力
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="p-1">
         <div className="overflow-x-auto">
@@ -80,8 +136,8 @@ export function MonthlyAssigneeSummary({ monthlyData }: MonthlyAssigneeSummaryPr
                 <TableHead className="sticky left-0 bg-gray-50 z-10"></TableHead>
                 {[...monthlyData.months, '合計'].map((period) => (
                   <React.Fragment key={period}>
-                    <TableHead className="text-right text-xs">予定</TableHead>
-                    <TableHead className="text-right text-xs">実績</TableHead>
+                    <TableHead className="text-right text-xs">予定({getUnitSuffix(hoursUnit)})</TableHead>
+                    <TableHead className="text-right text-xs">実績({getUnitSuffix(hoursUnit)})</TableHead>
                     <TableHead className="text-right text-xs">差分</TableHead>
                   </React.Fragment>
                 ))}

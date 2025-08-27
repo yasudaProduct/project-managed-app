@@ -9,10 +9,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Layers, Users } from "lucide-react";
+import { Layers, Users, Download } from "lucide-react";
 import { MonthlyAssigneeSummary } from "./monthly-assignee-summary";
 import { useWbsSummary } from "@/hooks/use-wbs-summary";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { exportPhaseSummary, exportAssigneeSummary, copyPhaseSummaryToClipboard, copyAssigneeSummaryToClipboard } from "@/utils/export-table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useState } from "react";
+import { HoursUnit, HOURS_UNIT_LABELS, convertHours, getUnitSuffix } from "@/utils/hours-converter";
+import { Copy } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface WbsSummaryTablesProps {
   projectId: string;
@@ -21,9 +40,11 @@ interface WbsSummaryTablesProps {
 
 export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
   const { data: summary, isLoading, error } = useWbsSummary(projectId, wbsId);
+  const [hoursUnit, setHoursUnit] = useState<HoursUnit>('hours');
 
   const formatNumber = (num: number) => {
-    return num.toLocaleString("ja-JP", {
+    const converted = convertHours(num, hoursUnit);
+    return converted.toLocaleString("ja-JP", {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     });
@@ -83,14 +104,72 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
 
   return (
     <div className="space-y-6">
+      {/* 工数単位選択 */}
+      <div className="flex justify-end">
+        <Select value={hoursUnit} onValueChange={(value) => setHoursUnit(value as HoursUnit)}>
+          <SelectTrigger className="w-32">
+            <SelectValue placeholder="単位を選択" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(HOURS_UNIT_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 工程別集計表 */}
         <Card className="rounded-none shadow-none">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Layers className="h-5 w-5 text-blue-600" />
-              工程別集計表
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <Layers className="h-5 w-5 text-blue-600" />
+                工程別集計表
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={async () => {
+                    try {
+                      await copyPhaseSummaryToClipboard(summary.phaseSummaries, summary.phaseTotal, hoursUnit);
+                      toast({ description: "TSV形式でクリップボードにコピーしました" });
+                    } catch (error) {
+                      toast({ 
+                        description: "コピーに失敗しました", 
+                        variant: "destructive" 
+                      });
+                    }
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                  コピー
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Download className="h-4 w-4" />
+                      出力
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => exportPhaseSummary(summary.phaseSummaries, summary.phaseTotal, 'csv', hoursUnit)}
+                    >
+                      CSV形式で出力
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => exportPhaseSummary(summary.phaseSummaries, summary.phaseTotal, 'tsv', hoursUnit)}
+                    >
+                      TSV形式で出力
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-1">
             <Table>
@@ -101,10 +180,10 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                     タスク数
                   </TableHead>
                   <TableHead className="text-right font-semibold">
-                    予定工数
+                    予定工数({getUnitSuffix(hoursUnit)})
                   </TableHead>
                   <TableHead className="text-right font-semibold">
-                    実績工数
+                    実績工数({getUnitSuffix(hoursUnit)})
                   </TableHead>
                   <TableHead className="text-right font-semibold">
                     差分
@@ -160,10 +239,55 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
         {/* 担当者別集計表 */}
         <Card className="rounded-none shadow-none">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-600" />
-              担当者別集計表
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600" />
+                担当者別集計表
+              </CardTitle>
+              {summary.assigneeSummaries.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={async () => {
+                      try {
+                        await copyAssigneeSummaryToClipboard(summary.assigneeSummaries, summary.assigneeTotal, hoursUnit);
+                        toast({ description: "TSV形式でクリップボードにコピーしました" });
+                      } catch (error) {
+                        toast({ 
+                          description: "コピーに失敗しました", 
+                          variant: "destructive" 
+                        });
+                      }
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                    コピー
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <Download className="h-4 w-4" />
+                        出力
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => exportAssigneeSummary(summary.assigneeSummaries, summary.assigneeTotal, 'csv', hoursUnit)}
+                      >
+                        CSV形式で出力
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => exportAssigneeSummary(summary.assigneeSummaries, summary.assigneeTotal, 'tsv', hoursUnit)}
+                      >
+                        TSV形式で出力
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="p-1">
             <Table>
@@ -174,10 +298,10 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                     タスク数
                   </TableHead>
                   <TableHead className="text-right font-semibold">
-                    予定工数
+                    予定工数({getUnitSuffix(hoursUnit)})
                   </TableHead>
                   <TableHead className="text-right font-semibold">
-                    実績工数
+                    実績工数({getUnitSuffix(hoursUnit)})
                   </TableHead>
                   <TableHead className="text-right font-semibold">
                     差分
@@ -246,7 +370,7 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
       </div>
 
       {/* 月別・担当者別集計表 */}
-      <MonthlyAssigneeSummary monthlyData={summary.monthlyAssigneeSummary} />
+      <MonthlyAssigneeSummary monthlyData={summary.monthlyAssigneeSummary} hoursUnit={hoursUnit} />
     </div>
   );
 }
