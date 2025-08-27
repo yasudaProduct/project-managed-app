@@ -4,18 +4,27 @@ import { ITaskApplicationService } from "@/applications/task/task-application-se
 import { GanttPhase, Task as GanttTask, TaskStatus as GanntTaskStatus } from "@/components/ganttv3/gantt";
 import { SYMBOL } from "@/types/symbol";
 import { container } from "@/lib/inversify.config";
-import { WbsPhase, WbsTask } from "@/types/wbs";
+import { Milestone, WbsTask } from "@/types/wbs";
 import { IWbsApplicationService } from "@/applications/wbs/wbs-application-service";
+import { IMilestoneApplicationService } from "@/applications/milestone/milestone-application-service";
 
-export async function getTasks(wbsId: number): Promise<GanttTask[]> {
+export async function getGanttTasks(wbsId: number): Promise<GanttTask[]> {
 
     const taskService = container.get<ITaskApplicationService>(
         SYMBOL.ITaskApplicationService
     );
 
-    const tasks = await taskService.getTaskAll(wbsId);
+    const milestoneService = container.get<IMilestoneApplicationService>(
+        SYMBOL.IMilestoneApplicationService
+    );
 
-    return tasks.map(convertTask).filter((task): task is GanttTask => task !== undefined);
+    const tasks = await taskService.getTaskAll(wbsId);
+    const milestones = await milestoneService.getMilestones(wbsId);
+
+    return [
+        ...milestones.map(convertMilestone).filter((milestone): milestone is GanttTask => milestone !== undefined),
+        ...tasks.map(convertTask).filter((task): task is GanttTask => task !== undefined)
+    ];;
 }
 
 export async function getPhases(wbsId: number): Promise<GanttPhase[]> {
@@ -30,7 +39,7 @@ export async function getPhases(wbsId: number): Promise<GanttPhase[]> {
         seq: phase.seq,
         name: phase.name,
         code: phase.code,
-        color : "#"+Math.floor(Math.random()*16777215).toString(16),
+        color: "#" + Math.floor(Math.random() * 16777215).toString(16),
         startDate: phase.startDate,
         endDate: phase.endDate,
     }));
@@ -76,4 +85,24 @@ function convertTask(task: WbsTask): GanttTask | undefined {
     }
 
     return undefined;
+}
+
+function convertMilestone(milestone: Milestone): GanttTask | undefined {
+
+    return {
+        id: milestone.id.toString(),
+        name: milestone.name,
+        startDate: milestone.date,
+        endDate: milestone.date,
+        duration: 0,
+        color: "#" + Math.floor(Math.random() * 16777215).toString(16),
+        isMilestone: true,
+        progress: 0,
+        predecessors: [],
+        level: 0,
+        isManuallyScheduled: false,
+        category: milestone.name,
+        assignee: undefined,
+        status: "notStarted",
+    };
 }

@@ -6,6 +6,7 @@ export const SYMBOL = {
     IScheduleGenerateService: Symbol.for('IScheduleGenerateService'),
     IDashboardApplicationService: Symbol.for('IDashboardApplicationService'),
     IPhaseApplicationService: Symbol.for('IPhaseApplicationService'),
+    IMilestoneApplicationService: Symbol.for('IMilestoneApplicationService'),
 
     // ドメインサービス
     GetOperationPossible: Symbol.for('GetOperationPossible'),
@@ -19,6 +20,7 @@ export const SYMBOL = {
     ITaskRepository: Symbol.for('ITaskRepository'),
     IDashboardQueryRepository: Symbol.for('IDashboardQueryRepository'),
     IUserRepository: Symbol.for('IUserRepository'),
+    IMilestoneRepository: Symbol.for('IMilestoneRepository'),
 
     // CQRS
     IQueryBus: Symbol.for('IQueryBus'),

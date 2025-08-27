@@ -1,22 +1,24 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Task,
   TimelineScale,
   GanttStyle,
   Category,
-  ProjectHeader,
+  // ProjectHeader,
   ViewSwitcher,
   QuickActions,
   GanttChart,
   GroupBy,
 } from "@/components/ganttv3";
-import {
-  defaultGanttStyle,
-} from "@/data/sampleData";
+import { defaultGanttStyle } from "@/data/sampleData";
 import { useParams } from "next/navigation";
-import { getTasks as getGanttTasks, getPhases } from "./action";
+import {
+  getGanttTasks as getGanttTasks,
+  getMilestones,
+  getPhases,
+} from "./action";
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -49,9 +51,9 @@ export default function App() {
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
 
   const [ganttStyle, setGanttStyle] = useState<GanttStyle>(defaultGanttStyle);
-  
+
   // Add groupBy state
-  const [groupBy, setGroupBy] = useState<GroupBy>('phase');
+  const [groupBy, setGroupBy] = useState<GroupBy>("phase");
 
   // プロジェクト統計を計算
   // const projectStats = useMemo(() => {

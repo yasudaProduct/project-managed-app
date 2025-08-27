@@ -8,7 +8,7 @@ import React, {
   JSX,
 } from "react";
 import { Task, TimelineScale, GanttStyle, GanttPhase, GroupBy } from "./gantt";
-import { groupTasksByType, TaskGroup } from './utils/groupTasks';
+import { groupTasksByType, TaskGroup } from "./utils/groupTasks";
 import { TimelineHeader } from "./TimelineHeader";
 import { TaskBar } from "./TaskBar";
 import { GridLines } from "./GridLines";
@@ -57,7 +57,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       style,
       expandedCategories,
       zoomLevel = 1.0,
-      groupBy = 'phase',
+      groupBy = "phase",
       onTaskUpdate,
       onCategoryToggle,
       onZoomChange,
@@ -150,7 +150,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     // グループごとのタスクマップ（互換性のため）
     const groupedTasks = useMemo(() => {
       const grouped: Record<string, Task[]> = {};
-      taskGroups.forEach(group => {
+      taskGroups.forEach((group) => {
         grouped[group.name] = group.tasks;
       });
       return grouped;
@@ -168,7 +168,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
           id: group.id,
         };
 
-        // Category row - ALWAYS present
+        // フェーズ行
         rows.push({
           type: "category",
           id: `category-${group.name}`,
@@ -179,7 +179,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         });
         currentY += CATEGORY_HEIGHT;
 
-        // Task rows - ONLY if category is expanded
+        // タスク行 - フェーズが展開されている場合のみ
         if (expandedCategories.has(group.name)) {
           group.tasks.forEach((task) => {
             rows.push({
@@ -441,7 +441,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         </div>
         <div ref={ref} className="w-full h-full bg-background gantt-chart">
           <div className="flex h-full">
-            {/* タスクリスト列 - 完全な整列のためにganttRowsを使用 */}
+            {/* タスクリスト列 */}
             <div
               className="border-r border-border bg-card flex-shrink-0"
               style={{ width: TASK_LIST_WIDTH }}
@@ -452,12 +452,12 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                 style={{ height: HEADER_HEIGHT }}
               >
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium">タスク名</h3>
-                  <div className="text-xs text-muted-foreground">詳細</div>
+                  {/* <h3 className="font-medium">タスク名</h3>
+                  <div className="text-xs text-muted-foreground">詳細</div> */}
                 </div>
               </div>
 
-              {/* タスクリストの内容 - ganttRowsを用いた絶対配置 */}
+              {/* タスクリストの内容 */}
               <div
                 className="overflow-y-auto relative"
                 style={{ height: `calc(100% - ${HEADER_HEIGHT}px)` }}
@@ -574,7 +574,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
               </div>
             </div>
 
-            {/* タイムライン領域 - 完全な整列のため同じganttRowsを使用 */}
+            {/* タイムライン領域 */}
             <div className="flex-1 flex flex-col min-w-0">
               {/* タイムラインコンテンツのコンテナ */}
               <div className="flex-1 flex flex-col min-h-0">

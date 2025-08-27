@@ -24,7 +24,7 @@ export class WbsApplicationService implements IWbsApplicationService {
     constructor(
         @inject(SYMBOL.IWbsRepository) private readonly wbsRepository: IWbsRepository,
         @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: IWbsAssigneeRepository,
-        @inject(SYMBOL.IPhaseRepository) private readonly phaseRepository: IPhaseRepository
+        @inject(SYMBOL.IPhaseRepository) private readonly phaseRepository: IPhaseRepository,
     ) { }
 
     public async getWbsById(id: number): Promise<WbsType | null> {
