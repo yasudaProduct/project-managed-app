@@ -62,11 +62,11 @@ export const QuickActions = ({
         <Button
           size="sm"
           onClick={onAddTask}
-          className="gap-2"
+          className="gap-2 disabled:bg-gray-400"
           variant="outline"
         >
           <Plus className="w-4 h-4" />
-          タスク追加
+          🚧タスク追加
         </Button>
 
         {selectedTasks.size > 0 && (

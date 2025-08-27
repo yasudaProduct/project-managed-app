@@ -12,8 +12,6 @@ import {
   GanttChart,
 } from "@/components/ganttv3";
 import {
-  sampleTasks,
-  sampleCategories,
   defaultGanttStyle,
 } from "@/data/sampleData";
 import { useParams } from "next/navigation";
@@ -362,7 +360,7 @@ export default function App() {
                   predecessors: [],
                   level: 0,
                   isManuallyScheduled: false,
-                  category: "R&D and Preparation",
+                  category: "TEST",
                   description: "",
                   resources: [],
                 };

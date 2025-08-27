@@ -231,7 +231,7 @@ export default function GeppoPage() {
             )}
           </div>
           <div className="flex items-center space-x-4">
-            <Link href="/work-records/import">
+            <Link href="/work-records/geppo-import">
               <Button>
                 <Upload className="h-4 w-4" />
                 月報データ取込
