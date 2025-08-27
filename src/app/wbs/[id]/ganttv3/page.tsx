@@ -17,12 +17,12 @@ import {
   defaultGanttStyle,
 } from "@/data/sampleData";
 import { useParams } from "next/navigation";
-import { getTasks as getGanttTasks } from "./action";
+import { getTasks as getGanttTasks, getPhases } from "./action";
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const [categories, setCategories] = useState<Category[]>(sampleCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [currentView, setCurrentView] = useState<"gantt" | "table">("gantt");
   const [timelineScale, setTimelineScale] = useState<TimelineScale>("month");
@@ -38,7 +38,12 @@ export default function App() {
       const tasks = await getGanttTasks(wbsId);
       setTasks(tasks);
     };
+    const fetchPhases = async () => {
+      const phases = await getPhases(wbsId);
+      setCategories(phases);
+    };
     fetchTasks();
+    fetchPhases();
   }, [wbsId]);
 
   // Add zoom level state

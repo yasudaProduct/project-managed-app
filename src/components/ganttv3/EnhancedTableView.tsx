@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
-import { Task, Category } from "./gantt";
+import { Task, GanttPhase } from "./gantt";
 import {
   Table,
   TableBody,
@@ -50,22 +50,22 @@ import {
 
 interface EnhancedTableViewProps {
   tasks: Task[];
-  categories: Category[];
+  categories: GanttPhase[];
   selectedTasks: Set<string>;
   onTaskUpdate: (task: Task) => void;
   onTaskSelect: (selectedTasks: Set<string>) => void;
   onTaskAdd: (task: Omit<Task, "id">) => void;
   onTaskMove: (taskId: string, newCategory: string) => void;
-  onCategoryUpdate: (category: Category) => void;
-  onCategoryAdd: (category: Omit<Category, "id">) => void;
-  onCategoryDelete?: (category: Category) => void;
+  onCategoryUpdate: (category: GanttPhase) => void;
+  onCategoryAdd: (category: Omit<GanttPhase, "id">) => void;
+  onCategoryDelete?: (category: GanttPhase) => void;
   onTaskIndent?: (taskId: string) => void;
   onTaskOutdent?: (taskId: string) => void;
 }
 
 interface TaskRowProps {
   task: Task;
-  categories: Category[];
+  categories: GanttPhase[];
   isSelected: boolean;
   onTaskUpdate: (task: Task) => void;
   onTaskSelect: (taskId: string, selected: boolean) => void;
@@ -537,12 +537,12 @@ const TaskRow: React.FC<TaskRowProps> = ({
 };
 
 interface CategoryHeaderProps {
-  category: Category;
+  category: GanttPhase;
   tasks: Task[];
   isExpanded: boolean;
   onToggle: () => void;
-  onCategoryUpdate: (category: Category) => void;
-  onCategoryDelete?: (category: Category) => void;
+  onCategoryUpdate: (category: GanttPhase) => void;
+  onCategoryDelete?: (category: GanttPhase) => void;
   onTaskMove: (taskId: string, newCategory: string) => void;
 }
 
@@ -705,7 +705,7 @@ const CategoryHeader: React.FC<CategoryHeaderProps> = ({
 };
 
 interface AddCategoryDialogProps {
-  onCategoryAdd: (category: Omit<Category, "id">) => void;
+  onCategoryAdd: (category: Omit<GanttPhase, "id">) => void;
 }
 
 const AddCategoryDialog: React.FC<AddCategoryDialogProps> = ({

@@ -5,23 +5,36 @@ export class Phase {
     public name: string;
     public code: PhaseCode;
     public seq: number;
+    public period?: { start: Date; end: Date };
 
-    private constructor(args: { id?: number; name: string; code: PhaseCode; seq: number }) {
+    private constructor(args: { id?: number; name: string; code: PhaseCode; seq: number, period?: { start: Date; end: Date } }) {
         this.id = args.id;
         this.name = args.name;
         this.code = args.code;
         this.seq = args.seq;
+        this.period = args.period;
+
+        this.validate()
     }
 
-    public static create(args: { name: string; code: PhaseCode; seq: number }): Phase {
+    public static create(args: { name: string; code: PhaseCode; seq: number, period?: { start: Date; end: Date } }): Phase {
         return new Phase(args);
     }
 
-    public static createFromDb(args: { id: number; name: string; code: PhaseCode; seq: number }): Phase {
+    public static createFromDb(args: { id: number; name: string; code: PhaseCode; seq: number, period?: { start: Date; end: Date } }): Phase {
         return new Phase(args);
     }
 
     public isEqual(phase: Phase) {
         return this.id === phase.id;
+    }
+
+    private validate() {
+        // periodの開始日と終了日のバリデーション
+        if (this.period) {
+            if (this.period.start >= this.period.end) {
+                throw new Error("無効な期間: 開始日は終了日より前である必要があります。");
+            }
+        }
     }
 }

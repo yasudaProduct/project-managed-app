@@ -3,6 +3,7 @@ import { Phase } from "@/domains/phase/phase";
 import { PhaseCode } from "@/domains/phase/phase-code";
 import prisma from "@/lib/prisma";
 import { injectable } from "inversify";
+import type { WbsPhase as PhaseDbType} from "@prisma/client";
 
 @injectable()
 export class PhaseRepository implements IPhaseRepository {
@@ -51,7 +52,7 @@ export class PhaseRepository implements IPhaseRepository {
     }
 
     async findByWbsId(wbsId: number): Promise<Phase[]> {
-
+        console.log("repository: findByWbsId")
         const phasesDb = await prisma.wbsPhase.findMany({
             where: {
                 wbsId: wbsId
@@ -59,12 +60,47 @@ export class PhaseRepository implements IPhaseRepository {
             orderBy: { seq: 'asc' },
         });
 
-        return phasesDb.map(phaseDb => Phase.createFromDb({
+        const computePeriod = async (phases: PhaseDbType[]) => {
+            // フェーズの期間を計算　紐づくタスクの最小値と最大値
+            const tasks = await prisma.wbsTask.findMany({
+                where: {
+                    phaseId: {
+                        in: phases.map(phase => phase.id)
+                    }
+                },
+            });
+
+            if (tasks.length === 0) {
+                return undefined;
+            }
+
+            // すべてのタスクに紐づく period レコードをまとめて取得
+            const periods = await prisma.taskPeriod.findMany({
+                where: {
+                    taskId: {
+                        in: tasks.map(t => t.id)
+                    }
+                }
+            });
+
+            if (periods.length === 0) {
+                return undefined;
+            }
+
+            // Date -> number (ms) に変換してから min/max を計算
+            const startMs = Math.min(...periods.map(p => p.startDate.getTime()));
+            const endMs = Math.max(...periods.map(p => p.endDate.getTime()));
+
+            return { start: new Date(startMs), end: new Date(endMs) };
+        }
+
+        return Promise.all(phasesDb.map(async phaseDb => Phase.createFromDb({
             id: phaseDb.id,
             name: phaseDb.name,
             code: new PhaseCode(phaseDb.code),
             seq: phaseDb.seq,
-        }));
+            period: await computePeriod(phasesDb)
+        })));
     }
 
     async findPhasesUsedInWbs(wbsId: number): Promise<Phase[]> {

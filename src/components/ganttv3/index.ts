@@ -15,7 +15,7 @@ export { ImportModal } from './ImportModal';
 // Type exports
 export type {
     Task,
-    Category,
+    GanttPhase as Category,
     Dependency,
     DependencyType,
     TimelineScale,

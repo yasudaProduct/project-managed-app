@@ -16,7 +16,7 @@ export interface Task {
   resources?: string[];
 }
 
-export interface Category {
+export interface GanttPhase {
   id: string;
   name: string;
   color: string;
@@ -58,7 +58,7 @@ export interface GanttStyle {
 
 export interface ProjectData {
   tasks: Task[];
-  categories: Category[];
+  categories: GanttPhase[];
   style: GanttStyle;
   scale: TimelineScale;
   metadata: {

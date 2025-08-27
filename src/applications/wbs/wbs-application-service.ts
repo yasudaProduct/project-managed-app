@@ -5,6 +5,7 @@ import type { IWbsRepository } from "./iwbs-repository";
 import { Wbs } from "@/domains/wbs/wbs";
 import type { IWbsAssigneeRepository } from "./iwbs-assignee-repository";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
+import type { IPhaseRepository } from "../task/iphase-repository";
 
 export interface IWbsApplicationService {
     getWbsById(id: number): Promise<WbsType | null>;
@@ -14,6 +15,7 @@ export interface IWbsApplicationService {
     deleteWbs(id: number): Promise<{ success: boolean; error?: string; id?: number }>;
     getAssignees(wbsId: number): Promise<{ assignee: AssigneeType | null, wbsId: number }[] | null>;
     getAssigneeById(id: number): Promise<{ assignee: AssigneeType | null, wbsId?: number }>;
+    getPhases(wbsId: number): Promise<{ id: number; name: string; seq: number; code: string; startDate: Date; endDate: Date; }[]>;
 }
 
 @injectable()
@@ -21,7 +23,8 @@ export class WbsApplicationService implements IWbsApplicationService {
 
     constructor(
         @inject(SYMBOL.IWbsRepository) private readonly wbsRepository: IWbsRepository,
-        @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: IWbsAssigneeRepository
+        @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: IWbsAssigneeRepository,
+        @inject(SYMBOL.IPhaseRepository) private readonly phaseRepository: IPhaseRepository
     ) { }
 
     public async getWbsById(id: number): Promise<WbsType | null> {
@@ -114,5 +117,18 @@ export class WbsApplicationService implements IWbsApplicationService {
                 rate: assignee.getRate() ?? 0,
             },
         }
+    }
+
+    public async getPhases(wbsId: number): Promise<{ id: number; name: string; seq: number; code: string; startDate: Date; endDate: Date; }[]> {
+        const phases = await this.phaseRepository.findByWbsId(wbsId);
+
+        return phases.map(phase => ({
+            id: phase.id!,
+            name: phase.name,
+            seq: phase.seq,
+            code: String(phase.code),
+            startDate: phase.period?.start ?? new Date(0),
+            endDate: phase.period?.end ?? new Date(0),
+        }));
     }
 }

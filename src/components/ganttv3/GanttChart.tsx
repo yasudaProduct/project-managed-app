@@ -7,7 +7,7 @@ import React, {
   useEffect,
   JSX,
 } from "react";
-import { Task, TimelineScale, GanttStyle, Category } from "./gantt";
+import { Task, TimelineScale, GanttStyle, GanttPhase } from "./gantt";
 import { TimelineHeader } from "./TimelineHeader";
 import { TaskBar } from "./TaskBar";
 import { GridLines } from "./GridLines";
@@ -25,7 +25,7 @@ import {
 
 interface GanttChartProps {
   tasks: Task[];
-  categories: Category[];
+  categories: GanttPhase[];
   timelineScale: TimelineScale;
   style: GanttStyle;
   expandedCategories: Set<string>;
@@ -43,7 +43,7 @@ interface GanttRow {
   height: number;
   categoryName?: string;
   task?: Task;
-  category?: Category;
+  category?: GanttPhase;
 }
 
 export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
