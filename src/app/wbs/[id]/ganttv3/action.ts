@@ -1,7 +1,7 @@
 "use server";
 
 import { ITaskApplicationService } from "@/applications/task/task-application-service";
-import { GanttPhase, Task as GanttTask } from "@/components/ganttv3/gantt";
+import { GanttPhase, Task as GanttTask, TaskStatus as GanntTaskStatus } from "@/components/ganttv3/gantt";
 import { SYMBOL } from "@/types/symbol";
 import { container } from "@/lib/inversify.config";
 import { WbsPhase, WbsTask } from "@/types/wbs";
@@ -39,15 +39,19 @@ export async function getPhases(wbsId: number): Promise<GanttPhase[]> {
 function convertTask(task: WbsTask): GanttTask | undefined {
 
     let color = "red";
+    let status: GanntTaskStatus
     switch (task.status) {
         case "COMPLETED":
             color = "green";
+            status = "completed";
             break;
         case "IN_PROGRESS":
             color = "blue";
+            status = "inProgress";
             break;
         case "NOT_STARTED":
             color = "gray";
+            status = "notStarted";
             break;
     }
 
@@ -66,6 +70,8 @@ function convertTask(task: WbsTask): GanttTask | undefined {
             level: 0,
             isManuallyScheduled: false,
             category: task.phase?.name,
+            assignee: task.assignee?.name,
+            status: status,
         };
     }
 

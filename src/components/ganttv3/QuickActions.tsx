@@ -1,5 +1,5 @@
 import React from "react";
-import { TimelineScale, GanttStyle } from "./gantt";
+import { TimelineScale, GanttStyle, GroupBy } from "./gantt";
 import { Button } from "../ui/button";
 import {
   Select,
@@ -17,6 +17,10 @@ import {
   GitBranch,
   Target,
   Calendar,
+  Users,
+  Layers,
+  Activity,
+  List,
 } from "lucide-react";
 
 interface QuickActionsProps {
@@ -28,6 +32,8 @@ interface QuickActionsProps {
   onAddTask: () => void;
   onDeleteTasks: () => void;
   onDuplicateTasks: () => void;
+  groupBy?: GroupBy;
+  onGroupByChange?: (groupBy: GroupBy) => void;
 }
 
 /**
@@ -54,7 +60,22 @@ export const QuickActions = ({
   onAddTask,
   onDeleteTasks,
   onDuplicateTasks,
+  groupBy = 'none',
+  onGroupByChange,
 }: QuickActionsProps) => {
+  const getGroupIcon = (group: GroupBy) => {
+    switch (group) {
+      case 'phase':
+        return <Layers className="w-4 h-4" />;
+      case 'assignee':
+        return <Users className="w-4 h-4" />;
+      case 'status':
+        return <Activity className="w-4 h-4" />;
+      default:
+        return <List className="w-4 h-4" />;
+    }
+  };
+
   return (
     <div className="flex items-center gap-3">
       {/* タスク操作 */}
@@ -94,6 +115,50 @@ export const QuickActions = ({
       </div>
 
       <Separator orientation="vertical" className="h-6" />
+
+      {/* グループ表示 */}
+      {onGroupByChange && (
+        <>
+          <div className="flex items-center gap-2">
+            <Select
+              value={groupBy}
+              onValueChange={(value: GroupBy) => {
+                onGroupByChange(value);
+              }}
+            >
+              <SelectTrigger className="w-36">
+                <div className="flex items-center gap-2">
+                  {getGroupIcon(groupBy)}
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">
+                  <div className="flex items-center gap-2">
+                    <span>グループなし</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="phase">
+                  <div className="flex items-center gap-2">
+                    <span>フェーズ</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="assignee">
+                  <div className="flex items-center gap-2">
+                    <span>担当者</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="status">
+                  <div className="flex items-center gap-2">
+                    <span>ステータス</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Separator orientation="vertical" className="h-6" />
+        </>
+      )}
 
       {/* タイムラインスケール */}
       <div className="flex items-center gap-2 pl-2">

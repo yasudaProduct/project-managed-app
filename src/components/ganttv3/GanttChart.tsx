@@ -7,7 +7,8 @@ import React, {
   useEffect,
   JSX,
 } from "react";
-import { Task, TimelineScale, GanttStyle, GanttPhase } from "./gantt";
+import { Task, TimelineScale, GanttStyle, GanttPhase, GroupBy } from "./gantt";
+import { groupTasksByType, TaskGroup } from './utils/groupTasks';
 import { TimelineHeader } from "./TimelineHeader";
 import { TaskBar } from "./TaskBar";
 import { GridLines } from "./GridLines";
@@ -30,6 +31,7 @@ interface GanttChartProps {
   style: GanttStyle;
   expandedCategories: Set<string>;
   zoomLevel?: number;
+  groupBy?: GroupBy;
   onTaskUpdate: (task: Task) => void;
   onCategoryToggle: (categoryName: string) => void;
   onZoomChange?: (zoom: number) => void;
@@ -55,6 +57,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       style,
       expandedCategories,
       zoomLevel = 1.0,
+      groupBy = 'phase',
       onTaskUpdate,
       onCategoryToggle,
       onZoomChange,
@@ -139,62 +142,53 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
 
     const columnWidth = Math.round(getBaseColumnWidth() * zoomLevel);
 
-    // タスクをカテゴリごとにグループ化
+    // タスクをグループ化
+    const taskGroups = useMemo(() => {
+      return groupTasksByType(tasks, groupBy, categories);
+    }, [tasks, groupBy, categories]);
+
+    // グループごとのタスクマップ（互換性のため）
     const groupedTasks = useMemo(() => {
       const grouped: Record<string, Task[]> = {};
-
-      categories.forEach((category) => {
-        grouped[category.name] = [];
+      taskGroups.forEach(group => {
+        grouped[group.name] = group.tasks;
       });
-
-      if (tasks.some((task) => !task.category)) {
-        grouped["Uncategorized"] = [];
-      }
-
-      tasks.forEach((task) => {
-        const categoryName = task.category || "Uncategorized";
-        if (!grouped[categoryName]) {
-          grouped[categoryName] = [];
-        }
-        grouped[categoryName].push(task);
-      });
-
       return grouped;
-    }, [tasks, categories]);
+    }, [taskGroups]);
 
     // 堅牢な行計算 - 両側の単一の信頼できる情報源（SSOT）
     const ganttRows = useMemo(() => {
       const rows: GanttRow[] = [];
       let currentY = 0;
 
-      Object.entries(groupedTasks).forEach(([categoryName, categoryTasks]) => {
-        const category = categories.find((c) => c.name === categoryName) || {
-          name: categoryName,
-          color: "#6B7280",
-          id: "uncategorized",
+      taskGroups.forEach((group) => {
+        const category = categories.find((c) => c.name === group.name) || {
+          name: group.name,
+          color: group.color || "#6B7280",
+          id: group.id,
         };
 
         // Category row - ALWAYS present
         rows.push({
           type: "category",
-          id: `category-${categoryName}`,
+          id: `category-${group.name}`,
           y: currentY,
           height: CATEGORY_HEIGHT,
-          categoryName,
+          categoryName: group.name,
           category,
         });
         currentY += CATEGORY_HEIGHT;
 
         // Task rows - ONLY if category is expanded
-        if (expandedCategories.has(categoryName)) {
-          categoryTasks.forEach((task) => {
+        if (expandedCategories.has(group.name)) {
+          group.tasks.forEach((task) => {
             rows.push({
               type: "task",
               id: `task-${task.id}`,
               y: currentY,
               height: ROW_HEIGHT,
               task,
-              categoryName,
+              categoryName: group.name,
             });
             currentY += ROW_HEIGHT;
           });
@@ -203,7 +197,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
 
       return rows;
     }, [
-      groupedTasks,
+      taskGroups,
       categories,
       expandedCategories,
       CATEGORY_HEIGHT,

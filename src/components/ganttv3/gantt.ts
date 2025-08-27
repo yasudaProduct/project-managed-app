@@ -14,7 +14,13 @@ export interface Task {
   isOnCriticalPath?: boolean;
   description?: string;
   resources?: string[];
+  assignee?: string;
+  status?: TaskStatus;
 }
+
+export type TaskStatus = 'notStarted' | 'inProgress' | 'completed' | 'delayed' | 'onHold';
+
+export type GroupBy = 'none' | 'phase' | 'assignee' | 'status';
 
 export interface GanttPhase {
   id: string;

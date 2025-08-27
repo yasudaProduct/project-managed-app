@@ -10,6 +10,7 @@ import {
   ViewSwitcher,
   QuickActions,
   GanttChart,
+  GroupBy,
 } from "@/components/ganttv3";
 import {
   defaultGanttStyle,
@@ -48,6 +49,9 @@ export default function App() {
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
 
   const [ganttStyle, setGanttStyle] = useState<GanttStyle>(defaultGanttStyle);
+  
+  // Add groupBy state
+  const [groupBy, setGroupBy] = useState<GroupBy>('phase');
 
   // プロジェクト統計を計算
   // const projectStats = useMemo(() => {
@@ -370,6 +374,8 @@ export default function App() {
               onDuplicateTasks={() =>
                 handleTaskDuplicate(Array.from(selectedTasks))
               }
+              groupBy={groupBy}
+              onGroupByChange={setGroupBy}
             />
 
             {currentView === "gantt" && (
@@ -402,6 +408,7 @@ export default function App() {
             style={ganttStyle}
             expandedCategories={expandedCategories}
             zoomLevel={zoomLevel}
+            groupBy={groupBy}
             onTaskUpdate={handleTaskUpdate}
             onCategoryToggle={handleCategoryToggle}
             onZoomChange={setZoomLevel}

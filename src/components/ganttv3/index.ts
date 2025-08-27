@@ -21,6 +21,8 @@ export type {
     TimelineScale,
     GanttStyle,
     ProjectData,
+    GroupBy,
+    TaskStatus,
 } from './gantt';
 
 // Default export for convenience
