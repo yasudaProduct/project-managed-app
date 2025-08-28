@@ -35,7 +35,7 @@ import { toast } from "@/hooks/use-toast";
 
 interface WbsSummaryTablesProps {
   projectId: string;
-  wbsId: string;
+  wbsId: number;
 }
 
 export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {

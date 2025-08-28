@@ -9,6 +9,7 @@ import {
   Trello,
   Users,
   History,
+  CalendarCheck,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { AuthStatus } from "./auth/auth-status";
@@ -101,6 +102,13 @@ export function SideMenu() {
             >
               <Calendar className="h-4 w-4" />
               予定自動作成
+            </Link>
+            <Link
+              href="/company-holidays"
+              className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
+              <CalendarCheck className="h-4 w-4" />
+              会社休日管理
             </Link>
 
             {wbsId && (

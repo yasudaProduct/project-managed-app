@@ -182,7 +182,7 @@ export default async function WbsManagementPage({
               />
             </TabsContent>
             <TabsContent value="table">
-              <WbsSummaryTables projectId={project.id} wbsId={String(wbs.id)} />
+              <WbsSummaryTables projectId={project.id} wbsId={wbs.id} />
             </TabsContent>
           </Tabs>
         </Suspense>

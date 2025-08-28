@@ -8,7 +8,7 @@ import { getWbsSummary } from "@/app/wbs/[id]/wbs-summary-actions";
  * @param wbsId WBSID
  * @returns WBSの集計
  */
-export function useWbsSummary(projectId: string, wbsId: string) {
+export function useWbsSummary(projectId: string, wbsId: number) {
   return useQuery<WbsSummaryResult>({
     queryKey: ["wbsSummary", projectId, wbsId],
     queryFn: () => getWbsSummary(projectId, wbsId),

@@ -1,6 +1,6 @@
 export interface IWbsQueryRepository {
-  getWbsTasks(projectId: string, wbsId: string): Promise<WbsTaskData[]>;
-  getPhases(wbsId: string): Promise<PhaseData[]>;
+  getWbsTasks(projectId: string, wbsId: number): Promise<WbsTaskData[]>;
+  getPhases(wbsId: number): Promise<PhaseData[]>;
 }
 
 export interface WbsTaskData {

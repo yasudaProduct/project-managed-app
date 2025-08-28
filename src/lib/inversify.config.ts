@@ -78,6 +78,12 @@ import { SyncLogRepository } from "@/infrastructures/sync/SyncLogRepository";
 import type { IWbsSyncApplicationService } from "@/applications/excel-sync/IWbsSyncApplicationService";
 import { WbsSyncApplicationService } from "@/applications/excel-sync/WbsSyncApplicationService";
 
+// Calendar関連
+import type { ICompanyHolidayRepository } from "@/applications/calendar/icompany-holiday-repository";
+import { CompanyHolidayRepository } from "@/infrastructures/calendar/company-holiday-repository";
+import type { IUserScheduleRepository } from "@/applications/calendar/iuser-schedule-repository";
+import { UserScheduleRepository } from "@/infrastructures/calendar/user-schedule-repository";
+
 // Prisma
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma';
@@ -124,6 +130,8 @@ container.bind<ITaskDependencyRepository>(SYMBOL.ITaskDependencyRepository).to(T
 container.bind<IExcelWbsRepository>(SYMBOL.IExcelWbsRepository).to(ExcelWbsRepository).inSingletonScope();
 container.bind<ISyncLogRepository>(SYMBOL.ISyncLogRepository).to(SyncLogRepository).inSingletonScope();
 container.bind<IMilestoneRepository>(SYMBOL.IMilestoneRepository).to(MilestoneRepository).inSingletonScope();
+container.bind<ICompanyHolidayRepository>(SYMBOL.ICompanyHolidayRepository).to(CompanyHolidayRepository).inSingletonScope();
+container.bind<IUserScheduleRepository>(SYMBOL.IUserScheduleRepository).to(UserScheduleRepository).inSingletonScope();
 
 // Geppo Import関連サービス
 container.bind<ProjectMappingService>(SYMBOL.ProjectMappingService).to(ProjectMappingService).inSingletonScope();

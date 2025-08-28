@@ -200,6 +200,14 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"company_holidays" {
+  Int id PK
+  DateTime date UK
+  String name
+  CompanyHolidayType type
+  DateTime createdAt
+  DateTime updatedAt
+}
 "user_sessions" }o--|| "users" : user
 "wbs" }o--|| "projects" : project
 "wbs_assignee" }o--|| "wbs" : wbs
@@ -454,5 +462,15 @@ erDiagram
   - `updatedCount`: 
   - `deletedCount`: 
   - `errorDetails`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `company_holidays`
+
+**Properties**
+  - `id`: 
+  - `date`: 
+  - `name`: 
+  - `type`: 
   - `createdAt`: 
   - `updatedAt`: 

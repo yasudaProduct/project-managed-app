@@ -18,8 +18,13 @@
       "Bash(curl:*)",
       "Bash(npx prisma migrate dev:*)",
       "Bash(npm run lint:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(mkdir:*)",
+      "Bash(npx tsc:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "/model UserSchedule"
+    ]
   }
 }
