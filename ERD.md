@@ -141,6 +141,48 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"notifications" {
+  Int id PK
+  String userId FK
+  NotificationType type
+  NotificationPriority priority
+  String title
+  String message
+  Json data "nullable"
+  NotificationChannel channels
+  Boolean isRead
+  DateTime readAt "nullable"
+  DateTime scheduledAt "nullable"
+  DateTime sentAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"notification_preferences" {
+  Int id PK
+  String userId FK
+  Boolean enablePush
+  Boolean enableInApp
+  Boolean enableEmail
+  Json taskDeadline
+  Json manhourThreshold
+  Boolean scheduleDelay
+  Boolean taskAssignment
+  Boolean projectStatusChange
+  Int quietHoursStart "nullable"
+  Int quietHoursEnd "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"push_subscriptions" {
+  Int id PK
+  String userId FK
+  String endpoint
+  Json keys
+  String userAgent "nullable"
+  Boolean isActive
+  DateTime createdAt
+  DateTime updatedAt
+}
 "wbs_progress_history" {
   Int id PK
   Int wbsId FK
@@ -226,6 +268,9 @@ erDiagram
 "work_records" }o--|| "users" : user
 "work_records" }o--o| "wbs_task" : task
 "user_schedule" }o--|| "users" : user
+"notifications" }o--|| "users" : user
+"notification_preferences" |o--|| "users" : user
+"push_subscriptions" }o--|| "users" : user
 "wbs_progress_history" }o--|| "wbs" : wbs
 "task_progress_history" }o--|| "wbs_progress_history" : wbsProgressHistory
 "task_dependencies" }o--|| "wbs_task" : predecessorTask
@@ -395,6 +440,54 @@ erDiagram
   - `title`: 
   - `location`: 
   - `description`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `notifications`
+
+**Properties**
+  - `id`: 
+  - `userId`: 
+  - `type`: 
+  - `priority`: 
+  - `title`: 
+  - `message`: 
+  - `data`: 
+  - `channels`: 
+  - `isRead`: 
+  - `readAt`: 
+  - `scheduledAt`: 
+  - `sentAt`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `notification_preferences`
+
+**Properties**
+  - `id`: 
+  - `userId`: 
+  - `enablePush`: 
+  - `enableInApp`: 
+  - `enableEmail`: 
+  - `taskDeadline`: 
+  - `manhourThreshold`: 
+  - `scheduleDelay`: 
+  - `taskAssignment`: 
+  - `projectStatusChange`: 
+  - `quietHoursStart`: 
+  - `quietHoursEnd`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `push_subscriptions`
+
+**Properties**
+  - `id`: 
+  - `userId`: 
+  - `endpoint`: 
+  - `keys`: 
+  - `userAgent`: 
+  - `isActive`: 
   - `createdAt`: 
   - `updatedAt`: 
 

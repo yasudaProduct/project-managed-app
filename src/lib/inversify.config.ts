@@ -84,6 +84,14 @@ import { CompanyHolidayRepository } from "@/infrastructures/calendar/company-hol
 import type { IUserScheduleRepository } from "@/applications/calendar/iuser-schedule-repository";
 import { UserScheduleRepository } from "@/infrastructures/calendar/user-schedule-repository";
 
+// Notification関連
+import type { INotificationService } from "@/applications/notification/INotificationService";
+import { NotificationService } from "@/applications/notification/NotificationService";
+import type { INotificationRepository } from "@/applications/notification/INotificationRepository";
+import { NotificationRepository } from "@/infrastructures/notification/NotificationRepository";
+import { PushNotificationService } from "@/infrastructures/notification/PushNotificationService";
+import { NotificationEventDetector } from "@/applications/notification/NotificationEventDetector";
+
 // Prisma
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma';
@@ -107,6 +115,9 @@ container.bind<IProgressHistoryApplicationService>(SYMBOL.IProgressHistoryApplic
 container.bind<TaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDependencyService).inSingletonScope();
 container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<IMilestoneApplicationService>(SYMBOL.IMilestoneApplicationService).to(MilestoneApplicationService).inSingletonScope();
+container.bind<INotificationService>('NotificationService').to(NotificationService).inSingletonScope();
+container.bind<PushNotificationService>('PushNotificationService').to(PushNotificationService).inSingletonScope();
+container.bind<NotificationEventDetector>('NotificationEventDetector').to(NotificationEventDetector).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
@@ -132,6 +143,7 @@ container.bind<ISyncLogRepository>(SYMBOL.ISyncLogRepository).to(SyncLogReposito
 container.bind<IMilestoneRepository>(SYMBOL.IMilestoneRepository).to(MilestoneRepository).inSingletonScope();
 container.bind<ICompanyHolidayRepository>(SYMBOL.ICompanyHolidayRepository).to(CompanyHolidayRepository).inSingletonScope();
 container.bind<IUserScheduleRepository>(SYMBOL.IUserScheduleRepository).to(UserScheduleRepository).inSingletonScope();
+container.bind<INotificationRepository>('NotificationRepository').to(NotificationRepository).inSingletonScope();
 
 // Geppo Import関連サービス
 container.bind<ProjectMappingService>(SYMBOL.ProjectMappingService).to(ProjectMappingService).inSingletonScope();
