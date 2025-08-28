@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AuthHeader } from "./auth/auth-header";
+import { NotificationCenter } from "./notification/NotificationCenter";
 
 interface WbsInfo {
   id: string;
@@ -155,8 +156,9 @@ export function Header() {
           )}
         </div>
 
-        {/* Right side - Auth status */}
-        <div className="flex items-center">
+        {/* Right side - Notifications and Auth status */}
+        <div className="flex items-center space-x-2">
+          <NotificationCenter />
           <AuthHeader />
         </div>
       </div>
