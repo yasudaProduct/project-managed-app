@@ -78,6 +78,14 @@ import { SyncLogRepository } from "@/infrastructures/sync/SyncLogRepository";
 import type { IWbsSyncApplicationService } from "@/applications/excel-sync/IWbsSyncApplicationService";
 import { WbsSyncApplicationService } from "@/applications/excel-sync/WbsSyncApplicationService";
 
+// Notification関連
+import type { INotificationService } from "@/applications/notification/INotificationService";
+import { NotificationService } from "@/applications/notification/NotificationService";
+import type { INotificationRepository } from "@/applications/notification/INotificationRepository";
+import { NotificationRepository } from "@/infrastructures/notification/NotificationRepository";
+import { PushNotificationService } from "@/infrastructures/notification/PushNotificationService";
+import { NotificationEventDetector } from "@/applications/notification/NotificationEventDetector";
+
 // Prisma
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma';
@@ -97,6 +105,9 @@ container.bind<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationSer
 container.bind<IProgressHistoryApplicationService>(SYMBOL.IProgressHistoryApplicationService).to(ProgressHistoryApplicationService).inSingletonScope();
 container.bind<TaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDependencyService).inSingletonScope();
 container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(WbsSyncApplicationService).inSingletonScope();
+container.bind<INotificationService>('NotificationService').to(NotificationService).inSingletonScope();
+container.bind<PushNotificationService>('PushNotificationService').to(PushNotificationService).inSingletonScope();
+container.bind<NotificationEventDetector>('NotificationEventDetector').to(NotificationEventDetector).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
@@ -119,6 +130,7 @@ container.bind<IProgressHistoryRepository>(SYMBOL.IProgressHistoryRepository).to
 container.bind<ITaskDependencyRepository>(SYMBOL.ITaskDependencyRepository).to(TaskDependencyRepository).inSingletonScope();
 container.bind<IExcelWbsRepository>(SYMBOL.IExcelWbsRepository).to(ExcelWbsRepository).inSingletonScope();
 container.bind<ISyncLogRepository>(SYMBOL.ISyncLogRepository).to(SyncLogRepository).inSingletonScope();
+container.bind<INotificationRepository>('NotificationRepository').to(NotificationRepository).inSingletonScope();
 
 // Geppo Import関連サービス
 container.bind<ProjectMappingService>(SYMBOL.ProjectMappingService).to(ProjectMappingService).inSingletonScope();
