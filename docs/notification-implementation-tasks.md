@@ -1,4 +1,17 @@
-# 通知機能実装タスクブレークダウン
+# 通知機能実装タスクブレークダウン（ハイブリッドアプローチ）
+
+## アーキテクチャ戦略
+
+### Server Actions使用箇所
+- **ユーザー操作系**: 既読/未読切り替え、通知削除、設定変更
+- **フォーム処理**: 通知設定更新、テスト通知送信
+- **初回データ取得**: Server Componentsとの組み合わせ
+
+### API Routes使用箇所  
+- **システム連携系**: Service Worker連携、Push通知購読
+- **バッチ処理**: Cronジョブ、定期イベント検知
+- **外部連携**: Webhook受信、他システム連携
+- **リアルタイム系**: SSE、動的データ更新
 
 ## 実装タスク一覧
 
@@ -123,28 +136,33 @@
 - [ ] 通知時間帯設定
 - [ ] 設定保存API連携
 
-#### 4.4 React Queryフック（1日）
-- [ ] useNotifications フック作成
-- [ ] useNotificationPreferences フック作成
-- [ ] リアルタイム更新対応
+#### 4.4 データフェッチング統合（1日）
+- [ ] useNotifications フック作成（API Routes + Server Actions）
+- [ ] useNotificationPreferences フック作成（Server Actions）
+- [ ] Server Componentsとの連携実装
+- [ ] リアルタイム更新対応（SSE統合）
 
-### Phase 5: API実装（1週間）
+### Phase 5: ハイブリッドAPI実装（1週間）
 
-#### 5.1 通知API（3日）
-- [ ] GET /api/notifications - 一覧取得
-- [ ] POST /api/notifications/mark-read - 既読処理
-- [ ] DELETE /api/notifications/:id - 削除
-- [ ] GET /api/notifications/count - 未読数取得
+#### 5.1 Server Actions実装（3日）
+- [ ] `markNotificationAsRead` Server Action作成
+  - `src/app/actions/notification-actions.ts`
+- [ ] `deleteNotification` Server Action作成
+- [ ] `updateNotificationPreferences` Server Action作成
+- [ ] `sendTestNotification` Server Action作成
+- [ ] Server Actionsの型安全性確保とバリデーション
 
-#### 5.2 購読管理API（2日）
-- [ ] POST /api/notifications/subscribe - Push購読
+#### 5.2 API Routes実装（3日）
+- [ ] GET /api/notifications - 一覧取得（ページネーション対応）
+- [ ] POST /api/notifications/subscribe - Push購読管理
 - [ ] DELETE /api/notifications/unsubscribe - 購読解除
-- [ ] GET /api/notifications/subscription-status
+- [ ] GET /api/notifications/count - 未読数取得
+- [ ] GET /api/notifications/stream - SSE配信エンドポイント
 
-#### 5.3 設定API（2日）
-- [ ] GET /api/notifications/preferences
-- [ ] PUT /api/notifications/preferences
-- [ ] POST /api/notifications/test - テスト通知送信
+#### 5.3 システム連携API（1日）
+- [ ] GET /api/cron/notifications - Cronジョブエンドポイント
+- [ ] POST /api/webhooks/notification - Webhook受信
+- [ ] GET /api/notifications/subscription-status - 購読状態確認
 
 ### Phase 6: テストと改善（1週間）
 
@@ -217,6 +235,32 @@
 2. **誤通知**
    - 対策: テスト環境での十分な検証
 
+## ハイブリッドアプローチの実装指針
+
+### Server Actions使用ケース
+1. **フォーム送信**: 通知設定更新、既読処理
+2. **ユーザー操作**: 通知削除、一括既読
+3. **プログレッシブエンハンスメント**: JavaScriptなしでも動作
+4. **型安全性重視**: TypeScriptによる自動型推論
+
+### API Routes使用ケース
+1. **システム間連携**: Service Worker、Cronジョブ
+2. **データ取得**: ページネーション、フィルタリング
+3. **リアルタイム通信**: SSE、WebSocket
+4. **外部API**: Webhook、サードパーティ連携
+
+### データフロー設計
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ Server Actions  │    │ Shared Services  │    │   API Routes    │
+│                 │    │                  │    │                 │
+│ - 既読処理      │    │ - Domain Logic   │    │ - データ取得    │
+│ - 設定更新      │◄──►│ - Business Rules │◄──►│ - SSE配信       │
+│ - 通知削除      │    │ - Repositories   │    │ - Cronジョブ     │
+│                 │    │                  │    │                 │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+```
+
 ## 依存関係
 
 ### 必要なパッケージ
@@ -225,7 +269,11 @@
   "dependencies": {
     "web-push": "^3.6.0",
     "@tanstack/react-query": "^5.0.0",
-    "node-cron": "^3.0.0"
+    "date-fns": "^3.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/web-push": "^3.6.0"
   }
 }
 ```
@@ -235,6 +283,7 @@
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 VAPID_SUBJECT=mailto:admin@example.com
+CRON_SECRET=your-cron-secret-key
 ```
 
 ## チェックポイント
