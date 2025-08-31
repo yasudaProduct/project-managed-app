@@ -29,15 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { DatePicker } from "@/components/date-picker";
 
 type CompanyHolidayType = "NATIONAL" | "COMPANY" | "SPECIAL";
 
@@ -56,11 +48,11 @@ interface CompanyHolidayFormProps {
   onSaveSuccess: () => void;
 }
 
-// バリデーションスキーマ
+// バリデーションスキーマ（DatePickerに合わせて文字列 YYYY/MM/DD を受け付け）
 const formSchema = z.object({
-  date: z.date({
-    required_error: "日付を選択してください",
-  }),
+  date: z
+    .string({ required_error: "日付を選択してください" })
+    .regex(/^\d{4}\/\d{2}\/\d{2}$/u, "日付はYYYY/MM/DD形式で入力してください"),
   name: z
     .string()
     .min(1, "休日名を入力してください")
@@ -78,14 +70,14 @@ export function CompanyHolidayForm({
   onSaveSuccess,
 }: CompanyHolidayFormProps) {
   const [loading, setLoading] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  // DatePicker 使用のため個別のカレンダー開閉状態は不要
 
   const isEditing = !!holiday;
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      date: holiday ? new Date(holiday.date) : undefined,
+      date: holiday ? holiday.date.replace(/-/g, "/") : "",
       name: holiday?.name || "",
       type: holiday?.type || "COMPANY",
     },
@@ -115,7 +107,7 @@ export function CompanyHolidayForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          date: format(data.date, "yyyy-MM-dd"),
+          date: data.date.replace(/\//g, "-"),
           name: data.name,
           type: data.type,
         }),
@@ -158,38 +150,7 @@ export function CompanyHolidayForm({
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>日付 *</FormLabel>
-                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className="w-full pl-3 text-left font-normal"
-                          type="button"
-                        >
-                          {field.value ? (
-                            format(field.value, "yyyy年MM月dd日(E)", {
-                              locale: ja,
-                            })
-                          ) : (
-                            <span>日付を選択</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={(date) => {
-                          field.onChange(date);
-                          setCalendarOpen(false);
-                        }}
-                        locale={ja}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <DatePicker field={field} />
                   <FormDescription>
                     休日として設定する日付を選択してください
                   </FormDescription>

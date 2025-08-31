@@ -230,7 +230,6 @@ export const mockData = {
             bufferType: "RISK",
         },
     ],
-
     workRecords: [
         {
             id: 1,
@@ -329,6 +328,7 @@ export const mockData = {
             date: addDays(70),
         },
     ],
+    companyHolidays: []
 };
 
 // 大量データ
@@ -413,6 +413,7 @@ export const mockDataLarge = {
         name: `マイルストーン${i + 1} `,
         date: addDays(i),
     })),
+    companyHolidays: []
 }
 
 // プロジェクトデータ
@@ -597,6 +598,7 @@ export const importTestData = {
             date: addDays(70),
         },
     ],
+    companyHolidays: []
 }
 
 export const importTestData2 = {
@@ -688,6 +690,7 @@ export const importTestData2 = {
             date: addDays(0),
         },
     ],
+    companyHolidays: []
 }
 
 // 営業日案分ロジックのテストデータ
@@ -744,7 +747,7 @@ export const proportionalAllocationTestData = {
             taskNo: "D1-0001",
             wbsId: 40,
             phaseId: 40,
-            name: "月またぎタスクA（フルタイム担当）",
+            name: "月またぎタスクA（稼働率1.0担当）",
             assigneeId: 40,
             status: "IN_PROGRESS",
             startDate: addDays(25), // 今月末
@@ -753,15 +756,15 @@ export const proportionalAllocationTestData = {
         },
         {
             id: 41,
-            taskNo: "D1-0002", 
+            taskNo: "D1-0002",
             wbsId: 40,
             phaseId: 40,
-            name: "月またぎタスクB（パートタイム担当）",
+            name: "月またぎタスクB（稼働率0.5担当）",
             assigneeId: 41,
             status: "IN_PROGRESS",
             startDate: addDays(20),
             endDate: addDays(45),
-            kosu: 60, // パートタイム考慮で60時間
+            kosu: 60,
         },
         {
             id: 42,
@@ -786,6 +789,42 @@ export const proportionalAllocationTestData = {
             startDate: new Date(baseDate.getFullYear(), 11, 25), // 12/25
             endDate: new Date(baseDate.getFullYear() + 1, 0, 10), // 1/10
             kosu: 40,
+        },
+        {
+            id: 44,
+            taskNo: "D1-0005",
+            wbsId: 40,
+            phaseId: 40,
+            name: "複数の月跨ぎロジック1（稼働率1.0担当）",
+            assigneeId: 40,
+            status: "NOT_STARTED",
+            startDate: addDays(25),
+            endDate: addDays(55),
+            kosu: 80,
+        },
+        {
+            id: 45,
+            taskNo: "D1-0006",
+            wbsId: 40,
+            phaseId: 40,
+            name: "複数の月跨ぎロジック2（稼働率1.0担当）",
+            assigneeId: 40,
+            status: "NOT_STARTED",
+            startDate: addDays(25),
+            endDate: addDays(55),
+            kosu: 80,
+        },
+        {
+            id: 46,
+            taskNo: "D1-0007",
+            wbsId: 40,
+            phaseId: 40,
+            name: "会社休日がある月が跨ぐタスク（稼働率1.0担当）",
+            assigneeId: 40,
+            status: "NOT_STARTED",
+            startDate: addDays(25),
+            endDate: addDays(45),
+            kosu: 80,
         },
     ],
     wbsBuffer: [
@@ -851,6 +890,12 @@ export const proportionalAllocationTestData = {
             id: 4,
             date: new Date(baseDate.getFullYear() + 1, 0, 3), // 1/3
             name: "年始特別休暇",
+            type: "COMPANY",
+        },
+        {
+            id: 5,
+            date: addDays(25),
+            name: "会社休日がある月が跨ぐタスク",
             type: "COMPANY",
         },
     ],

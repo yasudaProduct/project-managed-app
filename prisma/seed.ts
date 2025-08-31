@@ -2,7 +2,7 @@ import { complexProportionalTestData, importTestData, importTestData2, mockData,
 import { phases } from "../src/data/phases";
 import { users } from "../src/data/users";
 import prisma from "../src/lib/prisma";
-import { ProjectStatus, TaskStatus, BufferType } from "@prisma/client";
+import { ProjectStatus, TaskStatus, BufferType, CompanyHolidayType } from "@prisma/client";
 
 async function main() {
     console.log("▶️シードデータの挿入を開始します");
@@ -271,6 +271,21 @@ async function main() {
                 },
             })
         }
+
+        for (const companyHoliday of mock.companyHolidays) {
+            await prisma.companyHoliday.upsert({
+                where: { id: companyHoliday.id },
+                update: {
+                    date: new Date(companyHoliday.date),
+                },
+                create: {
+                    id: companyHoliday.id,
+                    date: new Date(companyHoliday.date),
+                    name: companyHoliday.name,
+                    type: companyHoliday.type as CompanyHolidayType,
+                },
+            })
+        }
     }
 
 
@@ -292,6 +307,7 @@ async function main() {
         "user_schedule",
         "wbs_progress_history",
         "task_progress_history",
+        "company_holidays",
     ] as const;
 
     for (const tableName of autoIncrementTables) {
