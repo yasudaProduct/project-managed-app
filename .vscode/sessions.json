@@ -17,12 +17,30 @@
       },
       [
         {
+          "name": "docker:app",
+          "autoExecuteCommands": true,
+          "icon": "database",
+          "color": "terminal.ansiGreen",
+          "commands": [
+            "echo docker compose up app"
+          ]
+        },
+        {
           "name": "docker:postgres",
           "autoExecuteCommands": true,
           "icon": "database",
           "color": "terminal.ansiGreen",
           "commands": [
             "docker compose up db"
+          ]
+        },
+        {
+          "name": "docker:cron",
+          "autoExecuteCommands": true,
+          "icon": "database",
+          "color": "terminal.ansiGreen",
+          "commands": [
+            "docker compose up notification-cron"
           ]
         }
       ]

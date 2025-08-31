@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { container } from '@/lib/inversify.config';
 import type { INotificationService } from '@/applications/notification/INotificationService';
-import { getCurrentUserId } from '@/lib/auth';
+import { getCurrentUserIdOrThrow } from '@/lib/get-current-user-id';
 
 const notificationService = container.get<INotificationService>('NotificationService');
 
@@ -10,9 +10,9 @@ const notificationService = container.get<INotificationService>('NotificationSer
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getCurrentUserId();
+    const userId = await getCurrentUserIdOrThrow();
     const subscription = await request.json();
-    
+
     // 購読データのバリデーション
     if (!subscription.endpoint || !subscription.keys) {
       return NextResponse.json(
@@ -37,16 +37,16 @@ export async function POST(request: NextRequest) {
       userAgent: subscription.userAgent,
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Push subscription saved successfully'
     });
 
   } catch (error) {
     console.error('Failed to save push subscription:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to save push subscription',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -58,22 +58,22 @@ export async function POST(request: NextRequest) {
 /**
  * DELETE /api/notifications/subscribe - Push通知購読解除
  */
-export async function DELETE(request: NextRequest) {
+export async function DELETE() {
   try {
-    const userId = await getCurrentUserId();
-    
+    const userId = await getCurrentUserIdOrThrow();
+
     await notificationService.removePushSubscription(userId);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Push subscription removed successfully'
     });
 
   } catch (error) {
     console.error('Failed to remove push subscription:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to remove push subscription',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -85,14 +85,14 @@ export async function DELETE(request: NextRequest) {
 /**
  * GET /api/notifications/subscribe - Push通知購読状態取得
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const userId = await getCurrentUserId();
-    
+    await getCurrentUserIdOrThrow();
+
     // 購読状態の確認ロジック（実装省略）
     // 実際には購読データベースから状態を取得する
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       isSubscribed: true, // 実装時は実際の状態を返す
       timestamp: new Date().toISOString()
     }, {
@@ -103,9 +103,9 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Failed to get subscription status:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to get subscription status',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

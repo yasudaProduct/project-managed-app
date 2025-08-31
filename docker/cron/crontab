@@ -1,0 +1,12 @@
+# docker/cron/crontab
+# 6時間ごとに通知チェックを実行
+0 */6 * * * /usr/local/bin/run-notification-check.sh
+
+# 毎日午前2時にクリーンアップ
+0 2 * * * /usr/local/bin/run-cleanup.sh
+
+# 毎時0分にヘルスチェック
+0 * * * * /usr/local/bin/health-check.sh
+
+# 毎日午前0時にログローテーション
+0 0 * * * find /var/log/cron -name '*.log' -mtime +7 -delete

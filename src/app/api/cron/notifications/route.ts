@@ -15,18 +15,18 @@ export async function GET(request: NextRequest) {
     // Cron秘密キーによる認証
     const authHeader = request.headers.get('Authorization');
     const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
-    
+
     if (!process.env.CRON_SECRET) {
       console.error('CRON_SECRET environment variable is not set');
-      return NextResponse.json({ 
-        error: 'Server configuration error' 
+      return NextResponse.json({
+        error: 'Server configuration error'
       }, { status: 500 });
     }
 
     if (authHeader !== expectedAuth) {
       console.error('Unauthorized cron job access attempt');
-      return NextResponse.json({ 
-        error: 'Unauthorized' 
+      return NextResponse.json({
+        error: 'Unauthorized'
       }, { status: 401 });
     }
 
@@ -43,9 +43,8 @@ export async function GET(request: NextRequest) {
       // スケジュール済み通知の送信
       await notificationService.sendScheduledNotifications();
       console.log('Scheduled notifications processed');
-      
-      // TODO: 実際の送信件数を取得する実装
-      results.scheduledNotifications = 0; // 仮の値
+
+      results.scheduledNotifications = 0; // 仮の値  TODO: 実際の送信件数を取得する実装
     } catch (error) {
       console.error('Error processing scheduled notifications:', error);
       results.errors.push(`Scheduled notifications: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -73,16 +72,16 @@ export async function GET(request: NextRequest) {
     // イベント検知処理の実行
     try {
       await Promise.allSettled([
-        eventDetector.detectTaskDeadlines(),
-        eventDetector.detectManhourExceeded(),
-        eventDetector.detectScheduleDelays(),
+        eventDetector.detectTaskDeadlines(), // タスク期限の検知と通知作成
+        eventDetector.detectManhourExceeded(), // 工数超過の検知と通知作成
+        eventDetector.detectScheduleDelays(), // スケジュール遅延の検知と通知作成
       ]);
       console.log('Event detection completed');
     } catch (error) {
       console.error('Error in event detection:', error);
       results.errors.push(`Event detection: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
+
     console.log('Cron job execution completed', results);
 
     const status = results.errors.length > 0 ? 207 : 200; // Multi-Status if there are errors
@@ -90,14 +89,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: results.errors.length === 0,
       results,
-      message: results.errors.length > 0 
+      message: results.errors.length > 0
         ? `Completed with ${results.errors.length} errors`
         : 'All tasks completed successfully'
     }, { status });
 
   } catch (error) {
     console.error('Cron job failed:', error);
-    
+
     return NextResponse.json({
       success: false,
       error: 'Cron job execution failed',
@@ -119,7 +118,7 @@ export async function POST(request: NextRequest) {
   }
 
   console.log('Manual cron job triggered');
-  
+
   // GETと同じ処理を実行
   return GET(request);
 }

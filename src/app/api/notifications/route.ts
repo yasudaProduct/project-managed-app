@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { container } from '@/lib/inversify.config';
 import type { INotificationService } from '@/applications/notification/INotificationService';
-import { getCurrentUserId } from '@/lib/auth';
+import { getCurrentUserIdOrThrow } from '@/lib/get-current-user-id';
 
 const notificationService = container.get<INotificationService>('NotificationService');
 
@@ -10,15 +10,15 @@ const notificationService = container.get<INotificationService>('NotificationSer
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getCurrentUserId();
+    const userId = await getCurrentUserIdOrThrow();
     const { searchParams } = new URL(request.url);
-    
+
     const page = Number(searchParams.get('page')) || 1;
     const limit = Math.min(Number(searchParams.get('limit')) || 20, 100); // 最大100件
     const unreadOnly = searchParams.get('unreadOnly') === 'true';
     const type = searchParams.get('type');
     const priority = searchParams.get('priority');
-    
+
     const options = {
       userId,
       page,
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     };
 
     const notifications = await notificationService.getNotifications(options);
-    
+
     return NextResponse.json(notifications, {
       headers: {
         'Cache-Control': 'private, no-cache, no-store, must-revalidate',
@@ -39,9 +39,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Failed to get notifications:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to get notifications',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -55,10 +55,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getCurrentUserId();
+    const userId = await getCurrentUserIdOrThrow();
     const body = await request.json();
-    
-    // 管理者権限のチェック（実装は省略、必要に応じて追加）
+
+    // 管理者権限のチェック（必要に応じて追加）
     // const isAdmin = await checkAdminPermission(userId);
     // if (!isAdmin) {
     //   return NextResponse.json({ error: 'Admin permission required' }, { status: 403 });
@@ -82,9 +82,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Failed to create notification:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to create notification',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

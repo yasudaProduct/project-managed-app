@@ -1,18 +1,24 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Bell, Smartphone, Mail, Clock, TestTube, Save, RotateCcw } from 'lucide-react';
-import { useNotificationPreferences } from '@/hooks/useNotificationPreferences';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import React, { useState } from "react";
+import { Bell, Smartphone, Clock, TestTube, RotateCcw } from "lucide-react";
+import { useNotificationPreferences } from "@/hooks/useNotificationPreferences";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 export function NotificationSettings() {
   const {
@@ -36,10 +42,10 @@ export function NotificationSettings() {
   } = usePushNotifications();
 
   const [localQuietStart, setLocalQuietStart] = useState<string>(
-    preferences?.quietHoursStart?.toString().padStart(2, '0') || ''
+    preferences?.quietHoursStart?.toString().padStart(2, "0") || ""
   );
   const [localQuietEnd, setLocalQuietEnd] = useState<string>(
-    preferences?.quietHoursEnd?.toString().padStart(2, '0') || ''
+    preferences?.quietHoursEnd?.toString().padStart(2, "0") || ""
   );
 
   if (isLoading) {
@@ -65,7 +71,7 @@ export function NotificationSettings() {
   const handleQuietHoursUpdate = () => {
     const start = localQuietStart ? parseInt(localQuietStart) : undefined;
     const end = localQuietEnd ? parseInt(localQuietEnd) : undefined;
-    
+
     if (validateQuietHours(start, end)) {
       updatePreferences({
         quietHoursStart: start,
@@ -82,7 +88,7 @@ export function NotificationSettings() {
         await subscribe();
       }
     } catch (error) {
-      console.error('Push notification toggle failed:', error);
+      console.error("Push notification toggle failed:", error);
     }
   };
 
@@ -90,7 +96,7 @@ export function NotificationSettings() {
     try {
       await sendTestNotification();
     } catch (error) {
-      console.error('Test notification failed:', error);
+      console.error("Test notification failed:", error);
     }
   };
 
@@ -98,13 +104,15 @@ export function NotificationSettings() {
     if (!isSupported) {
       return <Badge variant="secondary">非対応</Badge>;
     }
-    
+
     switch (permission) {
-      case 'granted':
-        return isSubscribed 
-          ? <Badge variant="default">有効</Badge>
-          : <Badge variant="secondary">無効</Badge>;
-      case 'denied':
+      case "granted":
+        return isSubscribed ? (
+          <Badge variant="default">有効</Badge>
+        ) : (
+          <Badge variant="secondary">無効</Badge>
+        );
+      case "denied":
         return <Badge variant="destructive">拒否済み</Badge>;
       default:
         return <Badge variant="outline">未設定</Badge>;
@@ -151,7 +159,7 @@ export function NotificationSettings() {
             </Alert>
           )}
 
-          {permission === 'denied' && (
+          {permission === "denied" && (
             <Alert variant="destructive">
               <AlertDescription>
                 通知が拒否されています。ブラウザの設定で通知を許可してください。
@@ -169,7 +177,7 @@ export function NotificationSettings() {
             <Switch
               checked={isSubscribed}
               onCheckedChange={handlePushToggle}
-              disabled={!isSupported || permission === 'denied' || pushLoading}
+              disabled={!isSupported || permission === "denied" || pushLoading}
             />
           </div>
 
@@ -210,7 +218,9 @@ export function NotificationSettings() {
             </div>
             <Switch
               checked={preferences.enableInApp}
-              onCheckedChange={(checked) => handleToggle('enableInApp', checked)}
+              onCheckedChange={(checked) =>
+                handleToggle("enableInApp", checked)
+              }
             />
           </div>
 
@@ -223,7 +233,9 @@ export function NotificationSettings() {
             </div>
             <Switch
               checked={preferences.enableEmail}
-              onCheckedChange={(checked) => handleToggle('enableEmail', checked)}
+              onCheckedChange={(checked) =>
+                handleToggle("enableEmail", checked)
+              }
               disabled={true}
             />
           </div>
@@ -245,15 +257,17 @@ export function NotificationSettings() {
               <Label>タスク期限通知</Label>
               <Switch
                 checked={preferences.taskDeadline.days.length > 0}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   handleDeadlineDaysChange(checked ? [3, 1, 0] : [])
                 }
               />
             </div>
-            
+
             {preferences.taskDeadline.days.length > 0 && (
               <div className="ml-4 space-y-2">
-                <p className="text-sm text-gray-600">通知タイミング（期限前の日数）</p>
+                <p className="text-sm text-gray-600">
+                  通知タイミング（期限前の日数）
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {[7, 3, 1, 0].map((day) => (
                     <div key={day} className="flex items-center space-x-2">
@@ -264,12 +278,12 @@ export function NotificationSettings() {
                           const currentDays = preferences.taskDeadline.days;
                           const newDays = checked
                             ? [...currentDays, day].sort((a, b) => b - a)
-                            : currentDays.filter(d => d !== day);
+                            : currentDays.filter((d) => d !== day);
                           handleDeadlineDaysChange(newDays);
                         }}
                       />
                       <Label htmlFor={`deadline-${day}`} className="text-sm">
-                        {day === 0 ? '当日' : `${day}日前`}
+                        {day === 0 ? "当日" : `${day}日前`}
                       </Label>
                     </div>
                   ))}
@@ -291,25 +305,36 @@ export function NotificationSettings() {
                 }
               />
             </div>
-            
+
             {preferences.manhourThreshold.percentages.length > 0 && (
               <div className="ml-4 space-y-2">
-                <p className="text-sm text-gray-600">通知タイミング（予定工数に対する割合）</p>
+                <p className="text-sm text-gray-600">
+                  通知タイミング（予定工数に対する割合）
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {[50, 80, 100, 120, 150].map((percentage) => (
-                    <div key={percentage} className="flex items-center space-x-2">
+                    <div
+                      key={percentage}
+                      className="flex items-center space-x-2"
+                    >
                       <Checkbox
                         id={`manhour-${percentage}`}
-                        checked={preferences.manhourThreshold.percentages.includes(percentage)}
+                        checked={preferences.manhourThreshold.percentages.includes(
+                          percentage
+                        )}
                         onCheckedChange={(checked) => {
-                          const current = preferences.manhourThreshold.percentages;
+                          const current =
+                            preferences.manhourThreshold.percentages;
                           const newPercentages = checked
                             ? [...current, percentage].sort((a, b) => a - b)
-                            : current.filter(p => p !== percentage);
+                            : current.filter((p) => p !== percentage);
                           handleManhourThresholdsChange(newPercentages);
                         }}
                       />
-                      <Label htmlFor={`manhour-${percentage}`} className="text-sm">
+                      <Label
+                        htmlFor={`manhour-${percentage}`}
+                        className="text-sm"
+                      >
                         {percentage}%
                       </Label>
                     </div>
@@ -326,33 +351,45 @@ export function NotificationSettings() {
             <div className="flex items-center justify-between">
               <div>
                 <Label>スケジュール遅延通知</Label>
-                <p className="text-sm text-gray-500">プロジェクト全体の遅延を検知した時</p>
+                <p className="text-sm text-gray-500">
+                  プロジェクト全体の遅延を検知した時
+                </p>
               </div>
               <Switch
                 checked={preferences.scheduleDelay}
-                onCheckedChange={(checked) => handleToggle('scheduleDelay', checked)}
+                onCheckedChange={(checked) =>
+                  handleToggle("scheduleDelay", checked)
+                }
               />
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <Label>タスク割り当て通知</Label>
-                <p className="text-sm text-gray-500">新しいタスクが割り当てられた時</p>
+                <p className="text-sm text-gray-500">
+                  新しいタスクが割り当てられた時
+                </p>
               </div>
               <Switch
                 checked={preferences.taskAssignment}
-                onCheckedChange={(checked) => handleToggle('taskAssignment', checked)}
+                onCheckedChange={(checked) =>
+                  handleToggle("taskAssignment", checked)
+                }
               />
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <Label>プロジェクト状況変更通知</Label>
-                <p className="text-sm text-gray-500">プロジェクトのステータスが変更された時</p>
+                <p className="text-sm text-gray-500">
+                  プロジェクトのステータスが変更された時
+                </p>
               </div>
               <Switch
                 checked={preferences.projectStatusChange}
-                onCheckedChange={(checked) => handleToggle('projectStatusChange', checked)}
+                onCheckedChange={(checked) =>
+                  handleToggle("projectStatusChange", checked)
+                }
               />
             </div>
           </div>
@@ -366,9 +403,7 @@ export function NotificationSettings() {
             <Clock size={20} />
             クワイエットアワー
           </CardTitle>
-          <CardDescription>
-            指定した時間帯は通知を停止します
-          </CardDescription>
+          <CardDescription>指定した時間帯は通知を停止します</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -399,22 +434,25 @@ export function NotificationSettings() {
               />
             </div>
           </div>
-          
+
           <Button
             variant="outline"
             size="sm"
             onClick={handleQuietHoursUpdate}
-            disabled={!validateQuietHours(
-              localQuietStart ? parseInt(localQuietStart) : undefined,
-              localQuietEnd ? parseInt(localQuietEnd) : undefined
-            )}
+            disabled={
+              !validateQuietHours(
+                localQuietStart ? parseInt(localQuietStart) : undefined,
+                localQuietEnd ? parseInt(localQuietEnd) : undefined
+              )
+            }
           >
             クワイエットアワーを更新
           </Button>
 
           {preferences.quietHoursStart && preferences.quietHoursEnd && (
             <p className="text-sm text-gray-600">
-              現在の設定: {preferences.quietHoursStart}:00 〜 {preferences.quietHoursEnd}:00
+              現在の設定: {preferences.quietHoursStart}:00 〜{" "}
+              {preferences.quietHoursEnd}:00
             </p>
           )}
         </CardContent>

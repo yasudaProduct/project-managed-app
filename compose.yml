@@ -9,18 +9,25 @@ services:
       - .:/app
     environment:
       - WATCHPACK_POLLING=true
+      - CRON_SECRET=${CRON_SECRET:-dev-cron-secret-key}
     command: npm run dev
+    networks:
+      - app-network
+
   db:
     image: postgres:17-alpine
     container_name: project-managed-postgres
     ports:
-      - "5434:5432"
+      - "5432:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     volumes:
       - postgres:/var/lib/postgresql/data
+    networks:
+      - app-network
+
   db-test:
     image: postgres:17-alpine
     container_name: project-managed-postgres-test
@@ -32,5 +39,44 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - postgres:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # Cron専用コンテナ
+  notification-cron:
+    build:
+      context: .
+      dockerfile: docker/dockerfile-cron
+    container_name: project-managed-cron
+    environment:
+      - NODE_ENV=development
+      - CRON_SECRET=${CRON_SECRET:-dev-cron-secret-key}
+      - NOTIFICATION_API_URL=http://app:3000/api/cron/notifications
+      - TZ=Asia/Tokyo
+    volumes:
+      - ./logs/cron:/var/log/cron
+      - ./docker/cron:/usr/local/bin:ro
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      - app
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/health-check.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  app-network:
+    driver: bridge
+
 volumes:
   postgres:
+  cron-logs:

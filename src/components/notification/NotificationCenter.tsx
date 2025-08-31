@@ -1,59 +1,63 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Settings, CheckCheck } from 'lucide-react';
-import { useNotifications } from '@/hooks/useNotifications';
-import { NotificationList } from './NotificationList';
-import { Button } from '@/components/ui/button';
+import React, { useState, useRef, useEffect } from "react";
+import { Bell, Settings, CheckCheck } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
+import { NotificationList } from "./NotificationList";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
   DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface NotificationCenterProps {
   className?: string;
   maxHeight?: string;
 }
 
-export function NotificationCenter({ className = '', maxHeight = '400px' }: NotificationCenterProps) {
+export function NotificationCenter({
+  className = "",
+  maxHeight = "400px",
+}: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'unread'>('unread');
+  const [activeTab, setActiveTab] = useState<"all" | "unread">("unread");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const {
     notifications,
     unreadCount,
     isLoading,
-    isConnected,
     markAllNotificationsAsRead,
     refresh,
     markAllAsReadState,
   } = useNotifications({
-    unreadOnly: activeTab === 'unread',
-    enableRealtime: true,
+    unreadOnly: activeTab === "unread",
+    enableRealtime: false,
     autoRefresh: true,
   });
 
   // 外部クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen]);
 
@@ -65,16 +69,19 @@ export function NotificationCenter({ className = '', maxHeight = '400px' }: Noti
     refresh();
   };
 
-  const getStatusIndicator = () => {
-    if (!isConnected) {
-      return (
-        <div className="w-2 h-2 bg-yellow-400 rounded-full" title="接続中..." />
-      );
-    }
-    return (
-      <div className="w-2 h-2 bg-green-400 rounded-full" title="リアルタイム接続中" />
-    );
-  };
+  // const getStatusIndicator = () => {
+  //   if (!isConnected) {
+  //     return (
+  //       <div className="w-2 h-2 bg-yellow-400 rounded-full" title="接続中..." />
+  //     );
+  //   }
+  //   return (
+  //     <div
+  //       className="w-2 h-2 bg-green-400 rounded-full"
+  //       title="リアルタイム接続中"
+  //     />
+  //   );
+  // };
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
@@ -84,7 +91,9 @@ export function NotificationCenter({ className = '', maxHeight = '400px' }: Noti
             variant="ghost"
             size="sm"
             className="relative p-2 h-auto"
-            aria-label={`通知 ${unreadCount > 0 ? `(${unreadCount}件未読)` : ''}`}
+            aria-label={`通知 ${
+              unreadCount > 0 ? `(${unreadCount}件未読)` : ""
+            }`}
           >
             <Bell size={20} className="text-gray-600 hover:text-gray-900" />
             {unreadCount > 0 && (
@@ -92,24 +101,20 @@ export function NotificationCenter({ className = '', maxHeight = '400px' }: Noti
                 variant="destructive"
                 className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
               >
-                {unreadCount > 99 ? '99+' : unreadCount}
+                {unreadCount > 99 ? "99+" : unreadCount}
               </Badge>
             )}
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent
-          align="end"
-          className="w-96 p-0"
-          sideOffset={5}
-        >
+        <DropdownMenuContent align="end" className="w-96 p-0" sideOffset={5}>
           {/* ヘッダー */}
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-lg">通知</h3>
-              {getStatusIndicator()}
+              {/* {getStatusIndicator()} */}
             </div>
-            
+
             <div className="flex items-center gap-1">
               {unreadCount > 0 && (
                 <Button
@@ -123,7 +128,7 @@ export function NotificationCenter({ className = '', maxHeight = '400px' }: Noti
                   全て既読
                 </Button>
               )}
-              
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -133,7 +138,7 @@ export function NotificationCenter({ className = '', maxHeight = '400px' }: Noti
               >
                 更新
               </Button>
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="p-1 h-auto">
@@ -144,7 +149,7 @@ export function NotificationCenter({ className = '', maxHeight = '400px' }: Noti
                   <DropdownMenuItem
                     onClick={() => {
                       // 通知設定画面への遷移
-                      window.location.href = '/settings/notifications';
+                      window.location.href = "/settings/notifications";
                     }}
                   >
                     <Settings size={14} className="mr-2" />
@@ -156,9 +161,9 @@ export function NotificationCenter({ className = '', maxHeight = '400px' }: Noti
           </div>
 
           {/* タブ */}
-          <Tabs 
-            value={activeTab} 
-            onValueChange={(value) => setActiveTab(value as 'all' | 'unread')}
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as "all" | "unread")}
             className="w-full"
           >
             <TabsList className="grid w-full grid-cols-2 m-2 mb-0">
@@ -175,7 +180,9 @@ export function NotificationCenter({ className = '', maxHeight = '400px' }: Noti
                 {unreadCount === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <Bell size={48} className="text-gray-300 mb-4" />
-                    <p className="text-gray-500 text-sm">未読の通知はありません</p>
+                    <p className="text-gray-500 text-sm">
+                      未読の通知はありません
+                    </p>
                   </div>
                 ) : (
                   <NotificationList
@@ -193,7 +200,7 @@ export function NotificationCenter({ className = '', maxHeight = '400px' }: Noti
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <Bell size={48} className="text-gray-300 mb-4" />
                     <p className="text-gray-500 text-sm">
-                      {isLoading ? '読み込み中...' : '通知がありません'}
+                      {isLoading ? "読み込み中..." : "通知がありません"}
                     </p>
                   </div>
                 ) : (
@@ -215,7 +222,7 @@ export function NotificationCenter({ className = '', maxHeight = '400px' }: Noti
               className="w-full text-xs"
               onClick={() => {
                 setIsOpen(false);
-                window.location.href = '/notifications';
+                window.location.href = "/notifications";
               }}
             >
               すべての通知を見る

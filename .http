@@ -1,0 +1,126 @@
+# プロジェクト管理アプリ API テスト用
+
+# ========================================
+# 使用方法
+# ========================================
+
+# 1. VSCodeにREST Client拡張機能をインストール
+# 2. .envファイルにCRON_SECRETを設定
+# 3. 各リクエストの上にある「Send Request」をクリック
+# 4. レスポンスが右側のタブに表示されます
+
+# ========================================
+# Cron エンドポイント
+# ========================================
+
+@URL=http://localhost:3000/api
+@CRON_SECRET=your-secret-key
+
+### Cronジョブ実行（GET）
+GET {{URL}}/cron/notifications
+Authorization: Bearer {{CRON_SECRET}}
+Content-Type: application/json
+
+### Cronジョブ手動実行（POST - 開発環境のみ）
+POST {{URL}}/cron/notifications
+Authorization: Bearer {{CRON_SECRET}}
+Content-Type: application/json
+
+# ========================================
+# 通知関連エンドポイント
+# ========================================
+
+@cookie=cookie_token=1234567890
+
+### 通知一覧取得
+GET {{URL}}/notifications?page=1&limit=20&unreadOnly=false
+Content-Type: application/json
+
+### 通知一覧取得（未読のみ）
+GET {{URL}}/notifications?page=1&limit=20&unreadOnly=true
+Content-Type: application/json
+
+### 通知作成（管理者用）
+POST {{URL}}/notifications
+Content-Type: application/json
+
+{
+  "targetUserId": "user123",
+  "type": "TASK_DEADLINE_WARNING",
+  "priority": "HIGH",
+  "title": "タスク期限警告",
+  "message": "タスク「設計書作成」の期限が3日後です",
+  "data": {
+    "taskId": "task456",
+    "daysRemaining": 3
+  },
+  "channels": ["PUSH", "IN_APP"]
+}
+
+### 未読通知数取得
+GET {{URL}}/notifications/count
+Content-Type: application/json
+
+### Push通知購読登録
+POST {{URL}}/notifications/subscribe
+Content-Type: application/json
+
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/example",
+  "keys": {
+    "p256dh": "example-p256dh-key",
+    "auth": "example-auth-key"
+  },
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+}
+
+### Push通知購読解除
+DELETE {{URL}}/notifications/subscribe
+Content-Type: application/json
+
+### Push通知購読状態取得
+GET {{URL}}/notifications/subscribe
+Content-Type: application/json
+
+# ========================================
+# テスト用データ
+# ========================================
+
+### テスト通知作成
+POST {{URL}}/notifications
+Content-Type: application/json
+
+{
+  "targetUserId": "test-user",
+  "type": "TASK_ASSIGNED",
+  "priority": "MEDIUM",
+  "title": "テスト通知",
+  "message": "これはテスト用の通知です",
+  "data": {
+    "taskId": "test-task-001",
+    "projectId": "test-project"
+  },
+  "channels": ["IN_APP"]
+}
+
+### 複数通知作成（バッチテスト）
+POST {{URL}}/notifications
+Content-Type: application/json
+
+{
+  "targetUserId": "batch-user",
+  "type": "SCHEDULE_DELAY",
+  "priority": "HIGH",
+  "title": "スケジュール遅延警告",
+  "message": "プロジェクト「テストプロジェクト」で遅延が発生しています",
+  "data": {
+    "projectId": "test-project-001",
+    "delayedTaskCount": 3,
+    "delayedTasks": [
+      {"id": "task1", "name": "要件定義", "daysDelayed": 2},
+      {"id": "task2", "name": "設計", "daysDelayed": 1},
+      {"id": "task3", "name": "実装", "daysDelayed": 0}
+    ]
+  },
+  "channels": ["PUSH", "IN_APP", "EMAIL"]
+}

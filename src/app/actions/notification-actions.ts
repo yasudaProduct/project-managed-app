@@ -4,7 +4,7 @@ import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { container } from '@/lib/inversify.config';
 import type { INotificationService } from '@/applications/notification/INotificationService';
-import { getCurrentUserId } from '@/lib/auth';
+import { getCurrentUserId, getCurrentUserIdOrThrow } from '@/lib/get-current-user-id';
 
 const notificationService = container.get<INotificationService>('NotificationService');
 
@@ -38,6 +38,7 @@ const PreferencesSchema = z.object({
 export type NotificationActionResult = {
   success: boolean;
   error?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any;
 };
 
@@ -50,7 +51,7 @@ export async function markNotificationAsRead(
 ): Promise<NotificationActionResult> {
   try {
     const userId = await getCurrentUserId();
-    
+
     let data;
     if (formDataOrIds instanceof FormData) {
       const formData = formDataOrIds;
@@ -62,20 +63,20 @@ export async function markNotificationAsRead(
     }
 
     await notificationService.markAsRead(userId, data.notificationIds);
-    
+
     // キャッシュを無効化
     revalidateTag('notifications');
     revalidateTag(`notifications-${userId}`);
-    
-    return { 
+
+    return {
       success: true,
       data: { markedCount: data.notificationIds.length }
     };
   } catch (error) {
     console.error('Failed to mark notification as read:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to mark notification as read' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to mark notification as read'
     };
   }
 }
@@ -87,20 +88,20 @@ export async function markAllAsRead(
   prevState?: NotificationActionResult | null
 ): Promise<NotificationActionResult> {
   try {
-    const userId = await getCurrentUserId();
-    
+    const userId = await getCurrentUserIdOrThrow();
+
     await notificationService.markAllAsRead(userId);
-    
+
     // キャッシュを無効化
     revalidateTag('notifications');
     revalidateTag(`notifications-${userId}`);
-    
+
     return { success: true };
   } catch (error) {
     console.error('Failed to mark all notifications as read:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to mark all notifications as read' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to mark all notifications as read'
     };
   }
 }
@@ -113,8 +114,8 @@ export async function deleteNotification(
   formDataOrId: FormData | { notificationId: string }
 ): Promise<NotificationActionResult> {
   try {
-    const userId = await getCurrentUserId();
-    
+    const userId = await getCurrentUserIdOrThrow();
+
     let data;
     if (formDataOrId instanceof FormData) {
       const formData = formDataOrId;
@@ -126,17 +127,17 @@ export async function deleteNotification(
     }
 
     await notificationService.deleteNotification(userId, data.notificationId);
-    
+
     // キャッシュを無効化
     revalidateTag('notifications');
     revalidateTag(`notifications-${userId}`);
-    
+
     return { success: true };
   } catch (error) {
     console.error('Failed to delete notification:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to delete notification' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete notification'
     };
   }
 }
@@ -148,9 +149,10 @@ export async function updateNotificationPreferences(
   prevState: NotificationActionResult | null,
   formData: FormData
 ): Promise<NotificationActionResult> {
+  console.log('updateNotificationPreferences');
   try {
-    const userId = await getCurrentUserId();
-    
+    const userId = await getCurrentUserIdOrThrow();
+
     // FormDataから設定データを解析
     const rawData = {
       enablePush: formData.get('enablePush') === 'true',
@@ -166,30 +168,30 @@ export async function updateNotificationPreferences(
     };
 
     const validatedData = PreferencesSchema.parse(rawData);
-    
+
     const updatedPreferences = await notificationService.updatePreferences(userId, validatedData);
-    
+
     // キャッシュを無効化
     revalidateTag('notification-preferences');
     revalidateTag(`notification-preferences-${userId}`);
-    
-    return { 
+
+    return {
       success: true,
       data: updatedPreferences
     };
   } catch (error) {
     console.error('Failed to update preferences:', error);
-    
+
     if (error instanceof z.ZodError) {
       return {
         success: false,
         error: `Validation error: ${error.errors.map(e => e.message).join(', ')}`
       };
     }
-    
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to update notification preferences' 
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update notification preferences'
     };
   }
 }
@@ -201,19 +203,19 @@ export async function sendTestNotification(
   prevState?: NotificationActionResult | null
 ): Promise<NotificationActionResult> {
   try {
-    const userId = await getCurrentUserId();
-    
+    const userId = await getCurrentUserIdOrThrow();
+
     await notificationService.sendTestNotification(userId);
-    
-    return { 
+
+    return {
       success: true,
       data: { message: 'Test notification sent successfully' }
     };
   } catch (error) {
     console.error('Failed to send test notification:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to send test notification' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send test notification'
     };
   }
 }
@@ -223,19 +225,19 @@ export async function sendTestNotification(
  */
 export async function getUnreadCount(): Promise<NotificationActionResult> {
   try {
-    const userId = await getCurrentUserId();
-    
+    const userId = await getCurrentUserIdOrThrow();
+
     const count = await notificationService.getUnreadCount(userId);
-    
-    return { 
+
+    return {
       success: true,
       data: { count }
     };
   } catch (error) {
     console.error('Failed to get unread count:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to get unread count' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get unread count'
     };
   }
 }
@@ -244,20 +246,22 @@ export async function getUnreadCount(): Promise<NotificationActionResult> {
  * 通知設定を取得する
  */
 export async function getNotificationPreferences(): Promise<NotificationActionResult> {
+  console.log('getNotificationPreferences');
   try {
     const userId = await getCurrentUserId();
-    
+
     const preferences = await notificationService.getPreferences(userId);
-    
-    return { 
+    console.log('preferences', preferences);
+
+    return {
       success: true,
       data: preferences
     };
   } catch (error) {
     console.error('Failed to get notification preferences:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to get notification preferences' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get notification preferences'
     };
   }
 }
@@ -277,19 +281,19 @@ export async function savePushSubscription(
   }
 ): Promise<NotificationActionResult> {
   try {
-    const userId = await getCurrentUserId();
-    
+    const userId = await getCurrentUserIdOrThrow();
+
     await notificationService.savePushSubscription(userId, subscriptionData);
-    
-    return { 
+
+    return {
       success: true,
       data: { message: 'Push subscription saved successfully' }
     };
   } catch (error) {
     console.error('Failed to save push subscription:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to save push subscription' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to save push subscription'
     };
   }
 }
@@ -301,19 +305,19 @@ export async function removePushSubscription(
   prevState?: NotificationActionResult | null
 ): Promise<NotificationActionResult> {
   try {
-    const userId = await getCurrentUserId();
-    
+    const userId = await getCurrentUserIdOrThrow();
+
     await notificationService.removePushSubscription(userId);
-    
-    return { 
+
+    return {
       success: true,
       data: { message: 'Push subscription removed successfully' }
     };
   } catch (error) {
     console.error('Failed to remove push subscription:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to remove push subscription' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to remove push subscription'
     };
   }
 }

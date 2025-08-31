@@ -1,18 +1,19 @@
 import { injectable, inject } from 'inversify';
-import { Notification, NotificationData } from '@/domains/notification/notification';
+import { Notification } from '@/domains/notification/notification';
 import { NotificationPreference } from '@/domains/notification/notification-preference';
 import { NotificationType } from '@/domains/notification/notification-type';
 import { NotificationPriority } from '@/domains/notification/notification-priority';
 import { NotificationChannel } from '@/domains/notification/notification-channel';
-import { 
+import {
   INotificationService,
   CreateNotificationRequest,
   GetNotificationsOptions,
-  NotificationUpdateCallback
+  NotificationPreferencePlain,
+  NotificationPlain,
+  NotificationListResultPlain,
 } from './INotificationService';
-import { 
+import type {
   INotificationRepository,
-  NotificationListResult,
   PushSubscriptionData,
   NotificationFilter
 } from './INotificationRepository';
@@ -20,17 +21,21 @@ import { PushNotificationService } from '@/infrastructures/notification/PushNoti
 
 @injectable()
 export class NotificationService implements INotificationService {
-  private updateCallbacks: Map<string, NotificationUpdateCallback[]> = new Map();
+
 
   constructor(
     @inject('NotificationRepository') private notificationRepository: INotificationRepository,
     @inject('PushNotificationService') private pushNotificationService: PushNotificationService
-  ) {}
+  ) { }
 
+  /**
+   * 通知の作成
+   * 通知の作成は通知設定に応じてチャンネルを調整します
+   */
   async createNotification(request: CreateNotificationRequest): Promise<Notification> {
     // ユーザーの通知設定を確認
-    const preferences = await this.getPreferences(request.userId);
-    
+    const preferences = await this.getPreferencesDomain(request.userId);
+
     // クワイエットアワーのチェック
     if (preferences.isInQuietHours()) {
       // クワイエットアワー中は送信時刻を調整
@@ -40,28 +45,29 @@ export class NotificationService implements INotificationService {
 
     // 通知設定に応じてチャンネルを調整
     const enabledChannels = this.getEnabledChannels(request, preferences);
-    
+
     const notification = Notification.create({
       ...request,
       channels: enabledChannels,
     });
 
+    // 通知の作成
     const savedNotification = await this.notificationRepository.create(notification);
 
     // リアルタイム通知の送信
     if (this.shouldSendImmediately(savedNotification, preferences)) {
+      // リアルタイム通知の送信
       await this.sendNotification(savedNotification);
     }
 
-    // リアルタイム更新の通知
-    this.notifySubscribers(request.userId, savedNotification);
+
 
     return savedNotification;
   }
 
   async createBatchNotifications(userId: string, requests: CreateNotificationRequest[]): Promise<Notification[]> {
-    const preferences = await this.getPreferences(userId);
-    
+    const preferences = await this.getPreferencesDomain(userId);
+
     const notifications = requests.map(request => {
       const enabledChannels = this.getEnabledChannels(request, preferences);
       return Notification.create({
@@ -72,26 +78,27 @@ export class NotificationService implements INotificationService {
 
     const savedNotifications = await this.notificationRepository.createBatch(notifications);
 
-    // リアルタイム更新の通知
-    savedNotifications.forEach(notification => {
-      this.notifySubscribers(userId, notification);
-    });
+
 
     return savedNotifications;
   }
 
+  /**
+   * 通知の送信
+   * 通知の送信は各チャンネルに送信します
+   */
   async sendNotification(notification: Notification): Promise<void> {
     // 各チャンネルに送信
     const sendPromises = notification.channels.map(async (channel) => {
       try {
         switch (channel.getValue()) {
-          case NotificationChannel.PUSH:
+          case NotificationChannel.PUSH: // デスクトップ通知
             await this.sendPushNotification(notification);
             break;
-          case NotificationChannel.IN_APP:
+          case NotificationChannel.IN_APP: // アプリ内通知
             // アプリ内通知は既に作成済み
             break;
-          case NotificationChannel.EMAIL:
+          case NotificationChannel.EMAIL: // メール通知
             await this.sendEmailNotification(notification);
             break;
         }
@@ -101,20 +108,29 @@ export class NotificationService implements INotificationService {
     });
 
     await Promise.allSettled(sendPromises);
-    
+
     // 送信済みマークを付ける
     await this.notificationRepository.markAsSent([notification.id!], new Date());
   }
 
+  /**
+   * スケジュール済み通知の送信
+   * 通知の送信はsendNotificationを使用します
+   */
   async sendScheduledNotifications(): Promise<void> {
+    // スケジュール済み通知の取得
     const scheduledNotifications = await this.notificationRepository.findScheduledNotifications(new Date());
-    
+
     for (const notification of scheduledNotifications) {
+      // 通知の送信
       await this.sendNotification(notification);
     }
   }
 
-  async getNotifications(options: GetNotificationsOptions): Promise<NotificationListResult> {
+  /**
+   * 通知の取得
+   */
+  async getNotifications(options: GetNotificationsOptions): Promise<NotificationListResultPlain> {
     const filter: NotificationFilter = {
       userId: options.userId,
     };
@@ -138,11 +154,24 @@ export class NotificationService implements INotificationService {
       sortOrder: 'desc' as const,
     };
 
-    return this.notificationRepository.findByFilter(filter, listOptions);
+    const result = await this.notificationRepository.findByFilter(filter, listOptions);
+
+    // ドメインモデルをプレゼンテーション層用の型に変換
+    return {
+      notifications: result.data.map(notification => this.convertNotificationToPlain(notification)),
+      totalCount: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    };
   }
 
-  async getNotificationById(id: number): Promise<Notification | null> {
-    return this.notificationRepository.findById(id);
+  async getNotificationById(id: number): Promise<NotificationPlain | null> {
+    const notification = await this.notificationRepository.findById(id);
+    if (!notification) {
+      return null;
+    }
+    return this.convertNotificationToPlain(notification);
   }
 
   async getUnreadCount(userId: string): Promise<number> {
@@ -165,13 +194,24 @@ export class NotificationService implements INotificationService {
     if (!notification || notification.userId !== userId) {
       throw new Error('Notification not found or access denied');
     }
-    
+
     await this.notificationRepository.delete(id);
   }
 
-  async getPreferences(userId: string): Promise<NotificationPreference> {
+  /**
+   * 通知設定の取得（プレゼンテーション層向け: プレーンオブジェクトを返す）
+   */
+  async getPreferences(userId: string): Promise<NotificationPreferencePlain> {
+    const preferences = await this.getPreferencesDomain(userId);
+    return this.convertToResult(preferences);
+  }
+
+  /**
+   * 通知設定の取得（内部用: ドメインモデルを返す）
+   */
+  private async getPreferencesDomain(userId: string): Promise<NotificationPreference> {
     let preferences = await this.notificationRepository.findPreferenceByUserId(userId);
-    
+
     if (!preferences) {
       // デフォルト設定を作成
       preferences = NotificationPreference.createDefault(userId);
@@ -182,13 +222,18 @@ export class NotificationService implements INotificationService {
   }
 
   async updatePreferences(
-    userId: string, 
+    userId: string,
     updates: Partial<NotificationPreference>
-  ): Promise<NotificationPreference> {
-    const currentPreferences = await this.getPreferences(userId);
+  ): Promise<NotificationPreferencePlain> {
+    const currentPreferences = await this.getPreferencesDomain(userId);
     const updatedPreferences = currentPreferences.update(updates);
-    
-    return this.notificationRepository.updatePreference(updatedPreferences);
+
+    const savedPreferences = await this.notificationRepository.updatePreference(updatedPreferences);
+
+    // ドメインモデルをプレーンオブジェクトに変換して返却
+    const plainObject = this.convertToResult(savedPreferences);
+
+    return plainObject;
   }
 
   async savePushSubscription(userId: string, subscription: PushSubscriptionData): Promise<void> {
@@ -214,44 +259,30 @@ export class NotificationService implements INotificationService {
     await this.sendNotification(testNotification);
   }
 
-  subscribeToUpdates(userId: string, callback: NotificationUpdateCallback): () => void {
-    if (!this.updateCallbacks.has(userId)) {
-      this.updateCallbacks.set(userId, []);
-    }
-    
-    this.updateCallbacks.get(userId)!.push(callback);
-    
-    // アンサブスクライブ関数を返す
-    return () => {
-      const callbacks = this.updateCallbacks.get(userId);
-      if (callbacks) {
-        const index = callbacks.indexOf(callback);
-        if (index > -1) {
-          callbacks.splice(index, 1);
-        }
-        
-        if (callbacks.length === 0) {
-          this.updateCallbacks.delete(userId);
-        }
-      }
-    };
-  }
 
+  /**
+   * 古い通知のクリーンアップ
+   * 古い通知のクリーンアップは30日以上古い既読の通知を削除します
+   */
   async cleanupOldNotifications(): Promise<number> {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     return this.notificationRepository.deleteOldNotifications(thirtyDaysAgo);
   }
 
+  /**
+   * 通知キューの処理
+   * 通知キューの処理は予定された通知の送信と古い通知のクリーンアップを行います
+   */
   async processNotificationQueue(): Promise<void> {
     // 予定された通知の送信
     await this.sendScheduledNotifications();
-    
+
     // 古い通知のクリーンアップ
     await this.cleanupOldNotifications();
   }
 
   private getEnabledChannels(
-    request: CreateNotificationRequest, 
+    request: CreateNotificationRequest,
     preferences: NotificationPreference
   ): NotificationChannel[] {
     const requestedChannels = request.channels ?? [
@@ -294,18 +325,68 @@ export class NotificationService implements INotificationService {
     return true;
   }
 
+  /**
+   * 通知設定のドメインモデルをプレーンオブジェクトに変換
+   * @param preferences 通知設定のドメインモデル
+   * @returns プレーンオブジェクト
+   */
+  private convertToResult(preferences: NotificationPreference): NotificationPreferencePlain {
+    const plainObject = {
+      id: preferences.id,
+      userId: preferences.userId,
+      enablePush: preferences.enablePush,
+      enableInApp: preferences.enableInApp,
+      enableEmail: preferences.enableEmail,
+      taskDeadline: preferences.taskDeadline,
+      manhourThreshold: preferences.manhourThreshold,
+      scheduleDelay: preferences.scheduleDelay,
+      taskAssignment: preferences.taskAssignment,
+      projectStatusChange: preferences.projectStatusChange,
+      quietHoursStart: preferences.quietHoursStart,
+      quietHoursEnd: preferences.quietHoursEnd,
+      createdAt: preferences.createdAt,
+      updatedAt: preferences.updatedAt,
+    };
+
+    // 通常のプレーンオブジェクトとして返す（nullプロトタイプは使用しない）
+    return plainObject;
+  }
+
+  /**
+   * 通知のドメインモデルをプレーンオブジェクトに変換
+   * @param notification 通知のドメインモデル
+   * @returns プレーンオブジェクト
+   */
+  private convertNotificationToPlain(notification: Notification): NotificationPlain {
+    return {
+      id: notification.id,
+      userId: notification.userId,
+      type: notification.type.getValue(),
+      priority: notification.priority.getValue(),
+      title: notification.title,
+      message: notification.message,
+      data: notification.data,
+      channels: notification.channels.map(channel => channel.getValue()),
+      isRead: notification.isRead,
+      isSent: notification.sentAt !== undefined,
+      scheduledAt: notification.scheduledAt,
+      createdAt: notification.createdAt!,
+      updatedAt: notification.updatedAt!,
+    };
+  }
+
   private calculateNextSendTime(preferences: NotificationPreference): Date {
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     // クワイエットアワー終了時刻に設定
     if (preferences.quietHoursEnd !== undefined) {
       tomorrow.setHours(preferences.quietHoursEnd, 0, 0, 0);
     } else {
       tomorrow.setHours(9, 0, 0, 0); // デフォルトは9時
     }
-    
+
     return tomorrow;
   }
 
@@ -319,20 +400,9 @@ export class NotificationService implements INotificationService {
   }
 
   private async sendEmailNotification(notification: Notification): Promise<void> {
-    // メール通知の実装は後のフェーズで行う
+    // TODO: メール通知の実装を行う
     console.log('Email notification would be sent:', notification);
   }
 
-  private notifySubscribers(userId: string, notification: Notification): void {
-    const callbacks = this.updateCallbacks.get(userId);
-    if (callbacks) {
-      callbacks.forEach(callback => {
-        try {
-          callback(notification);
-        } catch (error) {
-          console.error('Error in notification callback:', error);
-        }
-      });
-    }
-  }
+
 }

@@ -1,11 +1,11 @@
 ## 通知機能 実装ドキュメント（現行）
 
-このドキュメントは、現時点で実装済みの通知機能の構成、API、リアルタイム配信（SSE）、Web Push、Server Actions、認証、運用方法（Cron）について説明します。
+このドキュメントは、現時点で実装済みの通知機能の構成、API、Web Push、Server Actions、認証、運用方法（Cron）について説明します。
 
 ### 概要
 - **通知一覧/作成API**: `src/app/api/notifications/route.ts`
 - **未読数API**: `src/app/api/notifications/count/route.ts`
-- **SSEストリーム**: `src/app/api/notifications/stream/route.ts`
+
 - **Push購読API**: `src/app/api/notifications/subscribe/route.ts`
 - **Server Actions**: `src/app/actions/notification-actions.ts`
 - **認証ヘルパー**: `src/lib/get-current-user-id.ts`
@@ -44,14 +44,7 @@ const userId = await getCurrentUserIdOrThrow();
 - DELETE: 購読解除
 - GET: 購読状態取得（簡易実装）
 
-### SSE: `/api/notifications/stream`
-- GET: Server-Sent Events によるリアルタイム配信
-- イベント種別
-  - `connected`: 接続確立
-  - `heartbeat`: 30秒ごと
-  - `notification`: 新規通知
-  - `unread-count-update`: 未読数変化時
-- タイムアウト: 15分で自動切断、切断時に購読解除とインターバル停止
+
 
 ## Server Actions（操作系）
 実装: `src/app/actions/notification-actions.ts`
@@ -67,23 +60,7 @@ const userId = await getCurrentUserIdOrThrow();
 
 いずれも実行後に `revalidateTag(...)` を用いてキャッシュを無効化します。
 
-## リアルタイム配信（SSE）
-実装: `src/app/api/notifications/stream/route.ts`
-- `ReadableStream` を用いてテキストイベントを送信
-- 接続直後に `connected` を送信
-- 30秒ごとに `heartbeat` を送信
-- `NotificationService.subscribeToUpdates(userId, cb)` を介して通知を `notification` として送信
-- 1分ごとに未読数をチェックし、変化時のみ `unread-count-update` を送信
 
-クライアント最小例:
-```ts
-const es = new EventSource('/api/notifications/stream');
-es.onmessage = (ev) => {
-  const msg = JSON.parse(ev.data);
-  // msg.type: 'connected' | 'heartbeat' | 'notification' | 'unread-count-update'
-};
-es.onerror = () => es.close();
-```
 
 ## Web Push
 ### Service Worker
@@ -134,6 +111,11 @@ await fetch('/api/notifications/subscribe', {
 - 想定運用: 外部 Cron（Vercel Cron / GitHub Actions / Cloud Scheduler 等）から HTTP で起動
 - 認証: `Authorization: Bearer ${CRON_SECRET}`
 - 役割: 期限・工数・遅延等のイベント検知 → 通知作成
+
+``` cron
+
+
+```
 
 ## キャッシュ/リアルタイム整合性
 - 一覧API: `Cache-Control: private, no-cache, no-store`

@@ -1,8 +1,8 @@
 import { injectable } from 'inversify';
-import { PrismaClient } from '@prisma/client';
+import { NotificationPriority, NotificationType, Prisma, PrismaClient } from '@prisma/client';
 import { Notification } from '@/domains/notification/notification';
 import { NotificationPreference } from '@/domains/notification/notification-preference';
-import { 
+import {
   INotificationRepository,
   NotificationFilter,
   NotificationListOptions,
@@ -18,6 +18,11 @@ export class NotificationRepository implements INotificationRepository {
     this.prisma = new PrismaClient();
   }
 
+  /**
+   * 通知を取得
+   * @param id 
+   * @returns 
+   */
   async findById(id: number): Promise<Notification | null> {
     const record = await this.prisma.notification.findUnique({
       where: { id },
@@ -30,25 +35,37 @@ export class NotificationRepository implements INotificationRepository {
     return this.toDomainModel(record);
   }
 
+  /**
+   * ユーザーIDを指定して通知を取得
+   * @param userId ユーザーID
+   * @param options オプション
+   * @returns 通知リスト
+   */
   async findByUserId(userId: string, options?: NotificationListOptions): Promise<NotificationListResult> {
     const filter: NotificationFilter = { userId };
     return this.findByFilter(filter, options);
   }
 
+  /**
+   * フィルターを指定して通知を取得
+   * @param filter フィルター
+   * @param options オプション
+   * @returns 通知リスト
+   */
   async findByFilter(
     filter: NotificationFilter,
     options: NotificationListOptions = { page: 1, limit: 20 }
   ): Promise<NotificationListResult> {
-    const where: any = {
+    const where: Prisma.NotificationWhereInput = {
       userId: filter.userId,
     };
 
     if (filter.type) {
-      where.type = filter.type;
+      where.type = filter.type as NotificationType;
     }
 
     if (filter.priority) {
-      where.priority = filter.priority;
+      where.priority = filter.priority as NotificationPriority;
     }
 
     if (filter.isRead !== undefined) {
@@ -74,7 +91,7 @@ export class NotificationRepository implements INotificationRepository {
     }
 
     const skip = (options.page - 1) * options.limit;
-    const orderBy: any = {};
+    const orderBy: Prisma.NotificationOrderByWithRelationInput = {};
 
     if (options.sortBy) {
       orderBy[options.sortBy] = options.sortOrder ?? 'desc';
@@ -106,6 +123,11 @@ export class NotificationRepository implements INotificationRepository {
     };
   }
 
+  /**
+   * 通知を作成
+   * @param notification 通知
+   * @returns 通知
+   */
   async create(notification: Notification): Promise<Notification> {
     const record = await this.prisma.notification.create({
       data: {
@@ -114,7 +136,7 @@ export class NotificationRepository implements INotificationRepository {
         priority: notification.priority.getValue(),
         title: notification.title,
         message: notification.message,
-        data: notification.data ? JSON.stringify(notification.data) : null,
+        data: notification.data ? JSON.stringify(notification.data) : undefined,
         channels: notification.channels.map(c => c.getValue()),
         scheduledAt: notification.scheduledAt,
       },
@@ -123,6 +145,11 @@ export class NotificationRepository implements INotificationRepository {
     return this.toDomainModel(record);
   }
 
+  /**
+   * 通知を複数作成
+   * @param notifications 通知リスト
+   * @returns 通知リスト
+   */
   async createBatch(notifications: Notification[]): Promise<Notification[]> {
     const data = notifications.map(notification => ({
       userId: notification.userId,
@@ -130,7 +157,7 @@ export class NotificationRepository implements INotificationRepository {
       priority: notification.priority.getValue(),
       title: notification.title,
       message: notification.message,
-      data: notification.data ? JSON.stringify(notification.data) : null,
+      data: notification.data ? JSON.stringify(notification.data) : undefined,
       channels: notification.channels.map(c => c.getValue()),
       scheduledAt: notification.scheduledAt,
     }));
@@ -150,6 +177,11 @@ export class NotificationRepository implements INotificationRepository {
     return lastCreated.map(record => this.toDomainModel(record));
   }
 
+  /**
+   * 通知を更新
+   * @param notification 通知
+   * @returns 通知
+   */
   async update(notification: Notification): Promise<Notification> {
     if (!notification.id) {
       throw new Error('Cannot update notification without ID');
@@ -162,7 +194,7 @@ export class NotificationRepository implements INotificationRepository {
         priority: notification.priority.getValue(),
         title: notification.title,
         message: notification.message,
-        data: notification.data ? JSON.stringify(notification.data) : null,
+        data: notification.data ? JSON.stringify(notification.data) : undefined,
         channels: notification.channels.map(c => c.getValue()),
         isRead: notification.isRead,
         readAt: notification.readAt,
@@ -174,12 +206,23 @@ export class NotificationRepository implements INotificationRepository {
     return this.toDomainModel(record);
   }
 
+  /**
+   * 通知を削除
+   * @param id 通知ID
+   * @returns 
+   */
   async delete(id: number): Promise<void> {
     await this.prisma.notification.delete({
       where: { id },
     });
   }
 
+  /**
+   * 通知を既読にする
+   * @param userId ユーザーID
+   * @param notificationIds 通知IDリスト
+   * @returns 
+   */
   async markAsRead(userId: string, notificationIds: number[]): Promise<void> {
     await this.prisma.notification.updateMany({
       where: {
@@ -193,6 +236,11 @@ export class NotificationRepository implements INotificationRepository {
     });
   }
 
+  /**
+   * ユーザーの通知を既読にする
+   * @param userId ユーザーID
+   * @returns 
+   */
   async markAllAsRead(userId: string): Promise<void> {
     await this.prisma.notification.updateMany({
       where: {
@@ -206,6 +254,11 @@ export class NotificationRepository implements INotificationRepository {
     });
   }
 
+  /**
+   * ユーザーの未読通知数を取得
+   * @param userId ユーザーID
+   * @returns 未読通知数
+   */
   async getUnreadCount(userId: string): Promise<number> {
     return this.prisma.notification.count({
       where: {
@@ -215,15 +268,26 @@ export class NotificationRepository implements INotificationRepository {
     });
   }
 
+  /**
+   * ユーザーの通知数を取得
+   * @param userId ユーザーID
+   * @param type 通知種類
+   * @returns 通知数
+   */
   async getCountByType(userId: string, type: string): Promise<number> {
     return this.prisma.notification.count({
       where: {
         userId,
-        type: type as any,
+        type: type as NotificationType,
       },
     });
   }
 
+  /**
+   * スケジュール通知を取得
+   * @param before 前の日時
+   * @returns 通知リスト
+   */
   async findScheduledNotifications(before: Date): Promise<Notification[]> {
     const records = await this.prisma.notification.findMany({
       where: {
@@ -238,6 +302,10 @@ export class NotificationRepository implements INotificationRepository {
     return records.map(record => this.toDomainModel(record));
   }
 
+  /**
+   * 過ぎたスケジュール通知を取得
+   * @returns 通知リスト
+   */
   async findOverdueNotifications(): Promise<Notification[]> {
     const records = await this.prisma.notification.findMany({
       where: {
@@ -252,6 +320,12 @@ export class NotificationRepository implements INotificationRepository {
     return records.map(record => this.toDomainModel(record));
   }
 
+  /**
+   * 通知を送信済みにする
+   * @param notificationIds 通知IDリスト
+   * @param sentAt 送信時刻
+   * @returns 
+   */
   async markAsSent(notificationIds: number[], sentAt: Date): Promise<void> {
     await this.prisma.notification.updateMany({
       where: {
@@ -263,6 +337,11 @@ export class NotificationRepository implements INotificationRepository {
     });
   }
 
+  /**
+   * ユーザーの通知設定を取得
+   * @param userId ユーザーID
+   * @returns 通知設定
+   */
   async findPreferenceByUserId(userId: string): Promise<NotificationPreference | null> {
     const record = await this.prisma.notificationPreference.findUnique({
       where: { userId },
@@ -278,18 +357,23 @@ export class NotificationRepository implements INotificationRepository {
       enablePush: record.enablePush,
       enableInApp: record.enableInApp,
       enableEmail: record.enableEmail,
-      taskDeadline: record.taskDeadline as any,
-      manhourThreshold: record.manhourThreshold as any,
+      taskDeadline: record.taskDeadline as Prisma.JsonValue,
+      manhourThreshold: record.manhourThreshold as Prisma.JsonValue,
       scheduleDelay: record.scheduleDelay,
       taskAssignment: record.taskAssignment,
       projectStatusChange: record.projectStatusChange,
-      quietHoursStart: record.quietHoursStart,
-      quietHoursEnd: record.quietHoursEnd,
+      quietHoursStart: record.quietHoursStart ?? undefined,
+      quietHoursEnd: record.quietHoursEnd ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
   }
 
+  /**
+   * ユーザーの通知設定を保存
+   * @param preference 通知設定
+   * @returns 通知設定
+   */
   async savePreference(preference: NotificationPreference): Promise<NotificationPreference> {
     const record = await this.prisma.notificationPreference.create({
       data: {
@@ -297,8 +381,8 @@ export class NotificationRepository implements INotificationRepository {
         enablePush: preference.enablePush,
         enableInApp: preference.enableInApp,
         enableEmail: preference.enableEmail,
-        taskDeadline: preference.taskDeadline,
-        manhourThreshold: preference.manhourThreshold,
+        taskDeadline: preference.taskDeadline as unknown as Prisma.InputJsonValue,
+        manhourThreshold: preference.manhourThreshold as unknown as Prisma.InputJsonValue,
         scheduleDelay: preference.scheduleDelay,
         taskAssignment: preference.taskAssignment,
         projectStatusChange: preference.projectStatusChange,
@@ -313,18 +397,23 @@ export class NotificationRepository implements INotificationRepository {
       enablePush: record.enablePush,
       enableInApp: record.enableInApp,
       enableEmail: record.enableEmail,
-      taskDeadline: record.taskDeadline as any,
-      manhourThreshold: record.manhourThreshold as any,
+      taskDeadline: record.taskDeadline as Prisma.JsonValue,
+      manhourThreshold: record.manhourThreshold as Prisma.JsonValue,
       scheduleDelay: record.scheduleDelay,
       taskAssignment: record.taskAssignment,
       projectStatusChange: record.projectStatusChange,
-      quietHoursStart: record.quietHoursStart,
-      quietHoursEnd: record.quietHoursEnd,
+      quietHoursStart: record.quietHoursStart ?? undefined,
+      quietHoursEnd: record.quietHoursEnd ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
   }
 
+  /**
+   * ユーザーの通知設定を更新
+   * @param preference 通知設定
+   * @returns 通知設定
+   */
   async updatePreference(preference: NotificationPreference): Promise<NotificationPreference> {
     if (!preference.id) {
       throw new Error('Cannot update preference without ID');
@@ -336,8 +425,8 @@ export class NotificationRepository implements INotificationRepository {
         enablePush: preference.enablePush,
         enableInApp: preference.enableInApp,
         enableEmail: preference.enableEmail,
-        taskDeadline: preference.taskDeadline,
-        manhourThreshold: preference.manhourThreshold,
+        taskDeadline: preference.taskDeadline as unknown as Prisma.InputJsonValue,
+        manhourThreshold: preference.manhourThreshold as unknown as Prisma.InputJsonValue,
         scheduleDelay: preference.scheduleDelay,
         taskAssignment: preference.taskAssignment,
         projectStatusChange: preference.projectStatusChange,
@@ -352,18 +441,24 @@ export class NotificationRepository implements INotificationRepository {
       enablePush: record.enablePush,
       enableInApp: record.enableInApp,
       enableEmail: record.enableEmail,
-      taskDeadline: record.taskDeadline as any,
-      manhourThreshold: record.manhourThreshold as any,
+      taskDeadline: record.taskDeadline as Prisma.JsonValue,
+      manhourThreshold: record.manhourThreshold as Prisma.JsonValue,
       scheduleDelay: record.scheduleDelay,
       taskAssignment: record.taskAssignment,
       projectStatusChange: record.projectStatusChange,
-      quietHoursStart: record.quietHoursStart,
-      quietHoursEnd: record.quietHoursEnd,
+      quietHoursStart: record.quietHoursStart ?? undefined,
+      quietHoursEnd: record.quietHoursEnd ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
   }
 
+  /**
+   * ユーザーのPush通知設定を保存
+   * @param userId ユーザーID
+   * @param subscription Push通知設定
+   * @returns 
+   */
   async savePushSubscription(userId: string, subscription: PushSubscriptionData): Promise<void> {
     await this.prisma.pushSubscription.upsert({
       where: {
@@ -386,6 +481,11 @@ export class NotificationRepository implements INotificationRepository {
     });
   }
 
+  /**
+   * ユーザーのPush通知設定を取得
+   * @param userId ユーザーID
+   * @returns Push通知設定リスト
+   */
   async findPushSubscriptionsByUserId(userId: string): Promise<PushSubscriptionData[]> {
     const records = await this.prisma.pushSubscription.findMany({
       where: {
@@ -396,14 +496,20 @@ export class NotificationRepository implements INotificationRepository {
 
     return records.map(record => ({
       endpoint: record.endpoint,
-      keys: record.keys as any,
+      keys: record.keys as { p256dh: string; auth: string },
       userAgent: record.userAgent || undefined,
     }));
   }
 
+  /**
+   * ユーザーのPush通知設定を削除
+   * @param userId ユーザーID
+   * @param endpoint エンドポイント
+   * @returns 
+   */
   async removePushSubscription(userId: string, endpoint?: string): Promise<void> {
-    const where: any = { userId };
-    
+    const where: Prisma.PushSubscriptionWhereInput = { userId };
+
     if (endpoint) {
       where.endpoint = endpoint;
     }
@@ -427,12 +533,17 @@ export class NotificationRepository implements INotificationRepository {
       userId: record.userId,
       subscription: {
         endpoint: record.endpoint,
-        keys: record.keys as any,
+        keys: record.keys as { p256dh: string; auth: string },
         userAgent: record.userAgent || undefined,
       },
     }));
   }
 
+  /**
+   * 古い通知を削除
+   * @param beforeDate 削除する日時
+   * @returns 削除された通知数
+   */
   async deleteOldNotifications(beforeDate: Date): Promise<number> {
     const result = await this.prisma.notification.deleteMany({
       where: {
@@ -460,8 +571,8 @@ export class NotificationRepository implements INotificationRepository {
     return result.count;
   }
 
-  private toDomainModel(record: any): Notification {
-    const data = record.data ? JSON.parse(record.data) : undefined;
+  private toDomainModel(record: Prisma.NotificationGetPayload<Record<string, never>>): Notification {
+    const data = record.data ? JSON.parse(record.data as string) : undefined;
 
     return Notification.createFromDb({
       id: record.id,
@@ -473,9 +584,9 @@ export class NotificationRepository implements INotificationRepository {
       data,
       channels: record.channels,
       isRead: record.isRead,
-      readAt: record.readAt,
-      scheduledAt: record.scheduledAt,
-      sentAt: record.sentAt,
+      readAt: record.readAt ?? undefined,
+      scheduledAt: record.scheduledAt ?? undefined,
+      sentAt: record.sentAt ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });

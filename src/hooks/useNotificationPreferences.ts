@@ -32,6 +32,11 @@ export interface NotificationPreferences {
   updatedAt?: string;
 }
 
+/**
+ * 通知設定の取得
+ * 通知設定の取得はユーザーの通知設定を取得します
+ * 通知設定が存在しない場合はデフォルト設定を作成します
+ */
 export function useNotificationPreferences() {
   const queryClient = useQueryClient();
   const queryKey = ['notification-preferences'];
@@ -51,15 +56,19 @@ export function useNotificationPreferences() {
   });
 
   // Server Actions
+  /**
+   * 通知設定の更新
+   * 通知設定の更新はupdateNotificationPreferencesを使用します
+   */
   const [updateState, updateAction] = useActionState(
     async (prevState: NotificationActionResult | null, formData: FormData) => {
       const result = await updateNotificationPreferences(prevState, formData);
-      
+
       // 成功時はキャッシュを更新
       if (result.success && result.data) {
         queryClient.setQueryData(queryKey, result.data);
       }
-      
+
       return result;
     },
     null
@@ -78,7 +87,7 @@ export function useNotificationPreferences() {
   // 設定更新のヘルパー関数
   const updatePreferences = useCallback((updates: Partial<NotificationPreferences>) => {
     const formData = new FormData();
-    
+
     // 現在の設定をベースに更新
     const currentPrefs = preferences || {
       enablePush: true,
@@ -102,7 +111,7 @@ export function useNotificationPreferences() {
     formData.set('scheduleDelay', newPrefs.scheduleDelay.toString());
     formData.set('taskAssignment', newPrefs.taskAssignment.toString());
     formData.set('projectStatusChange', newPrefs.projectStatusChange.toString());
-    
+
     if (newPrefs.quietHoursStart !== undefined) {
       formData.set('quietHoursStart', newPrefs.quietHoursStart.toString());
     }
@@ -147,9 +156,9 @@ export function useNotificationPreferences() {
   }, [updatePreferences]);
 
   const setQuietHours = useCallback((start?: number, end?: number) => {
-    updatePreferences({ 
-      quietHoursStart: start, 
-      quietHoursEnd: end 
+    updatePreferences({
+      quietHoursStart: start,
+      quietHoursEnd: end
     });
   }, [updatePreferences]);
 
@@ -187,11 +196,11 @@ export function useNotificationPreferences() {
     if ((start === undefined) !== (end === undefined)) {
       return false; // 片方だけが設定されているのは無効
     }
-    
+
     if (start !== undefined && end !== undefined) {
       return start >= 0 && start <= 23 && end >= 0 && end <= 23;
     }
-    
+
     return true;
   }, []);
 
@@ -219,11 +228,11 @@ export function useNotificationPreferences() {
   return {
     // データ
     preferences,
-    
+
     // 状態
     isLoading,
     error,
-    
+
     // 更新アクション
     updatePreferences,
     togglePushNotifications,
@@ -236,16 +245,16 @@ export function useNotificationPreferences() {
     toggleProjectStatusChangeNotifications,
     setQuietHours,
     resetToDefaults,
-    
+
     // Push通知管理
     subscribeToPush,
     unsubscribeFromPush,
-    
+
     // アクション状態
     updateState,
     pushSubscriptionState,
     pushUnsubscriptionState,
-    
+
     // ユーティリティ
     validateQuietHours,
     isInQuietHours,

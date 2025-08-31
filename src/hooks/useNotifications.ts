@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useActionState } from 'react';
-import { 
-  markNotificationAsRead, 
+import {
+  markNotificationAsRead,
   markAllAsRead,
   deleteNotification,
   sendTestNotification,
-  type NotificationActionResult 
 } from '@/app/actions/notification-actions';
 
 export interface NotificationData {
@@ -17,7 +16,7 @@ export interface NotificationData {
   priority: string;
   title: string;
   message: string;
-  data?: any;
+  data?: unknown;
   channels: string[];
   isRead: boolean;
   readAt?: string;
@@ -45,31 +44,42 @@ interface UseNotificationsOptions {
   autoRefresh?: boolean;
 }
 
+/**
+ * 通知システムのフック
+ * @param options オプション
+ * @returns 通知システムのフック
+ * @remarks 
+ * - enableRealtime: リアルタイム更新を有効にするかどうか
+ * - autoRefresh: 自動更新を有効にするかどうか
+ * - page: ページ番号
+ * - limit: ページあたりの通知数
+ * - unreadOnly: 未読のみを取得するかどうか
+ * - type: 通知の種類
+ * - priority: 通知の優先度
+ */
 export function useNotifications(options: UseNotificationsOptions = {}) {
-  const { 
-    page = 1, 
-    limit = 20, 
-    unreadOnly = false, 
-    type, 
+  const {
+    page = 1,
+    limit = 20,
+    unreadOnly = false,
+    type,
     priority,
-    enableRealtime = true,
-    autoRefresh = true 
+    autoRefresh = true
   } = options;
-  
+
   const queryClient = useQueryClient();
-  const [isConnected, setIsConnected] = useState(false);
 
   // クエリキーの生成
   const queryKey = ['notifications', { page, limit, unreadOnly, type, priority }];
   const countQueryKey = ['notifications', 'count'];
 
   // 通知一覧の取得
-  const { 
-    data: notifications, 
-    isLoading, 
-    error, 
+  const {
+    data: notifications,
+    isLoading,
+    error,
     refetch,
-    isFetching 
+    isFetching
   } = useQuery<NotificationListResult>({
     queryKey,
     queryFn: async () => {
@@ -78,7 +88,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
         limit: limit.toString(),
         unreadOnly: unreadOnly.toString(),
       });
-      
+
       if (type) params.append('type', type);
       if (priority) params.append('priority', priority);
 
@@ -108,15 +118,15 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
   // Server Actions
   const [markAsReadState, markAsReadAction] = useActionState(
-    markNotificationAsRead, 
+    markNotificationAsRead,
     null
   );
   const [markAllAsReadState, markAllAsReadAction] = useActionState(
-    markAllAsRead, 
+    markAllAsRead,
     null
   );
   const [deleteState, deleteAction] = useActionState(
-    deleteNotification, 
+    deleteNotification,
     null
   );
   const [testNotificationState, testNotificationAction] = useActionState(
@@ -124,88 +134,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     null
   );
 
-  // SSE接続によるリアルタイム更新
-  useEffect(() => {
-    if (!enableRealtime) return;
 
-    let eventSource: EventSource | null = null;
-    let reconnectTimeout: NodeJS.Timeout;
-
-    const connect = () => {
-      try {
-        eventSource = new EventSource('/api/notifications/stream');
-        
-        eventSource.onopen = () => {
-          console.log('SSE connection established');
-          setIsConnected(true);
-        };
-
-        eventSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            
-            switch (data.type) {
-              case 'connected':
-                console.log('SSE connected for user:', data.userId);
-                break;
-                
-              case 'notification':
-                console.log('New notification received:', data.payload);
-                // キャッシュを無効化して最新データを取得
-                queryClient.invalidateQueries({ queryKey: ['notifications'] });
-                break;
-                
-              case 'unread-count-update':
-                console.log('Unread count updated:', data.payload.count);
-                // 未読数キャッシュを更新
-                queryClient.setQueryData(countQueryKey, {
-                  count: data.payload.count,
-                  timestamp: data.timestamp
-                });
-                break;
-                
-              case 'heartbeat':
-                // ハートビート（接続維持）
-                break;
-                
-              default:
-                console.log('Unknown SSE event type:', data.type);
-            }
-          } catch (error) {
-            console.error('Error parsing SSE data:', error);
-          }
-        };
-
-        eventSource.onerror = (error) => {
-          console.error('SSE error:', error);
-          setIsConnected(false);
-          eventSource?.close();
-          
-          // 3秒後に再接続を試行
-          reconnectTimeout = setTimeout(() => {
-            console.log('Attempting to reconnect SSE...');
-            connect();
-          }, 3000);
-        };
-
-      } catch (error) {
-        console.error('Failed to establish SSE connection:', error);
-        setIsConnected(false);
-      }
-    };
-
-    connect();
-
-    return () => {
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-      }
-      if (eventSource) {
-        eventSource.close();
-        setIsConnected(false);
-      }
-    };
-  }, [queryClient, enableRealtime, countQueryKey]);
 
   // アクション完了後のキャッシュ更新
   useEffect(() => {
@@ -214,9 +143,9 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
   }, [
-    markAsReadState?.success, 
-    deleteState?.success, 
-    markAllAsReadState?.success, 
+    markAsReadState?.success,
+    deleteState?.success,
+    markAllAsReadState?.success,
     queryClient
   ]);
 
@@ -293,13 +222,12 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     hasNext: notifications?.hasNext || false,
     hasPrev: notifications?.hasPrev || false,
     total: notifications?.total || 0,
-    
+
     // 状態
     isLoading,
     isFetching,
     error,
-    isConnected,
-    
+
     // アクション関数
     markAsRead,
     markSingleAsRead,
@@ -308,13 +236,13 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     sendTestNotificationAction,
     refresh,
     refetch,
-    
+
     // アクション状態
     markAsReadState,
     markAllAsReadState,
     deleteState,
     testNotificationState,
-    
+
     // ユーティリティ関数
     getPriorityIcon,
     getTypeIcon,
