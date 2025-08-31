@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,7 +30,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -57,7 +61,10 @@ const formSchema = z.object({
   date: z.date({
     required_error: "日付を選択してください",
   }),
-  name: z.string().min(1, "休日名を入力してください").max(100, "休日名は100文字以内で入力してください"),
+  name: z
+    .string()
+    .min(1, "休日名を入力してください")
+    .max(100, "休日名は100文字以内で入力してください"),
   type: z.enum(["NATIONAL", "COMPANY", "SPECIAL"], {
     required_error: "休日の種類を選択してください",
   }),
@@ -65,7 +72,11 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-export function CompanyHolidayForm({ holiday, onClose, onSaveSuccess }: CompanyHolidayFormProps) {
+export function CompanyHolidayForm({
+  holiday,
+  onClose,
+  onSaveSuccess,
+}: CompanyHolidayFormProps) {
   const [loading, setLoading] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -92,10 +103,10 @@ export function CompanyHolidayForm({ holiday, onClose, onSaveSuccess }: CompanyH
     try {
       setLoading(true);
 
-      const url = isEditing 
-        ? `/api/company-holidays/${holiday.id}` 
+      const url = isEditing
+        ? `/api/company-holidays/${holiday.id}`
         : "/api/company-holidays";
-      
+
       const method = isEditing ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -132,10 +143,9 @@ export function CompanyHolidayForm({ holiday, onClose, onSaveSuccess }: CompanyH
             {isEditing ? "会社休日の編集" : "会社休日の新規追加"}
           </DialogTitle>
           <DialogDescription>
-            {isEditing 
-              ? "会社休日の情報を編集します。" 
-              : "新しい会社休日を追加します。営業日案分計算に反映されます。"
-            }
+            {isEditing
+              ? "会社休日の情報を編集します。"
+              : "新しい会社休日を追加します。営業日案分計算に反映されます。"}
           </DialogDescription>
         </DialogHeader>
 
@@ -157,7 +167,9 @@ export function CompanyHolidayForm({ holiday, onClose, onSaveSuccess }: CompanyH
                           type="button"
                         >
                           {field.value ? (
-                            format(field.value, "yyyy年MM月dd日(E)", { locale: ja })
+                            format(field.value, "yyyy年MM月dd日(E)", {
+                              locale: ja,
+                            })
                           ) : (
                             <span>日付を選択</span>
                           )}
@@ -194,8 +206,8 @@ export function CompanyHolidayForm({ holiday, onClose, onSaveSuccess }: CompanyH
                 <FormItem>
                   <FormLabel>休日名 *</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="例: 年末特別休暇" 
+                    <Input
+                      placeholder="例: 年末特別休暇"
                       {...field}
                       maxLength={100}
                     />
@@ -215,7 +227,10 @@ export function CompanyHolidayForm({ holiday, onClose, onSaveSuccess }: CompanyH
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>種類 *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="休日の種類を選択" />
