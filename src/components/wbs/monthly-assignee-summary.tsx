@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Calendar, Users, Download } from "lucide-react";
+import { Calendar, Users, Download, Info } from "lucide-react";
 import React from "react";
 import { MonthlyAssigneeSummary as MonthlyAssigneeSummaryData } from "@/applications/wbs/query/wbs-summary-result";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,12 @@ import {
 } from "@/utils/hours-converter";
 import { Copy } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface MonthlyAssigneeSummaryProps {
   monthlyData: MonthlyAssigneeSummaryData;
@@ -79,6 +85,32 @@ export function MonthlyAssigneeSummary({
             <Calendar className="h-5 w-5 text-blue-600" />
             <Users className="h-5 w-5 text-blue-600" />
             月別・担当者別集計表
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-gray-500 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-sm bg-gray-900 text-white">
+                  <div className="space-y-2">
+                    <p className="font-semibold">月跨ぎタスクの案分ロジック</p>
+                    <ul className="text-xs space-y-1">
+                      <li>
+                        •
+                        タスクが複数月にまたがる場合、各月の日数で按分計算されます
+                      </li>
+                      <li>• 例：4月20日〜5月10日のタスク（21日間）の場合</li>
+                      <li className="ml-4">
+                        - 4月分：11日間（4月20日〜4月30日）
+                      </li>
+                      <li className="ml-4">
+                        - 5月分：10日間（5月1日〜5月10日）
+                      </li>
+                      <li>• 工数は日数の比率で自動的に配分されます</li>
+                    </ul>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardTitle>
           <div className="flex gap-2">
             <Button
@@ -189,10 +221,110 @@ export function MonthlyAssigneeSummary({
                     return (
                       <React.Fragment key={month}>
                         <TableCell className="text-right text-sm">
-                          {plannedHours > 0 ? formatNumber(plannedHours) : "-"}
+                          {plannedHours > 0 ? (
+                            data?.taskDetails && data.taskDetails.length > 0 ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help underline decoration-dotted">
+                                      {formatNumber(plannedHours)}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-lg bg-gray-900 text-white p-4">
+                                    <div className="space-y-3">
+                                      <p className="font-semibold text-sm">
+                                        {data.assignee} - {data.month} 予定工数内訳
+                                      </p>
+                                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                                        {data.taskDetails.map((task, idx) => {
+                                          const monthAllocation = task.monthlyAllocations.find(
+                                            (ma) => ma.month === data.month
+                                          );
+                                          if (!monthAllocation || monthAllocation.allocatedPlannedHours === 0) return null;
+                                          return (
+                                            <div key={idx} className="text-xs border-b border-gray-700 pb-2 last:border-0">
+                                              <div className="font-medium">{task.taskName}</div>
+                                              <div className="text-gray-300 mt-1">
+                                                期間: {task.startDate} ～ {task.endDate}
+                                              </div>
+                                              <div className="text-gray-300">
+                                                総工数: {formatNumber(task.totalPlannedHours)}{getUnitSuffix(hoursUnit)}
+                                              </div>
+                                              <div className="text-yellow-300 mt-1">
+                                                {data.month}分: {formatNumber(monthAllocation.allocatedPlannedHours)}{getUnitSuffix(hoursUnit)}
+                                                ({(monthAllocation.allocationRatio * 100).toFixed(1)}%)
+                                              </div>
+                                              <div className="text-gray-400 text-xs mt-1">
+                                                稼働日数: {monthAllocation.workingDays}日 / 
+                                                利用可能時間: {monthAllocation.availableHours.toFixed(1)}h
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              formatNumber(plannedHours)
+                            )
+                          ) : (
+                            "-"
+                          )}
                         </TableCell>
                         <TableCell className="text-right text-sm">
-                          {actualHours > 0 ? formatNumber(actualHours) : "-"}
+                          {actualHours > 0 ? (
+                            data?.taskDetails && data.taskDetails.length > 0 ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help underline decoration-dotted">
+                                      {formatNumber(actualHours)}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-lg bg-gray-900 text-white p-4">
+                                    <div className="space-y-3">
+                                      <p className="font-semibold text-sm">
+                                        {data.assignee} - {data.month} 実績工数内訳
+                                      </p>
+                                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                                        {data.taskDetails.map((task, idx) => {
+                                          const monthAllocation = task.monthlyAllocations.find(
+                                            (ma) => ma.month === data.month
+                                          );
+                                          if (!monthAllocation || monthAllocation.allocatedActualHours === 0) return null;
+                                          return (
+                                            <div key={idx} className="text-xs border-b border-gray-700 pb-2 last:border-0">
+                                              <div className="font-medium">{task.taskName}</div>
+                                              <div className="text-gray-300 mt-1">
+                                                期間: {task.startDate} ～ {task.endDate}
+                                              </div>
+                                              <div className="text-gray-300">
+                                                総工数: {formatNumber(task.totalActualHours)}{getUnitSuffix(hoursUnit)}
+                                              </div>
+                                              <div className="text-yellow-300 mt-1">
+                                                {data.month}分: {formatNumber(monthAllocation.allocatedActualHours)}{getUnitSuffix(hoursUnit)}
+                                                ({(monthAllocation.allocationRatio * 100).toFixed(1)}%)
+                                              </div>
+                                              <div className="text-gray-400 text-xs mt-1">
+                                                稼働日数: {monthAllocation.workingDays}日 / 
+                                                利用可能時間: {monthAllocation.availableHours.toFixed(1)}h
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              formatNumber(actualHours)
+                            )
+                          ) : (
+                            "-"
+                          )}
                         </TableCell>
                         <TableCell
                           className={`text-right text-sm ${getDifferenceColor(

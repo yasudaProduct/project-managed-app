@@ -24,7 +24,8 @@ export function usePushNotifications() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { subscribeToPush, unsubscribeFromPush } = useNotificationPreferences();
+  // 通知設定のhookは依存関係として残すが、保存はAPIルートに統一するためここでは呼び出さない
+  useNotificationPreferences();
 
   // ブラウザサポート状況をチェック
   const checkSupport = useCallback(() => {
@@ -105,11 +106,8 @@ export function usePushNotifications() {
         await registerServiceWorker();
       }
 
-      // Push通知に購読
+      // Push通知に購読（内部でAPIルートへ保存する）
       const subscriptionData = await pushNotificationManager.subscribeToPush();
-
-      // サーバーに購読情報を保存
-      subscribeToPush(subscriptionData);
 
       await updateStatus();
 
@@ -121,7 +119,7 @@ export function usePushNotifications() {
     } finally {
       setIsLoading(false);
     }
-  }, [status.isSupported, status.isServiceWorkerReady, registerServiceWorker, subscribeToPush, updateStatus]);
+  }, [status.isSupported, status.isServiceWorkerReady, registerServiceWorker, updateStatus]);
 
   // Push通知から購読解除
   const unsubscribe = useCallback(async () => {
@@ -131,9 +129,6 @@ export function usePushNotifications() {
     try {
       await pushNotificationManager.unsubscribeFromPush();
 
-      // サーバーから購読情報を削除
-      unsubscribeFromPush();
-
       await updateStatus();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unsubscribe failed';
@@ -142,7 +137,7 @@ export function usePushNotifications() {
     } finally {
       setIsLoading(false);
     }
-  }, [unsubscribeFromPush, updateStatus]);
+  }, [updateStatus]);
 
   // 通知権限を要求
   const requestPermission = useCallback(async () => {

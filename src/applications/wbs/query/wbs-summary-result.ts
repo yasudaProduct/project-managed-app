@@ -14,6 +14,24 @@ export interface AssigneeSummary {
   difference: number;
 }
 
+export interface TaskAllocationDetail {
+  taskId: string;
+  taskName: string;
+  assignee: string;
+  startDate: string;
+  endDate: string;
+  totalPlannedHours: number;
+  totalActualHours: number;
+  monthlyAllocations: {
+    month: string;
+    workingDays: number;
+    availableHours: number;
+    allocatedPlannedHours: number;
+    allocatedActualHours: number;
+    allocationRatio: number;
+  }[];
+}
+
 export interface MonthlyAssigneeData {
   assignee: string;
   month: string;
@@ -21,6 +39,7 @@ export interface MonthlyAssigneeData {
   plannedHours: number;
   actualHours: number;
   difference: number;
+  taskDetails?: TaskAllocationDetail[];
 }
 
 export interface MonthlyAssigneeSummary {
