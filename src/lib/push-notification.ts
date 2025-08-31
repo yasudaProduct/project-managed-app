@@ -12,7 +12,7 @@ export class PushNotificationManager {
   private registration: ServiceWorkerRegistration | null = null;
   private subscription: PushSubscription | null = null;
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): PushNotificationManager {
     if (!PushNotificationManager.instance) {
@@ -26,16 +26,22 @@ export class PushNotificationManager {
    */
   async registerServiceWorker(): Promise<ServiceWorkerRegistration> {
     if (!('serviceWorker' in navigator)) {
-      throw new Error('Service Worker is not supported in this browser');
+      throw new Error('Service Workerはこのブラウザではサポートされていません');
     }
 
     try {
+
+      // Service Workerを登録
       this.registration = await navigator.serviceWorker.register('/service-worker.js', {
         scope: '/',
         updateViaCache: 'none'
       });
 
-      console.log('Service Worker registered successfully:', this.registration);
+      console.log('Service Workerが正常に登録されました:', this.registration);
+
+      // Service Workerがアクティブ化されるまで待機
+      const readyRegistration = await navigator.serviceWorker.ready;
+      this.registration = readyRegistration;
 
       // Service Workerの更新をチェック
       this.registration.addEventListener('updatefound', () => {
@@ -43,7 +49,7 @@ export class PushNotificationManager {
         if (newWorker) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('New Service Worker installed, reload required');
+              console.log('新しいService Workerがインストールされました、再読み込みが必要です');
               // ユーザーに更新を通知するロジック
               this.notifyUpdate();
             }
@@ -66,6 +72,12 @@ export class PushNotificationManager {
       await this.registerServiceWorker();
     }
 
+    // 念のため、アクティブなService Workerを待機
+    if (!this.registration?.active) {
+      const readyRegistration = await navigator.serviceWorker.ready;
+      this.registration = readyRegistration;
+    }
+
     // 通知の許可を要求
     const permission = await this.requestNotificationPermission();
     if (permission !== 'granted') {
@@ -81,7 +93,7 @@ export class PushNotificationManager {
     try {
       // 既存の購読があるかチェック
       let subscription = await this.registration!.pushManager.getSubscription();
-      
+
       if (!subscription) {
         // 新しい購読を作成
         subscription = await this.registration!.pushManager.subscribe({
@@ -124,13 +136,13 @@ export class PushNotificationManager {
 
     try {
       const subscription = await this.registration.pushManager.getSubscription();
-      
+
       if (subscription) {
         const success = await subscription.unsubscribe();
         if (success) {
           console.log('Push subscription cancelled successfully');
           this.subscription = null;
-          
+
           // サーバーに購読解除を通知
           await this.removeSubscriptionFromServer();
         } else {
@@ -154,7 +166,7 @@ export class PushNotificationManager {
     permission: NotificationPermission;
   }> {
     const permission = this.getNotificationPermission();
-    
+
     if (!this.registration) {
       return {
         isSubscribed: false,
@@ -165,7 +177,7 @@ export class PushNotificationManager {
 
     try {
       const subscription = await this.registration.pushManager.getSubscription();
-      
+
       if (subscription) {
         const subscriptionData: PushSubscriptionData = {
           endpoint: subscription.endpoint,
@@ -233,8 +245,9 @@ export class PushNotificationManager {
    * テスト通知を送信
    */
   async sendTestNotification(): Promise<void> {
+    console.log('Sending test notification');
     const permission = await this.requestNotificationPermission();
-    
+
     if (permission !== 'granted') {
       throw new Error('Notification permission denied');
     }
@@ -242,10 +255,13 @@ export class PushNotificationManager {
     // ローカル通知でテスト
     const notification = new Notification('テスト通知', {
       body: 'プッシュ通知が正常に動作しています！',
-      icon: '/icon-192x192.png',
-      badge: '/badge-72x72.png',
+      // icon: '/icon-192x192.png',
+      // badge: '/badge-72x72.png',
       tag: 'test-notification'
     });
+
+    console.log('Test notification sent');
+    console.log(notification);
 
     notification.onclick = () => {
       console.log('Test notification clicked');
@@ -262,13 +278,14 @@ export class PushNotificationManager {
   /**
    * Service Workerにメッセージを送信
    */
-  async postMessage(message: any): Promise<void> {
+  async postMessage(message: unknown): Promise<void> {
     if (!this.registration) {
       throw new Error('Service Worker is not registered');
     }
 
     if (this.registration.active) {
-      this.registration.active.postMessage(message);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (this.registration.active as any).postMessage(message);
     }
   }
 
@@ -348,17 +365,7 @@ export class PushNotificationManager {
         body: 'アプリケーションを更新してください。',
         icon: '/icon-192x192.png',
         tag: 'app-update',
-        requireInteraction: true,
-        actions: [
-          {
-            action: 'update',
-            title: '更新する'
-          },
-          {
-            action: 'later',
-            title: '後で'
-          }
-        ]
+        requireInteraction: true
       });
 
       notification.onclick = () => {

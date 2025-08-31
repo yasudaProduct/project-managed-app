@@ -20,10 +20,10 @@ export function usePushNotifications() {
     subscription: null,
     isServiceWorkerReady: false,
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const { subscribeToPush, unsubscribeFromPush } = useNotificationPreferences();
 
   // ブラウザサポート状況をチェック
@@ -40,7 +40,7 @@ export function usePushNotifications() {
     try {
       const permission = pushNotificationManager.getNotificationPermission();
       const subscriptionStatus = await pushNotificationManager.getSubscriptionStatus();
-      
+
       setStatus({
         isSupported: true,
         permission,
@@ -48,12 +48,12 @@ export function usePushNotifications() {
         subscription: subscriptionStatus.subscription,
         isServiceWorkerReady: true, // getSubscriptionStatusが成功すればSWは準備完了
       });
-      
+
       setError(null);
     } catch (err) {
       console.error('Failed to update push notification status:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
-      
+
       setStatus(prev => ({
         ...prev,
         permission: pushNotificationManager.getNotificationPermission(),
@@ -62,17 +62,22 @@ export function usePushNotifications() {
     }
   }, [checkSupport]);
 
-  // Service Workerを登録
+  /**
+   * Service Workerを登録
+   */
   const registerServiceWorker = useCallback(async () => {
     if (!status.isSupported) {
-      throw new Error('Push notifications are not supported');
+      throw new Error('プッシュ通知はサポートされていません');
     }
 
     setIsLoading(true);
     setError(null);
 
     try {
+      // Service Workerを登録
       await pushNotificationManager.registerServiceWorker();
+
+      // 状態を更新
       await updateStatus();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Service Worker registration failed';
@@ -83,10 +88,12 @@ export function usePushNotifications() {
     }
   }, [status.isSupported, updateStatus]);
 
-  // Push通知に購読
+  /**
+   * プッシュ通知に購読
+   */
   const subscribe = useCallback(async () => {
     if (!status.isSupported) {
-      throw new Error('Push notifications are not supported');
+      throw new Error('プッシュ通知はサポートされていません');
     }
 
     setIsLoading(true);
@@ -100,15 +107,15 @@ export function usePushNotifications() {
 
       // Push通知に購読
       const subscriptionData = await pushNotificationManager.subscribeToPush();
-      
+
       // サーバーに購読情報を保存
       subscribeToPush(subscriptionData);
-      
+
       await updateStatus();
-      
+
       return subscriptionData;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Push subscription failed';
+      const errorMessage = err instanceof Error ? err.message : 'プッシュ通知の購読に失敗しました';
       setError(errorMessage);
       throw err;
     } finally {
@@ -123,10 +130,10 @@ export function usePushNotifications() {
 
     try {
       await pushNotificationManager.unsubscribeFromPush();
-      
+
       // サーバーから購読情報を削除
       unsubscribeFromPush();
-      
+
       await updateStatus();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unsubscribe failed';
@@ -159,7 +166,9 @@ export function usePushNotifications() {
     }
   }, [status.isSupported, updateStatus]);
 
-  // テスト通知を送信
+  /**
+   * テスト通知を送信
+   */
   const sendTestNotification = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -223,13 +232,13 @@ export function usePushNotifications() {
     ...status,
     isLoading,
     error,
-    
+
     // 便利な判定
     canRequestPermission,
     canSubscribe,
     canUnsubscribe,
     canSendTest,
-    
+
     // アクション
     registerServiceWorker,
     subscribe,
@@ -237,7 +246,7 @@ export function usePushNotifications() {
     requestPermission,
     sendTestNotification,
     updateStatus,
-    
+
     // エラーのクリア
     clearError: useCallback(() => setError(null), []),
   };

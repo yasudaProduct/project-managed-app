@@ -80,6 +80,9 @@ export function NotificationSettings() {
     }
   };
 
+  /**
+   * プッシュ通知の有効/無効を切り替え
+   */
   const handlePushToggle = async () => {
     try {
       if (isSubscribed) {
@@ -92,6 +95,9 @@ export function NotificationSettings() {
     }
   };
 
+  /**
+   * テスト通知を送信
+   */
   const handleTestNotification = async () => {
     try {
       await sendTestNotification();
@@ -100,6 +106,10 @@ export function NotificationSettings() {
     }
   };
 
+  /**
+   * プッシュ通知のステータスを取得
+   * @returns
+   */
   const getPushStatusBadge = () => {
     if (!isSupported) {
       return <Badge variant="secondary">非対応</Badge>;

@@ -19,8 +19,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { exportMonthlyAssigneeSummary, copyMonthlyAssigneeSummaryToClipboard } from "@/utils/export-table";
-import { HoursUnit, convertHours, getUnitSuffix } from "@/utils/hours-converter";
+import {
+  exportMonthlyAssigneeSummary,
+  copyMonthlyAssigneeSummaryToClipboard,
+} from "@/utils/export-table";
+import {
+  HoursUnit,
+  convertHours,
+  getUnitSuffix,
+} from "@/utils/hours-converter";
 import { Copy } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -29,8 +36,10 @@ interface MonthlyAssigneeSummaryProps {
   hoursUnit: HoursUnit;
 }
 
-export function MonthlyAssigneeSummary({ monthlyData, hoursUnit }: MonthlyAssigneeSummaryProps) {
-
+export function MonthlyAssigneeSummary({
+  monthlyData,
+  hoursUnit,
+}: MonthlyAssigneeSummaryProps) {
   const formatNumber = (num: number) => {
     const converted = convertHours(num, hoursUnit);
     return converted.toLocaleString("ja-JP", {
@@ -44,7 +53,6 @@ export function MonthlyAssigneeSummary({ monthlyData, hoursUnit }: MonthlyAssign
     if (difference === 0) return "text-green-600";
     return "text-blue-600";
   };
-
 
   if (monthlyData.months.length === 0 || monthlyData.assignees.length === 0) {
     return (
@@ -79,12 +87,19 @@ export function MonthlyAssigneeSummary({ monthlyData, hoursUnit }: MonthlyAssign
               className="gap-2"
               onClick={async () => {
                 try {
-                  await copyMonthlyAssigneeSummaryToClipboard(monthlyData, hoursUnit);
-                  toast({ description: "TSV形式でクリップボードにコピーしました" });
+                  await copyMonthlyAssigneeSummaryToClipboard(
+                    monthlyData,
+                    hoursUnit
+                  );
+                  toast({
+                    description: "TSV形式でクリップボードにコピーしました",
+                  });
                 } catch (error) {
-                  toast({ 
-                    description: "コピーに失敗しました", 
-                    variant: "destructive" 
+                  toast({
+                    description:
+                      "コピーに失敗しました" +
+                      (error instanceof Error ? error.message : ""),
+                    variant: "destructive",
                   });
                 }
               }}
@@ -101,12 +116,16 @@ export function MonthlyAssigneeSummary({ monthlyData, hoursUnit }: MonthlyAssign
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => exportMonthlyAssigneeSummary(monthlyData, 'csv', hoursUnit)}
+                  onClick={() =>
+                    exportMonthlyAssigneeSummary(monthlyData, "csv", hoursUnit)
+                  }
                 >
                   CSV形式で出力
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => exportMonthlyAssigneeSummary(monthlyData, 'tsv', hoursUnit)}
+                  onClick={() =>
+                    exportMonthlyAssigneeSummary(monthlyData, "tsv", hoursUnit)
+                  }
                 >
                   TSV形式で出力
                 </DropdownMenuItem>
@@ -124,20 +143,31 @@ export function MonthlyAssigneeSummary({ monthlyData, hoursUnit }: MonthlyAssign
                   担当者
                 </TableHead>
                 {monthlyData.months.map((month) => (
-                  <TableHead key={month} className="text-center font-semibold min-w-[120px]" colSpan={3}>
+                  <TableHead
+                    key={month}
+                    className="text-center font-semibold min-w-[120px]"
+                    colSpan={3}
+                  >
                     {month}
                   </TableHead>
                 ))}
-                <TableHead className="text-center font-semibold min-w-[120px]" colSpan={3}>
+                <TableHead
+                  className="text-center font-semibold min-w-[120px]"
+                  colSpan={3}
+                >
                   合計
                 </TableHead>
               </TableRow>
               <TableRow className="bg-gray-50">
                 <TableHead className="sticky left-0 bg-gray-50 z-10"></TableHead>
-                {[...monthlyData.months, '合計'].map((period) => (
+                {[...monthlyData.months, "合計"].map((period) => (
                   <React.Fragment key={period}>
-                    <TableHead className="text-right text-xs">予定({getUnitSuffix(hoursUnit)})</TableHead>
-                    <TableHead className="text-right text-xs">実績({getUnitSuffix(hoursUnit)})</TableHead>
+                    <TableHead className="text-right text-xs">
+                      予定({getUnitSuffix(hoursUnit)})
+                    </TableHead>
+                    <TableHead className="text-right text-xs">
+                      実績({getUnitSuffix(hoursUnit)})
+                    </TableHead>
                     <TableHead className="text-right text-xs">差分</TableHead>
                   </React.Fragment>
                 ))}
@@ -150,33 +180,51 @@ export function MonthlyAssigneeSummary({ monthlyData, hoursUnit }: MonthlyAssign
                     {assignee}
                   </TableCell>
                   {monthlyData.months.map((month) => {
-                    const data = monthlyData.data.find(d => d.month === month && d.assignee === assignee);
+                    const data = monthlyData.data.find(
+                      (d) => d.month === month && d.assignee === assignee
+                    );
                     const plannedHours = data?.plannedHours || 0;
                     const actualHours = data?.actualHours || 0;
                     const difference = data?.difference || 0;
                     return (
                       <React.Fragment key={month}>
                         <TableCell className="text-right text-sm">
-                          {plannedHours > 0 ? formatNumber(plannedHours) : '-'}
+                          {plannedHours > 0 ? formatNumber(plannedHours) : "-"}
                         </TableCell>
                         <TableCell className="text-right text-sm">
-                          {actualHours > 0 ? formatNumber(actualHours) : '-'}
+                          {actualHours > 0 ? formatNumber(actualHours) : "-"}
                         </TableCell>
-                        <TableCell className={`text-right text-sm ${getDifferenceColor(difference)}`}>
-                          {plannedHours > 0 || actualHours > 0 ? formatNumber(difference) : '-'}
+                        <TableCell
+                          className={`text-right text-sm ${getDifferenceColor(
+                            difference
+                          )}`}
+                        >
+                          {plannedHours > 0 || actualHours > 0
+                            ? formatNumber(difference)
+                            : "-"}
                         </TableCell>
                       </React.Fragment>
                     );
                   })}
                   {/* 担当者合計 */}
                   <TableCell className="text-right text-sm font-semibold bg-gray-50">
-                    {formatNumber(monthlyData.assigneeTotals[assignee].plannedHours)}
+                    {formatNumber(
+                      monthlyData.assigneeTotals[assignee].plannedHours
+                    )}
                   </TableCell>
                   <TableCell className="text-right text-sm font-semibold bg-gray-50">
-                    {formatNumber(monthlyData.assigneeTotals[assignee].actualHours)}
+                    {formatNumber(
+                      monthlyData.assigneeTotals[assignee].actualHours
+                    )}
                   </TableCell>
-                  <TableCell className={`text-right text-sm font-semibold bg-gray-50 ${getDifferenceColor(monthlyData.assigneeTotals[assignee].difference)}`}>
-                    {formatNumber(monthlyData.assigneeTotals[assignee].difference)}
+                  <TableCell
+                    className={`text-right text-sm font-semibold bg-gray-50 ${getDifferenceColor(
+                      monthlyData.assigneeTotals[assignee].difference
+                    )}`}
+                  >
+                    {formatNumber(
+                      monthlyData.assigneeTotals[assignee].difference
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -196,7 +244,11 @@ export function MonthlyAssigneeSummary({ monthlyData, hoursUnit }: MonthlyAssign
                       <TableCell className="text-right text-sm">
                         {formatNumber(total.actualHours)}
                       </TableCell>
-                      <TableCell className={`text-right text-sm ${getDifferenceColor(difference)}`}>
+                      <TableCell
+                        className={`text-right text-sm ${getDifferenceColor(
+                          difference
+                        )}`}
+                      >
                         {formatNumber(difference)}
                       </TableCell>
                     </React.Fragment>
@@ -209,7 +261,11 @@ export function MonthlyAssigneeSummary({ monthlyData, hoursUnit }: MonthlyAssign
                 <TableCell className="text-right text-sm bg-gray-200">
                   {formatNumber(monthlyData.grandTotal.actualHours)}
                 </TableCell>
-                <TableCell className={`text-right text-sm bg-gray-200 ${getDifferenceColor(monthlyData.grandTotal.difference)}`}>
+                <TableCell
+                  className={`text-right text-sm bg-gray-200 ${getDifferenceColor(
+                    monthlyData.grandTotal.difference
+                  )}`}
+                >
                   {formatNumber(monthlyData.grandTotal.difference)}
                 </TableCell>
               </TableRow>

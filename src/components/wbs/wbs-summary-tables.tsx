@@ -20,7 +20,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { exportPhaseSummary, exportAssigneeSummary, copyPhaseSummaryToClipboard, copyAssigneeSummaryToClipboard } from "@/utils/export-table";
+import {
+  exportPhaseSummary,
+  exportAssigneeSummary,
+  copyPhaseSummaryToClipboard,
+  copyAssigneeSummaryToClipboard,
+} from "@/utils/export-table";
 import {
   Select,
   SelectContent,
@@ -29,7 +34,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState } from "react";
-import { HoursUnit, HOURS_UNIT_LABELS, convertHours, getUnitSuffix } from "@/utils/hours-converter";
+import {
+  HoursUnit,
+  HOURS_UNIT_LABELS,
+  convertHours,
+  getUnitSuffix,
+} from "@/utils/hours-converter";
 import { Copy } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -40,7 +50,7 @@ interface WbsSummaryTablesProps {
 
 export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
   const { data: summary, isLoading, error } = useWbsSummary(projectId, wbsId);
-  const [hoursUnit, setHoursUnit] = useState<HoursUnit>('hours');
+  const [hoursUnit, setHoursUnit] = useState<HoursUnit>("hours");
 
   const formatNumber = (num: number) => {
     const converted = convertHours(num, hoursUnit);
@@ -106,7 +116,10 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
     <div className="space-y-6">
       {/* 工数単位選択 */}
       <div className="flex justify-end">
-        <Select value={hoursUnit} onValueChange={(value) => setHoursUnit(value as HoursUnit)}>
+        <Select
+          value={hoursUnit}
+          onValueChange={(value) => setHoursUnit(value as HoursUnit)}
+        >
           <SelectTrigger className="w-32">
             <SelectValue placeholder="単位を選択" />
           </SelectTrigger>
@@ -135,12 +148,20 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                   className="gap-2"
                   onClick={async () => {
                     try {
-                      await copyPhaseSummaryToClipboard(summary.phaseSummaries, summary.phaseTotal, hoursUnit);
-                      toast({ description: "TSV形式でクリップボードにコピーしました" });
+                      await copyPhaseSummaryToClipboard(
+                        summary.phaseSummaries,
+                        summary.phaseTotal,
+                        hoursUnit
+                      );
+                      toast({
+                        description: "TSV形式でクリップボードにコピーしました",
+                      });
                     } catch (error) {
-                      toast({ 
-                        description: "コピーに失敗しました", 
-                        variant: "destructive" 
+                      toast({
+                        description:
+                          "コピーに失敗しました" +
+                          (error instanceof Error ? error.message : ""),
+                        variant: "destructive",
                       });
                     }
                   }}
@@ -157,12 +178,26 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onClick={() => exportPhaseSummary(summary.phaseSummaries, summary.phaseTotal, 'csv', hoursUnit)}
+                      onClick={() =>
+                        exportPhaseSummary(
+                          summary.phaseSummaries,
+                          summary.phaseTotal,
+                          "csv",
+                          hoursUnit
+                        )
+                      }
                     >
                       CSV形式で出力
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => exportPhaseSummary(summary.phaseSummaries, summary.phaseTotal, 'tsv', hoursUnit)}
+                      onClick={() =>
+                        exportPhaseSummary(
+                          summary.phaseSummaries,
+                          summary.phaseTotal,
+                          "tsv",
+                          hoursUnit
+                        )
+                      }
                     >
                       TSV形式で出力
                     </DropdownMenuItem>
@@ -252,12 +287,21 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                     className="gap-2"
                     onClick={async () => {
                       try {
-                        await copyAssigneeSummaryToClipboard(summary.assigneeSummaries, summary.assigneeTotal, hoursUnit);
-                        toast({ description: "TSV形式でクリップボードにコピーしました" });
+                        await copyAssigneeSummaryToClipboard(
+                          summary.assigneeSummaries,
+                          summary.assigneeTotal,
+                          hoursUnit
+                        );
+                        toast({
+                          description:
+                            "TSV形式でクリップボードにコピーしました",
+                        });
                       } catch (error) {
-                        toast({ 
-                          description: "コピーに失敗しました", 
-                          variant: "destructive" 
+                        toast({
+                          description:
+                            "コピーに失敗しました" +
+                            (error instanceof Error ? error.message : ""),
+                          variant: "destructive",
                         });
                       }
                     }}
@@ -274,12 +318,26 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        onClick={() => exportAssigneeSummary(summary.assigneeSummaries, summary.assigneeTotal, 'csv', hoursUnit)}
+                        onClick={() =>
+                          exportAssigneeSummary(
+                            summary.assigneeSummaries,
+                            summary.assigneeTotal,
+                            "csv",
+                            hoursUnit
+                          )
+                        }
                       >
                         CSV形式で出力
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => exportAssigneeSummary(summary.assigneeSummaries, summary.assigneeTotal, 'tsv', hoursUnit)}
+                        onClick={() =>
+                          exportAssigneeSummary(
+                            summary.assigneeSummaries,
+                            summary.assigneeTotal,
+                            "tsv",
+                            hoursUnit
+                          )
+                        }
                       >
                         TSV形式で出力
                       </DropdownMenuItem>
@@ -370,7 +428,10 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
       </div>
 
       {/* 月別・担当者別集計表 */}
-      <MonthlyAssigneeSummary monthlyData={summary.monthlyAssigneeSummary} hoursUnit={hoursUnit} />
+      <MonthlyAssigneeSummary
+        monthlyData={summary.monthlyAssigneeSummary}
+        hoursUnit={hoursUnit}
+      />
     </div>
   );
 }
