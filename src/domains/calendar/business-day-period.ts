@@ -16,24 +16,32 @@ export class BusinessDayPeriod {
     this.workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, userSchedules);
   }
 
+  /**
+   * 期間の営業日数を担当者固有の条件で計算
+   * @returns 営業日数
+   */
   getBusinessDaysCount(): number {
     let count = 0;
     const current = new Date(this.startDate);
-    
+
     while (current <= this.endDate) {
       if (this.workingCalendar.isWorkingDay(current)) {
         count++;
       }
       current.setDate(current.getDate() + 1);
     }
-    
+
     return count;
   }
 
+  /**
+   * 月ごとの営業日数を取得
+   * @returns 月ごとの営業日数
+   */
   getBusinessDaysByMonth(): Map<string, number> {
     const monthlyBusinessDays = new Map<string, number>();
     const current = new Date(this.startDate);
-    
+
     while (current <= this.endDate) {
       if (this.workingCalendar.isWorkingDay(current)) {
         const yearMonth = this.formatYearMonth(current);
@@ -42,14 +50,18 @@ export class BusinessDayPeriod {
       }
       current.setDate(current.getDate() + 1);
     }
-    
+
     return monthlyBusinessDays;
   }
 
+  /**
+   * 月ごとの稼働可能時間を取得
+   * @returns 月ごとの稼働可能時間
+   */
   getAvailableHoursByMonth(): Map<string, number> {
     const monthlyHours = new Map<string, number>();
     const current = new Date(this.startDate);
-    
+
     while (current <= this.endDate) {
       const availableHours = this.workingCalendar.getAvailableHours(current);
       if (availableHours > 0) {
@@ -59,29 +71,34 @@ export class BusinessDayPeriod {
       }
       current.setDate(current.getDate() + 1);
     }
-    
+
     return monthlyHours;
   }
 
+  /**
+   * 月ごとの工数を営業日数で案分する
+   * @param totalHours 総工数
+   * @returns 月ごとの工数
+   */
   distributeHoursByBusinessDays(totalHours: number): Map<string, number> {
     const monthlyAvailableHours = this.getAvailableHoursByMonth();
     const totalAvailableHours = Array.from(monthlyAvailableHours.values()).reduce((sum, hours) => sum + hours, 0);
-    
+
     if (totalAvailableHours === 0) {
       // 稼働可能時間がない場合は、開始月に全工数を計上
       const startYearMonth = this.formatYearMonth(this.startDate);
       return new Map([[startYearMonth, totalHours]]);
     }
-    
+
     const distributedHours = new Map<string, number>();
-    
+
     // 各月の稼働可能時間の比率で工数を案分
     monthlyAvailableHours.forEach((availableHours, yearMonth) => {
       const ratio = availableHours / totalAvailableHours;
       const allocatedHours = totalHours * ratio;
       distributedHours.set(yearMonth, Math.round(allocatedHours * 100) / 100); // 小数第2位まで
     });
-    
+
     // 丸め誤差の調整（最後の月で調整）
     const allocatedTotal = Array.from(distributedHours.values()).reduce((sum, hours) => sum + hours, 0);
     const difference = totalHours - allocatedTotal;
@@ -90,7 +107,7 @@ export class BusinessDayPeriod {
       const adjustedHours = distributedHours.get(lastMonth)! + difference;
       distributedHours.set(lastMonth, Math.round(adjustedHours * 100) / 100);
     }
-    
+
     return distributedHours;
   }
 

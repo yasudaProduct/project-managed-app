@@ -328,7 +328,8 @@ export const mockData = {
             date: addDays(70),
         },
     ],
-    companyHolidays: []
+    companyHolidays: [],
+    userSchedules: []
 };
 
 // 大量データ
@@ -413,7 +414,8 @@ export const mockDataLarge = {
         name: `マイルストーン${i + 1} `,
         date: addDays(i),
     })),
-    companyHolidays: []
+    companyHolidays: [],
+    userSchedules: []
 }
 
 // プロジェクトデータ
@@ -598,7 +600,8 @@ export const importTestData = {
             date: addDays(70),
         },
     ],
-    companyHolidays: []
+    companyHolidays: [],
+    userSchedules: []
 }
 
 export const importTestData2 = {
@@ -690,7 +693,8 @@ export const importTestData2 = {
             date: addDays(0),
         },
     ],
-    companyHolidays: []
+    companyHolidays: [],
+    userSchedules: []
 }
 
 // 営業日案分ロジックのテストデータ
@@ -700,8 +704,8 @@ export const proportionalAllocationTestData = {
         name: "営業日案分テスト",
         status: "ACTIVE",
         description: "営業日案分ロジックのテスト用プロジェクト",
-        startDate: baseDate,
-        endDate: addDays(60),
+        startDate: new Date("2025-04-01"),
+        endDate: new Date("2025-09-30"),
     },
     wbs: [
         {
@@ -715,19 +719,19 @@ export const proportionalAllocationTestData = {
         {
             id: 40,
             wbsId: 40,
-            assigneeId: "dummy01", // フルタイム（稼働率1.0）
+            assigneeId: "dummy01",
             rate: 1.0,
         },
         {
             id: 41,
             wbsId: 40,
-            assigneeId: "dummy02", // パートタイム（稼働率0.5）
+            assigneeId: "dummy02",
             rate: 0.5,
         },
         {
             id: 42,
             wbsId: 40,
-            assigneeId: "dummy03", // フルタイム（稼働率1.0）
+            assigneeId: "dummy03",
             rate: 1.0,
         },
     ],
@@ -750,9 +754,9 @@ export const proportionalAllocationTestData = {
             name: "月またぎタスクA（稼働率1.0担当）",
             assigneeId: 40,
             status: "IN_PROGRESS",
-            startDate: addDays(25), // 今月末
-            endDate: addDays(35),   // 来月上旬
-            kosu: 80, // 80時間 = 約2週間分の工数
+            startDate: new Date("2025-04-25"), // 今月末
+            endDate: new Date("2025-05-04"),   // 来月上旬
+            kosu: 80,
         },
         {
             id: 41,
@@ -762,8 +766,8 @@ export const proportionalAllocationTestData = {
             name: "月またぎタスクB（稼働率0.5担当）",
             assigneeId: 41,
             status: "IN_PROGRESS",
-            startDate: addDays(20),
-            endDate: addDays(45),
+            startDate: new Date("2025-05-20"),
+            endDate: new Date("2025-06-04"),
             kosu: 60,
         },
         {
@@ -774,32 +778,20 @@ export const proportionalAllocationTestData = {
             name: "長期月またぎタスク（3ヶ月間）",
             assigneeId: 42,
             status: "IN_PROGRESS",
-            startDate: addDays(15),
-            endDate: addDays(75), // 3ヶ月後
-            kosu: 240, // 3ヶ月分の工数
+            startDate: new Date("2025-06-15"),
+            endDate: new Date("2025-08-04"),
+            kosu: 240,
         },
         {
             id: 43,
             taskNo: "D1-0004",
             wbsId: 40,
             phaseId: 40,
-            name: "年末年始またぎタスク",
+            name: "月跨ぎロジック1（稼働率1.0担当）",
             assigneeId: 40,
             status: "NOT_STARTED",
-            startDate: new Date(baseDate.getFullYear(), 11, 25), // 12/25
-            endDate: new Date(baseDate.getFullYear() + 1, 0, 10), // 1/10
-            kosu: 40,
-        },
-        {
-            id: 44,
-            taskNo: "D1-0005",
-            wbsId: 40,
-            phaseId: 40,
-            name: "複数の月跨ぎロジック1（稼働率1.0担当）",
-            assigneeId: 40,
-            status: "NOT_STARTED",
-            startDate: addDays(25),
-            endDate: addDays(55),
+            startDate: new Date("2025-07-25"),
+            endDate: new Date("2025-08-04"),
             kosu: 80,
         },
         {
@@ -807,11 +799,11 @@ export const proportionalAllocationTestData = {
             taskNo: "D1-0006",
             wbsId: 40,
             phaseId: 40,
-            name: "複数の月跨ぎロジック2（稼働率1.0担当）",
+            name: "月跨ぎロジック2（稼働率1.0担当）",
             assigneeId: 40,
             status: "NOT_STARTED",
-            startDate: addDays(25),
-            endDate: addDays(55),
+            startDate: new Date("2025-07-25"),
+            endDate: new Date("2025-08-04"),
             kosu: 80,
         },
         {
@@ -822,8 +814,20 @@ export const proportionalAllocationTestData = {
             name: "会社休日がある月が跨ぐタスク（稼働率1.0担当）",
             assigneeId: 40,
             status: "NOT_STARTED",
-            startDate: addDays(25),
-            endDate: addDays(45),
+            startDate: new Date("2025-08-25"),
+            endDate: new Date("2025-09-04"),
+            kosu: 80,
+        },
+        {
+            id: 47,
+            taskNo: "D1-0008",
+            wbsId: 40,
+            phaseId: 40,
+            name: "個人の予定休暇考慮タスク",
+            assigneeId: 41,
+            status: "NOT_STARTED",
+            startDate: new Date("2025-08-22"),
+            endDate: new Date("2025-08-28"),
             kosu: 80,
         },
     ],
@@ -870,31 +874,7 @@ export const proportionalAllocationTestData = {
     companyHolidays: [
         {
             id: 1,
-            date: new Date(baseDate.getFullYear(), 11, 29), // 12/29
-            name: "年末特別休暇",
-            type: "COMPANY",
-        },
-        {
-            id: 2,
-            date: new Date(baseDate.getFullYear(), 11, 30), // 12/30
-            name: "年末特別休暇",
-            type: "COMPANY",
-        },
-        {
-            id: 3,
-            date: new Date(baseDate.getFullYear() + 1, 0, 2), // 1/2
-            name: "年始特別休暇",
-            type: "COMPANY",
-        },
-        {
-            id: 4,
-            date: new Date(baseDate.getFullYear() + 1, 0, 3), // 1/3
-            name: "年始特別休暇",
-            type: "COMPANY",
-        },
-        {
-            id: 5,
-            date: addDays(25),
+            date: new Date("2025-08-25"),
             name: "会社休日がある月が跨ぐタスク",
             type: "COMPANY",
         },
@@ -902,49 +882,44 @@ export const proportionalAllocationTestData = {
     // ユーザースケジュール（個人の休暇・予定）
     userSchedules: [
         {
-            id: 40,
-            userId: "dummy01",
-            date: addDays(27),
-            title: "有給休暇",
-            type: "VACATION",
-            isAllDay: true,
-            scheduledHours: 7.5,
-        },
-        {
-            id: 41,
-            userId: "dummy01",
-            date: addDays(28),
-            title: "午後半休",
-            type: "HALF_VACATION",
-            isAllDay: false,
-            scheduledHours: 3.75,
-        },
-        {
             id: 42,
             userId: "dummy02",
-            date: addDays(22),
-            title: "病院",
-            type: "PRIVATE",
-            isAllDay: false,
-            scheduledHours: 2.0,
+            date: new Date("2025-08-22"),
+            title: "有給",
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "病院",
+            description: "病院に行く",
         },
         {
             id: 43,
-            userId: "dummy03",
-            date: addDays(30),
-            title: "研修参加",
-            type: "TRAINING",
-            isAllDay: true,
-            scheduledHours: 7.5,
+            userId: "dummy02",
+            date: new Date("2025-08-23"),
+            title: "有給",
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "有給",
+            description: "有給に行く",
         },
         {
             id: 44,
             userId: "dummy03",
-            date: addDays(45),
+            date: new Date("2025-08-30"),
+            title: "研修参加",
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "研修",
+            description: "研修に行く",
+        },
+        {
+            id: 45,
+            userId: "dummy03",
+            date: new Date("2025-08-30"),
             title: "夏季休暇",
-            type: "VACATION",
-            isAllDay: true,
-            scheduledHours: 7.5,
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "夏季休暇",
+            description: "夏季休暇に行く",
         },
     ],
 }
@@ -1099,27 +1074,30 @@ export const complexProportionalTestData = {
             userId: "dummy05",
             date: addDays(7),
             title: "取締役会",
-            type: "MEETING",
-            isAllDay: false,
-            scheduledHours: 4.0,
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "取締役会",
+            description: "取締役会に行く",
         },
         {
             id: 51,
             userId: "dummy05",
             date: addDays(14),
             title: "出張",
-            type: "BUSINESS_TRIP",
-            isAllDay: true,
-            scheduledHours: 7.5,
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "出張",
+            description: "出張に行く",
         },
         {
             id: 52,
             userId: "dummy05",
             date: addDays(21),
             title: "午前半休",
-            type: "HALF_VACATION",
-            isAllDay: false,
-            scheduledHours: 3.75,
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "午前半休",
+            description: "午前半休に行く",
         },
         // dummy06（新人）の予定
         {
@@ -1127,36 +1105,40 @@ export const complexProportionalTestData = {
             userId: "dummy06",
             date: addDays(8),
             title: "新人研修",
-            type: "TRAINING",
-            isAllDay: true,
-            scheduledHours: 7.5,
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "新人研修",
+            description: "新人研修に行く",
         },
         {
             id: 54,
             userId: "dummy06",
             date: addDays(9),
             title: "新人研修",
-            type: "TRAINING",
-            isAllDay: true,
-            scheduledHours: 7.5,
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "新人研修",
+            description: "新人研修に行く",
         },
         {
             id: 55,
             userId: "dummy06",
             date: addDays(15),
             title: "メンター面談",
-            type: "MEETING",
-            isAllDay: false,
-            scheduledHours: 2.0,
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "メンター面談",
+            description: "メンター面談に行く",
         },
         {
             id: 56,
             userId: "dummy06",
             date: addDays(22),
             title: "体調不良",
-            type: "SICK_LEAVE",
-            isAllDay: true,
-            scheduledHours: 7.5,
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "体調不良",
+            description: "体調不良に行く",
         },
         // dummy07（外部委託）の予定
         {
@@ -1164,27 +1146,30 @@ export const complexProportionalTestData = {
             userId: "dummy07",
             date: addDays(12),
             title: "他社案件",
-            type: "EXTERNAL_WORK",
-            isAllDay: false,
-            scheduledHours: 4.5, // 稼働時間のさらに一部を削減
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "他社案件",
+            description: "他社案件に行く",
         },
         {
             id: 58,
             userId: "dummy07",
             date: addDays(18),
             title: "他社案件",
-            type: "EXTERNAL_WORK",
-            isAllDay: false,
-            scheduledHours: 5.0,
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "他社案件",
+            description: "他社案件に行く",
         },
         {
             id: 59,
             userId: "dummy07",
             date: addDays(25),
             title: "契約更新面談",
-            type: "MEETING",
-            isAllDay: false,
-            scheduledHours: 2.0,
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "契約更新面談",
+            description: "契約更新面談に行く",
         },
     ],
     workRecords: [

@@ -286,6 +286,25 @@ async function main() {
                 },
             })
         }
+
+        for (const userSchedule of mock.userSchedules) {
+            await prisma.userSchedule.upsert({
+                where: { id: userSchedule.id },
+                update: {
+                    userId: userSchedule.userId,
+                },
+                create: {
+                    id: userSchedule.id,
+                    userId: userSchedule.userId,
+                    date: new Date(userSchedule.date),
+                    startTime: userSchedule.startTime,
+                    endTime: userSchedule.endTime,
+                    title: userSchedule.title,
+                    location: userSchedule.location,
+                    description: userSchedule.description,
+                },
+            })
+        }
     }
 
 
