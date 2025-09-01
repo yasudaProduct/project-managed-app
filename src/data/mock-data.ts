@@ -1219,3 +1219,111 @@ export const complexProportionalTestData = {
         },
     ],
 }
+
+export const assigneeGanttTestData = {
+    project: {
+        id: 50,
+        name: "稼働表テスト",
+        status: "ACTIVE",
+        description: "稼働表テスト",
+        startDate: baseDate,
+        endDate: addDays(90),
+    },
+    wbs: [
+        {
+            id: 50,
+            projectId: 50,
+            name: "稼働表テスト",
+            status: "IN_PROGRESS",
+        },
+    ],
+    wbsAssignee: [
+        {
+            id: 50,
+            wbsId: 50,
+            assigneeId: "dummy05",
+            rate: 1,
+        },
+        {
+            id: 51,
+            wbsId: 50,
+            assigneeId: "dummy06",
+            rate: 0.8,
+        },
+        {
+            id: 52,
+            wbsId: 50,
+            assigneeId: "dummy07",
+            rate: 0.6,
+        },
+    ],
+    wbsPhase: [
+        {
+            id: 50,
+            wbsId: 50,
+            name: "稼働表テスト",
+            code: "TEST",
+            seq: 1,
+        },
+    ],
+    wbsTask: [
+        {
+            id: 50,
+            taskNo: "TEST-0001",
+            wbsId: 50,
+            phaseId: 50,
+            name: "稼働表テスト",
+            assigneeId: 50,
+            status: "IN_PROGRESS",
+            startDate: addDays(10),
+            endDate: addDays(10),
+            kosu: 3,
+        },
+    ],
+    milestone: [
+        {
+            id: 50,
+            wbsId: 50,
+            name: "稼働表テスト",
+            date: addDays(30),
+        },
+    ],
+    wbsBuffer: [
+        {
+            id: 50,
+            wbsId: 50,
+            name: "稼働表テスト",
+            buffer: 20,
+            bufferType: "RISK",
+        },
+    ],
+    userSchedules: [
+        {
+            id: 50,
+            userId: "dummy06",
+            date: addDays(10),
+            title: "稼働表テスト",
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "稼働表テスト",
+            description: "稼働表テストに行く",
+        },
+    ],
+    workRecords: [
+        {
+            id: 50,
+            userId: "dummy05",
+            taskId: 50,
+            date: addDays(10),
+            hours_worked: 6.0,
+        },
+        {
+            id: 51,
+            userId: "dummy06",
+            taskId: 51,
+            date: addDays(10),
+            hours_worked: 4.5,
+        },
+    ],
+    companyHolidays: [],
+}

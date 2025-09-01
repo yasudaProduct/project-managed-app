@@ -28,6 +28,7 @@ import GanttV2Wrapper from "@/components/ganttv2/gantt-v2-wrapper";
 import { getMilestones } from "./milestone-actions";
 import MilestoneManagement from "@/components/milestone/milestone-management";
 import { WbsSummaryTables } from "@/components/wbs/wbs-summary-tables";
+import { AssigneeGanttChartWrapper } from "./assignee-gantt/assignee-gantt-chart-wrapper";
 
 export default async function WbsManagementPage({
   params,
@@ -63,7 +64,8 @@ export default async function WbsManagementPage({
 
   return (
     <>
-      <div className="container mx-auto">
+      <div className="container mx-auto mt-2">
+        {/* ヘッダメニュー */}
         <Link href={`/wbs/${wbs.id}/phase/new`}>
           <Button className="bg-white text-black">
             <CirclePlus className="h-4 w-4" />
@@ -112,42 +114,32 @@ export default async function WbsManagementPage({
             </div>
           }
         >
-          <Tabs defaultValue={tab || "summary"} className="w-full mt-4">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger
-                value="summary"
-                className="flex items-center gap-2 w-full justify-center"
-              >
+          {/* タブ */}
+          <Tabs defaultValue={tab || "summary"} className="mt-2">
+            <TabsList className="flex flex-row justify-start gap-2 border-b-2 border-gray-200">
+              <TabsTrigger value="summary" className="flex items-center gap-2">
                 <LayoutDashboard className="h-4 w-4" />
-                ダッシュボード
               </TabsTrigger>
-              <TabsTrigger
-                value="list"
-                className="flex items-center gap-2 w-full justify-center"
-              >
+              <TabsTrigger value="list" className="flex items-center gap-2">
                 <List className="h-4 w-4" />
-                タスク一覧
               </TabsTrigger>
-              <TabsTrigger
-                value="gantt"
-                className="flex items-center gap-2 w-full justify-center"
-              >
+              <TabsTrigger value="gantt" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
-                ガントチャート
               </TabsTrigger>
               <TabsTrigger
                 value="milestone"
-                className="flex items-center gap-2 w-full justify-center"
+                className="flex items-center gap-2"
               >
                 <CalendarCheck className="h-4 w-4" />
-                マイルストーン
+              </TabsTrigger>
+              <TabsTrigger value="table" className="flex items-center gap-2">
+                <Table className="h-4 w-4" />
               </TabsTrigger>
               <TabsTrigger
-                value="table"
-                className="flex items-center gap-2 w-full justify-center"
+                value="assignee-gantt"
+                className="flex items-center gap-2"
               >
-                <Table className="h-4 w-4" />
-                集計表
+                <Users className="h-4 w-4" />
               </TabsTrigger>
             </TabsList>
             <TabsContent value="summary">
@@ -183,6 +175,9 @@ export default async function WbsManagementPage({
             </TabsContent>
             <TabsContent value="table">
               <WbsSummaryTables projectId={project.id} wbsId={wbs.id} />
+            </TabsContent>
+            <TabsContent value="assignee-gantt">
+              <AssigneeGanttChartWrapper wbsId={wbs.id} />
             </TabsContent>
           </Tabs>
         </Suspense>
