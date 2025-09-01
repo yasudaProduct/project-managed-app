@@ -7,10 +7,12 @@ export interface CompanyHoliday {
 }
 
 export class CompanyCalendar {
-  private readonly standardWorkingHours = 7.5;
   private companyHolidays: CompanyHoliday[] = [];
 
-  constructor(companyHolidays: CompanyHoliday[] = []) {
+  constructor(
+    private readonly standardWorkingHours: number,
+    companyHolidays: CompanyHoliday[] = []
+  ) {
     this.companyHolidays = companyHolidays;
   }
 

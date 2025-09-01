@@ -14,6 +14,9 @@ npm install
 ```bash
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
 GEPPO_DATABASE_URL=mysql://test_user:test_password@localhost:3307/project_managed_test
+
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=your_public_key
+VAPID_PRIVATE_KEY=your_private_key
 ```
 
 ### 3. データベース

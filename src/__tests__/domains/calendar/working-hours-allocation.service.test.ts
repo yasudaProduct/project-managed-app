@@ -7,7 +7,7 @@ describe('WorkingHoursAllocationService', () => {
   let companyCalendar: CompanyCalendar;
 
   beforeEach(() => {
-    companyCalendar = new CompanyCalendar([]);
+    companyCalendar = new CompanyCalendar(7.5, []);
     service = new WorkingHoursAllocationService(companyCalendar);
   });
 

@@ -66,6 +66,10 @@ export const SYMBOL = {
     ICompanyHolidayRepository: Symbol.for('ICompanyHolidayRepository'),
     IUserScheduleRepository: Symbol.for('IUserScheduleRepository'),
 
+    // Settings
+    ISettingsRepository: Symbol.for('ISettingsRepository'),
+    ISettingsService: Symbol.for('ISettingsService'),
+
     // Infrastructure
     PrismaClient: Symbol.for('PrismaClient'),
 }

@@ -98,6 +98,10 @@ import prisma from '@/lib/prisma';
 import { IMilestoneApplicationService, MilestoneApplicationService } from '@/applications/milestone/milestone-application-service';
 import { IMilestoneRepository } from '@/applications/milestone/milestone.interfase';
 import { MilestoneRepository } from '@/infrastructures/milestone/milestone.repository';
+import type { ISettingsRepository } from '@/applications/settings/ISettingsRepository';
+import { SettingsRepository } from '@/infrastructures/settings/SettingsRepository';
+import type { ISettingsService } from '@/applications/settings/ISettingsService';
+import { SettingsService } from '@/applications/settings/SettingsService';
 
 const container: Container = new Container();
 // アプリケーションサービス
@@ -115,6 +119,7 @@ container.bind<IProgressHistoryApplicationService>(SYMBOL.IProgressHistoryApplic
 container.bind<TaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDependencyService).inSingletonScope();
 container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<IMilestoneApplicationService>(SYMBOL.IMilestoneApplicationService).to(MilestoneApplicationService).inSingletonScope();
+container.bind<ISettingsService>(SYMBOL.ISettingsService).to(SettingsService).inSingletonScope();
 container.bind<INotificationService>('NotificationService').to(NotificationService).inSingletonScope();
 container.bind<PushNotificationService>('PushNotificationService').to(PushNotificationService).inSingletonScope();
 container.bind<NotificationEventDetector>('NotificationEventDetector').to(NotificationEventDetector).inSingletonScope();
@@ -143,6 +148,7 @@ container.bind<ISyncLogRepository>(SYMBOL.ISyncLogRepository).to(SyncLogReposito
 container.bind<IMilestoneRepository>(SYMBOL.IMilestoneRepository).to(MilestoneRepository).inSingletonScope();
 container.bind<ICompanyHolidayRepository>(SYMBOL.ICompanyHolidayRepository).to(CompanyHolidayRepository).inSingletonScope();
 container.bind<IUserScheduleRepository>(SYMBOL.IUserScheduleRepository).to(UserScheduleRepository).inSingletonScope();
+container.bind<ISettingsRepository>(SYMBOL.ISettingsRepository).to(SettingsRepository).inSingletonScope();
 container.bind<INotificationRepository>('NotificationRepository').to(NotificationRepository).inSingletonScope();
 
 // Geppo Import関連サービス

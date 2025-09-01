@@ -250,6 +250,19 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"global_settings" {
+  Int id PK
+  Float dailyWorkingHours
+  DateTime createdAt
+  DateTime updatedAt
+}
+"project_settings" {
+  String id PK
+  String projectId FK
+  Float dailyWorkingHours "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "user_sessions" }o--|| "users" : user
 "wbs" }o--|| "projects" : project
 "wbs_assignee" }o--|| "wbs" : wbs
@@ -276,6 +289,7 @@ erDiagram
 "task_dependencies" }o--|| "wbs_task" : predecessorTask
 "task_dependencies" }o--|| "wbs_task" : successorTask
 "task_dependencies" }o--|| "wbs" : wbs
+"project_settings" |o--|| "projects" : project
 ```
 
 ### `projects`
@@ -565,5 +579,22 @@ erDiagram
   - `date`: 
   - `name`: 
   - `type`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `global_settings`
+
+**Properties**
+  - `id`: 
+  - `dailyWorkingHours`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `project_settings`
+
+**Properties**
+  - `id`: 
+  - `projectId`: 
+  - `dailyWorkingHours`: 
   - `createdAt`: 
   - `updatedAt`: 

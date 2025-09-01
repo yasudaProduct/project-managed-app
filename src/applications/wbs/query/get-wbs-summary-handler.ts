@@ -12,6 +12,7 @@ import { BusinessDayPeriod } from "@/domains/calendar/business-day-period";
 import type { ICompanyHolidayRepository } from "@/applications/calendar/icompany-holiday-repository";
 import type { IUserScheduleRepository } from "@/applications/calendar/iuser-schedule-repository";
 import type { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-repository";
+import type { ISettingsService } from "@/applications/settings/ISettingsService";
 
 @injectable()
 export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, WbsSummaryResult> {
@@ -23,12 +24,17 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     @inject(SYMBOL.IUserScheduleRepository)
     private readonly userScheduleRepository: IUserScheduleRepository,
     @inject(SYMBOL.IWbsAssigneeRepository)
-    private readonly wbsAssigneeRepository: IWbsAssigneeRepository
+    private readonly wbsAssigneeRepository: IWbsAssigneeRepository,
+    @inject(SYMBOL.ISettingsService)
+    private readonly settingsService: ISettingsService
   ) { }
 
   async execute(query: GetWbsSummaryQuery): Promise<WbsSummaryResult> {
     // WBSタスクを取得
     const tasks = await this.wbsQueryRepository.getWbsTasks(query.projectId, query.wbsId);
+    
+    // プロジェクトの有効な設定を取得
+    const effectiveSettings = await this.settingsService.getEffectiveSettings(query.projectId);
 
     // 工程リストを取得
     const phases = await this.wbsQueryRepository.getPhases(query.wbsId);
@@ -43,7 +49,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     const assigneeTotal = this.calculateTotal(assigneeSummaries);
 
     // 月別・担当者別集計
-    const monthlyAssigneeSummary = await this.calculateMonthlyAssigneeSummary(tasks, query.wbsId, query.calculationMode);
+    const monthlyAssigneeSummary = await this.calculateMonthlyAssigneeSummary(tasks, query.wbsId, query.calculationMode, effectiveSettings.dailyWorkingHours);
 
     return {
       phaseSummaries,
@@ -128,10 +134,10 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
    * 月別・担当者別集計を行う
    * 月別・担当者別集計は、月ごとにタスク数、予定工数、実績工数、差分を計算する
    */
-  private async calculateMonthlyAssigneeSummary(tasks: WbsTaskData[], wbsId: number, calculationMode: AllocationCalculationMode) {
+  private async calculateMonthlyAssigneeSummary(tasks: WbsTaskData[], wbsId: number, calculationMode: AllocationCalculationMode, dailyWorkingHours: number) {
     switch (calculationMode) {
       case AllocationCalculationMode.BUSINESS_DAY_ALLOCATION:
-        return this.calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks, wbsId);
+        return this.calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks, wbsId, dailyWorkingHours);
       case AllocationCalculationMode.START_DATE_BASED:
         return this.calculateMonthlyAssigneeSummaryWithStartDateBased(tasks);
       default:
@@ -142,7 +148,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
   /**
    * 営業日案分による月別・担当者別集計
    */
-  private async calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks: WbsTaskData[], wbsId: number) {
+  private async calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks: WbsTaskData[], wbsId: number, dailyWorkingHours: number) {
     const monthlyData: MonthlyAssigneeData[] = [];
     const assignees = new Set<string>();
     const months = new Set<string>();
@@ -151,7 +157,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
 
     // 会社休日とWorking Hours Allocation Serviceの準備
     const companyHolidays = await this.companyHolidayRepository.findAll();
-    const companyCalendar = new CompanyCalendar(companyHolidays);
+    const companyCalendar = new CompanyCalendar(dailyWorkingHours, companyHolidays);
     const workingHoursAllocationService = new WorkingHoursAllocationService(companyCalendar);
 
     // WBS担当者情報を取得

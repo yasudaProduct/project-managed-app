@@ -24,6 +24,7 @@ model Projects {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   wbs         Wbs[]
+  settings    ProjectSettings?
 
   @@map("projects")
 }
@@ -473,4 +474,24 @@ enum CompanyHolidayType {
   NATIONAL
   COMPANY
   SPECIAL
+}
+
+model GlobalSettings {
+  id                Int      @id @default(1)
+  dailyWorkingHours Float    @default(7.5)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("global_settings")
+}
+
+model ProjectSettings {
+  id                String   @id @default(uuid())
+  projectId         String   @unique
+  dailyWorkingHours Float?
+  project           Projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("project_settings")
 }
