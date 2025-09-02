@@ -11,7 +11,7 @@ import { SYMBOL } from '@/types/symbol';
 import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
-import { CompanyCalendar, CompanyHoliday } from '@/domains/calendar/company-calendar';
+import { CompanyCalendar } from '@/domains/calendar/company-calendar';
 import { AssigneeWorkingCalendar } from '@/domains/calendar/assignee-working-calendar';
 
 @injectable()
