@@ -4,21 +4,25 @@ export class AssigneeWorkload {
   public readonly assigneeId: string;
   public readonly assigneeName: string;
   public readonly dailyAllocations: DailyWorkAllocation[];
+  public readonly assigneeRate: number;
 
   private constructor(args: {
     assigneeId: string;
     assigneeName: string;
     dailyAllocations: DailyWorkAllocation[];
+    assigneeRate: number;
   }) {
     this.assigneeId = args.assigneeId;
     this.assigneeName = args.assigneeName;
     this.dailyAllocations = args.dailyAllocations;
+    this.assigneeRate = args.assigneeRate;
   }
 
   public static create(args: {
     assigneeId: string;
     assigneeName: string;
     dailyAllocations: DailyWorkAllocation[];
+    assigneeRate: number;
   }): AssigneeWorkload {
     return new AssigneeWorkload(args);
   }

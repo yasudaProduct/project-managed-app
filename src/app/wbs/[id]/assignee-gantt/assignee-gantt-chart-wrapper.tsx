@@ -36,6 +36,9 @@ interface DailyWorkAllocationUI {
   userSchedules: { title: string; startTime: string; endTime: string; durationHours: number }[];
   isOverloadedByStandard: boolean;
   overloadedByStandardHours: number;
+  rateAllowedHours: number;
+  isOverRateCapacity: boolean;
+  overRateHours: number;
 }
 
 interface AssigneeWorkloadUI {
@@ -43,6 +46,7 @@ interface AssigneeWorkloadUI {
   assigneeName: string;
   dailyAllocations: DailyWorkAllocationUI[];
   overloadedDays: DailyWorkAllocationUI[];
+  assigneeRate: number;
 }
 
 export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperProps) {
@@ -143,6 +147,9 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
             userSchedules: daily.userSchedules || [],
             isOverloadedByStandard: daily.isOverloadedByStandard,
             overloadedByStandardHours: daily.overloadedByStandardHours,
+            rateAllowedHours: daily.rateAllowedHours,
+            isOverRateCapacity: daily.isOverRateCapacity,
+            overRateHours: daily.overRateHours,
           };
         });
 
@@ -153,6 +160,7 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
           assigneeName: workloadData.assigneeName,
           dailyAllocations,
           overloadedDays,
+          assigneeRate: workloadData.assigneeRate,
         };
       });
 
@@ -225,6 +233,9 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
         userSchedules: [],
         isOverloadedByStandard: false,
         overloadedByStandardHours: 0,
+        rateAllowedHours: 0,
+        isOverRateCapacity: false,
+        overRateHours: 0,
       };
     }
 
@@ -360,10 +371,6 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
                 選択した日の作業負荷詳細
               </SheetDescription>
             </SheetHeader>
-            <div className="mt-6 space-y-4">
-              debug情報
-              <pre className="text-xs text-gray-500">{JSON.stringify(selectedAllocation, null, 2)}</pre>
-            </div>
 
             <div className="mt-6 space-y-4">
               <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded">
@@ -386,6 +393,12 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
                   <div className={selectedAllocation.isOverloaded || selectedAllocation.isOverloadedByStandard ? 'font-medium text-red-600' : 'font-medium text-gray-700'}>
                     {selectedAllocation.isOverloaded ? `過負荷 (+${selectedAllocation.overloadedHours.toFixed(2)}h)` : '適正'}
                     {selectedAllocation.isOverloadedByStandard && !selectedAllocation.isOverloaded && ` / 標準超過 (+${selectedAllocation.overloadedByStandardHours.toFixed(2)}h)`}
+                  </div>
+                </div>
+                <div className="text-sm col-span-2">
+                  <div className="text-gray-500">レート基準</div>
+                  <div className={selectedAllocation.isOverRateCapacity ? 'font-medium text-blue-600' : 'font-medium text-gray-700'}>
+                    許容: {selectedAllocation.rateAllowedHours.toFixed(2)}h / 超過: {selectedAllocation.overRateHours.toFixed(2)}h
                   </div>
                 </div>
               </div>
@@ -413,7 +426,7 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
                     {selectedAllocation.userSchedules.map((s, i) => (
                       <div key={i} className="flex items-center justify-between border rounded p-2">
                         <span className="mr-2">{s.title}</span>
-                        <span>{s.startTime} - {s.endTime} ({s.durationHours.toFixed(1)}h)</span>
+                        <span>{s.startTime} - {s.endTime} ({s.durationHours.toFixed(2)}h)</span>
                       </div>
                     ))}
                   </div>

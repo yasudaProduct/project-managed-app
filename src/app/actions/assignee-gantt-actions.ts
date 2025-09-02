@@ -8,6 +8,7 @@ import { IAssigneeGanttService } from '@/applications/assignee-gantt/iassignee-g
 export interface WorkloadData {
   assigneeId: string;
   assigneeName: string;
+  assigneeRate: number;
   dailyAllocations: {
     date: string;
     availableHours: number;
@@ -18,6 +19,10 @@ export interface WorkloadData {
     overloadedHours: number;
     isOverloadedByStandard: boolean;
     overloadedByStandardHours: number;
+    // レート基準
+    rateAllowedHours: number;
+    isOverRateCapacity: boolean;
+    overRateHours: number;
     isWeekend?: boolean;
     isCompanyHoliday?: boolean;
     userSchedules?: {
@@ -57,24 +62,21 @@ export async function getAssigneeWorkloads(
     // DIコンテナからサービスを取得
     const assigneeGanttService = container.get<IAssigneeGanttService>(SYMBOL.IAssigneeGanttService);
 
-    // データを取得
     // YYYY-MM-DD をUTC深夜に変換してサービスへ
     const toUtcMidnight = (ymd: string) => new Date(`${ymd}T00:00:00.000Z`);
 
+    // データを取得
     const workloads = await assigneeGanttService.getAssigneeWorkloads(
       wbsId,
       toUtcMidnight(startDate),
       toUtcMidnight(endDate)
     );
-    // console.log('-----------------')
-    // const test = workloads[0].dailyAllocations.filter(daily => daily.taskAllocations.length > 0)[0].taskAllocations
-    // console.log(test)
-    // console.log('-----------------')
 
     // プレーンオブジェクトに変換
     const plainWorkloads: WorkloadData[] = workloads.map(workload => ({
       assigneeId: workload.assigneeId,
       assigneeName: workload.assigneeName,
+      assigneeRate: workload.assigneeRate,
       dailyAllocations: workload.dailyAllocations.map(daily => ({
         date: daily.date.toISOString(),
         availableHours: daily.availableHours,
@@ -84,6 +86,9 @@ export async function getAssigneeWorkloads(
         overloadedHours: daily.getOverloadedHours(),
         isOverloadedByStandard: daily.allocatedHours > 7.5,
         overloadedByStandardHours: Math.max(0, daily.allocatedHours - 7.5),
+        rateAllowedHours: daily.availableHours * workload.assigneeRate,
+        isOverRateCapacity: daily.allocatedHours > (daily.availableHours * workload.assigneeRate),
+        overRateHours: Math.max(0, daily.allocatedHours - (daily.availableHours * workload.assigneeRate)),
         isWeekend: daily.isWeekend,
         isCompanyHoliday: daily.isCompanyHoliday,
         userSchedules: daily.userSchedules,

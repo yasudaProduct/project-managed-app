@@ -45,14 +45,14 @@ export class AssigneeWorkingCalendar {
     }
 
     const standardHours = this.companyCalendar.getStandardWorkingHours(); // 7.5
-    const assigneeRate = this.assignee.getRate(); // 0.0-1.0
 
     // ユーザースケジュールによる減算（半休等）
     const userSchedule = this.getUserScheduleForDate(date);
     const scheduledHours = userSchedule ? this.getScheduledHours(userSchedule) : 0;
 
     const availableHours = Math.max(0, standardHours - scheduledHours);
-    return availableHours * assigneeRate;
+    // rate は日々の割当には考慮しない（UIでの超過表示にのみ使用）
+    return availableHours;
   }
 
   private getUserScheduleForDate(date: Date): UserSchedule | undefined {

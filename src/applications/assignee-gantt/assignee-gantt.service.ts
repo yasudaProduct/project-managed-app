@@ -65,7 +65,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       const workload = AssigneeWorkload.create({
         assigneeId: assignee.userId,
         assigneeName: assignee.userName || assignee.userId,
-        dailyAllocations
+        dailyAllocations,
+        assigneeRate: assignee.getRate(),
       });
 
       workloads.push(workload);
@@ -112,13 +113,6 @@ export class AssigneeGanttService implements IAssigneeGanttService {
 
   /**
    * 担当者の作業負荷を計算
-   * @param tasks 
-   * @param assignee 
-   * @param userSchedules 
-   * @param companyHolidays 
-   * @param startDate 
-   * @param endDate 
-   * @returns 
    */
   private calculateDailyAllocations(
     tasks: Task[],
@@ -133,8 +127,7 @@ export class AssigneeGanttService implements IAssigneeGanttService {
 
     // 日付ごとにループ
     for (let currentDate = new Date(startDate); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
-      
-      // その日の稼働可能時間を共通カレンダーロジックで計算
+      // その日の稼働可能時間（rateは考慮しない）
       const availableHours = workingCalendar.getAvailableHours(currentDate);
 
       const isCompanyHoliday = companyCalendar.isCompanyHoliday(currentDate);
@@ -173,15 +166,11 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     return dailyAllocations;
   }
 
-  // 従来のcalculateAvailableHoursはAssigneeWorkingCalendarへ委譲したため削除
-
   private calculateScheduleDuration(startTime: string, endTime: string): number {
     const [startHour, startMin] = startTime.split(':').map(Number);
     const [endHour, endMin] = endTime.split(':').map(Number);
-    
     const startMinutes = startHour * 60 + startMin;
     const endMinutes = endHour * 60 + endMin;
-    
     return (endMinutes - startMinutes) / 60; // 時間単位で返す
   }
 
@@ -202,8 +191,6 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     // 各タスクの工数を日別に按分
     for (const task of activeTasks) {
       const allocatedHours = this.calculateTaskHoursForDate(task, date, availableHours, activeTasks.length);
-      console.log(`Task ID: ${task.id}, Allocated Hours: ${allocatedHours}`);
-
       if (allocatedHours > 0) {
         const taskAllocation = TaskAllocation.create({
           taskId: task.id?.toString() || '0',
@@ -220,11 +207,9 @@ export class AssigneeGanttService implements IAssigneeGanttService {
   private isTaskActiveOnDate(task: Task, date: Date): boolean {
     const yoteiStart = task.getYoteiStart();
     const yoteiEnd = task.getYoteiEnd();
-    
     if (!yoteiStart || !yoteiEnd) {
       return false;
     }
-
     return date >= yoteiStart && date <= yoteiEnd;
   }
 
@@ -234,7 +219,6 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     availableHours: number,
     totalActiveTasks: number
   ): number {
-    console.log('----calculateTaskHoursForDate----')
     const yoteiStart = task.getYoteiStart();
     const yoteiEnd = task.getYoteiEnd();
     const totalHours = task.getYoteiKosus();
@@ -245,13 +229,10 @@ export class AssigneeGanttService implements IAssigneeGanttService {
 
     // タスク期間内の営業日数を計算（簡略化版）終了日-開始日+1日
     const taskDurationDays = Math.ceil((yoteiEnd.getTime() - yoteiStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    console.log(`Task ID: ${task.id}, Duration Days: ${taskDurationDays}, Total Hours: ${totalHours}`);
-    
     // 1日あたりの工数を計算（平均分散）
     const hoursPerDay = totalHours / taskDurationDays;
-    console.log(`Task ID: ${task.id}, Hours Per Day: ${hoursPerDay}`);
 
-    // 利用可能時間を超えないよう調整
+    // 利用可能時間を超えないよう調整（rateは考慮しない）
     return Math.min(hoursPerDay, availableHours / totalActiveTasks);
   }
 }

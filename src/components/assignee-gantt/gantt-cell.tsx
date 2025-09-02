@@ -23,6 +23,8 @@ interface DailyWorkAllocationUI {
   userSchedules: { title: string; startTime: string; endTime: string; durationHours: number }[];
   isOverloadedByStandard: boolean;
   overloadedByStandardHours: number;
+  isOverRateCapacity: boolean;
+  overRateHours: number;
 }
 
 interface GanttCellProps {
@@ -77,8 +79,11 @@ export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCe
       onClick={() => onClick?.(allocation)}
     >
       <span>{formatHours(allocation.allocatedHours)}</span>
-      {(isOverloaded || isOverloadedByStandard) && (
+      {(isOverloaded || isOverloadedByStandard || allocation.isOverRateCapacity) && (
         <span className="ml-1 text-red-600 font-bold" title="過負荷">!</span>
+      )}
+      {allocation.isOverRateCapacity && (
+        <span className="ml-1 text-blue-600 font-bold" title="レート超過">R</span>
       )}
     </div>
   );
@@ -129,6 +134,11 @@ export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCe
               {isOverloadedByStandard && (
                 <div className="text-xs text-red-600 font-medium">
                   標準超過: +{allocation.overloadedByStandardHours.toFixed(2)}h
+                </div>
+              )}
+              {allocation.isOverRateCapacity && (
+                <div className="text-xs text-blue-600 font-medium">
+                  レート超過: +{allocation.overRateHours.toFixed(2)}h
                 </div>
               )}
             </div>
