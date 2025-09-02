@@ -33,7 +33,7 @@ export default async function WbsPage({
         data={
           wbsList?.map((wbs) => ({
             ...wbs,
-            link: `/projects/${projectId}/wbs/${wbs.id}`,
+            link: `/wbs/${wbs.id}`,
           })) ?? []
         }
       />

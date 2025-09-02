@@ -10,7 +10,7 @@ export interface IProjectApplicationService {
     getProjectById(id: string): Promise<ProjectType | null>;
     getProjectAll(): Promise<ProjectType[] | null>;
     createProject(args: { name: string; description: string; startDate: Date; endDate: Date }): Promise<{ success: boolean; error?: string; id?: string }>;
-    updateProject(args: { id: string; name?: string; description?: string; startDate?: Date; endDate?: Date }): Promise<{ success: boolean; error?: string; id?: string }>;
+    updateProject(args: { id: string; name?: string; description?: string; startDate?: Date; endDate?: Date; status?: ProjectStatusType }): Promise<{ success: boolean; error?: string; id?: string }>;
     deleteProject(id: string): Promise<{ success: boolean; error?: string; id?: string }>;
 }
 

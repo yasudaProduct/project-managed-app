@@ -36,9 +36,11 @@ export const columns: ColumnDef<Wbs & { link?: string }>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {/* WRN: 遷移が上手くいかないためコメントアウト
             <Link href={`/projects/${wbs.projectId}/wbs/${wbs.id}/edit`}>
               <DropdownMenuItem>編集</DropdownMenuItem>
-            </Link>
+            </Link> 
+            */}
           </DropdownMenuContent>
         </DropdownMenu>
       );
