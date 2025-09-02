@@ -64,7 +64,7 @@ export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCe
 
   const formatHours = (hours: number) => {
     if (hours === 0) return '-';
-    return hours.toFixed(1);
+    return hours.toFixed(2);
   };
 
   const cellContent = (
@@ -118,17 +118,17 @@ export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCe
                   "ml-1 font-medium",
                   isOverloaded ? "text-red-600" : "text-green-600"
                 )}>
-                  {(utilizationRate * 100).toFixed(1)}%
+                  {(utilizationRate * 100).toFixed(2)}%
                 </span>
               </div>
               {isOverloaded && (
                 <div className="text-xs text-red-600 font-medium">
-                  過負荷: +{allocation.overloadedHours.toFixed(1)}h
+                  過負荷: +{allocation.overloadedHours.toFixed(2)}h
                 </div>
               )}
               {isOverloadedByStandard && (
                 <div className="text-xs text-red-600 font-medium">
-                  標準超過: +{allocation.overloadedByStandardHours.toFixed(1)}h
+                  標準超過: +{allocation.overloadedByStandardHours.toFixed(2)}h
                 </div>
               )}
             </div>
@@ -140,7 +140,7 @@ export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCe
                   <div key={index} className="text-xs">
                     <div className="font-medium">{task.taskName}</div>
                     <div className="text-gray-500 ml-2">
-                      {task.allocatedHours.toFixed(1)}h
+                      {task.allocatedHours.toFixed(2)}h
                     </div>
                   </div>
                 ))}
@@ -154,7 +154,7 @@ export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCe
                   <div key={i} className="text-xs text-gray-600 flex justify-between">
                     <span className="mr-2">{s.title}</span>
                     <span>
-                      {s.startTime} - {s.endTime} ({s.durationHours.toFixed(1)}h)
+                      {s.startTime} - {s.endTime} ({s.durationHours.toFixed(2)}h)
                     </span>
                   </div>
                 ))}

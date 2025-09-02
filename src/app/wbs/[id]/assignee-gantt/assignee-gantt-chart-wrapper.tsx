@@ -8,6 +8,7 @@ import { Calendar, Users, ChevronLeft, ChevronRight, AlertTriangle } from 'lucid
 import { GanttHeader } from '@/components/assignee-gantt/gantt-header';
 import { GanttRow } from '@/components/assignee-gantt/gantt-row';
 import { getAssigneeWorkloads } from '@/app/actions/assignee-gantt-actions';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 interface AssigneeGanttChartWrapperProps {
   wbsId: number;
@@ -50,6 +51,9 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [selectedAssignee, setSelectedAssignee] = useState<AssigneeWorkloadUI | null>(null);
+  const [selectedAllocation, setSelectedAllocation] = useState<DailyWorkAllocationUI | null>(null);
 
   // 日付範囲を計算
   const getDateRange = (mode: ViewMode, baseDate: Date): Date[] => {
@@ -206,8 +210,31 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
 
   // セル クリック処理
   const handleCellClick = (assigneeId: string, date: Date) => {
-    console.log('Cell clicked:', { assigneeId, date });
-    // TODO: 詳細ダイアログの表示など
+    const workload = workloads.find(w => w.assigneeId === assigneeId) || null;
+    let allocation: DailyWorkAllocationUI | null = workload?.dailyAllocations.find(d => d.date.toDateString() === date.toDateString()) || null;
+
+    if (!allocation) {
+      const dayOfWeek = date.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      allocation = {
+        date,
+        availableHours: isWeekend ? 0 : 7.5,
+        taskAllocations: [],
+        allocatedHours: 0,
+        isOverloaded: false,
+        utilizationRate: 0,
+        overloadedHours: 0,
+        isWeekend,
+        isCompanyHoliday: isWeekend,
+        userSchedules: [],
+        isOverloadedByStandard: false,
+        overloadedByStandardHours: 0,
+      };
+    }
+
+    setSelectedAssignee(workload);
+    setSelectedAllocation(allocation);
+    setIsSheetOpen(true);
   };
 
   // 過負荷状態の担当者数を計算
@@ -243,6 +270,7 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
   }
 
   return (
+    <>
     <Card className="w-full">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
@@ -323,5 +351,79 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
         )}
       </CardContent>
     </Card>
+
+    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+      <SheetContent className="w-[520px] sm:w-[640px] overflow-y-auto">
+        {selectedAssignee && selectedAllocation && (
+          <>
+            <SheetHeader>
+              <SheetTitle>
+                {selectedAssignee.assigneeName} - {selectedAllocation.date.toLocaleDateString('ja-JP')}
+              </SheetTitle>
+              <SheetDescription>
+                選択した日の作業負荷詳細
+              </SheetDescription>
+            </SheetHeader>
+
+            <div className="mt-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded">
+                <div className="text-sm">
+                  <div className="text-gray-500">予定工数</div>
+                  <div className="font-medium">{selectedAllocation.allocatedHours.toFixed(2)}h</div>
+                </div>
+                <div className="text-sm">
+                  <div className="text-gray-500">稼働可能時間</div>
+                  <div className="font-medium">{selectedAllocation.availableHours.toFixed(2)}h</div>
+                </div>
+                <div className="text-sm">
+                  <div className="text-gray-500">稼働率</div>
+                  <div className={selectedAllocation.isOverloaded ? 'font-medium text-red-600' : 'font-medium text-green-600'}>
+                    {(selectedAllocation.utilizationRate * 100).toFixed(2)}%
+                  </div>
+                </div>
+                <div className="text-sm">
+                  <div className="text-gray-500">状態</div>
+                  <div className={selectedAllocation.isOverloaded || selectedAllocation.isOverloadedByStandard ? 'font-medium text-red-600' : 'font-medium text-gray-700'}>
+                    {selectedAllocation.isOverloaded ? `過負荷 (+${selectedAllocation.overloadedHours.toFixed(2)}h)` : '適正'}
+                    {selectedAllocation.isOverloadedByStandard && !selectedAllocation.isOverloaded && ` / 標準超過 (+${selectedAllocation.overloadedByStandardHours.toFixed(2)}h)`}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-sm font-semibold">タスク詳細</div>
+                {selectedAllocation.taskAllocations.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedAllocation.taskAllocations.map((t, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm border rounded p-2">
+                        <div className="font-medium truncate mr-2">{t.taskName}</div>
+                        <div className="text-gray-600">{t.allocatedHours.toFixed(2)}h</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">タスクはありません</div>
+                )}
+              </div>
+
+              {selectedAllocation.userSchedules && selectedAllocation.userSchedules.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold">個人予定</div>
+                  <div className="space-y-1 text-xs text-gray-700">
+                    {selectedAllocation.userSchedules.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between border rounded p-2">
+                        <span className="mr-2">{s.title}</span>
+                        <span>{s.startTime} - {s.endTime} ({s.durationHours.toFixed(1)}h)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+    </>
   );
 }
