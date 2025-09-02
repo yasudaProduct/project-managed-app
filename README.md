@@ -12,8 +12,13 @@ npm install
 
 `.env`ファイルを作成し、必要な環境変数を設定してください。
 ```bash
+# Database
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
 GEPPO_DATABASE_URL=mysql://test_user:test_password@localhost:3307/project_managed_test
+
+# WebPush
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=BL42r4cS084h4ZS7p01Q-HuRzvzfjCuzVDs_f9GlEEEYmJiWrasMKbD9lZY5ayxtC0uvWr_XjCHYAGp_Gool4KY
+VAPID_PRIVATE_KEY=w22msVOERtwnBHB5Kze0KllnqpGKnyFJ9SZEYCq9gX8
 ```
 
 ### 3. データベース
@@ -36,8 +41,17 @@ npx prisma db seed
 
 ```
 
+### 4.開発
 
-## Prisma
+```bash
+# 開発サーバー起動
+npm run dev
+```
+
+
+## Tips
+
+### Prisma
 ```bash
 # 新しいマイグレーション作成
 npx prisma migrate dev --name <migration_name>
@@ -46,14 +60,16 @@ npx prisma migrate dev --name <migration_name>
 npx prisma migrate reset
 ```
 
+### VSCode 拡張機能
+ - Terminal Keeper
+
 ## テスト
 
 ### テスト戦略
 
-1. **TDD（テスト駆動開発）**: 新機能開発時は原則としてテストファーストで進める
-2. **多層テスト**: ユニット、統合、E2Eテストによる多層防御
-3. **ビジュアルリグレッション**: Playwrightによるスクリーンショット比較
-4. **継続的テスト**: CI/CDパイプラインでの自動テスト実行
+```bash
+...未検討
+```
 
 ### テストの種類と実行方法
 
@@ -79,21 +95,3 @@ npm run test:integration
 # ウォッチモードで実行
 npm run test:integration:watch
 ```
-
-### 開発
-
-```bash
-npm run dev          # 開発サーバー起動（Turbopack使用）
-npm run build        # 本番用ビルド
-npm run lint         # ESLint実行
-```
-
-### 主要技術スタック
-
-- **フロントエンド**: Next.js 15, React 19, TypeScript, Tailwind CSS
-- **バックエンド**: Next.js API Routes
-- **データベース**: PostgreSQL, Prisma ORM
-- **状態管理**: TanStack Query
-- **UI コンポーネント**: shadcn/ui Radix UI
-- **依存性注入**: Inversify
-- **テスト**: Jest, React Testing Library, Playwright
