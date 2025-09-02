@@ -30,6 +30,11 @@ interface DailyWorkAllocationUI {
   isOverloaded: boolean;
   utilizationRate: number;
   overloadedHours: number;
+  isWeekend: boolean;
+  isCompanyHoliday: boolean;
+  userSchedules: { title: string; startTime: string; endTime: string; durationHours: number }[];
+  isOverloadedByStandard: boolean;
+  overloadedByStandardHours: number;
 }
 
 interface AssigneeWorkloadUI {
@@ -119,9 +124,11 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
           }));
 
           const allocatedHours = taskAllocations.reduce((sum, t) => sum + t.allocatedHours, 0);
-          const isOverloaded = allocatedHours > daily.availableHours;
+          const isOverloaded = allocatedHours > daily.availableHours; // availableHours基準
           const utilizationRate = daily.availableHours === 0 ? 0 : allocatedHours / daily.availableHours;
           const overloadedHours = isOverloaded ? allocatedHours - daily.availableHours : 0;
+          const isOverloadedByStandard = allocatedHours > 7.5; // 標準7.5h基準
+          const overloadedByStandardHours = isOverloadedByStandard ? allocatedHours - 7.5 : 0;
 
           return {
             date: new Date(daily.date),
@@ -130,7 +137,12 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
             allocatedHours,
             isOverloaded,
             utilizationRate,
-            overloadedHours
+            overloadedHours,
+            isWeekend: !!daily.isWeekend,
+            isCompanyHoliday: !!daily.isCompanyHoliday,
+            userSchedules: daily.userSchedules || [],
+            isOverloadedByStandard,
+            overloadedByStandardHours
           };
         });
 

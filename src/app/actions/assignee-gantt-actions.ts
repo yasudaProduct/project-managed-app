@@ -11,6 +11,14 @@ export interface WorkloadData {
   dailyAllocations: {
     date: string;
     availableHours: number;
+    isWeekend?: boolean;
+    isCompanyHoliday?: boolean;
+    userSchedules?: {
+      title: string;
+      startTime: string;
+      endTime: string;
+      durationHours: number;
+    }[];
     taskAllocations: {
       taskId: string;
       taskName: string;
@@ -48,6 +56,10 @@ export async function getAssigneeWorkloads(
       new Date(startDate),
       new Date(endDate)
     );
+    // console.log('-----------------')
+    // const test = workloads[0].dailyAllocations.filter(daily => daily.taskAllocations.length > 0)[0].taskAllocations
+    // console.log(test)
+    // console.log('-----------------')
 
     // プレーンオブジェクトに変換
     const plainWorkloads: WorkloadData[] = workloads.map(workload => ({
@@ -56,6 +68,9 @@ export async function getAssigneeWorkloads(
       dailyAllocations: workload.dailyAllocations.map(daily => ({
         date: daily.date.toISOString(),
         availableHours: daily.availableHours,
+        isWeekend: (daily as any).isWeekend,
+        isCompanyHoliday: (daily as any).isCompanyHoliday,
+        userSchedules: (daily as any).userSchedules,
         taskAllocations: daily.taskAllocations.map(task => ({
           taskId: task.taskId,
           taskName: task.taskName,

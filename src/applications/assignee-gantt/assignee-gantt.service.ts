@@ -11,7 +11,8 @@ import { SYMBOL } from '@/types/symbol';
 import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
-import { CompanyHoliday } from '@/domains/calendar/company-calendar';
+import { CompanyCalendar, CompanyHoliday } from '@/domains/calendar/company-calendar';
+import { AssigneeWorkingCalendar } from '@/domains/calendar/assignee-working-calendar';
 
 @injectable()
 export class AssigneeGanttService implements IAssigneeGanttService {
@@ -41,6 +42,7 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       this.getUserSchedulesForAssignees(assignees, startDate, endDate),
       this.companyHolidayRepository.findByDateRange(startDate, endDate)
     ]);
+    const companyCalendar = new CompanyCalendar(companyHolidays);
 
     // 担当者別に作業負荷を計算
     const workloads: AssigneeWorkload[] = [];
@@ -48,16 +50,18 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     for (const assignee of assignees) {
       const assigneeTasks = this.getTasksByAssignee(tasks, assignee.id!);
       const assigneeSchedules = this.getUserSchedulesByAssignee(userSchedules, assignee.userId);
-      
+
+      // 1日の作業割り当てを計算
       const dailyAllocations = this.calculateDailyAllocations(
         assigneeTasks,
         assignee,
         assigneeSchedules,
-        companyHolidays,
+        companyCalendar,
         startDate,
         endDate
       );
 
+      // 担当者の作業負荷を作成
       const workload = AssigneeWorkload.create({
         assigneeId: assignee.userId,
         assigneeName: assignee.userName || assignee.userId,
@@ -106,26 +110,46 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     return schedules.filter(schedule => schedule.userId === userId);
   }
 
+  /**
+   * 担当者の作業負荷を計算
+   * @param tasks 
+   * @param assignee 
+   * @param userSchedules 
+   * @param companyHolidays 
+   * @param startDate 
+   * @param endDate 
+   * @returns 
+   */
   private calculateDailyAllocations(
     tasks: Task[],
     assignee: WbsAssignee,
     userSchedules: UserSchedule[],
-    companyHolidays: CompanyHoliday[],
+    companyCalendar: CompanyCalendar,
     startDate: Date,
     endDate: Date
   ): DailyWorkAllocation[] {
     const dailyAllocations: DailyWorkAllocation[] = [];
+    const workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, userSchedules);
 
     // 日付ごとにループ
     for (let currentDate = new Date(startDate); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
       
-      // その日の稼働可能時間を計算
-      const availableHours = this.calculateAvailableHours(
-        currentDate,
-        assignee,
-        userSchedules,
-        companyHolidays
-      );
+      // その日の稼働可能時間を共通カレンダーロジックで計算
+      const availableHours = workingCalendar.getAvailableHours(currentDate);
+
+      const isCompanyHoliday = companyCalendar.isCompanyHoliday(currentDate);
+      const dayOfWeek = currentDate.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+      // 当日のユーザースケジュール（ツールチップ表示用）
+      const schedulesForDay = userSchedules
+        .filter(schedule => schedule.date.toDateString() === currentDate.toDateString())
+        .map(schedule => ({
+          title: schedule.title,
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+          durationHours: this.calculateScheduleDuration(schedule.startTime, schedule.endTime)
+        }));
 
       // その日にアサインされたタスクの配分を計算
       const taskAllocations = this.calculateTaskAllocationsForDate(
@@ -137,7 +161,10 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       const dailyAllocation = DailyWorkAllocation.create({
         date: new Date(currentDate),
         availableHours,
-        taskAllocations
+        taskAllocations,
+        isWeekend,
+        isCompanyHoliday,
+        userSchedules: schedulesForDay
       });
 
       dailyAllocations.push(dailyAllocation);
@@ -146,45 +173,7 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     return dailyAllocations;
   }
 
-  private calculateAvailableHours(
-    date: Date,
-    assignee: WbsAssignee,
-    userSchedules: UserSchedule[],
-    companyHolidays: CompanyHoliday[]
-  ): number {
-    // 会社休日チェック
-    const isCompanyHoliday = companyHolidays.some(holiday => 
-      holiday.date.toDateString() === date.toDateString()
-    );
-    if (isCompanyHoliday) {
-      return 0;
-    }
-
-    // 土日チェック
-    const dayOfWeek = date.getDay();
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-      return 0;
-    }
-
-    // 基本稼働時間（7.5時間）
-    let availableHours = 7.5;
-
-    // ユーザーの個人予定による稼働時間の減算
-    const daySchedules = userSchedules.filter(schedule =>
-      schedule.date.toDateString() === date.toDateString()
-    );
-
-    for (const schedule of daySchedules) {
-      const scheduleDuration = this.calculateScheduleDuration(schedule.startTime, schedule.endTime);
-      availableHours -= scheduleDuration;
-    }
-
-    // 担当者の参画率を適用
-    availableHours *= assignee.getRate();
-
-    // 負の値にならないよう調整
-    return Math.max(0, availableHours);
-  }
+  // 従来のcalculateAvailableHoursはAssigneeWorkingCalendarへ委譲したため削除
 
   private calculateScheduleDuration(startTime: string, endTime: string): number {
     const [startHour, startMin] = startTime.split(':').map(Number);
@@ -213,7 +202,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     // 各タスクの工数を日別に按分
     for (const task of activeTasks) {
       const allocatedHours = this.calculateTaskHoursForDate(task, date, availableHours, activeTasks.length);
-      
+      console.log(`Task ID: ${task.id}, Allocated Hours: ${allocatedHours}`);
+
       if (allocatedHours > 0) {
         const taskAllocation = TaskAllocation.create({
           taskId: task.id?.toString() || '0',
@@ -244,6 +234,7 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     availableHours: number,
     totalActiveTasks: number
   ): number {
+    console.log('----calculateTaskHoursForDate----')
     const yoteiStart = task.getYoteiStart();
     const yoteiEnd = task.getYoteiEnd();
     const totalHours = task.getYoteiKosus();
@@ -252,11 +243,13 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       return 0;
     }
 
-    // タスク期間内の営業日数を計算（簡略化版）
+    // タスク期間内の営業日数を計算（簡略化版）終了日-開始日+1日
     const taskDurationDays = Math.ceil((yoteiEnd.getTime() - yoteiStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    console.log(`Task ID: ${task.id}, Duration Days: ${taskDurationDays}, Total Hours: ${totalHours}`);
     
     // 1日あたりの工数を計算（平均分散）
     const hoursPerDay = totalHours / taskDurationDays;
+    console.log(`Task ID: ${task.id}, Hours Per Day: ${hoursPerDay}`);
 
     // 利用可能時間を超えないよう調整
     return Math.min(hoursPerDay, availableHours / totalActiveTasks);

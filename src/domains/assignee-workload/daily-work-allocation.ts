@@ -4,11 +4,27 @@ export class DailyWorkAllocation {
   public readonly date: Date;
   public readonly availableHours: number;
   public readonly taskAllocations: TaskAllocation[];
+  public readonly isWeekend: boolean;
+  public readonly isCompanyHoliday: boolean;
+  public readonly userSchedules: {
+    title: string;
+    startTime: string;
+    endTime: string;
+    durationHours: number;
+  }[];
 
   private constructor(args: {
     date: Date;
     availableHours: number;
     taskAllocations: TaskAllocation[];
+    isWeekend?: boolean;
+    isCompanyHoliday?: boolean;
+    userSchedules?: {
+      title: string;
+      startTime: string;
+      endTime: string;
+      durationHours: number;
+    }[];
   }) {
     if (args.availableHours < 0) {
       throw new Error('稼働可能時間は0以上である必要があります');
@@ -17,12 +33,23 @@ export class DailyWorkAllocation {
     this.date = args.date;
     this.availableHours = args.availableHours;
     this.taskAllocations = args.taskAllocations;
+    this.isWeekend = args.isWeekend ?? false;
+    this.isCompanyHoliday = args.isCompanyHoliday ?? false;
+    this.userSchedules = args.userSchedules ?? [];
   }
 
   public static create(args: {
     date: Date;
     availableHours: number;
     taskAllocations: TaskAllocation[];
+    isWeekend?: boolean;
+    isCompanyHoliday?: boolean;
+    userSchedules?: {
+      title: string;
+      startTime: string;
+      endTime: string;
+      durationHours: number;
+    }[];
   }): DailyWorkAllocation {
     return new DailyWorkAllocation(args);
   }

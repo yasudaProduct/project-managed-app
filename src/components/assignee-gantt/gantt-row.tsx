@@ -18,6 +18,11 @@ interface DailyWorkAllocationUI {
   isOverloaded: boolean;
   utilizationRate: number;
   overloadedHours: number;
+  isWeekend: boolean;
+  isCompanyHoliday: boolean;
+  userSchedules: { title: string; startTime: string; endTime: string; durationHours: number }[];
+  isOverloadedByStandard: boolean;
+  overloadedByStandardHours: number;
 }
 
 interface AssigneeWorkloadUI {
@@ -40,8 +45,7 @@ export function GanttRow({ assignee, dateRange, onCellClick }: GanttRowProps) {
   };
 
   const isHoliday = (date: Date) => {
-    // 簡略化: 土日のみをチェック
-    // 実際の実装では CompanyHoliday を参照
+    // デフォルトは土日。実データ側でisCompanyHolidayが優先される
     return isWeekend(date);
   };
 
@@ -92,15 +96,20 @@ export function GanttRow({ assignee, dateRange, onCellClick }: GanttRowProps) {
           allocatedHours: 0,
           isOverloaded: false,
           utilizationRate: 0,
-          overloadedHours: 0
+          overloadedHours: 0,
+          isWeekend: isWeekend(date),
+          isCompanyHoliday: isHoliday(date),
+          userSchedules: [],
+          isOverloadedByStandard: false,
+          overloadedByStandardHours: 0
         };
 
         return (
           <GanttCell
             key={index}
             allocation={allocation || defaultAllocation}
-            isWeekend={isWeekend(date)}
-            isHoliday={isHoliday(date)}
+            isWeekend={(allocation || defaultAllocation).isWeekend}
+            isHoliday={(allocation || defaultAllocation).isCompanyHoliday}
             onClick={handleCellClick}
           />
         );

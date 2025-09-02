@@ -1,4 +1,4 @@
-import { assigneeGanttTestData, complexProportionalTestData, importTestData, importTestData2, mockData, mockDataProjects, proportionalAllocationTestData } from "../src/data/mock-data";
+import { assigneeGanttMonthlyE2eTestData, assigneeGanttTestData, complexProportionalTestData, importTestData, importTestData2, mockData, mockDataProjects, proportionalAllocationTestData } from "../src/data/mock-data";
 import { phases } from "../src/data/phases";
 import { users } from "../src/data/users";
 import prisma from "../src/lib/prisma";
@@ -95,7 +95,8 @@ async function main() {
         //mockDataLarge,
         proportionalAllocationTestData,
         complexProportionalTestData,
-        assigneeGanttTestData
+        assigneeGanttTestData,
+        assigneeGanttMonthlyE2eTestData,
     ]
 
     for (const mock of mocks) {
@@ -275,9 +276,11 @@ async function main() {
 
         for (const companyHoliday of mock.companyHolidays) {
             await prisma.companyHoliday.upsert({
-                where: { id: companyHoliday.id },
+                // date はユニーク制約。重複日付をまとめて upsert する
+                where: { date: new Date(companyHoliday.date) },
                 update: {
-                    date: new Date(companyHoliday.date),
+                    name: companyHoliday.name,
+                    type: companyHoliday.type as CompanyHolidayType,
                 },
                 create: {
                     id: companyHoliday.id,

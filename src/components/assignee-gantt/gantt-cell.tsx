@@ -18,6 +18,11 @@ interface DailyWorkAllocationUI {
   isOverloaded: boolean;
   utilizationRate: number;
   overloadedHours: number;
+  isWeekend: boolean;
+  isCompanyHoliday: boolean;
+  userSchedules: { title: string; startTime: string; endTime: string; durationHours: number }[];
+  isOverloadedByStandard: boolean;
+  overloadedByStandardHours: number;
 }
 
 interface GanttCellProps {
@@ -30,6 +35,7 @@ interface GanttCellProps {
 export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCellProps) {
   const utilizationRate = allocation.utilizationRate;
   const isOverloaded = allocation.isOverloaded;
+  const isOverloadedByStandard = allocation.isOverloadedByStandard;
 
   // 色分けロジック
   const getCellColor = () => {
@@ -71,7 +77,7 @@ export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCe
       onClick={() => onClick?.(allocation)}
     >
       <span>{formatHours(allocation.allocatedHours)}</span>
-      {isOverloaded && (
+      {(isOverloaded || isOverloadedByStandard) && (
         <span className="ml-1 text-red-600 font-bold" title="過負荷">!</span>
       )}
     </div>
@@ -103,6 +109,10 @@ export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCe
                 <span className="ml-1 font-medium">{formatHours(allocation.availableHours)}h</span>
               </div>
               <div className="text-xs">
+                <span className="text-gray-500">標準勤務時間:</span>
+                <span className="ml-1 font-medium">7.5h</span>
+              </div>
+              <div className="text-xs">
                 <span className="text-gray-500">稼働率:</span>
                 <span className={cn(
                   "ml-1 font-medium",
@@ -116,6 +126,11 @@ export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCe
                   過負荷: +{allocation.overloadedHours.toFixed(1)}h
                 </div>
               )}
+              {isOverloadedByStandard && (
+                <div className="text-xs text-red-600 font-medium">
+                  標準超過: +{allocation.overloadedByStandardHours.toFixed(1)}h
+                </div>
+              )}
             </div>
 
             {allocation.taskAllocations.length > 0 && (
@@ -127,6 +142,20 @@ export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCe
                     <div className="text-gray-500 ml-2">
                       {task.allocatedHours.toFixed(1)}h
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {allocation.userSchedules && allocation.userSchedules.length > 0 && (
+              <div className="border-t pt-2 space-y-1">
+                <div className="text-xs font-medium">個人予定:</div>
+                {allocation.userSchedules.map((s, i) => (
+                  <div key={i} className="text-xs text-gray-600 flex justify-between">
+                    <span className="mr-2">{s.title}</span>
+                    <span>
+                      {s.startTime} - {s.endTime} ({s.durationHours.toFixed(1)}h)
+                    </span>
                   </div>
                 ))}
               </div>

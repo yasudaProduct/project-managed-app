@@ -1327,3 +1327,165 @@ export const assigneeGanttTestData = {
     ],
     companyHolidays: [],
 }
+
+// ガント/月次集計の総合動作確認用データ
+export const assigneeGanttMonthlyE2eTestData = {
+    project: {
+        id: 60,
+        name: "ガント・月次集計E2Eテスト",
+        status: "ACTIVE",
+        description: "ガントと月別・担当者別集計の動作確認用",
+        startDate: new Date("2025-04-20"),
+        endDate: new Date("2025-06-15"),
+    },
+    wbs: [
+        {
+            id: 60,
+            projectId: 60,
+            name: "E2EテストWBS",
+            status: "IN_PROGRESS",
+        },
+    ],
+    wbsAssignee: [
+        {
+            id: 60,
+            wbsId: 60,
+            assigneeId: "dummy01",
+            rate: 1.0,
+        },
+        {
+            id: 61,
+            wbsId: 60,
+            assigneeId: "dummy02",
+            rate: 0.8,
+        },
+    ],
+    wbsPhase: [
+        {
+            id: 60,
+            wbsId: 60,
+            name: "検証",
+            code: "VER",
+            seq: 1,
+        },
+    ],
+    // 月またぎ/同日複数タスク/会社休日/個人予定を含む
+    wbsTask: [
+        {
+            id: 60,
+            taskNo: "VER-0001",
+            wbsId: 60,
+            phaseId: 60,
+            name: "月跨ぎタスクA（dummy01）",
+            assigneeId: 60, // dummy01
+            status: "IN_PROGRESS",
+            startDate: new Date("2025-04-25"),
+            endDate: new Date("2025-05-05"),
+            kosu: 60,
+        },
+        {
+            id: 61,
+            taskNo: "VER-0002",
+            wbsId: 60,
+            phaseId: 60,
+            name: "単月タスクB（dummy02）",
+            assigneeId: 61, // dummy02
+            status: "IN_PROGRESS",
+            startDate: new Date("2025-05-02"),
+            endDate: new Date("2025-05-02"),
+            kosu: 10,
+        },
+        {
+            id: 62,
+            taskNo: "VER-0003",
+            wbsId: 60,
+            phaseId: 60,
+            name: "同期間タスクC（dummy01）",
+            assigneeId: 60, // dummy01
+            status: "IN_PROGRESS",
+            startDate: new Date("2025-05-02"),
+            endDate: new Date("2025-05-06"),
+            kosu: 20,
+        },
+    ],
+    wbsBuffer: [
+        {
+            id: 60,
+            wbsId: 60,
+            name: "E2E用バッファ",
+            buffer: 10,
+            bufferType: "RISK",
+        },
+    ],
+    workRecords: [],
+    milestone: [
+        {
+            id: 60,
+            wbsId: 60,
+            name: "検証開始",
+            date: new Date("2025-04-25"),
+        },
+        {
+            id: 61,
+            wbsId: 60,
+            name: "検証完了",
+            date: new Date("2025-05-10"),
+        },
+    ],
+    // 会社休日（GW付近を想定）
+    companyHolidays: [
+        {
+            id: 60,
+            date: new Date("2025-05-01"),
+            name: "会社特別休暇(前段)",
+            type: "COMPANY",
+        },
+        {
+            id: 61,
+            date: new Date("2025-05-03"),
+            name: "会社特別休暇",
+            type: "COMPANY",
+        },
+        {
+            id: 62,
+            date: new Date("2025-05-04"),
+            name: "会社特別休暇(後段)",
+            type: "COMPANY",
+        },
+    ],
+    // 個人予定（半休/全休/会議）
+    userSchedules: [
+        // dummy01
+        {
+            id: 60,
+            userId: "dummy01",
+            date: new Date("2025-05-02"),
+            title: "午前半休",
+            startTime: "09:00",
+            endTime: "12:00",
+            location: "私用",
+            description: "午前半休",
+        },
+        {
+            id: 61,
+            userId: "dummy01",
+            date: new Date("2025-05-06"),
+            title: "有給",
+            startTime: "09:00",
+            endTime: "18:00",
+            location: "休暇",
+            description: "全休",
+        },
+        // dummy02
+        {
+            id: 62,
+            userId: "dummy02",
+            date: new Date("2025-05-02"),
+            title: "クライアント定例",
+            startTime: "13:00",
+            endTime: "18:00",
+            location: "会議室A",
+            description: "定例会議",
+        },
+    ],
+};
