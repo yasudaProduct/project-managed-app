@@ -3,7 +3,7 @@
 import { IProjectApplicationService } from "@/applications/projects/project-application-service"
 import prisma from "@/lib/prisma"
 import { SYMBOL } from "@/types/symbol"
-import { ProjectStatus } from "@prisma/client"
+import { ProjectStatus as ProjectStatusPrisma } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { container } from "@/lib/inversify.config"
 import { Project } from "@/types/project"
@@ -83,7 +83,7 @@ export async function updateProject(
         description?: string
         startDate?: string
         endDate?: string
-        status?: ProjectStatus
+        status?: ProjectStatusPrisma
     },
 ): Promise<{ success: boolean, error?: string, id?: string, project?: Project }> {
 
@@ -95,6 +95,7 @@ export async function updateProject(
             description: projectData.description,
             startDate: ensureUTC(projectData.startDate),
             endDate: ensureUTC(projectData.endDate),
+            status: projectData.status,
         }
     );
 

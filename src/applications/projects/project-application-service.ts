@@ -1,7 +1,9 @@
 import type { IProjectRepository } from "@/applications/projects/iproject-repository";
 import { Project } from "@/domains/project/project";
+import { ProjectStatus } from "@/domains/project/project-status";
 import type { Project as ProjectType } from "@/types/project";
 import { SYMBOL } from "@/types/symbol";
+import { ProjectStatus as ProjectStatusType} from "@/types/wbs";
 import { inject, injectable } from "inversify";
 
 export interface IProjectApplicationService {
@@ -85,14 +87,23 @@ export class ProjectApplicationService implements IProjectApplicationService {
      * @param args プロジェクトデータ
      * @returns プロジェクト
      */
-    public async updateProject(args: { id: string; name?: string; description?: string; startDate?: Date; endDate?: Date }): Promise<{ success: boolean; error?: string; id?: string }> {
-        const project = await this.projectRepository.findById(args.id);
+    public async updateProject(
+        args: { 
+            id: string; 
+            name?: string; 
+            description?: string; 
+            startDate?: Date; 
+            endDate?: Date; 
+            status?: ProjectStatusType
+        }): Promise<{ success: boolean; error?: string; id?: string }> {
+        const project: Project | null = await this.projectRepository.findById(args.id);
         if (!project) return { success: false, error: "プロジェクトが存在しません。" }
 
         if (args.name) project.updateName(args.name);
         if (args.description) project.updateDescription(args.description);
         if (args.startDate) project.updateStartDate(args.startDate);
         if (args.endDate) project.updateEndDate(args.endDate);
+        if (args.status) project.updateStatus(new ProjectStatus({ status: args.status }));
 
         // プロジェクト名の重複チェック
         const check = await this.projectRepository.findByName(project.name);

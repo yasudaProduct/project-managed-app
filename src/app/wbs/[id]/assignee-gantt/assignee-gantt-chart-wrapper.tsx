@@ -48,7 +48,7 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
   const [workloads, setWorkloads] = useState<AssigneeWorkloadUI[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // 日付範囲を計算
