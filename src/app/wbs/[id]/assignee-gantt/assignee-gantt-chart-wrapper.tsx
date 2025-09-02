@@ -105,11 +105,14 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
     try {
       const startDate = currentDateRange[0];
       const endDate = currentDateRange[currentDateRange.length - 1];
+
+      // YYYY-MM-DD に正規化して送信（サーバ側でUTC深夜に変換）
+      const toYMD = (d: Date) => d.toISOString().split('T')[0];
       
       const result = await getAssigneeWorkloads(
         wbsId,
-        startDate.toISOString(),
-        endDate.toISOString()
+        toYMD(startDate),
+        toYMD(endDate)
       );
 
       if (!result.success || !result.data) {
@@ -117,36 +120,29 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
       }
 
       const data = result.data;
-      
-      // プレーンなデータからUI用オブジェクトに変換
+
+      // サーバー計算済み値を利用しつつ、日付だけDateに変換
       const workloadObjects: AssigneeWorkloadUI[] = data.map(workloadData => {
         const dailyAllocations: DailyWorkAllocationUI[] = workloadData.dailyAllocations.map(daily => {
           const taskAllocations: TaskAllocationUI[] = daily.taskAllocations.map(task => ({
             taskId: task.taskId,
             taskName: task.taskName,
-            allocatedHours: task.allocatedHours
+            allocatedHours: task.allocatedHours,
           }));
-
-          const allocatedHours = taskAllocations.reduce((sum, t) => sum + t.allocatedHours, 0);
-          const isOverloaded = allocatedHours > daily.availableHours; // availableHours基準
-          const utilizationRate = daily.availableHours === 0 ? 0 : allocatedHours / daily.availableHours;
-          const overloadedHours = isOverloaded ? allocatedHours - daily.availableHours : 0;
-          const isOverloadedByStandard = allocatedHours > 7.5; // 標準7.5h基準
-          const overloadedByStandardHours = isOverloadedByStandard ? allocatedHours - 7.5 : 0;
 
           return {
             date: new Date(daily.date),
             availableHours: daily.availableHours,
             taskAllocations,
-            allocatedHours,
-            isOverloaded,
-            utilizationRate,
-            overloadedHours,
+            allocatedHours: daily.allocatedHours,
+            isOverloaded: daily.isOverloaded,
+            utilizationRate: daily.utilizationRate,
+            overloadedHours: daily.overloadedHours,
             isWeekend: !!daily.isWeekend,
             isCompanyHoliday: !!daily.isCompanyHoliday,
             userSchedules: daily.userSchedules || [],
-            isOverloadedByStandard,
-            overloadedByStandardHours
+            isOverloadedByStandard: daily.isOverloadedByStandard,
+            overloadedByStandardHours: daily.overloadedByStandardHours,
           };
         });
 
@@ -156,7 +152,7 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
           assigneeId: workloadData.assigneeId,
           assigneeName: workloadData.assigneeName,
           dailyAllocations,
-          overloadedDays
+          overloadedDays,
         };
       });
 
@@ -364,6 +360,10 @@ export function AssigneeGanttChartWrapper({ wbsId }: AssigneeGanttChartWrapperPr
                 選択した日の作業負荷詳細
               </SheetDescription>
             </SheetHeader>
+            <div className="mt-6 space-y-4">
+              debug情報
+              <pre className="text-xs text-gray-500">{JSON.stringify(selectedAllocation, null, 2)}</pre>
+            </div>
 
             <div className="mt-6 space-y-4">
               <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded">

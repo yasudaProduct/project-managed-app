@@ -11,6 +11,13 @@ export interface WorkloadData {
   dailyAllocations: {
     date: string;
     availableHours: number;
+    // サーバー計算済みフィールド
+    allocatedHours: number;
+    isOverloaded: boolean;
+    utilizationRate: number;
+    overloadedHours: number;
+    isOverloadedByStandard: boolean;
+    overloadedByStandardHours: number;
     isWeekend?: boolean;
     isCompanyHoliday?: boolean;
     userSchedules?: {
@@ -35,8 +42,8 @@ export interface AssigneeGanttResponse {
 
 export async function getAssigneeWorkloads(
   wbsId: number,
-  startDate: string,
-  endDate: string
+  startDate: string, // YYYY-MM-DD を想定
+  endDate: string // YYYY-MM-DD を想定
 ): Promise<AssigneeGanttResponse> {
   try {
     // バリデーション
@@ -51,10 +58,13 @@ export async function getAssigneeWorkloads(
     const assigneeGanttService = container.get<IAssigneeGanttService>(SYMBOL.IAssigneeGanttService);
 
     // データを取得
+    // YYYY-MM-DD をUTC深夜に変換してサービスへ
+    const toUtcMidnight = (ymd: string) => new Date(`${ymd}T00:00:00.000Z`);
+
     const workloads = await assigneeGanttService.getAssigneeWorkloads(
       wbsId,
-      new Date(startDate),
-      new Date(endDate)
+      toUtcMidnight(startDate),
+      toUtcMidnight(endDate)
     );
     // console.log('-----------------')
     // const test = workloads[0].dailyAllocations.filter(daily => daily.taskAllocations.length > 0)[0].taskAllocations
@@ -68,9 +78,15 @@ export async function getAssigneeWorkloads(
       dailyAllocations: workload.dailyAllocations.map(daily => ({
         date: daily.date.toISOString(),
         availableHours: daily.availableHours,
-        isWeekend: (daily as any).isWeekend,
-        isCompanyHoliday: (daily as any).isCompanyHoliday,
-        userSchedules: (daily as any).userSchedules,
+        allocatedHours: daily.allocatedHours,
+        isOverloaded: daily.isOverloaded(),
+        utilizationRate: daily.getUtilizationRate(),
+        overloadedHours: daily.getOverloadedHours(),
+        isOverloadedByStandard: daily.allocatedHours > 7.5,
+        overloadedByStandardHours: Math.max(0, daily.allocatedHours - 7.5),
+        isWeekend: daily.isWeekend,
+        isCompanyHoliday: daily.isCompanyHoliday,
+        userSchedules: daily.userSchedules,
         taskAllocations: daily.taskAllocations.map(task => ({
           taskId: task.taskId,
           taskName: task.taskName,
