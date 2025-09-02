@@ -697,652 +697,21 @@ export const importTestData2 = {
     userSchedules: []
 }
 
-// 営業日案分ロジックのテストデータ
-export const proportionalAllocationTestData = {
-    project: {
-        id: 40,
-        name: "営業日案分テスト",
-        status: "ACTIVE",
-        description: "営業日案分ロジックのテスト用プロジェクト",
-        startDate: new Date("2025-04-01"),
-        endDate: new Date("2025-09-30"),
-    },
-    wbs: [
-        {
-            id: 40,
-            projectId: 40,
-            name: "営業日案分テスト",
-            status: "IN_PROGRESS",
-        },
-    ],
-    wbsAssignee: [
-        {
-            id: 40,
-            wbsId: 40,
-            assigneeId: "dummy01",
-            rate: 1.0,
-        },
-        {
-            id: 41,
-            wbsId: 40,
-            assigneeId: "dummy02",
-            rate: 0.5,
-        },
-        {
-            id: 42,
-            wbsId: 40,
-            assigneeId: "dummy03",
-            rate: 1.0,
-        },
-    ],
-    wbsPhase: [
-        {
-            id: 40,
-            wbsId: 40,
-            name: "設計・開発",
-            code: "D1",
-            seq: 1,
-        },
-    ],
-    // 月をまたぐタスク群 - 営業日案分が必要
-    wbsTask: [
-        {
-            id: 40,
-            taskNo: "D1-0001",
-            wbsId: 40,
-            phaseId: 40,
-            name: "月またぎタスクA（稼働率1.0担当）",
-            assigneeId: 40,
-            status: "IN_PROGRESS",
-            startDate: new Date("2025-04-25"), // 今月末
-            endDate: new Date("2025-05-04"),   // 来月上旬
-            kosu: 80,
-        },
-        {
-            id: 41,
-            taskNo: "D1-0002",
-            wbsId: 40,
-            phaseId: 40,
-            name: "月またぎタスクB（稼働率0.5担当）",
-            assigneeId: 41,
-            status: "IN_PROGRESS",
-            startDate: new Date("2025-05-20"),
-            endDate: new Date("2025-06-04"),
-            kosu: 60,
-        },
-        {
-            id: 42,
-            taskNo: "D1-0003",
-            wbsId: 40,
-            phaseId: 40,
-            name: "長期月またぎタスク（3ヶ月間）",
-            assigneeId: 42,
-            status: "IN_PROGRESS",
-            startDate: new Date("2025-06-15"),
-            endDate: new Date("2025-08-04"),
-            kosu: 240,
-        },
-        {
-            id: 43,
-            taskNo: "D1-0004",
-            wbsId: 40,
-            phaseId: 40,
-            name: "月跨ぎロジック1（稼働率1.0担当）",
-            assigneeId: 40,
-            status: "NOT_STARTED",
-            startDate: new Date("2025-07-25"),
-            endDate: new Date("2025-08-04"),
-            kosu: 80,
-        },
-        {
-            id: 45,
-            taskNo: "D1-0006",
-            wbsId: 40,
-            phaseId: 40,
-            name: "月跨ぎロジック2（稼働率1.0担当）",
-            assigneeId: 40,
-            status: "NOT_STARTED",
-            startDate: new Date("2025-07-25"),
-            endDate: new Date("2025-08-04"),
-            kosu: 80,
-        },
-        {
-            id: 46,
-            taskNo: "D1-0007",
-            wbsId: 40,
-            phaseId: 40,
-            name: "会社休日がある月が跨ぐタスク（稼働率1.0担当）",
-            assigneeId: 40,
-            status: "NOT_STARTED",
-            startDate: new Date("2025-08-25"),
-            endDate: new Date("2025-09-04"),
-            kosu: 80,
-        },
-        {
-            id: 47,
-            taskNo: "D1-0008",
-            wbsId: 40,
-            phaseId: 40,
-            name: "個人の予定休暇考慮タスク",
-            assigneeId: 41,
-            status: "NOT_STARTED",
-            startDate: new Date("2025-08-22"),
-            endDate: new Date("2025-08-28"),
-            kosu: 80,
-        },
-    ],
-    wbsBuffer: [
-        {
-            id: 40,
-            wbsId: 40,
-            name: "営業日案分バッファ",
-            buffer: 20,
-            bufferType: "RISK",
-        },
-    ],
-    workRecords: [
-        {
-            id: 40,
-            userId: "dummy01",
-            taskId: 40,
-            date: addDays(25),
-            hours_worked: 7.5,
-        },
-        {
-            id: 41,
-            userId: "dummy02",
-            taskId: 41,
-            date: addDays(20),
-            hours_worked: 4.0, // パートタイム
-        },
-    ],
-    milestone: [
-        {
-            id: 40,
-            wbsId: 40,
-            name: "設計完了（月またぎ）",
-            date: addDays(30),
-        },
-        {
-            id: 41,
-            wbsId: 40,
-            name: "開発完了（月またぎ）",
-            date: addDays(60),
-        },
-    ],
-    // 会社休日データ
-    companyHolidays: [
-        {
-            id: 1,
-            date: new Date("2025-08-25"),
-            name: "会社休日がある月が跨ぐタスク",
-            type: "COMPANY",
-        },
-    ],
-    // ユーザースケジュール（個人の休暇・予定）
-    userSchedules: [
-        {
-            id: 42,
-            userId: "dummy02",
-            date: new Date("2025-08-22"),
-            title: "有給",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "病院",
-            description: "病院に行く",
-        },
-        {
-            id: 43,
-            userId: "dummy02",
-            date: new Date("2025-08-23"),
-            title: "有給",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "有給",
-            description: "有給に行く",
-        },
-        {
-            id: 44,
-            userId: "dummy03",
-            date: new Date("2025-08-30"),
-            title: "研修参加",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "研修",
-            description: "研修に行く",
-        },
-        {
-            id: 45,
-            userId: "dummy03",
-            date: new Date("2025-08-30"),
-            title: "夏季休暇",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "夏季休暇",
-            description: "夏季休暇に行く",
-        },
-    ],
-}
-
-// 営業日案分の検証用複雑パターン
-export const complexProportionalTestData = {
-    project: {
-        id: 50,
-        name: "営業日案分検証（複雑パターン）",
-        status: "ACTIVE",
-        description: "様々な条件での営業日案分の動作を検証するテスト",
-        startDate: baseDate,
-        endDate: addDays(90),
-    },
-    wbs: [
-        {
-            id: 50,
-            projectId: 50,
-            name: "営業日案分検証",
-            status: "IN_PROGRESS",
-        },
-    ],
-    wbsAssignee: [
-        {
-            id: 50,
-            wbsId: 50,
-            assigneeId: "dummy05", // 管理者（稼働率0.8）
-            rate: 0.8,
-        },
-        {
-            id: 51,
-            wbsId: 50,
-            assigneeId: "dummy06", // 新人（稼働率0.6）
-            rate: 0.6,
-        },
-        {
-            id: 52,
-            wbsId: 50,
-            assigneeId: "dummy07", // 外部委託（稼働率0.3）
-            rate: 0.3,
-        },
-    ],
-    wbsPhase: [
-        {
-            id: 50,
-            wbsId: 50,
-            name: "複雑案分テスト",
-            code: "CPX",
-            seq: 1,
-        },
-    ],
-    wbsTask: [
-        // 祝日・連休をまたぐタスク
-        {
-            id: 50,
-            taskNo: "CPX-0001",
-            wbsId: 50,
-            phaseId: 50,
-            name: "GW連休またぎタスク",
-            assigneeId: 50,
-            status: "IN_PROGRESS",
-            startDate: new Date(baseDate.getFullYear(), 3, 27), // 4/27
-            endDate: new Date(baseDate.getFullYear(), 4, 8),   // 5/8
-            kosu: 32, // GW前後の営業日で案分
-        },
-        // 多数の個人休暇があるタスク
-        {
-            id: 51,
-            taskNo: "CPX-0002",
-            wbsId: 50,
-            phaseId: 50,
-            name: "多数個人休暇またぎタスク",
-            assigneeId: 51,
-            status: "IN_PROGRESS",
-            startDate: addDays(5),
-            endDate: addDays(25),
-            kosu: 48,
-        },
-        // 稼働率の低い外部委託者のタスク
-        {
-            id: 52,
-            taskNo: "CPX-0003",
-            wbsId: 50,
-            phaseId: 50,
-            name: "外部委託案分タスク",
-            assigneeId: 52,
-            status: "IN_PROGRESS",
-            startDate: addDays(10),
-            endDate: addDays(40),
-            kosu: 36,
-        },
-        // 年度末またぎタスク
-        {
-            id: 53,
-            taskNo: "CPX-0004",
-            wbsId: 50,
-            phaseId: 50,
-            name: "年度末またぎタスク",
-            assigneeId: 50,
-            status: "NOT_STARTED",
-            startDate: new Date(baseDate.getFullYear(), 2, 20), // 3/20
-            endDate: new Date(baseDate.getFullYear(), 3, 10),   // 4/10
-            kosu: 60,
-        },
-    ],
-    // 複雑な会社休日パターン
-    companyHolidays: [
-        // GW特別休暇
-        {
-            id: 10,
-            date: new Date(baseDate.getFullYear(), 3, 30), // 4/30
-            name: "GW特別休暇",
-            type: "COMPANY",
-        },
-        {
-            id: 11,
-            date: new Date(baseDate.getFullYear(), 4, 1), // 5/1
-            name: "GW特別休暇",
-            type: "COMPANY",
-        },
-        {
-            id: 12,
-            date: new Date(baseDate.getFullYear(), 4, 2), // 5/2
-            name: "GW特別休暇",
-            type: "COMPANY",
-        },
-        // 夏季休暇
-        {
-            id: 13,
-            date: new Date(baseDate.getFullYear(), 7, 13), // 8/13
-            name: "夏季休暇",
-            type: "COMPANY",
-        },
-        {
-            id: 14,
-            date: new Date(baseDate.getFullYear(), 7, 14), // 8/14
-            name: "夏季休暇",
-            type: "COMPANY",
-        },
-        {
-            id: 15,
-            date: new Date(baseDate.getFullYear(), 7, 15), // 8/15
-            name: "夏季休暇",
-            type: "COMPANY",
-        },
-    ],
-    // 複雑なユーザースケジュール
-    userSchedules: [
-        // dummy05（管理者）の予定
-        {
-            id: 50,
-            userId: "dummy05",
-            date: addDays(7),
-            title: "取締役会",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "取締役会",
-            description: "取締役会に行く",
-        },
-        {
-            id: 51,
-            userId: "dummy05",
-            date: addDays(14),
-            title: "出張",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "出張",
-            description: "出張に行く",
-        },
-        {
-            id: 52,
-            userId: "dummy05",
-            date: addDays(21),
-            title: "午前半休",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "午前半休",
-            description: "午前半休に行く",
-        },
-        // dummy06（新人）の予定
-        {
-            id: 53,
-            userId: "dummy06",
-            date: addDays(8),
-            title: "新人研修",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "新人研修",
-            description: "新人研修に行く",
-        },
-        {
-            id: 54,
-            userId: "dummy06",
-            date: addDays(9),
-            title: "新人研修",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "新人研修",
-            description: "新人研修に行く",
-        },
-        {
-            id: 55,
-            userId: "dummy06",
-            date: addDays(15),
-            title: "メンター面談",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "メンター面談",
-            description: "メンター面談に行く",
-        },
-        {
-            id: 56,
-            userId: "dummy06",
-            date: addDays(22),
-            title: "体調不良",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "体調不良",
-            description: "体調不良に行く",
-        },
-        // dummy07（外部委託）の予定
-        {
-            id: 57,
-            userId: "dummy07",
-            date: addDays(12),
-            title: "他社案件",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "他社案件",
-            description: "他社案件に行く",
-        },
-        {
-            id: 58,
-            userId: "dummy07",
-            date: addDays(18),
-            title: "他社案件",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "他社案件",
-            description: "他社案件に行く",
-        },
-        {
-            id: 59,
-            userId: "dummy07",
-            date: addDays(25),
-            title: "契約更新面談",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "契約更新面談",
-            description: "契約更新面談に行く",
-        },
-    ],
-    workRecords: [
-        {
-            id: 50,
-            userId: "dummy05",
-            taskId: 50,
-            date: addDays(5),
-            hours_worked: 6.0, // 管理者稼働率0.8を反映
-        },
-        {
-            id: 51,
-            userId: "dummy06",
-            taskId: 51,
-            date: addDays(6),
-            hours_worked: 4.5, // 新人稼働率0.6を反映
-        },
-        {
-            id: 52,
-            userId: "dummy07",
-            taskId: 52,
-            date: addDays(11),
-            hours_worked: 2.25, // 外部委託稼働率0.3を反映
-        },
-    ],
-    milestone: [
-        {
-            id: 40,
-            wbsId: 40,
-            name: "設計完了（月またぎ）",
-            date: addDays(30),
-        },
-        {
-            id: 41,
-            wbsId: 40,
-            name: "開発完了（月またぎ）",
-            date: addDays(60),
-        },
-    ],
-    wbsBuffer: [
-        {
-            id: 40,
-            wbsId: 40,
-            name: "営業日案分バッファ",
-            buffer: 20,
-            bufferType: "RISK",
-        },
-    ],
-}
-
-export const assigneeGanttTestData = {
-    project: {
-        id: 50,
-        name: "稼働表テスト",
-        status: "ACTIVE",
-        description: "稼働表テスト",
-        startDate: baseDate,
-        endDate: addDays(90),
-    },
-    wbs: [
-        {
-            id: 50,
-            projectId: 50,
-            name: "稼働表テスト",
-            status: "IN_PROGRESS",
-        },
-    ],
-    wbsAssignee: [
-        {
-            id: 50,
-            wbsId: 50,
-            assigneeId: "dummy05",
-            rate: 1,
-        },
-        {
-            id: 51,
-            wbsId: 50,
-            assigneeId: "dummy06",
-            rate: 0.8,
-        },
-        {
-            id: 52,
-            wbsId: 50,
-            assigneeId: "dummy07",
-            rate: 0.6,
-        },
-    ],
-    wbsPhase: [
-        {
-            id: 50,
-            wbsId: 50,
-            name: "稼働表テスト",
-            code: "TEST",
-            seq: 1,
-        },
-    ],
-    wbsTask: [
-        {
-            id: 50,
-            taskNo: "TEST-0001",
-            wbsId: 50,
-            phaseId: 50,
-            name: "稼働表テスト",
-            assigneeId: 50,
-            status: "IN_PROGRESS",
-            startDate: addDays(10),
-            endDate: addDays(10),
-            kosu: 3,
-        },
-    ],
-    milestone: [
-        {
-            id: 50,
-            wbsId: 50,
-            name: "稼働表テスト",
-            date: addDays(30),
-        },
-    ],
-    wbsBuffer: [
-        {
-            id: 50,
-            wbsId: 50,
-            name: "稼働表テスト",
-            buffer: 20,
-            bufferType: "RISK",
-        },
-    ],
-    userSchedules: [
-        {
-            id: 50,
-            userId: "dummy06",
-            date: addDays(10),
-            title: "稼働表テスト",
-            startTime: "09:00",
-            endTime: "12:00",
-            location: "稼働表テスト",
-            description: "稼働表テストに行く",
-        },
-    ],
-    workRecords: [
-        {
-            id: 50,
-            userId: "dummy05",
-            taskId: 50,
-            date: addDays(10),
-            hours_worked: 6.0,
-        },
-        {
-            id: 51,
-            userId: "dummy06",
-            taskId: 51,
-            date: addDays(10),
-            hours_worked: 4.5,
-        },
-    ],
-    companyHolidays: [],
-}
-
 // ガント/月次集計の総合動作確認用データ
-export const assigneeGanttMonthlyE2eTestData = {
+export const assigneeGanttMonthlyTestData = {
     project: {
         id: 60,
-        name: "ガント・月次集計E2Eテスト",
+        name: "稼働表・月次集計テスト",
         status: "ACTIVE",
-        description: "ガントと月別・担当者別集計の動作確認用",
-        startDate: new Date("2025-04-20"),
-        endDate: new Date("2025-06-15"),
+        description: "稼働表・月次集計テスト",
+        startDate: new Date("2025-09-01"),
+        endDate: new Date("2025-10-30"),
     },
     wbs: [
         {
             id: 60,
             projectId: 60,
-            name: "E2EテストWBS",
+            name: "稼働表・月次集計テスト",
             status: "IN_PROGRESS",
         },
     ],
@@ -1350,13 +719,13 @@ export const assigneeGanttMonthlyE2eTestData = {
         {
             id: 60,
             wbsId: 60,
-            assigneeId: "dummy01",
+            assigneeId: "dummy05",
             rate: 1.0,
         },
         {
             id: 61,
             wbsId: 60,
-            assigneeId: "dummy02",
+            assigneeId: "dummy06",
             rate: 0.8,
         },
     ],
@@ -1364,8 +733,8 @@ export const assigneeGanttMonthlyE2eTestData = {
         {
             id: 60,
             wbsId: 60,
-            name: "検証",
-            code: "VER",
+            name: "稼働表・月次集計テスト",
+            code: "TEST",
             seq: 1,
         },
     ],
@@ -1373,39 +742,75 @@ export const assigneeGanttMonthlyE2eTestData = {
     wbsTask: [
         {
             id: 60,
-            taskNo: "VER-0001",
+            taskNo: "TEST-0001",
             wbsId: 60,
             phaseId: 60,
-            name: "月跨ぎタスクA（dummy01）",
-            assigneeId: 60, // dummy01
+            name: "休日跨がないタスク",
+            assigneeId: 60,
             status: "IN_PROGRESS",
-            startDate: new Date("2025-04-25"),
-            endDate: new Date("2025-05-05"),
-            kosu: 60,
+            startDate: new Date("2025-09-01"),
+            endDate: new Date("2025-09-05"),
+            kosu: 10,
         },
         {
             id: 61,
-            taskNo: "VER-0002",
+            taskNo: "TEST-0002",
             wbsId: 60,
             phaseId: 60,
-            name: "単月タスクB（dummy02）",
-            assigneeId: 61, // dummy02
+            name: "休日を跨ぐタスク",
+            assigneeId: 61, // dummy06
             status: "IN_PROGRESS",
-            startDate: new Date("2025-05-02"),
-            endDate: new Date("2025-05-02"),
+            startDate: new Date("2025-09-05"),
+            endDate: new Date("2025-09-08"),
             kosu: 10,
         },
         {
             id: 62,
-            taskNo: "VER-0003",
+            taskNo: "TEST-0003",
             wbsId: 60,
             phaseId: 60,
-            name: "同期間タスクC（dummy01）",
-            assigneeId: 60, // dummy01
+            name: "重なってるタスクA",
+            assigneeId: 60,
             status: "IN_PROGRESS",
-            startDate: new Date("2025-05-02"),
-            endDate: new Date("2025-05-06"),
-            kosu: 20,
+            startDate: new Date("2025-09-16"),
+            endDate: new Date("2025-09-16"),
+            kosu: 2,
+        },
+        {
+            id: 63,
+            taskNo: "TEST-0004",
+            wbsId: 60,
+            phaseId: 60,
+            name: "重なってるタスクB",
+            assigneeId: 60,
+            status: "IN_PROGRESS",
+            startDate: new Date("2025-09-16"),
+            endDate: new Date("2025-09-16"),
+            kosu: 2,
+        },
+        {
+            id: 64,
+            taskNo: "TEST-0005",
+            wbsId: 60,
+            phaseId: 60,
+            name: "重なってるタスクA1",
+            assigneeId: 61, // dummy06
+            status: "IN_PROGRESS",
+            startDate: new Date("2025-09-16"),
+            endDate: new Date("2025-09-17"),
+            kosu: 10,
+        },
+        {
+            id: 65,
+            taskNo: "TEST-0006",
+            wbsId: 60,
+            phaseId: 60,
+            name: "重なってるタスクA2",
+            assigneeId: 61, // dummy06
+            status: "IN_PROGRESS",
+            startDate: new Date("2025-09-16"),
+            endDate: new Date("2025-09-17"),
+            kosu: 8,
         },
     ],
     wbsBuffer: [
@@ -1417,7 +822,15 @@ export const assigneeGanttMonthlyE2eTestData = {
             bufferType: "RISK",
         },
     ],
-    workRecords: [],
+    workRecords: [
+        {
+            id: 60,
+            userId: "dummy05",
+            taskId: 60,
+            date: addDays(0),
+            hours_worked: 6.0,
+        },
+    ],
     milestone: [
         {
             id: 60,
@@ -1436,30 +849,29 @@ export const assigneeGanttMonthlyE2eTestData = {
     companyHolidays: [
         {
             id: 60,
-            date: new Date("2025-05-01"),
-            name: "会社特別休暇(前段)",
+            date: addDays(30),
+            name: "会社特別休暇",
             type: "COMPANY",
         },
         {
             id: 61,
-            date: new Date("2025-05-03"),
+            date: addDays(31),
             name: "会社特別休暇",
             type: "COMPANY",
         },
         {
             id: 62,
-            date: new Date("2025-05-04"),
-            name: "会社特別休暇(後段)",
+            date: addDays(32),
+            name: "会社特別休暇",
             type: "COMPANY",
         },
     ],
     // 個人予定（半休/全休/会議）
     userSchedules: [
-        // dummy01
         {
             id: 60,
-            userId: "dummy01",
-            date: new Date("2025-05-02"),
+            userId: "dummy05",
+            date: addDays(33),
             title: "午前半休",
             startTime: "09:00",
             endTime: "12:00",
@@ -1468,19 +880,18 @@ export const assigneeGanttMonthlyE2eTestData = {
         },
         {
             id: 61,
-            userId: "dummy01",
-            date: new Date("2025-05-06"),
+            userId: "dummy05",
+            date: addDays(34),
             title: "有給",
             startTime: "09:00",
             endTime: "18:00",
             location: "休暇",
             description: "全休",
         },
-        // dummy02
         {
             id: 62,
-            userId: "dummy02",
-            date: new Date("2025-05-02"),
+            userId: "dummy05",
+            date: addDays(35),
             title: "クライアント定例",
             startTime: "13:00",
             endTime: "18:00",

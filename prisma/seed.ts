@@ -1,4 +1,4 @@
-import { assigneeGanttMonthlyE2eTestData, assigneeGanttTestData, complexProportionalTestData, importTestData, importTestData2, mockData, mockDataProjects, proportionalAllocationTestData } from "../src/data/mock-data";
+import { assigneeGanttMonthlyTestData, importTestData, importTestData2, mockData, mockDataProjects } from "../src/data/mock-data";
 import { phases } from "../src/data/phases";
 import { users } from "../src/data/users";
 import prisma from "../src/lib/prisma";
@@ -93,10 +93,7 @@ async function main() {
         importTestData,
         importTestData2,
         //mockDataLarge,
-        proportionalAllocationTestData,
-        complexProportionalTestData,
-        assigneeGanttTestData,
-        assigneeGanttMonthlyE2eTestData,
+        assigneeGanttMonthlyTestData,
     ]
 
     for (const mock of mocks) {

@@ -21,7 +21,7 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     @inject(SYMBOL.IUserScheduleRepository) private readonly userScheduleRepository: IUserScheduleRepository,
     @inject(SYMBOL.ICompanyHolidayRepository) private readonly companyHolidayRepository: ICompanyHolidayRepository,
     @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: iwbsAssigneeRepository.IWbsAssigneeRepository
-  ) {}
+  ) { }
 
   async getAssigneeWorkloads(
     wbsId: number,
@@ -46,7 +46,7 @@ export class AssigneeGanttService implements IAssigneeGanttService {
 
     // 担当者別に作業負荷を計算
     const workloads: AssigneeWorkload[] = [];
-    
+
     for (const assignee of assignees) {
       const assigneeTasks = this.getTasksByAssignee(tasks, assignee.id!);
       const assigneeSchedules = this.getUserSchedulesByAssignee(userSchedules, assignee.userId);
@@ -83,7 +83,7 @@ export class AssigneeGanttService implements IAssigneeGanttService {
   ): Promise<AssigneeWorkload> {
     const workloads = await this.getAssigneeWorkloads(wbsId, startDate, endDate);
     const workload = workloads.find(w => w.assigneeId === assigneeId);
-    
+
     if (!workload) {
       throw new Error(`担当者が見つかりません: ${assigneeId}`);
     }
@@ -148,7 +148,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       const taskAllocations = this.calculateTaskAllocationsForDate(
         tasks,
         new Date(currentDate),
-        availableHours
+        availableHours,
+        companyCalendar
       );
 
       const dailyAllocation = DailyWorkAllocation.create({
@@ -177,7 +178,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
   private calculateTaskAllocationsForDate(
     tasks: Task[],
     date: Date,
-    availableHours: number
+    availableHours: number,
+    companyCalendar: CompanyCalendar
   ): TaskAllocation[] {
     const taskAllocations: TaskAllocation[] = [];
 
@@ -190,12 +192,15 @@ export class AssigneeGanttService implements IAssigneeGanttService {
 
     // 各タスクの工数を日別に按分
     for (const task of activeTasks) {
-      const allocatedHours = this.calculateTaskHoursForDate(task, date, availableHours, activeTasks.length);
+      const allocatedHours = this.calculateTaskHoursForDate(task, date, availableHours, activeTasks.length, companyCalendar);
       if (allocatedHours > 0) {
         const taskAllocation = TaskAllocation.create({
           taskId: task.id?.toString() || '0',
           taskName: task.name,
-          allocatedHours
+          allocatedHours,
+          totalHours: task.getYoteiKosus() || 0,
+          periodStart: task.getYoteiStart() || undefined,
+          periodEnd: task.getYoteiEnd() || undefined
         });
         taskAllocations.push(taskAllocation);
       }
@@ -217,7 +222,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     task: Task,
     date: Date,
     availableHours: number,
-    totalActiveTasks: number
+    totalActiveTasks: number,
+    companyCalendar: CompanyCalendar
   ): number {
     const yoteiStart = task.getYoteiStart();
     const yoteiEnd = task.getYoteiEnd();
@@ -227,12 +233,26 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       return 0;
     }
 
-    // タスク期間内の営業日数を計算（簡略化版）終了日-開始日+1日
-    const taskDurationDays = Math.ceil((yoteiEnd.getTime() - yoteiStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    // 1日あたりの工数を計算（平均分散）
-    const hoursPerDay = totalHours / taskDurationDays;
+    // 非稼働日は配分しない
+    if (companyCalendar.isCompanyHoliday(date)) {
+      return 0;
+    }
 
-    // 利用可能時間を超えないよう調整（rateは考慮しない）
-    return Math.min(hoursPerDay, availableHours / totalActiveTasks);
+    // タスク期間内の営業日数を算出（会社休日・土日を除外）
+    let workingDays = 0;
+    for (let d = new Date(yoteiStart); d <= yoteiEnd; d.setDate(d.getDate() + 1)) {
+      const day = new Date(d);
+      if (!companyCalendar.isCompanyHoliday(day)) {
+        workingDays += 1;
+      }
+    }
+
+    if (workingDays <= 0) {
+      return 0;
+    }
+
+    // 営業日で均等割り。日次上限（availableHours / totalActiveTasks）は適用しない
+    const hoursPerWorkingDay = totalHours / workingDays;
+    return hoursPerWorkingDay;
   }
 }

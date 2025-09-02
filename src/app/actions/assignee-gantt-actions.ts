@@ -35,6 +35,9 @@ export interface WorkloadData {
       taskId: string;
       taskName: string;
       allocatedHours: number;
+      totalHours: number;
+      periodStart?: string;
+      periodEnd?: string;
     }[];
   }[];
 }
@@ -95,7 +98,10 @@ export async function getAssigneeWorkloads(
         taskAllocations: daily.taskAllocations.map(task => ({
           taskId: task.taskId,
           taskName: task.taskName,
-          allocatedHours: task.allocatedHours
+          allocatedHours: task.allocatedHours,
+          totalHours: task.totalHours,
+          periodStart: task.periodStart ? task.periodStart.toISOString() : undefined,
+          periodEnd: task.periodEnd ? task.periodEnd.toISOString() : undefined
         }))
       }))
     }));
