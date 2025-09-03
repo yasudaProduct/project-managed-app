@@ -72,9 +72,12 @@ const formSchema = z
         .min(0, { message: "工数は0以上の数値を入力してください。" })
         .max(1000, { message: "工数は1000時間以内で入力してください。" })
     ),
-    status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] as const, {
-      message: "ステータスを選択してください。",
-    }),
+    status: z.enum(
+      ["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "ON_HOLD"] as const,
+      {
+        message: "ステータスを選択してください。",
+      }
+    ),
     phaseId: z.preprocess(
       (val) => Number(val),
       z.number().min(1, {
