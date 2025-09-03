@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { AssigneeGanttChartWrapper } from './assignee-gantt-chart-wrapper';
+import { AssigneeGanttChart } from './assignee-gantt-chart';
 
 interface AssigneeGanttPageProps {
   params: {
@@ -25,7 +25,7 @@ export default function AssigneeGanttPage({ params }: AssigneeGanttPageProps) {
         </p>
       </div>
       
-      <AssigneeGanttChartWrapper wbsId={wbsId} />
+      <AssigneeGanttChart wbsId={wbsId} />
     </div>
   );
 }

@@ -93,7 +93,9 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       this.wbsAssigneeRepository.findByWbsId(wbsId)
     ]);
 
+    // 会社休日を取得
     const companyHolidays = await this.companyHolidayRepository.findByDateRange(startDate, endDate);
+    // 会社休日をカレンダーに設定
     const companyCalendar = new CompanyCalendar(companyHolidays);
 
     const assigneeIdToUser = new Map<number, { userId: string; userName?: string }>();
@@ -102,6 +104,7 @@ export class AssigneeGanttService implements IAssigneeGanttService {
         assigneeIdToUser.set(a.id, { userId: a.userId, userName: a.userName });
       }
     }
+    
     const assigneeIdToEntity = new Map<number, WbsAssignee>();
     for (const a of assignees) {
       if (a.id != null) assigneeIdToEntity.set(a.id, a);
@@ -125,7 +128,9 @@ export class AssigneeGanttService implements IAssigneeGanttService {
         continue;
       }
 
+      // 担当者を取得
       const wbsAssignee = task.assigneeId != null ? assigneeIdToEntity.get(task.assigneeId) : undefined;
+
       if (wbsAssignee) {
         // 個人予定も含めた稼働可能時間の総和で判定
         const schedules = await this.userScheduleRepository.findByUserIdAndDateRange(
@@ -140,7 +145,10 @@ export class AssigneeGanttService implements IAssigneeGanttService {
           totalAvailable += workingCalendar.getAvailableHours(day);
         }
         if (totalAvailable <= 0) {
-          const assigneeInfo = assigneeIdToUser.get(wbsAssignee.id!);
+          // 警告を追加
+
+          // const assigneeInfo = assigneeIdToUser.get(wbsAssignee.id!); // TODO:assigneeIdToEntityから取得したら？
+          const assigneeInfo = assigneeIdToEntity.get(wbsAssignee.id!);
           warnings.push({
             taskId: task.id?.toString() || '0',
             taskName: task.name,
@@ -152,7 +160,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
           });
         }
       } else {
-        // 担当者情報が無い場合は従来通り（会社休日のみ）で判定
+        // 担当者情報が無い場合は従来通り（会社休日のみ）で判定　
+        // TODO:担当者が割り当たってないタスクは考慮しなくて良いか
         let workingDays = 0;
         for (let d = new Date(yoteiStart); d <= yoteiEnd; d.setDate(d.getDate() + 1)) {
           const day = new Date(d);

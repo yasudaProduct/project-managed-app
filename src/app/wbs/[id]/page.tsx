@@ -28,7 +28,7 @@ import GanttV2Wrapper from "@/components/ganttv2/gantt-v2-wrapper";
 import { getMilestones } from "./milestone-actions";
 import MilestoneManagement from "@/components/milestone/milestone-management";
 import { WbsSummaryTables } from "@/components/wbs/wbs-summary-tables";
-import { AssigneeGanttChartWrapper } from "./assignee-gantt/assignee-gantt-chart-wrapper";
+import { AssigneeGanttChart } from "./assignee-gantt/assignee-gantt-chart";
 
 export default async function WbsManagementPage({
   params,
@@ -177,7 +177,7 @@ export default async function WbsManagementPage({
               <WbsSummaryTables projectId={project.id} wbsId={wbs.id} />
             </TabsContent>
             <TabsContent value="assignee-gantt">
-              <AssigneeGanttChartWrapper wbsId={wbs.id} />
+              <AssigneeGanttChart wbsId={wbs.id} />
             </TabsContent>
           </Tabs>
         </Suspense>

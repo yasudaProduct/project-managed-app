@@ -7,7 +7,7 @@ export interface CompanyHoliday {
 }
 
 export class CompanyCalendar {
-  private readonly standardWorkingHours = 7.5;
+  private readonly standardWorkingHours = 7.5; // TODO:設定から動的にする
   private companyHolidays: CompanyHoliday[] = [];
 
   constructor(companyHolidays: CompanyHoliday[] = []) {

@@ -28,59 +28,73 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
-interface AssigneeGanttChartWrapperProps {
+interface AssigneeGanttChartProps {
   wbsId: number;
 }
 
 type ViewMode = "week" | "month";
 
-// UI用のデータ型定義
-interface TaskAllocationUI {
+/**
+ * タスク配分
+ */
+interface TaskAllocation {
   taskId: string;
   taskName: string;
-  allocatedHours: number;
-  totalHours: number;
+  allocatedHours: number; // 配分された工数
+  totalHours: number; // 予定工数
   periodStart?: string;
   periodEnd?: string;
 }
 
-interface DailyWorkAllocationUI {
+/**
+ * 一日の作業負荷
+ */
+interface DailyWorkAllocation {
   date: Date;
-  availableHours: number;
-  taskAllocations: TaskAllocationUI[];
-  allocatedHours: number;
-  isOverloaded: boolean;
-  utilizationRate: number;
-  overloadedHours: number;
-  isWeekend: boolean;
-  isCompanyHoliday: boolean;
-  userSchedules: {
-    title: string;
-    startTime: string;
-    endTime: string;
-    durationHours: number;
+  availableHours: number; // 稼働可能時間
+  taskAllocations: TaskAllocation[];
+  allocatedHours: number; // 配分された工数
+  isOverloaded: boolean; // 過負荷かどうか
+  utilizationRate: number; // 稼働率
+  overloadedHours: number; // 過負荷時間
+  isWeekend: boolean; // 土日かどうか
+  isCompanyHoliday: boolean; // 会社休日かどうか
+  userSchedules: { // 個人予定
+    title: string; // タイトル
+    startTime: string; // 開始時間
+    endTime: string; // 終了時間
+    durationHours: number; // 期間
   }[];
-  isOverloadedByStandard: boolean;
-  overloadedByStandardHours: number;
-  rateAllowedHours: number;
-  isOverRateCapacity: boolean;
-  overRateHours: number;
+  isOverloadedByStandard: boolean; // 標準超過かどうか
+  overloadedByStandardHours: number; // 標準超過時間
+  rateAllowedHours: number; // レート基準の許容工数
+  isOverRateCapacity: boolean; // レート基準超過かどうか
+  overRateHours: number; // レート基準超過時間
 }
 
-interface AssigneeWorkloadUI {
+/**
+ * 担当者の作業負荷
+ */
+interface AssigneeWorkload {
   assigneeId: string;
   assigneeName: string;
-  dailyAllocations: DailyWorkAllocationUI[];
-  overloadedDays: DailyWorkAllocationUI[];
+  dailyAllocations: DailyWorkAllocation[]; // 一日の作業負荷
+  overloadedDays: DailyWorkAllocation[]; // 過負荷日
   assigneeRate: number;
 }
 
-export function AssigneeGanttChartWrapper({
+/**
+ * 担当者別ガントチャート
+ * @returns 
+ */
+export function AssigneeGanttChart({
   wbsId,
-}: AssigneeGanttChartWrapperProps) {
-  const [workloads, setWorkloads] = useState<AssigneeWorkloadUI[]>([]);
+}: AssigneeGanttChartProps) {
+  const [workloads, setWorkloads] = useState<AssigneeWorkload[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 警告（実現不可能タスク）
   const [warnings, setWarnings] = useState<{
     taskId: string;
     taskName: string;
@@ -94,9 +108,9 @@ export function AssigneeGanttChartWrapper({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedAssignee, setSelectedAssignee] =
-    useState<AssigneeWorkloadUI | null>(null);
+    useState<AssigneeWorkload | null>(null);
   const [selectedAllocation, setSelectedAllocation] =
-    useState<DailyWorkAllocationUI | null>(null);
+    useState<DailyWorkAllocation | null>(null);
 
   // 日付範囲を計算
   const getDateRange = (mode: ViewMode, baseDate: Date): Date[] => {
@@ -120,12 +134,6 @@ export function AssigneeGanttChartWrapper({
         startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
         endDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
         break;
-
-      default:
-        // デフォルトは現在日から2週間
-        startDate = new Date(baseDate);
-        endDate = new Date(baseDate);
-        endDate.setDate(startDate.getDate() + 13);
     }
 
     for (
@@ -139,13 +147,14 @@ export function AssigneeGanttChartWrapper({
     return dates;
   };
 
+  // 日付範囲
   const dateRange = getDateRange(viewMode, currentDate);
 
   // 警告（実現不可能タスク）の期間を担当者別・日付セットに展開
-  const warningDateMap = useMemo(() => {
+  const warningDateMap: Record<string, Set<string>> = useMemo(() => {
     const map: Record<string, Set<string>> = {};
     if (!warnings || warnings.length === 0 || dateRange.length === 0) return map;
-
+   
     const toLocalYMD = (d: Date) => {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -201,10 +210,10 @@ export function AssigneeGanttChartWrapper({
       const warn = result.warnings || [];
 
       // サーバー計算済み値を利用しつつ、日付だけDateに変換
-      const workloadObjects: AssigneeWorkloadUI[] = data.map((workloadData) => {
-        const dailyAllocations: DailyWorkAllocationUI[] =
+      const workloadObjects: AssigneeWorkload[] = data.map((workloadData) => {
+        const dailyAllocations: DailyWorkAllocation[] =
           workloadData.dailyAllocations.map((daily) => {
-            const taskAllocations: TaskAllocationUI[] =
+            const taskAllocations: TaskAllocation[] =
               daily.taskAllocations.map((task) => ({
                 taskId: task.taskId,
                 taskName: task.taskName,
@@ -277,6 +286,7 @@ export function AssigneeGanttChartWrapper({
     setCurrentDate(newDate);
   };
 
+  // ナビゲーション（次）
   const navigateNext = () => {
     const newDate = new Date(currentDate);
     switch (viewMode) {
@@ -292,6 +302,7 @@ export function AssigneeGanttChartWrapper({
     setCurrentDate(newDate);
   };
 
+  // 今日に戻る
   const goToToday = () => {
     setCurrentDate(new Date());
   };
@@ -299,7 +310,7 @@ export function AssigneeGanttChartWrapper({
   // セル クリック処理
   const handleCellClick = (assigneeId: string, date: Date) => {
     const workload = workloads.find((w) => w.assigneeId === assigneeId) || null;
-    let allocation: DailyWorkAllocationUI | null =
+    let allocation: DailyWorkAllocation | null =
       workload?.dailyAllocations.find(
         (d) => d.date.toDateString() === date.toDateString()
       ) || null;
@@ -352,6 +363,7 @@ export function AssigneeGanttChartWrapper({
     )}`;
   };
 
+  // 読み込み中
   if (loading) {
     return (
       <Card className="w-full">

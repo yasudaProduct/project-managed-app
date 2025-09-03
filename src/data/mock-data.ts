@@ -728,6 +728,12 @@ export const assigneeGanttMonthlyTestData = {
             assigneeId: "dummy06",
             rate: 0.8,
         },
+        {
+            id: 62,
+            wbsId: 60,
+            assigneeId: "dummy07",
+            rate: 1.0,
+        },
     ],
     wbsPhase: [
         {
@@ -882,6 +888,18 @@ export const assigneeGanttMonthlyTestData = {
             status: "IN_PROGRESS",
             startDate: new Date("2025-09-19"),
             endDate: new Date("2025-09-19"),
+            kosu: 8,
+        },
+        {
+            id: 72,
+            taskNo: "TEST-0013",
+            wbsId: 60,
+            phaseId: 60,
+            name: "月をまたぐ",
+            assigneeId: 62,
+            status: "IN_PROGRESS",
+            startDate: new Date("2025-09-30"),
+            endDate: new Date("2025-10-01"),
             kosu: 8,
         },
     ],
