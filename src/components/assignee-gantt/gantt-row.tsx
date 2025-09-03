@@ -36,9 +36,10 @@ interface GanttRowProps {
   assignee: AssigneeWorkloadUI;
   dateRange: Date[];
   onCellClick?: (assignee: string, date: Date) => void;
+  warningDates?: Set<string>; // YYYY-MM-DD セット
 }
 
-export function GanttRow({ assignee, dateRange, onCellClick }: GanttRowProps) {
+export function GanttRow({ assignee, dateRange, onCellClick, warningDates }: GanttRowProps) {
   const isWeekend = (date: Date) => {
     const dayOfWeek = date.getDay();
     return dayOfWeek === 0 || dayOfWeek === 6;
@@ -104,12 +105,16 @@ export function GanttRow({ assignee, dateRange, onCellClick }: GanttRowProps) {
           overloadedByStandardHours: 0
         };
 
+        const ymd = date.toISOString().split('T')[0];
+        const showWarning = warningDates?.has(ymd) === true;
+
         return (
           <GanttCell
             key={index}
             allocation={allocation || defaultAllocation}
             isWeekend={(allocation || defaultAllocation).isWeekend}
             isHoliday={(allocation || defaultAllocation).isCompanyHoliday}
+            showWarning={showWarning}
             onClick={handleCellClick}
           />
         );

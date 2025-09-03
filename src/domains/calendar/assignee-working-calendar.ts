@@ -65,7 +65,7 @@ export class AssigneeWorkingCalendar {
 
   private isFullDayOff(schedule: UserSchedule): boolean {
     // タイトルに「休暇」「有給」「休み」等が含まれる場合を全日休みとする
-    const offKeywords = ['休暇', '有給', '休み', '全休', '代休', '振休'];
+    const offKeywords = ['休暇', '有給', '休み', '全休', '代休', '振休', '有給休暇'];
     return offKeywords.some(keyword => schedule.title.includes(keyword));
   }
 

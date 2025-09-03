@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -81,6 +81,15 @@ export function AssigneeGanttChartWrapper({
   const [workloads, setWorkloads] = useState<AssigneeWorkloadUI[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<{
+    taskId: string;
+    taskName: string;
+    assigneeId?: string;
+    assigneeName?: string;
+    periodStart?: string;
+    periodEnd?: string;
+    reason: 'NO_WORKING_DAYS';
+  }[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -132,6 +141,37 @@ export function AssigneeGanttChartWrapper({
 
   const dateRange = getDateRange(viewMode, currentDate);
 
+  // 警告（実現不可能タスク）の期間を担当者別・日付セットに展開
+  const warningDateMap = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    if (!warnings || warnings.length === 0 || dateRange.length === 0) return map;
+
+    const toLocalYMD = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    for (const w of warnings) {
+      if (!w.assigneeId || !w.periodStart || !w.periodEnd) continue;
+      const start = new Date(w.periodStart);
+      const end = new Date(w.periodEnd);
+      const startYmd = toLocalYMD(start);
+      const endYmd = toLocalYMD(end);
+
+      for (const date of dateRange) {
+        const ymd = toLocalYMD(date);
+        if (ymd >= startYmd && ymd <= endYmd) {
+          if (!map[w.assigneeId]) map[w.assigneeId] = new Set<string>();
+          map[w.assigneeId].add(ymd);
+        }
+      }
+    }
+
+    return map;
+  }, [warnings, dateRange]);
+
   // データ取得用のServer Action呼び出し
   const fetchWorkloads = useCallback(async () => {
     const currentDateRange = getDateRange(viewMode, currentDate);
@@ -158,6 +198,7 @@ export function AssigneeGanttChartWrapper({
       }
 
       const data = result.data;
+      const warn = result.warnings || [];
 
       // サーバー計算済み値を利用しつつ、日付だけDateに変換
       const workloadObjects: AssigneeWorkloadUI[] = data.map((workloadData) => {
@@ -204,11 +245,13 @@ export function AssigneeGanttChartWrapper({
       });
 
       setWorkloads(workloadObjects);
+      setWarnings(warn);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "作業負荷の取得に失敗しました"
       );
       setWorkloads([]);
+      setWarnings([]);
     } finally {
       setLoading(false);
     }
@@ -371,6 +414,26 @@ export function AssigneeGanttChartWrapper({
             <span>期間: {formatPeriod()}</span>
             <span>担当者: {workloads.length}名</span>
           </div>
+          {warnings.length > 0 && (
+            <div className="mt-2 p-3 rounded border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle className="h-4 w-4" />
+                <span>実現不可能なタスクが見つかりました（すべて非稼働日）</span>
+              </div>
+              <ul className="list-disc pl-6 space-y-1">
+                {warnings.slice(0, 5).map((w, i) => (
+                  <li key={i} className="truncate">
+                    {w.taskName}
+                    {w.assigneeName ? ` / ${w.assigneeName}` : ''}
+                    {w.periodStart && w.periodEnd ? `（${new Date(w.periodStart).toLocaleDateString('ja-JP')} - ${new Date(w.periodEnd).toLocaleDateString('ja-JP')}）` : ''}
+                  </li>
+                ))}
+              </ul>
+              {warnings.length > 5 && (
+                <div className="text-xs text-gray-600 mt-1">他 {warnings.length - 5} 件</div>
+              )}
+            </div>
+          )}
         </CardHeader>
 
         <CardContent className="p-0">
@@ -399,6 +462,7 @@ export function AssigneeGanttChartWrapper({
                     key={workload.assigneeId}
                     assignee={workload}
                     dateRange={dateRange}
+                    warningDates={warningDateMap[workload.assigneeId]}
                     onCellClick={handleCellClick}
                   />
                 ))}
@@ -420,7 +484,7 @@ export function AssigneeGanttChartWrapper({
                 <SheetDescription>選択した日の作業負荷詳細</SheetDescription>
               </SheetHeader>
 
-              <div className="mt-6 space-y-4">
+              <div className="mt-6 space-y-1">
                 <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded">
                   <div className="text-sm">
                     <div className="text-gray-500">予定工数</div>
@@ -469,7 +533,7 @@ export function AssigneeGanttChartWrapper({
                     </div>
                   </div>
                   <div className="text-sm col-span-2">
-                    <div className="text-gray-500">レート基準</div>
+                    <div className="text-gray-500">レート基準({selectedAssignee.assigneeRate * 100}%)</div>
                     <div
                       className={
                         selectedAllocation.isOverRateCapacity
@@ -495,8 +559,8 @@ export function AssigneeGanttChartWrapper({
                           <div className="font-medium truncate mr-2">
                             {t.taskName}
                           </div>
-                          <div className="text-gray-600 flex items-center gap-2">
-                            <span>{t.totalHours.toFixed(2)}h</span>
+                          <div className="text-xs text-gray-600 flex items-center gap-2">
+                            <span>{t.totalHours.toFixed(2)}h <br />(内訳:{t.allocatedHours.toFixed(2)}h)</span>
                             {t.periodStart && t.periodEnd && (
                               <span className="text-xs text-gray-500">
                                 {new Date(t.periodStart).toLocaleDateString(

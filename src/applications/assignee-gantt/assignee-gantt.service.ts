@@ -75,6 +75,109 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     return workloads;
   }
 
+  async getAssigneeWarnings(
+    wbsId: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<{
+    taskId: string;
+    taskName: string;
+    assigneeId?: string;
+    assigneeName?: string;
+    periodStart?: Date;
+    periodEnd?: Date;
+    reason: 'NO_WORKING_DAYS';
+  }[]> {
+    const [tasks, assignees] = await Promise.all([
+      this.taskRepository.findByWbsId(wbsId),
+      this.wbsAssigneeRepository.findByWbsId(wbsId)
+    ]);
+
+    const companyHolidays = await this.companyHolidayRepository.findByDateRange(startDate, endDate);
+    const companyCalendar = new CompanyCalendar(companyHolidays);
+
+    const assigneeIdToUser = new Map<number, { userId: string; userName?: string }>();
+    for (const a of assignees) {
+      if (a.id != null) {
+        assigneeIdToUser.set(a.id, { userId: a.userId, userName: a.userName });
+      }
+    }
+    const assigneeIdToEntity = new Map<number, WbsAssignee>();
+    for (const a of assignees) {
+      if (a.id != null) assigneeIdToEntity.set(a.id, a);
+    }
+
+    const warnings: {
+      taskId: string;
+      taskName: string;
+      assigneeId?: string;
+      assigneeName?: string;
+      periodStart?: Date;
+      periodEnd?: Date;
+      reason: 'NO_WORKING_DAYS';
+    }[] = [];
+
+    for (const task of tasks) {
+      const yoteiStart = task.getYoteiStart();
+      const yoteiEnd = task.getYoteiEnd();
+
+      if (!yoteiStart || !yoteiEnd) {
+        continue;
+      }
+
+      const wbsAssignee = task.assigneeId != null ? assigneeIdToEntity.get(task.assigneeId) : undefined;
+      if (wbsAssignee) {
+        // 個人予定も含めた稼働可能時間の総和で判定
+        const schedules = await this.userScheduleRepository.findByUserIdAndDateRange(
+          wbsAssignee.userId,
+          new Date(yoteiStart),
+          new Date(yoteiEnd)
+        );
+        const workingCalendar = new AssigneeWorkingCalendar(wbsAssignee, companyCalendar, schedules);
+        let totalAvailable = 0;
+        for (let d = new Date(yoteiStart); d <= yoteiEnd; d.setDate(d.getDate() + 1)) {
+          const day = new Date(d);
+          totalAvailable += workingCalendar.getAvailableHours(day);
+        }
+        if (totalAvailable <= 0) {
+          const assigneeInfo = assigneeIdToUser.get(wbsAssignee.id!);
+          warnings.push({
+            taskId: task.id?.toString() || '0',
+            taskName: task.name,
+            assigneeId: assigneeInfo?.userId,
+            assigneeName: assigneeInfo?.userName || assigneeInfo?.userId,
+            periodStart: yoteiStart,
+            periodEnd: yoteiEnd,
+            reason: 'NO_WORKING_DAYS'
+          });
+        }
+      } else {
+        // 担当者情報が無い場合は従来通り（会社休日のみ）で判定
+        let workingDays = 0;
+        for (let d = new Date(yoteiStart); d <= yoteiEnd; d.setDate(d.getDate() + 1)) {
+          const day = new Date(d);
+          if (!companyCalendar.isCompanyHoliday(day)) {
+            workingDays += 1;
+          }
+        }
+        if (workingDays <= 0) {
+          const assigneeInfo = task.assigneeId != null ? assigneeIdToUser.get(task.assigneeId) : undefined;
+          warnings.push({
+            taskId: task.id?.toString() || '0',
+            taskName: task.name,
+            assigneeId: assigneeInfo?.userId,
+            assigneeName: assigneeInfo?.userName || assigneeInfo?.userId,
+            periodStart: yoteiStart,
+            periodEnd: yoteiEnd,
+            reason: 'NO_WORKING_DAYS'
+          });
+        }
+      }
+    }
+
+    return warnings;
+  }
+
   async getAssigneeWorkload(
     wbsId: number,
     assigneeId: string,
@@ -149,7 +252,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
         tasks,
         new Date(currentDate),
         availableHours,
-        companyCalendar
+        companyCalendar,
+        workingCalendar
       );
 
       const dailyAllocation = DailyWorkAllocation.create({
@@ -179,7 +283,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     tasks: Task[],
     date: Date,
     availableHours: number,
-    companyCalendar: CompanyCalendar
+    companyCalendar: CompanyCalendar,
+    workingCalendar: AssigneeWorkingCalendar
   ): TaskAllocation[] {
     const taskAllocations: TaskAllocation[] = [];
 
@@ -190,9 +295,31 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       return taskAllocations;
     }
 
-    // 各タスクの工数を日別に按分
+    // 各タスクの工数を日別に按分（期間内availableHours比率に基づく配分）
     for (const task of activeTasks) {
-      const allocatedHours = this.calculateTaskHoursForDate(task, date, availableHours, activeTasks.length, companyCalendar);
+      const yoteiStart = task.getYoteiStart();
+      const yoteiEnd = task.getYoteiEnd();
+      const totalHours = task.getYoteiKosus();
+
+      if (!yoteiStart || !yoteiEnd || !totalHours) {
+        continue;
+      }
+
+      // 期間全体の稼働可能時間を集計（個人予定・会社休日・稼働率=0を考慮）
+      let totalAvailableInPeriod = 0;
+      for (let d = new Date(yoteiStart); d <= yoteiEnd; d.setDate(d.getDate() + 1)) {
+        const day = new Date(d);
+        totalAvailableInPeriod += workingCalendar.getAvailableHours(day);
+      }
+
+      if (totalAvailableInPeriod <= 0) {
+        continue;
+      }
+
+      // 当日の稼働可能時間に比例して配分
+      const availableToday = workingCalendar.getAvailableHours(date);
+      const ratio = availableToday / totalAvailableInPeriod;
+      const allocatedHours = totalHours * ratio;
       if (allocatedHours > 0) {
         const taskAllocation = TaskAllocation.create({
           taskId: task.id?.toString() || '0',

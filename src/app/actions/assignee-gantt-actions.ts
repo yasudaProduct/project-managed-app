@@ -45,6 +45,15 @@ export interface WorkloadData {
 export interface AssigneeGanttResponse {
   success: boolean;
   data?: WorkloadData[];
+  warnings?: {
+    taskId: string;
+    taskName: string;
+    assigneeId?: string;
+    assigneeName?: string;
+    periodStart?: string;
+    periodEnd?: string;
+    reason: 'NO_WORKING_DAYS';
+  }[];
   error?: string;
 }
 
@@ -69,11 +78,18 @@ export async function getAssigneeWorkloads(
     const toUtcMidnight = (ymd: string) => new Date(`${ymd}T00:00:00.000Z`);
 
     // データを取得
-    const workloads = await assigneeGanttService.getAssigneeWorkloads(
+    const [workloads, warnings] = await Promise.all([
+      assigneeGanttService.getAssigneeWorkloads(
       wbsId,
       toUtcMidnight(startDate),
       toUtcMidnight(endDate)
-    );
+    ),
+      assigneeGanttService.getAssigneeWarnings(
+        wbsId,
+        toUtcMidnight(startDate),
+        toUtcMidnight(endDate)
+      )
+    ]);
 
     // プレーンオブジェクトに変換
     const plainWorkloads: WorkloadData[] = workloads.map(workload => ({
@@ -108,7 +124,16 @@ export async function getAssigneeWorkloads(
 
     return {
       success: true,
-      data: plainWorkloads
+      data: plainWorkloads,
+      warnings: warnings.map(w => ({
+        taskId: w.taskId,
+        taskName: w.taskName,
+        assigneeId: w.assigneeId,
+        assigneeName: w.assigneeName,
+        periodStart: w.periodStart ? w.periodStart.toISOString() : undefined,
+        periodEnd: w.periodEnd ? w.periodEnd.toISOString() : undefined,
+        reason: w.reason
+      }))
     };
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') {

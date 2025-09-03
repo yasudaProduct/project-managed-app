@@ -3,6 +3,11 @@ import { CompanyCalendar } from './company-calendar';
 import { WbsAssignee } from '../wbs/wbs-assignee';
 import { UserSchedule } from './assignee-working-calendar';
 
+/**
+ * 営業日案分期間
+ * @description
+ * 営業日案分期間は、担当者固有の稼働時間・休暇と会社既定の休日を考慮した営業日に応じて工数を案分する期間です。
+ */
 export class BusinessDayPeriod {
   private workingCalendar: AssigneeWorkingCalendar;
 

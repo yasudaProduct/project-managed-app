@@ -28,4 +28,21 @@ export interface IAssigneeGanttService {
     startDate: Date,
     endDate: Date
   ): Promise<AssigneeWorkload>;
+
+  /**
+   * 表示期間において、実現不可能（すべて非稼働日）のタスク警告を取得する
+   */
+  getAssigneeWarnings(
+    wbsId: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<{
+    taskId: string;
+    taskName: string;
+    assigneeId?: string;
+    assigneeName?: string;
+    periodStart?: Date;
+    periodEnd?: Date;
+    reason: 'NO_WORKING_DAYS';
+  }[]>;
 }

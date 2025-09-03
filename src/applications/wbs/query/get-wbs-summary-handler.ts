@@ -28,7 +28,10 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
 
   async execute(query: GetWbsSummaryQuery): Promise<WbsSummaryResult> {
     // WBSタスクを取得
+    console.log("WBSタスクを取得");
+    console.log(query.projectId, query.wbsId);
     const tasks = await this.wbsQueryRepository.getWbsTasks(query.projectId, query.wbsId);
+    console.log(tasks.length);
 
     // 工程リストを取得
     const phases = await this.wbsQueryRepository.getPhases(query.wbsId);
@@ -129,6 +132,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
    * 月別・担当者別集計は、月ごとにタスク数、予定工数、実績工数、差分を計算する
    */
   private async calculateMonthlyAssigneeSummary(tasks: WbsTaskData[], wbsId: number, calculationMode: AllocationCalculationMode) {
+    console.log(calculationMode);
     switch (calculationMode) {
       case AllocationCalculationMode.BUSINESS_DAY_ALLOCATION:
         return this.calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks, wbsId);
@@ -166,33 +170,33 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       const assigneeName = task.assignee.displayName;
       assignees.add(assigneeName);
 
-      // 担当者のWbsAssigneeを取得（稼働率を含む）
-      const wbsAssignee = assigneeMap.get(task.assignee.id.toString());
-      if (!wbsAssignee) {
-        // WbsAssigneeが見つからない場合は開始日基準ロジック
-        const date = new Date(task.yoteiStart);
-        const yearMonth = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
-        months.add(yearMonth);
+      // 担当者のWbsAssigneeを取得（WbsAssigneeが存在しない場合は考慮しない）
+      const wbsAssignee = assigneeMap.get(task.assignee.id.toString())!;
+      // if (!wbsAssignee) {
+      //   // WbsAssigneeが見つからない場合は開始日基準ロジック
+      //   const date = new Date(task.yoteiStart);
+      //   const yearMonth = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+      //   months.add(yearMonth);
 
-        const key = `${yearMonth}-${assigneeName}`;
-        const existing = dataMap.get(key) || {
-          assignee: assigneeName,
-          month: yearMonth,
-          taskCount: 0,
-          plannedHours: 0,
-          actualHours: 0,
-          difference: 0,
-          taskDetails: [],
-        };
+      //   const key = `${yearMonth}-${assigneeName}`;
+      //   const existing = dataMap.get(key) || {
+      //     assignee: assigneeName,
+      //     month: yearMonth,
+      //     taskCount: 0,
+      //     plannedHours: 0,
+      //     actualHours: 0,
+      //     difference: 0,
+      //     taskDetails: [],
+      //   };
 
-        existing.taskCount += 1;
-        existing.plannedHours += Number(task.yoteiKosu || 0);
-        existing.actualHours += Number(task.jissekiKosu || 0);
-        existing.difference = existing.actualHours - existing.plannedHours;
+      //   existing.taskCount += 1;
+      //   existing.plannedHours += Number(task.yoteiKosu || 0);
+      //   existing.actualHours += Number(task.jissekiKosu || 0);
+      //   existing.difference = existing.actualHours - existing.plannedHours;
 
-        dataMap.set(key, existing);
-        continue;
-      }
+      //   dataMap.set(key, existing);
+      //   continue;
+      // }
 
       // 月をまたぐかチェック
       const isSameMonth = !task.yoteiEnd || this.isSameMonth(task.yoteiStart, task.yoteiEnd);

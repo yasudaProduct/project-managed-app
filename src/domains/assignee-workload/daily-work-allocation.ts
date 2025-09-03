@@ -1,16 +1,19 @@
 import { TaskAllocation } from './task-allocation';
 
+/**
+ * 一日の作業負荷
+ */
 export class DailyWorkAllocation {
-  public readonly date: Date;
-  public readonly availableHours: number;
-  public readonly taskAllocations: TaskAllocation[];
+  public readonly date: Date; // 日付
+  public readonly availableHours: number; // 稼働可能時間
+  public readonly taskAllocations: TaskAllocation[]; // タスク配分
   public readonly isWeekend: boolean;
-  public readonly isCompanyHoliday: boolean;
-  public readonly userSchedules: {
-    title: string;
-    startTime: string;
-    endTime: string;
-    durationHours: number;
+  public readonly isCompanyHoliday: boolean; // 会社休日
+  public readonly userSchedules: { // ユーザースケジュール
+    title: string; // タイトル
+    startTime: string; // 開始時間
+    endTime: string; // 終了時間
+    durationHours: number; // 期間
   }[];
 
   private constructor(args: {
@@ -54,14 +57,28 @@ export class DailyWorkAllocation {
     return new DailyWorkAllocation(args);
   }
 
+  /**
+   * 配分工数
+   * @returns 配分工数
+   * @discreption タスク配分の配分工数を合計したもの
+   */
   public get allocatedHours(): number {
     return this.taskAllocations.reduce((total, task) => total + task.allocatedHours, 0);
   }
 
+  /**
+   * 配分工数が稼働可能時間を超えているかどうか
+   * @returns 配分工数が稼働可能時間を超えているかどうか
+   */
   public isOverloaded(): boolean {
     return this.allocatedHours > this.availableHours;
   }
 
+ /**
+  * 稼働率
+  * @returns 稼働率
+  * @discreption 配分工数 / 稼働可能時間
+  */ 
   public getUtilizationRate(): number {
     if (this.availableHours === 0) {
       return 0;
@@ -69,11 +86,21 @@ export class DailyWorkAllocation {
     return this.allocatedHours / this.availableHours;
   }
 
+  /**
+   * 稼働可能時間を超えている時間
+   * @returns 稼働可能時間を超えている時間
+   * @discreption 配分工数 - 稼働可能時間
+   */
   public getOverloadedHours(): number {
     const overload = this.allocatedHours - this.availableHours;
     return overload > 0 ? overload : 0;
   }
 
+  /**
+   * タスク配分を追加
+   * @param taskAllocation タスク配分
+   * @discreption タスク配分を追加
+   */
   public addTaskAllocation(taskAllocation: TaskAllocation): void {
     const existingIndex = this.taskAllocations.findIndex(task => 
       task.equals(taskAllocation)

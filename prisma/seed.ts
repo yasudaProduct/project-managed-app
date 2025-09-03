@@ -273,8 +273,10 @@ async function main() {
 
         for (const companyHoliday of mock.companyHolidays) {
             await prisma.companyHoliday.upsert({
-                // date はユニーク制約。重複日付をまとめて upsert する
-                where: { date: new Date(companyHoliday.date) },
+                where: { 
+                    id: companyHoliday.id,
+                    // date: new Date(companyHoliday.date) 
+                },
                 update: {
                     name: companyHoliday.name,
                     type: companyHoliday.type as CompanyHolidayType,
@@ -293,6 +295,12 @@ async function main() {
                 where: { id: userSchedule.id },
                 update: {
                     userId: userSchedule.userId,
+                    date: new Date(userSchedule.date),
+                    startTime: userSchedule.startTime,
+                    endTime: userSchedule.endTime,
+                    title: userSchedule.title,
+                    location: userSchedule.location,
+                    description: userSchedule.description,
                 },
                 create: {
                     id: userSchedule.id,

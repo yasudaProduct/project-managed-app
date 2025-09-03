@@ -31,10 +31,11 @@ interface GanttCellProps {
   allocation: DailyWorkAllocationUI;
   isWeekend: boolean;
   isHoliday: boolean;
+  showWarning?: boolean;
   onClick?: (allocation: DailyWorkAllocationUI) => void;
 }
 
-export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCellProps) {
+export function GanttCell({ allocation, isWeekend, isHoliday, showWarning, onClick }: GanttCellProps) {
   const utilizationRate = allocation.utilizationRate;
   const isOverloaded = allocation.isOverloaded;
   const isOverloadedByStandard = allocation.isOverloadedByStandard;
@@ -78,7 +79,17 @@ export function GanttCell({ allocation, isWeekend, isHoliday, onClick }: GanttCe
       )}
       onClick={() => onClick?.(allocation)}
     >
-      <span>{formatHours(allocation.allocatedHours)}</span>
+      <span className="relative inline-flex items-center">
+        {formatHours(allocation.allocatedHours)}
+        {showWarning && (
+          <span
+            className="absolute -top-2 -right-3 text-yellow-600"
+            title="実現不可能なタスク期間（全日非稼働）"
+          >
+            ⚠
+          </span>
+        )}
+      </span>
       {(isOverloaded || isOverloadedByStandard || allocation.isOverRateCapacity) && (
         <span className="ml-1 text-red-600 font-bold" title="過負荷">!</span>
       )}
