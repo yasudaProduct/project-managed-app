@@ -26,9 +26,14 @@ const formSchema = z.object({
   name: z.string().min(1, {
     message: "名前は必須です。",
   }),
-  code: z.string().min(1, {
-    message: "コードは必須です。",
-  }),
+  code: z
+    .string()
+    .min(1, {
+      message: "コードは必須です。",
+    })
+    .refine((value) => /^[a-zA-Z0-9]+$/.test(value), {
+      message: "コードは英数字で入力してください。",
+    }),
   seq: z
     .number()
     .min(1, {

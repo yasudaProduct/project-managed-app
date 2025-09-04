@@ -1,7 +1,9 @@
 "use server"
 
+import { formatDate } from "@/lib/date-util";
 import prisma from "@/lib/prisma";
 
+// TODO: サービス呼び出し
 export async function getWorkRecords() {
     const workRecords = await prisma.workRecord.findMany({
         include: {
@@ -15,6 +17,7 @@ export async function getWorkRecords() {
                 select: {
                     id: true,
                     name: true,
+                    taskNo: true,
                 },
             },
         },
@@ -24,15 +27,16 @@ export async function getWorkRecords() {
         id: workRecord.id,
         userId: workRecord.userId,
         userName: workRecord.user.name,
-        taskId: workRecord.taskId,
+        taskNo: workRecord.task?.taskNo,
         taskName: workRecord.task?.name,
-        date: workRecord.date,
-        hours_worked: workRecord.hours_worked,
+        date: formatDate(workRecord.date, "YYYY/MM/DD"),
+        hours_worked: Number(workRecord.hours_worked),
     }));
 
     return formattedWorkRecords;
 }
 
+// TODO: サービス呼び出し
 export async function getWorkRecordById(id: string) {
     return await prisma.workRecord.findUnique({
         where: {

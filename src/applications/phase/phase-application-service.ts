@@ -12,7 +12,7 @@ export interface IPhaseApplicationService {
 }
 
 /**
- * プロジェクトアプリケーションサービス
+ * 工程テンプレートアプリケーションサービス
  */
 @injectable()
 export class PhaseApplicationService implements IPhaseApplicationService {
@@ -74,6 +74,8 @@ export class PhaseApplicationService implements IPhaseApplicationService {
      * @returns 工程テンプレート
      */
     public async updatePhaseTemplate(phase: { id: number, name: string, code: string, seq: number }): Promise<{ success: boolean, phase?: PhaseType }> {
+
+        // 同じ工程名、工程コードがないことをチェック
         const cheackPhase = await this.phaseRepository.findAllTemplates();
         if (cheackPhase.some(p => p.id !== phase.id && (p.name === phase.name || p.code.value() === phase.code))) {
             return { success: false, phase: undefined };

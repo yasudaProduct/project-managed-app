@@ -10,9 +10,9 @@ export default async function PhasePage() {
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">工程一覧</h1>
+        <h1 className="text-3xl font-bold">工程テンプレート一覧</h1>
         <Link href="/wbs/phase/new">
-          <Button>新規工程作成</Button>
+          <Button>新規工程テンプレート作成</Button>
         </Link>
       </div>
       <DataTable

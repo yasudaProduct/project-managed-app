@@ -7,6 +7,7 @@ export async function getUsers() {
     return await prisma.users.findMany();
 }
 
+// TODO: サービス呼び出し
 export async function getUserById(id: string) {
     return await prisma.users.findUnique({
         where: {
@@ -15,6 +16,7 @@ export async function getUserById(id: string) {
     });
 }
 
+// TODO: サービス呼び出し
 export async function createUser(userData: { id: string, name: string; email: string, displayName: string }) {
     console.log(userData);
     const newUser = await prisma.users.create({
@@ -30,6 +32,7 @@ export async function createUser(userData: { id: string, name: string; email: st
     return { success: true, user: newUser }
 }
 
+// TODO: サービス呼び出し
 export async function updateUser(id: string, userData: { name: string; email: string, displayName: string }) {
     const updatedUser = await prisma.users.update({
         where: { id: id },

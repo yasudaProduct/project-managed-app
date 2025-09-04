@@ -45,15 +45,14 @@
         }
       ]
     ],
-    "gantt-chart": [
+    "mysql": [
       {
-        "name": "gantt-chart",
+        "name": "mysql",
         "autoExecuteCommands": true,
         "icon": "browser",
         "color": "terminal.ansiBlue",
         "commands": [
-          "cd ../gantt-chart",
-          "npm run dev"
+          "npm run mysql:setup"
         ]
       }
     ]

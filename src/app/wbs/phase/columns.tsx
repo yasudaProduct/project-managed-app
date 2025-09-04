@@ -45,7 +45,7 @@ export const columns: ColumnDef<Phase & { link?: string }>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <Link href={`/wbs/phase/${user.id}/edit`}>
+            <Link href={`/wbs/phase/${user.id}`}>
               <DropdownMenuItem>編集</DropdownMenuItem>
             </Link>
           </DropdownMenuContent>
