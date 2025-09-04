@@ -5,7 +5,7 @@ import {
   isUTCMidnight,
   ensureUTC,
   fromDatabase,
-} from "@/lib/date-utils";
+} from "@/lib/date-utils-utc";
 
 describe("date-utils", () => {
   describe("localDateStringToUTC", () => {
@@ -28,7 +28,7 @@ describe("date-utils", () => {
       // JST 2024-01-15 15:30:00
       const localDate = new Date(2024, 0, 15, 15, 30, 0);
       const result = localDateToUTCStartOfDay(localDate);
-      
+
       expect(result.toISOString()).toBe("2024-01-15T00:00:00.000Z");
       expect(result.getUTCDate()).toBe(15);
       expect(result.getUTCHours()).toBe(0);
@@ -37,7 +37,7 @@ describe("date-utils", () => {
     it("月末の日付でも正しく動作する", () => {
       const localDate = new Date(2024, 0, 31, 23, 59, 59);
       const result = localDateToUTCStartOfDay(localDate);
-      
+
       expect(result.toISOString()).toBe("2024-01-31T00:00:00.000Z");
     });
   });
@@ -46,7 +46,7 @@ describe("date-utils", () => {
     it("ローカル日付をUTC終了時刻に変換する", () => {
       const localDate = new Date(2024, 0, 15, 10, 0, 0);
       const result = localDateToUTCEndOfDay(localDate);
-      
+
       expect(result.toISOString()).toBe("2024-01-15T23:59:59.999Z");
       expect(result.getUTCDate()).toBe(15);
       expect(result.getUTCHours()).toBe(23);

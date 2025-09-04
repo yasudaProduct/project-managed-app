@@ -8,7 +8,7 @@ import { container } from "@/lib/inversify.config"
 import { ITaskApplicationService } from "@/applications/task/task-application-service";
 import { TaskStatus as TaskStatusDomain } from "@/domains/task/value-object/project-status";
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
-import { ensureUTC } from "@/lib/date-utils";
+import { ensureUTC } from "@/lib/date-utils-utc";
 
 const taskApplicationService = container.get<ITaskApplicationService>(SYMBOL.ITaskApplicationService);
 const taskFactory = container.get<ITaskFactory>(SYMBOL.ITaskFactory);

@@ -3,7 +3,7 @@ import { IProjectRepository } from "@/applications/projects/iproject-repository"
 import { Project } from "@/domains/project/project";
 import { ProjectStatus } from "@/domains/project/project-status";
 import { injectable } from "inversify";
-import { ensureUTC } from "@/lib/date-utils";
+import { ensureUTC } from "@/lib/date-utils-utc";
 
 @injectable()
 export class ProjectRepository implements IProjectRepository {

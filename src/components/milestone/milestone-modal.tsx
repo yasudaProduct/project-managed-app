@@ -29,7 +29,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Trash2, Calendar } from "lucide-react";
 import { utcToLocalDate } from "@/lib/date-display-utils";
-import { ensureUTC } from "@/lib/date-utils";
+import { ensureUTC } from "@/lib/date-utils-utc";
 
 interface MilestoneModalProps {
   isOpen: boolean;

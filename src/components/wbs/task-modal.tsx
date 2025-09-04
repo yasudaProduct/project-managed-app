@@ -623,6 +623,9 @@ export function TaskModal({
                               <SelectItem value="COMPLETED">
                                 {getTaskStatusName("COMPLETED")}
                               </SelectItem>
+                              <SelectItem value="ON_HOLD">
+                                {getTaskStatusName("ON_HOLD")}
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </FormControl>

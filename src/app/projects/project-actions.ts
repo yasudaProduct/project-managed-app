@@ -7,7 +7,7 @@ import { ProjectStatus as ProjectStatusPrisma } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { container } from "@/lib/inversify.config"
 import { Project } from "@/types/project"
-import { ensureUTC } from "@/lib/date-utils"
+import { ensureUTC } from "@/lib/date-utils-utc"
 
 const projectApplicationService = container.get<IProjectApplicationService>(SYMBOL.IProjectApplicationService);
 
@@ -93,8 +93,8 @@ export async function updateProject(
             id: projectId,
             name: projectData.name,
             description: projectData.description,
-            startDate: ensureUTC(projectData.startDate),
-            endDate: ensureUTC(projectData.endDate),
+            startDate: new Date(projectData.startDate!),
+            endDate: new Date(projectData.endDate!),
             status: projectData.status,
         }
     );

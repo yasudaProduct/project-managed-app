@@ -61,9 +61,17 @@ export function DataTable<TData extends { link?: string }, TValue>({
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                onClick={() =>
-                  row.original.link && router.push(row.original.link)
-                }
+                onClick={(e) => {
+                  const el = e.target as HTMLElement;
+                  // リンクがある場合はリンクをクリックしたとみなす
+                  if (
+                    el.closest(
+                      'a, button, [role="button"], [data-no-row-click]'
+                    )
+                  )
+                    return;
+                  if (row.original.link) router.push(row.original.link);
+                }}
                 className={row.original.link ? "cursor-pointer" : undefined}
               >
                 {row.getVisibleCells().map((cell) => (

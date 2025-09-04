@@ -23,8 +23,8 @@ export default async function EditProjectPage({
           id: project.id,
           name: project.name,
           description: project.description!,
-          startDate: project.startDate.toISOString(),
-          endDate: project.endDate.toISOString(),
+          startDate: project.startDate,
+          endDate: project.endDate,
           status: project.status,
         }}
       />

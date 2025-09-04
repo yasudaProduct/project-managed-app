@@ -16,14 +16,7 @@ import { Milestone } from "@/types/wbs";
 import { MilestoneModal } from "./milestone-modal";
 import { deleteMilestone } from "@/app/wbs/[id]/milestone-actions";
 import { toast } from "@/hooks/use-toast";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  Target,
-  Calendar,
-  Clock,
-} from "lucide-react";
+import { Plus, Edit, Trash2, Target, Calendar, Clock } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,7 +40,9 @@ export default function MilestoneManagement({
 }: MilestoneManagementProps) {
   const [milestones, setMilestones] = useState<Milestone[]>(initialMilestones);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingMilestone, setEditingMilestone] = useState<Milestone | undefined>();
+  const [editingMilestone, setEditingMilestone] = useState<
+    Milestone | undefined
+  >();
   const [deleteConfirm, setDeleteConfirm] = useState<Milestone | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -88,7 +83,7 @@ export default function MilestoneManagement({
           description: `${deleteConfirm.name}を削除しました`,
         });
         // ローカル状態からも削除
-        setMilestones(prev => prev.filter(m => m.id !== deleteConfirm.id));
+        setMilestones((prev) => prev.filter((m) => m.id !== deleteConfirm.id));
       } else {
         toast({
           title: "削除エラー",
@@ -109,9 +104,11 @@ export default function MilestoneManagement({
   };
 
   const formatDate = (date: Date | string) => {
-    const localDate = utcToLocalDate(typeof date === "string" ? new Date(date) : date);
+    const localDate = utcToLocalDate(
+      typeof date === "string" ? new Date(date) : date
+    );
     if (!localDate) return "無効な日付";
-    
+
     return localDate.toLocaleDateString("ja-JP", {
       year: "numeric",
       month: "long",
@@ -121,13 +118,15 @@ export default function MilestoneManagement({
   };
 
   const getDaysFromNow = (date: Date | string) => {
-    const localDate = utcToLocalDate(typeof date === "string" ? new Date(date) : date);
+    const localDate = utcToLocalDate(
+      typeof date === "string" ? new Date(date) : date
+    );
     if (!localDate) return 0;
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     localDate.setHours(0, 0, 0, 0);
-    
+
     const diffTime = localDate.getTime() - today.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
@@ -155,7 +154,10 @@ export default function MilestoneManagement({
           <h2 className="text-xl font-semibold">マイルストーン一覧</h2>
           <Badge variant="outline">{milestones.length}件</Badge>
         </div>
-        <Button onClick={handleCreateMilestone} className="flex items-center gap-2">
+        <Button
+          onClick={handleCreateMilestone}
+          className="flex items-center gap-2"
+        >
           <Plus className="h-4 w-4" />
           新規作成
         </Button>
@@ -165,7 +167,9 @@ export default function MilestoneManagement({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">総マイルストーン数</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              総マイルストーン数
+            </CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -180,10 +184,12 @@ export default function MilestoneManagement({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {milestones.filter(m => {
-                const days = getDaysFromNow(m.date);
-                return days >= 0 && days <= 30;
-              }).length}
+              {
+                milestones.filter((m) => {
+                  const days = getDaysFromNow(m.date);
+                  return days >= 0 && days <= 30;
+                }).length
+              }
             </div>
           </CardContent>
         </Card>
@@ -195,22 +201,26 @@ export default function MilestoneManagement({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {milestones.filter(m => {
-                const days = getDaysFromNow(m.date);
-                return days >= 0 && days <= 7;
-              }).length}
+              {
+                milestones.filter((m) => {
+                  const days = getDaysFromNow(m.date);
+                  return days >= 0 && days <= 7;
+                }).length
+              }
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">過去のマイルストーン</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              過去のマイルストーン
+            </CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {milestones.filter(m => getDaysFromNow(m.date) < 0).length}
+              {milestones.filter((m) => getDaysFromNow(m.date) < 0).length}
             </div>
           </CardContent>
         </Card>
@@ -266,7 +276,9 @@ export default function MilestoneManagement({
                             {Math.abs(daysFromNow)}日経過
                           </span>
                         ) : daysFromNow === 0 ? (
-                          <span className="font-medium text-orange-600">今日</span>
+                          <span className="font-medium text-orange-600">
+                            今日
+                          </span>
                         ) : (
                           <span className="font-medium">
                             あと{daysFromNow}日
@@ -314,7 +326,10 @@ export default function MilestoneManagement({
       />
 
       {/* 削除確認ダイアログ */}
-      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+      <AlertDialog
+        open={!!deleteConfirm}
+        onOpenChange={() => setDeleteConfirm(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>マイルストーンを削除しますか？</AlertDialogTitle>
@@ -323,7 +338,9 @@ export default function MilestoneManagement({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>キャンセル</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>
+              キャンセル
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               disabled={isDeleting}

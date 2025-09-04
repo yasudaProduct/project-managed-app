@@ -20,6 +20,11 @@ function toValidDate(value: Date | string | number | undefined | null): Date | u
   return undefined;
 }
 
+/**
+ * UTC日付をローカル日付として解釈し、YYYY-MM-DD形式で表示
+ * @param date UTC日付
+ * @returns 
+ */
 export function formatUTCDateForDisplay(date: Date | string | number | undefined | null): string {
   const d = toValidDate(date);
   if (!d) return "";
