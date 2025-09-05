@@ -2,13 +2,12 @@ import { notFound } from 'next/navigation';
 import { AssigneeGanttChart } from './assignee-gantt-chart';
 
 interface AssigneeGanttPageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
-export default function AssigneeGanttPage({ params }: AssigneeGanttPageProps) {
-  const wbsId = parseInt(params.id);
+export default async function AssigneeGanttPage({ params }: AssigneeGanttPageProps) {
+  const { id } = await params;
+  const wbsId = parseInt(id);
   
   if (isNaN(wbsId)) {
     notFound();

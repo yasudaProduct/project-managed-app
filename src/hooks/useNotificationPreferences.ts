@@ -168,7 +168,7 @@ export function useNotificationPreferences() {
     keys: { p256dh: string; auth: string };
     userAgent?: string;
   }) => {
-    pushSubscriptionAction(null, subscriptionData);
+    pushSubscriptionAction(subscriptionData);
   }, [pushSubscriptionAction]);
 
   const unsubscribeFromPush = useCallback(() => {

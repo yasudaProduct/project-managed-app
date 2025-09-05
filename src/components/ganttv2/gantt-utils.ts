@@ -286,15 +286,19 @@ export function groupTasks(
 
   return Array.from(groupMap.entries()).map(([id, tasks]) => ({
     id,
-    name: tasks[0]
-      ? groupBy === "phase"
-        ? tasks[0].phase?.name || "未分類"
-        : groupBy === "assignee"
-          ? tasks[0].assignee?.displayName || "未割り当て"
-          : groupBy === "status"
-            ? getTaskStatusName(tasks[0].status)
-            : "すべてのタスク"
-      : "未分類",
+    name: (
+      tasks[0]
+        ? (
+          groupBy === "phase"
+            ? tasks[0].phase?.name
+            : groupBy === "assignee"
+              ? tasks[0].assignee?.displayName
+              : groupBy === "status"
+                ? getTaskStatusName(tasks[0].status)
+                : "すべてのタスク"
+        )
+        : "未分類"
+    ) ?? "未分類",
     tasks: sortTasksByStartDate(tasks), // 各グループ内でタスクをソート
     collapsed: collapsedGroups.has(id),
   }));

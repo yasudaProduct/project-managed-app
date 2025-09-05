@@ -556,9 +556,6 @@ export const TaskTable = ({
                   checked={
                     selectedTasks.size === tasks.length && tasks.length > 0
                   }
-                  indeterminate={
-                    selectedTasks.size > 0 && selectedTasks.size < tasks.length
-                  }
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>

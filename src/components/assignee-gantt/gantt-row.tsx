@@ -23,6 +23,8 @@ interface DailyWorkAllocationUI {
   userSchedules: { title: string; startTime: string; endTime: string; durationHours: number }[];
   isOverloadedByStandard: boolean;
   overloadedByStandardHours: number;
+  isOverRateCapacity: boolean;
+  overRateHours: number;
 }
 
 interface AssigneeWorkloadUI {
@@ -102,7 +104,9 @@ export function GanttRow({ assignee, dateRange, onCellClick, warningDates }: Gan
           isCompanyHoliday: isHoliday(date),
           userSchedules: [],
           isOverloadedByStandard: false,
-          overloadedByStandardHours: 0
+          overloadedByStandardHours: 0,
+          isOverRateCapacity: false,
+          overRateHours: 0
         };
 
         const ymd = date.toISOString().split('T')[0];

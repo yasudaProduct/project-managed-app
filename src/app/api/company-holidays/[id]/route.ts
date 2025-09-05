@@ -13,11 +13,12 @@ const updateSchema = z.object({
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
-    if (isNaN(id)) {
+    const { id } = await params;
+    const holidayId = parseInt(id);
+    if (isNaN(holidayId)) {
       return NextResponse.json(
         { message: "不正なIDです" },
         { status: 400 }
@@ -29,7 +30,7 @@ export async function PUT(
 
     // 更新対象の休日が存在するかチェック
     const existingHoliday = await prisma.companyHoliday.findUnique({
-      where: { id },
+      where: { id: holidayId },
     });
 
     if (!existingHoliday) {
@@ -43,7 +44,7 @@ export async function PUT(
     const dateConflict = await prisma.companyHoliday.findFirst({
       where: {
         date: new Date(validatedData.date),
-        id: { not: id },
+        id: { not: holidayId },
       },
     });
 
@@ -56,7 +57,7 @@ export async function PUT(
 
     // 会社休日を更新
     const updatedHoliday = await prisma.companyHoliday.update({
-      where: { id },
+      where: { id: holidayId },
       data: {
         date: new Date(validatedData.date),
         name: validatedData.name,
@@ -93,11 +94,12 @@ export async function PUT(
 // DELETE: 会社休日削除
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
-    if (isNaN(id)) {
+    const { id } = await params;
+    const holidayId = parseInt(id);
+    if (isNaN(holidayId)) {
       return NextResponse.json(
         { message: "不正なIDです" },
         { status: 400 }
@@ -106,7 +108,7 @@ export async function DELETE(
 
     // 削除対象の休日が存在するかチェック
     const existingHoliday = await prisma.companyHoliday.findUnique({
-      where: { id },
+      where: { id: holidayId },
     });
 
     if (!existingHoliday) {
@@ -118,7 +120,7 @@ export async function DELETE(
 
     // 会社休日を削除
     await prisma.companyHoliday.delete({
-      where: { id },
+      where: { id: holidayId },
     });
 
     return NextResponse.json(
@@ -137,11 +139,12 @@ export async function DELETE(
 // GET: 個別の会社休日取得
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
-    if (isNaN(id)) {
+    const { id } = await params;
+    const holidayId = parseInt(id);
+    if (isNaN(holidayId)) {
       return NextResponse.json(
         { message: "不正なIDです" },
         { status: 400 }
@@ -149,7 +152,7 @@ export async function GET(
     }
 
     const holiday = await prisma.companyHoliday.findUnique({
-      where: { id },
+      where: { id: holidayId },
     });
 
     if (!holiday) {

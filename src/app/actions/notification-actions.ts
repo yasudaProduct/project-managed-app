@@ -50,7 +50,7 @@ export async function markNotificationAsRead(
   formDataOrIds: FormData | { notificationIds: string[] }
 ): Promise<NotificationActionResult> {
   try {
-    const userId = await getCurrentUserId();
+    const userId = await getCurrentUserIdOrThrow();
 
     let data;
     if (formDataOrIds instanceof FormData) {
@@ -168,8 +168,13 @@ export async function updateNotificationPreferences(
     };
 
     const validatedData = PreferencesSchema.parse(rawData);
+    const payload = {
+      ...validatedData,
+      quietHoursStart: validatedData.quietHoursStart ?? undefined,
+      quietHoursEnd: validatedData.quietHoursEnd ?? undefined,
+    };
 
-    const updatedPreferences = await notificationService.updatePreferences(userId, validatedData);
+    const updatedPreferences = await notificationService.updatePreferences(userId, payload);
 
     // キャッシュを無効化
     revalidateTag('notification-preferences');
@@ -248,7 +253,7 @@ export async function getUnreadCount(): Promise<NotificationActionResult> {
 export async function getNotificationPreferences(): Promise<NotificationActionResult> {
   console.log('getNotificationPreferences');
   try {
-    const userId = await getCurrentUserId();
+    const userId = await getCurrentUserIdOrThrow();
 
     const preferences = await notificationService.getPreferences(userId);
     console.log('preferences', preferences);

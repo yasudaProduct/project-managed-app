@@ -5,7 +5,7 @@ import { NotificationChannelVO, NotificationChannel } from './notification-chann
 export interface NotificationData {
   taskId?: number;
   taskNo?: string;
-  projectId?: number;
+  projectId?: string;
   projectName?: string;
   phaseId?: number;
   phaseName?: string;

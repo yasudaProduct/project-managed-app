@@ -6,7 +6,7 @@ import { TaskAllocation } from '@/domains/assignee-workload/task-allocation';
 import type { ITaskRepository } from '@/applications/task/itask-repository';
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
-import * as iwbsAssigneeRepository from '@/applications/wbs/iwbs-assignee-repository';
+import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import { SYMBOL } from '@/types/symbol';
 import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
@@ -20,7 +20,7 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     @inject(SYMBOL.ITaskRepository) private readonly taskRepository: ITaskRepository,
     @inject(SYMBOL.IUserScheduleRepository) private readonly userScheduleRepository: IUserScheduleRepository,
     @inject(SYMBOL.ICompanyHolidayRepository) private readonly companyHolidayRepository: ICompanyHolidayRepository,
-    @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: iwbsAssigneeRepository.IWbsAssigneeRepository
+    @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: IWbsAssigneeRepository
   ) { }
 
   async getAssigneeWorkloads(

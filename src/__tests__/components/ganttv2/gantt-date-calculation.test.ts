@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, it } from '@jest/globals';
 
 describe('ガントチャート日付計算の検証', () => {
   const chartWidth = 1000;

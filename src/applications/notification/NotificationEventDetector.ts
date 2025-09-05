@@ -15,7 +15,7 @@ export interface TaskDeadlineInfo {
   assigneeId?: number;
   assigneeName?: string;
   assigneeUserId?: string;
-  projectId: number;
+  projectId: string;
   projectName: string;
   endDate: Date;
   daysRemaining: number;
@@ -29,7 +29,7 @@ export interface ManhourInfo {
   assigneeId?: number;
   assigneeName?: string;
   assigneeUserId?: string;
-  projectId: number;
+  projectId: string;
   projectName: string;
   plannedHours: number;
   actualHours: number;
@@ -37,7 +37,7 @@ export interface ManhourInfo {
 }
 
 export interface ScheduleDelayInfo {
-  projectId: number;
+  projectId: string;
   projectName: string;
   projectManagerId?: string;
   delayedTaskCount: number;
@@ -138,8 +138,7 @@ export class NotificationEventDetector {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 7);
 
-    // TODO: 実際のタスクリポジトリの実装に合わせて調整
-    // この実装は仮のものです
+    // TODO: 仮の実装 Taskドメインにメソッド生やしてもいいかも
     const tasks = await this.taskRepository.findTasksByPeriod(startDate, endDate);
 
     const taskInfos: TaskDeadlineInfo[] = [];
@@ -160,12 +159,12 @@ export class NotificationEventDetector {
       if (daysRemaining >= 0 && daysRemaining <= 7) {
         taskInfos.push({
           id: task.id!,
-          taskNo: task.taskNo.value,
+          taskNo: task.taskNo.getValue(),
           name: task.name,
           assigneeId: task.assigneeId,
           assigneeName: task.assignee?.name,
-          assigneeUserId: task.assignee?.userId,
-          projectId: task.wbsId, // WBS IDをプロジェクトIDとして使用
+          assigneeUserId: task.assignee?.id!.toString(),
+          projectId: "1", // TODO: 修正要
           projectName: '', // プロジェクト名は別途取得が必要
           endDate,
           daysRemaining,
@@ -181,7 +180,8 @@ export class NotificationEventDetector {
     const now = new Date();
 
     // 期限が過ぎているタスクを取得
-    const tasks = await this.taskRepository.findOverdueTasks(now);
+    // const tasks = await this.taskRepository.findOverdueTasks(now);
+    const tasks = await this.taskRepository.findTasksByPeriod(now, now); // TODO: 仮
 
     const taskInfos: TaskDeadlineInfo[] = [];
 
@@ -198,12 +198,12 @@ export class NotificationEventDetector {
       if (daysOverdue > 0) {
         taskInfos.push({
           id: task.id!,
-          taskNo: task.taskNo.value,
+          taskNo: task.taskNo.getValue(),
           name: task.name,
           assigneeId: task.assigneeId,
           assigneeName: task.assignee?.name,
-          assigneeUserId: task.assignee?.userId,
-          projectId: task.wbsId,
+          assigneeUserId: task.assignee?.id!.toString(),
+          projectId: "1", // TODO: 修正要
           projectName: '',
           endDate,
           daysRemaining: -daysOverdue,
@@ -217,7 +217,8 @@ export class NotificationEventDetector {
 
   private async getManhourExceededTasks(): Promise<ManhourInfo[]> {
     // 進行中のタスクで工数実績があるものを取得
-    const tasks = await this.taskRepository.findActiveTasksWithWorkRecords();
+    // const tasks = await this.taskRepository.findActiveTasksWithWorkRecords();
+    const tasks = await this.taskRepository.findAll(); // TODO: 仮
 
     const manhourInfos: ManhourInfo[] = [];
 
@@ -226,7 +227,8 @@ export class NotificationEventDetector {
 
       // 実績工数を計算
       const actualHours = task.workRecords.reduce((sum, record) =>
-        sum + parseFloat(record.hoursWorked.toString()), 0
+        // sum + parseFloat(record.hoursWorked.toString()), 0  一旦コメント
+      50, 0// TODO: 仮
       );
 
       // 予定工数を取得 (仮の実装)
@@ -240,12 +242,12 @@ export class NotificationEventDetector {
         if (percentage >= 80) {
           manhourInfos.push({
             id: task.id!,
-            taskNo: task.taskNo.value,
+            taskNo: task.taskNo.getValue(),
             name: task.name,
             assigneeId: task.assigneeId,
             assigneeName: task.assignee?.name,
-            assigneeUserId: task.assignee?.userId,
-            projectId: task.wbsId,
+            assigneeUserId: task.assignee?.id!.toString(),
+            projectId: "1", // TODO: 修正要
             projectName: '',
             plannedHours,
             actualHours,
@@ -260,12 +262,14 @@ export class NotificationEventDetector {
 
   private async getScheduleDelayInfo(): Promise<ScheduleDelayInfo[]> {
     // アクティブなプロジェクトを取得
-    const projects = await this.projectRepository.findActiveProjects();
+    // const projects = await this.projectRepository.findActiveProjects();
+    const projects = await this.projectRepository.findAll(); // TODO: 仮
 
     const delayInfos: ScheduleDelayInfo[] = [];
 
     for (const project of projects) {
-      const delayedTasks = await this.taskRepository.findDelayedTasksByProject(project.id);
+      const delayedTasks = await this.taskRepository.findAll(); // TODO: 仮
+      // const delayedTasks = await this.taskRepository.findDelayedTasksByProject(project.id);
 
       if (delayedTasks.length > 0) {
         const criticalDelayDays = Math.max(...delayedTasks.map(task => {
@@ -274,7 +278,7 @@ export class NotificationEventDetector {
         }));
 
         delayInfos.push({
-          projectId: project.id,
+          projectId: project.id!,
           projectName: project.name,
           projectManagerId: undefined, // プロジェクトマネージャーID (実装が必要)
           delayedTaskCount: delayedTasks.length,

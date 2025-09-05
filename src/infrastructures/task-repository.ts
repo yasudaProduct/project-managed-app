@@ -333,4 +333,10 @@ export class TaskRepository implements ITaskRepository {
             where: { id },
         });
     }
+
+    async findTasksByPeriod(startDate: Date, endDate: Date): Promise<Task[]> {
+        
+        // TODO: 未実装
+        return [];
+    }
 }

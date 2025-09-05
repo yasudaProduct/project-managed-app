@@ -12,9 +12,30 @@ import {
   GanttChart,
   GroupBy,
 } from "@/components/ganttv3";
-import { defaultGanttStyle } from "@/data/sampleData";
 import { useParams } from "next/navigation";
 import { getGanttTasks as getGanttTasks, getPhases } from "./action";
+
+const defaultGanttStyle: GanttStyle = {
+  theme: 'modern',
+  showGrid: true,
+  showProgress: true,
+  showDependencies: true,
+  showCriticalPath: true,
+  showWeekends: true,
+  showTodayLine: true,
+  taskHeight: 16,
+  rowSpacing: 4,
+  labelPosition: 'inside',
+  colors: {
+      primary: '#3B82F6',
+      secondary: '#6B7280',
+      accent: '#10B981',
+      milestone: '#EF4444',
+      criticalPath: '#DC2626',
+      weekend: '#F3F4F6',
+      today: '#F59E0B'
+  }
+};
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
