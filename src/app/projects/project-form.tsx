@@ -42,7 +42,8 @@ const formSchema = z.object({
   endDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
     message: "終了予定日は YYYY/MM/DD 形式で入力してください。",
   }),
-  status: z.nativeEnum(ProjectStatus),
+  status: z.nativeEnum(ProjectStatus).optional() // TODO: 更新の場合は必須にする
+  , 
 });
 
 type ProjectFormProps = {
@@ -52,7 +53,7 @@ type ProjectFormProps = {
     description?: string;
     startDate: Date;
     endDate: Date;
-    status: ProjectStatus;
+    status?: ProjectStatus;
   };
 };
 
@@ -84,7 +85,10 @@ export function ProjectForm({ project }: ProjectFormProps) {
         console.log("values", values);
         const { project: updatedProject, error } = await updateProject(
           project.id,
-          values
+          {
+            ...values,
+            status: values.status!
+          }
         );
         if (!updatedProject) {
           toast({
@@ -206,6 +210,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
             </FormItem>
           )}
         />
+        {project && 
         <FormField
           control={form.control}
           name="status"
@@ -227,6 +232,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
             </FormItem>
           )}
         />
+      }
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting
             ? "保存中..."

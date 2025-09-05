@@ -83,7 +83,7 @@ export async function updateProject(
         description?: string
         startDate?: string
         endDate?: string
-        status?: ProjectStatusPrisma
+        status: ProjectStatusPrisma
     },
 ): Promise<{ success: boolean, error?: string, id?: string, project?: Project }> {
 
