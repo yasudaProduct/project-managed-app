@@ -15,6 +15,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
+import { getProjectStatusName } from "@/lib/utils";
 
 export default async function ProjectPage({
   params,
@@ -58,7 +59,7 @@ export default async function ProjectPage({
               variant={project.status === "ACTIVE" ? "default" : "secondary"}
               className="text-xs"
             >
-              {project.status}
+              {getProjectStatusName(project.status)}
             </Badge>
           </div>
 
@@ -75,12 +76,12 @@ export default async function ProjectPage({
                 WBS作成
               </Button>
             </Link>
-            <Link href={`/qqa/${project.id}`}>
+            {/* <Link href={`/qqa/${project.id}`}>
               <Button size="sm" variant="outline" className="gap-2">
                 <BarChart3 className="h-4 w-4" />
                 定量品質評価
               </Button>
-            </Link>
+            </Link> */}
           </div>
         </div>
       </div>
@@ -104,6 +105,15 @@ export default async function ProjectPage({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                  プロジェクトID
+                </h3>
+                <div className="flex items-center gap-2 text-sm">
+                  <FileText className="h-4 w-4" />
+                  {project.id}
+                </div>
+              </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
                   開始日

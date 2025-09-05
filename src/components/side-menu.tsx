@@ -97,13 +97,6 @@ export function SideMenu() {
               スケジュール取込
             </Link>
             <Link
-              href="/schedule-generator"
-              className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
-            >
-              <Calendar className="h-4 w-4" />
-              予定自動作成
-            </Link>
-            <Link
               href="/company-holidays"
               className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
             >

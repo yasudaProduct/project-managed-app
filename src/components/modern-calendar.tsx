@@ -146,7 +146,7 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 mx-8">
       {/* Sidebar */}
       <div className="w-64 bg-white border-r border-gray-200 p-4 overflow-y-auto">
         <div className="mt-12 mb-6">

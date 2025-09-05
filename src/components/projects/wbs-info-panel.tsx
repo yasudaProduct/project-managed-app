@@ -101,7 +101,7 @@ export function WbsInfoPanel({ selectedWbs }: WbsInfoPanelProps) {
         </CardTitle>
         <CardDescription>WBS ID: {selectedWbs.id}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 w-[50%]">
         {/* アクション */}
         <div className="space-y-2">
           <div className="space-y-2">
@@ -113,46 +113,6 @@ export function WbsInfoPanel({ selectedWbs }: WbsInfoPanelProps) {
               >
                 <ExternalLink className="h-4 w-4" />
                 WBS詳細を表示
-              </Button>
-            </Link>
-            <Link href={`/wbs/${selectedWbs.id}/dashboard`} className="block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start gap-2"
-              >
-                <BarChart className="h-4 w-4" />
-                ダッシュボード
-              </Button>
-            </Link>
-            <Link href={`/wbs/${selectedWbs.id}/ganttv2`} className="block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start gap-2"
-              >
-                <Calendar className="h-4 w-4" />
-                ガントチャート
-              </Button>
-            </Link>
-            <Link href={`/wbs/${selectedWbs.id}/milestone`} className="block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start gap-2"
-              >
-                <Target className="h-4 w-4" />
-                マイルストーン管理
-              </Button>
-            </Link>
-            <Link href={`/wbs/${selectedWbs.id}/assignee`} className="block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start gap-2"
-              >
-                <Users className="h-4 w-4" />
-                担当者管理
               </Button>
             </Link>
           </div>
