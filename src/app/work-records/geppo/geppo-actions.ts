@@ -56,11 +56,15 @@ export async function getGeppoFilterOptions() {
 
 /**
  * 作業実績を検索
+ * @param filters 検索条件
+ * @param pagination ページネーション
+ * @returns 検索結果
  */
 export async function searchGeppoWorkEntries(
   filters: GeppoSearchFilters,
   pagination: GeppoPaginationOptions
 ) {
+  // TODO: queryへ移行する
   try {
     const geppoService = container.get<IGeppoApplicationService>(SYMBOL.IGeppoApplicationService)
 

@@ -19,9 +19,17 @@ import {
 } from '@/app/actions/geppo-import'
 import { GeppoImportValidation, GeppoImportPreview, GeppoImportResult, ProjectImportOption } from '@/domains/geppo-import/geppo-import-result'
 
+// TODO: インポートフローの変更 server action と api(cron呼出し)から呼び出される想定
+// 1. 設定：システム側の進行中プロジェクトを選択
+// 2. 設定：対象月を任意選択
+// 3. バリデーション：プロジェクトがマッピング出来ない場合はエラー表示
+// 4. バリデーション：システム側のタスクにマッピング出来ない月報データをエラー表示
+// 5. インポート：インポート対象プロジェクトを選択
+// 6. 結果：インポート結果を表示
+
 export default function GeppoImportPage() {
   const [targetMonth, setTargetMonth] = useState('')
-  const [updateMode, setUpdateMode] = useState<'merge' | 'replace'>('merge')
+  const [updateMode, setUpdateMode] = useState<'merge' | 'replace'>('replace')
   const [selectedProjects, setSelectedProjects] = useState<string[]>([])
   const [availableProjects, setAvailableProjects] = useState<ProjectImportOption[]>([])
   const [validation, setValidation] = useState<GeppoImportValidation | null>(null)
@@ -122,8 +130,8 @@ export default function GeppoImportPage() {
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Geppoインポート</h1>
-        <p className="text-muted-foreground">月報データをワークレコードにインポートします</p>
+        <h1 className="text-3xl font-bold">月報インポート</h1>
+        <p className="text-muted-foreground">月報データをインポートします</p>
       </div>
 
       <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
@@ -155,10 +163,10 @@ export default function GeppoImportPage() {
               <div className="space-y-3">
                 <Label>更新モード</Label>
                 <RadioGroup value={updateMode} onValueChange={(value) => setUpdateMode(value as 'merge' | 'replace')}>
-                  <div className="flex items-center space-x-2">
+                  {/* <div className="flex items-center space-x-2">
                     <RadioGroupItem value="merge" id="merge" />
                     <Label htmlFor="merge">マージ（差分更新）</Label>
-                  </div>
+                  </div> */}
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="replace" id="replace" />
                     <Label htmlFor="replace">置換（既存データ削除後作成）</Label>

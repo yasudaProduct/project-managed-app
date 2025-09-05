@@ -32,6 +32,11 @@ export async function executeGeppoImport(options: GeppoImportOptions): Promise<G
   }
 }
 
+/**
+ * インポートプレビューを取得
+ * @param options 
+ * @returns 
+ */
 export async function previewGeppoImport(options: GeppoImportOptions): Promise<GeppoImportPreview> {
   try {
     const service = container.get<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService)
@@ -42,6 +47,11 @@ export async function previewGeppoImport(options: GeppoImportOptions): Promise<G
   }
 }
 
+/**
+ * インポート可能プロジェクト一覧を取得
+ * @param targetMonth 
+ * @returns 
+ */
 export async function getAvailableProjectsForImport(targetMonth: string): Promise<ProjectImportOption[]> {
   try {
     const service = container.get<ProjectMappingService>(SYMBOL.ProjectMappingService)

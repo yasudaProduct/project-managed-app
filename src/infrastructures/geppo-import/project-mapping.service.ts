@@ -90,11 +90,18 @@ export class ProjectMappingService {
     }
   }
 
+  /**
+   * インポート可能プロジェクト一覧を取得
+   * @param targetMonth 
+   * @returns インポート可能プロジェクト一覧
+   */
   async getAvailableProjectsForImport(targetMonth: string): Promise<ProjectImportOption[]> {
     try {
       // 1. 対象月のGeppoデータからプロジェクトを取得
       const geppoRecords = await this.geppoRepository.searchWorkEntries(
-        { dateFrom: new Date(`${targetMonth}-01`), dateTo: new Date(`${targetMonth}-31`) },
+        { 
+          dateFrom: new Date(`${targetMonth}-01`),
+          dateTo: new Date(`${targetMonth}-31`) },
         { page: 1, limit: 10000 }
       )
 

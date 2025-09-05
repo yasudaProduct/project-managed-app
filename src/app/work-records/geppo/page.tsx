@@ -180,42 +180,39 @@ export default function GeppoPage() {
   };
 
   // CSVエクスポート
-  const exportToCsv = async () => {
-    try {
-      const result = await exportGeppoToCsv(filters);
+  // const exportToCsv = async () => {
+  //   try {
+  //     const result = await exportGeppoToCsv(filters);
 
-      if (result.success && result.csvContent) {
-        // Blobを作成してダウンロード
-        const blob = new Blob([result.csvContent], {
-          type: "text/csv;charset=utf-8;",
-        });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download =
-          result.filename ||
-          `geppo_export_${new Date().toISOString().split("T")[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        setError(result.error || "エクスポートに失敗しました");
-      }
-    } catch {
-      setError("エクスポート中にエラーが発生しました");
-    }
-  };
+  //     if (result.success && result.csvContent) {
+  //       // Blobを作成してダウンロード
+  //       const blob = new Blob([result.csvContent], {
+  //         type: "text/csv;charset=utf-8;",
+  //       });
+  //       const url = window.URL.createObjectURL(blob);
+  //       const a = document.createElement("a");
+  //       a.href = url;
+  //       a.download =
+  //         result.filename ||
+  //         `geppo_export_${new Date().toISOString().split("T")[0]}.csv`;
+  //       document.body.appendChild(a);
+  //       a.click();
+  //       window.URL.revokeObjectURL(url);
+  //       document.body.removeChild(a);
+  //     } else {
+  //       setError(result.error || "エクスポートに失敗しました");
+  //     }
+  //   } catch {
+  //     setError("エクスポート中にエラーが発生しました");
+  //   }
+  // };
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Geppo月報データ</h1>
+        <h1 className="text-3xl font-bold mb-2">月報データ</h1>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-4">
-            <p className="text-muted-foreground">
-              MySQLのgeppoデータベースから作業実績データを検索・表示します
-            </p>
             {connectionStatus !== null && (
               <Badge
                 variant={connectionStatus ? "default" : "destructive"}
@@ -362,7 +359,7 @@ export default function GeppoPage() {
                     <RefreshCw className="mr-2 h-4 w-4" />
                     更新
                   </Button>
-                  {entries.length > 0 && (
+                  {/* {entries.length > 0 && (
                     <Button
                       variant="outline"
                       onClick={() => void exportToCsv()}
@@ -370,7 +367,7 @@ export default function GeppoPage() {
                       <Download className="mr-2 h-4 w-4" />
                       CSV出力
                     </Button>
-                  )}
+                  )} */}
                 </div>
               </div>
             </>
