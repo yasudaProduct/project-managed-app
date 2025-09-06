@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
-import { ja } from 'date-fns/locale';
-import { Check, X, ExternalLink } from 'lucide-react';
-import { NotificationData, useNotifications } from '@/hooks/useNotifications';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import React, { useState } from "react";
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { ja } from "date-fns/locale";
+import { Check, X, ExternalLink } from "lucide-react";
+import { NotificationData, useNotifications } from "@/hooks/useNotifications";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface NotificationItemProps {
   notification: NotificationData;
@@ -20,21 +20,26 @@ export function NotificationItem({
   notification,
   onClick,
   showActions = true,
-  className = '',
+  className = "",
 }: NotificationItemProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const { markSingleAsRead, deleteNotificationById, getPriorityIcon, getTypeIcon } = useNotifications();
+  const {
+    markSingleAsRead,
+    deleteNotificationById,
+    getPriorityIcon,
+    getTypeIcon,
+  } = useNotifications();
 
   const handleMarkAsRead = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (notification.isRead || isProcessing) return;
 
     setIsProcessing(true);
     try {
       markSingleAsRead(notification.id.toString());
     } catch (error) {
-      console.error('Failed to mark as read:', error);
+      console.error("Failed to mark as read:", error);
     } finally {
       setIsProcessing(false);
     }
@@ -42,14 +47,14 @@ export function NotificationItem({
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (isProcessing) return;
 
     setIsProcessing(true);
     try {
       deleteNotificationById(notification.id.toString());
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      console.error("Failed to delete notification:", error);
     } finally {
       setIsProcessing(false);
     }
@@ -65,28 +70,31 @@ export function NotificationItem({
 
   const getPriorityColor = () => {
     switch (notification.priority) {
-      case 'URGENT':
-        return 'border-red-500 bg-red-50';
-      case 'HIGH':
-        return 'border-orange-500 bg-orange-50';
-      case 'MEDIUM':
-        return 'border-blue-500 bg-blue-50';
-      case 'LOW':
-        return 'border-gray-300 bg-gray-50';
+      case "URGENT":
+        return "border-red-500 bg-red-50";
+      case "HIGH":
+        return "border-orange-500 bg-orange-50";
+      case "MEDIUM":
+        return "border-blue-500 bg-blue-50";
+      case "LOW":
+        return "border-gray-300 bg-gray-50";
       default:
-        return 'border-gray-300 bg-white';
+        return "border-gray-300 bg-white";
     }
   };
 
   const getNotificationIcon = () => {
     const typeIcon = getTypeIcon(notification.type);
     const priorityIcon = getPriorityIcon(notification.priority);
-    
+
     // 緊急度が高い場合は優先度アイコンを表示
-    if (notification.priority === 'URGENT' || notification.priority === 'HIGH') {
+    if (
+      notification.priority === "URGENT" ||
+      notification.priority === "HIGH"
+    ) {
       return priorityIcon;
     }
-    
+
     return typeIcon;
   };
 
@@ -96,19 +104,20 @@ export function NotificationItem({
         addSuffix: true,
         locale: ja,
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      return '時間不明';
+      return "時間不明";
     }
   };
 
   const notificationContent = (
     <div
       className={cn(
-        'flex items-start space-x-3 p-3 rounded-lg border transition-colors cursor-pointer hover:bg-gray-50',
+        "flex items-start space-x-3 p-3 rounded-lg border transition-colors cursor-pointer hover:bg-gray-50",
         getPriorityColor(),
-        !notification.isRead && 'shadow-sm',
-        notification.isRead && 'opacity-75',
-        isProcessing && 'opacity-50 pointer-events-none',
+        !notification.isRead && "shadow-sm",
+        notification.isRead && "opacity-75",
+        isProcessing && "opacity-50 pointer-events-none",
         className
       )}
       onClick={handleClick}
@@ -128,13 +137,13 @@ export function NotificationItem({
         <div className="flex items-start justify-between">
           <h4
             className={cn(
-              'text-sm font-medium text-gray-900 line-clamp-2',
-              notification.isRead && 'text-gray-600'
+              "text-sm font-medium text-gray-900 line-clamp-2",
+              notification.isRead && "text-gray-600"
             )}
           >
             {notification.title}
           </h4>
-          
+
           {showActions && (
             <div className="flex items-center space-x-1 ml-2 flex-shrink-0">
               {!notification.isRead && (
@@ -149,7 +158,7 @@ export function NotificationItem({
                   <Check size={12} />
                 </Button>
               )}
-              
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -160,7 +169,7 @@ export function NotificationItem({
               >
                 <X size={12} />
               </Button>
-              
+
               {notification.actionUrl && (
                 <Button
                   variant="ghost"
@@ -181,10 +190,12 @@ export function NotificationItem({
           )}
         </div>
 
-        <p className={cn(
-          'text-sm text-gray-600 mt-1 line-clamp-2',
-          notification.isRead && 'text-gray-500'
-        )}>
+        <p
+          className={cn(
+            "text-sm text-gray-600 mt-1 line-clamp-2",
+            notification.isRead && "text-gray-500"
+          )}
+        >
           {notification.message}
         </p>
 
@@ -192,7 +203,7 @@ export function NotificationItem({
           <span className="text-xs text-gray-500">
             {formatTime(notification.createdAt)}
           </span>
-          
+
           {notification.type && (
             <span className="text-xs text-gray-400 font-mono">
               {getTypeDisplayName(notification.type)}
@@ -218,22 +229,22 @@ export function NotificationItem({
 // 通知タイプの表示名
 function getTypeDisplayName(type: string): string {
   switch (type) {
-    case 'TASK_DEADLINE_WARNING':
-      return 'タスク期限';
-    case 'TASK_DEADLINE_OVERDUE':
-      return 'タスク超過';
-    case 'TASK_MANHOUR_WARNING':
-      return '工数警告';
-    case 'TASK_MANHOUR_EXCEEDED':
-      return '工数超過';
-    case 'TASK_ASSIGNED':
-      return 'タスク割当';
-    case 'TASK_UPDATED':
-      return 'タスク更新';
-    case 'SCHEDULE_DELAY':
-      return 'スケジュール遅延';
-    case 'PROJECT_STATUS_CHANGED':
-      return 'プロジェクト';
+    case "TASK_DEADLINE_WARNING":
+      return "タスク期限";
+    case "TASK_DEADLINE_OVERDUE":
+      return "タスク超過";
+    case "TASK_MANHOUR_WARNING":
+      return "工数警告";
+    case "TASK_MANHOUR_EXCEEDED":
+      return "工数超過";
+    case "TASK_ASSIGNED":
+      return "タスク割当";
+    case "TASK_UPDATED":
+      return "タスク更新";
+    case "SCHEDULE_DELAY":
+      return "スケジュール遅延";
+    case "PROJECT_STATUS_CHANGED":
+      return "プロジェクト";
     default:
       return type;
   }

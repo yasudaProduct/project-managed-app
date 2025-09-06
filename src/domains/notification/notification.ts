@@ -14,6 +14,7 @@ export interface NotificationData {
   plannedHours?: number;
   percentage?: number;
   delayedTaskCount?: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
@@ -99,6 +100,7 @@ export class Notification {
     priority: string;
     title: string;
     message: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data?: any;
     channels: string[];
     isRead: boolean;
@@ -181,9 +183,9 @@ export class Notification {
   }
 
   public isOverdue(): boolean {
-    return this.scheduledAt !== undefined && 
-           this.scheduledAt < new Date() && 
-           !this.isSent();
+    return this.scheduledAt !== undefined &&
+      this.scheduledAt < new Date() &&
+      !this.isSent();
   }
 
   public shouldSendToChannel(channel: NotificationChannelVO): boolean {
@@ -216,8 +218,8 @@ export class Notification {
   }
 
   public equals(other: Notification): boolean {
-    return this.id !== undefined && 
-           other.id !== undefined && 
-           this.id === other.id;
+    return this.id !== undefined &&
+      other.id !== undefined &&
+      this.id === other.id;
   }
 }

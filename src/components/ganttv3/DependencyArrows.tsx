@@ -100,7 +100,7 @@ export const DependencyArrows = ({
       const uniqueKey = `${pred.taskId}-${task.id}-${predIndex}`;
 
       // Calculate control points for smooth curves
-      const midX = (startX + endX) / 2;
+      // const midX = (startX + endX) / 2;
       const horizontalSpacing = 20;
       const verticalOffset = 15;
 

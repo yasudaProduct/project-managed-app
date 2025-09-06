@@ -80,7 +80,9 @@ export class NotificationPreference {
     enablePush: boolean;
     enableInApp: boolean;
     enableEmail: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     taskDeadline: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     manhourThreshold: any;
     scheduleDelay: boolean;
     taskAssignment: boolean;
@@ -159,26 +161,26 @@ export class NotificationPreference {
   }
 
   public shouldNotifyForManhourThreshold(percentage: number): boolean {
-    return this.manhourThreshold.percentages.some(threshold => 
+    return this.manhourThreshold.percentages.some(threshold =>
       percentage >= threshold && percentage < threshold + 20 // 20%の範囲内
     );
   }
 
   public getPushChannelsEnabled(): string[] {
     const channels: string[] = [];
-    
+
     if (this.enableInApp) {
       channels.push('IN_APP');
     }
-    
+
     if (this.enablePush) {
       channels.push('PUSH');
     }
-    
+
     if (this.enableEmail) {
       channels.push('EMAIL');
     }
-    
+
     return channels;
   }
 
@@ -186,14 +188,14 @@ export class NotificationPreference {
     if (this.quietHoursStart === undefined && this.quietHoursEnd === undefined) {
       return true;
     }
-    
+
     if (this.quietHoursStart === undefined || this.quietHoursEnd === undefined) {
       return false; // 片方だけが設定されているのは無効
     }
-    
-    return this.quietHoursStart >= 0 && 
-           this.quietHoursStart <= 23 && 
-           this.quietHoursEnd >= 0 && 
-           this.quietHoursEnd <= 23;
+
+    return this.quietHoursStart >= 0 &&
+      this.quietHoursStart <= 23 &&
+      this.quietHoursEnd >= 0 &&
+      this.quietHoursEnd <= 23;
   }
 }

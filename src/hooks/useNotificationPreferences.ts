@@ -39,6 +39,7 @@ export interface NotificationPreferences {
  */
 export function useNotificationPreferences() {
   const queryClient = useQueryClient();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const queryKey = ['notification-preferences'];
 
   // 設定の取得
@@ -223,7 +224,7 @@ export function useNotificationPreferences() {
   // 手動更新
   const refresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey });
-  }, [queryClient]);
+  }, [queryClient, queryKey]);
 
   return {
     // データ

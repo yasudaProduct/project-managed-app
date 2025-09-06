@@ -9,15 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  FileText,
-  Calendar,
-  Users,
-  BarChart,
-  ExternalLink,
-  UserPlus,
-  Target,
-} from "lucide-react";
+import { FileText, ExternalLink, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {

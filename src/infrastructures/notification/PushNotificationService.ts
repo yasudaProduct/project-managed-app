@@ -12,6 +12,7 @@ export interface PushPayload {
   actionUrl?: string;
   image?: string;
   tag?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any;
 }
 
@@ -48,14 +49,14 @@ export class PushNotificationService {
   async sendToUser(userId: string, notification: Notification): Promise<void> {
     try {
       const subscriptions = await this.notificationRepository.findPushSubscriptionsByUserId(userId);
-      
+
       if (subscriptions.length === 0) {
         console.log(`No push subscriptions found for user: ${userId}`);
         return;
       }
 
       const payload = this.createPayload(notification);
-      const promises = subscriptions.map(subscription => 
+      const promises = subscriptions.map(subscription =>
         this.sendToSubscription(subscription, payload)
       );
 
@@ -81,14 +82,14 @@ export class PushNotificationService {
   async sendToAllUsers(notification: Notification): Promise<void> {
     try {
       const allSubscriptions = await this.notificationRepository.findActivePushSubscriptions();
-      
+
       if (allSubscriptions.length === 0) {
         console.log('No active push subscriptions found');
         return;
       }
 
       const payload = this.createPayload(notification);
-      const promises = allSubscriptions.map(({ subscription }) => 
+      const promises = allSubscriptions.map(({ subscription }) =>
         this.sendToSubscription(subscription, payload)
       );
 
@@ -192,13 +193,14 @@ export class PushNotificationService {
   /**
    * 送信エラーのハンドリング
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async handleSendError(error: any, subscription: PushSubscriptionData): Promise<void> {
     console.error('Push notification send error:', error);
 
     // 購読が無効になった場合（410 Gone、404 Not Foundなど）
     if (error.statusCode === 410 || error.statusCode === 404) {
       console.log(`Subscription expired or invalid, removing: ${subscription.endpoint}`);
-      
+
       try {
         // 無効な購読をデータベースから削除
         await this.notificationRepository.removePushSubscription('', subscription.endpoint);
@@ -206,15 +208,15 @@ export class PushNotificationService {
         console.error('Failed to remove invalid subscription:', removeError);
       }
     }
-    
+
     // レート制限の場合
     else if (error.statusCode === 429) {
       const retryAfter = error.headers?.['retry-after'];
       console.warn(`Push service rate limited. Retry after: ${retryAfter} seconds`);
-      
+
       // TODO: レート制限対応（キューイングなど）
     }
-    
+
     // その他のエラー
     else {
       console.error(`Push notification failed with status ${error.statusCode}:`, error.body);
@@ -239,7 +241,9 @@ export class PushNotificationService {
   async sendTestNotification(userId: string): Promise<void> {
     const testNotification = Notification.create({
       userId,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       type: 'PROJECT_STATUS_CHANGED' as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       priority: 'LOW' as any,
       title: 'テスト通知',
       message: 'プッシュ通知が正常に動作しています。この通知は自動的に消えます。',
@@ -262,7 +266,7 @@ export class PushNotificationService {
   }> {
     try {
       const allSubscriptions = await this.notificationRepository.findActivePushSubscriptions();
-      
+
       return {
         totalSubscriptions: allSubscriptions.length,
         activeSubscriptions: allSubscriptions.length,

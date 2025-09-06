@@ -6,10 +6,8 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import Link from "next/link";
 
 export type Wbs = {
   id: number;
@@ -25,6 +23,7 @@ export const columns: ColumnDef<Wbs & { link?: string }>[] = [
   {
     id: "actions",
     cell: ({ row }) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const wbs = row.original;
 
       return (

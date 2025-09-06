@@ -226,9 +226,11 @@ export class NotificationEventDetector {
       if (!task.workRecords || task.workRecords.length === 0) continue;
 
       // 実績工数を計算
-      const actualHours = task.workRecords.reduce((sum, record) =>
-        // sum + parseFloat(record.hoursWorked.toString()), 0  一旦コメント
-      50, 0// TODO: 仮
+      const actualHours = task.workRecords.reduce(
+        // (sum, record) =>
+        () =>
+          // sum + parseFloat(record.hoursWorked.toString()), 0  一旦コメント
+          50, 0// TODO: 仮
       );
 
       // 予定工数を取得 (仮の実装)
@@ -272,7 +274,7 @@ export class NotificationEventDetector {
       // const delayedTasks = await this.taskRepository.findDelayedTasksByProject(project.id);
 
       if (delayedTasks.length > 0) {
-        const criticalDelayDays = Math.max(...delayedTasks.map(task => {
+        const criticalDelayDays = Math.max(...delayedTasks.map(() => {
           // 遅延日数の計算 (仮の実装)
           return 5; // 仮の値
         }));
@@ -395,7 +397,8 @@ export class NotificationEventDetector {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  private calculateDelayDays(task: any): number {
+  // private calculateDelayDays(task: any): number {
+  private calculateDelayDays(): number {
     // 遅延日数の計算ロジック (仮の実装)
     // TODO: 実際のビジネスロジックに合わせる
     return 5;

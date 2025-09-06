@@ -4,7 +4,7 @@ import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { container } from '@/lib/inversify.config';
 import type { INotificationService } from '@/applications/notification/INotificationService';
-import { getCurrentUserId, getCurrentUserIdOrThrow } from '@/lib/get-current-user-id';
+import { getCurrentUserIdOrThrow } from '@/lib/get-current-user-id';
 
 const notificationService = container.get<INotificationService>('NotificationService');
 
@@ -85,7 +85,7 @@ export async function markNotificationAsRead(
  * 全ての通知を既読にマークする
  */
 export async function markAllAsRead(
-  prevState?: NotificationActionResult | null
+  // prevState?: NotificationActionResult | null
 ): Promise<NotificationActionResult> {
   try {
     const userId = await getCurrentUserIdOrThrow();
@@ -205,7 +205,7 @@ export async function updateNotificationPreferences(
  * テスト通知を送信する
  */
 export async function sendTestNotification(
-  prevState?: NotificationActionResult | null
+  // prevState?: NotificationActionResult | null
 ): Promise<NotificationActionResult> {
   try {
     const userId = await getCurrentUserIdOrThrow();
@@ -307,7 +307,7 @@ export async function savePushSubscription(
  * Push通知の購読を解除する
  */
 export async function removePushSubscription(
-  prevState?: NotificationActionResult | null
+  // prevState?: NotificationActionResult | null
 ): Promise<NotificationActionResult> {
   try {
     const userId = await getCurrentUserIdOrThrow();

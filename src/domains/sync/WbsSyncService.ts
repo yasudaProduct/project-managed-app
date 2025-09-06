@@ -294,7 +294,7 @@ export class WbsSyncService implements IWbsSyncService {
         // 既存ユーザーがいる場合は、担当者が未登録なら WbsAssignee を作成
         const userId = existingUser.id as string;
         if (userId && !existingAssigneeUserIds.has(userId) && !seenAssigneeUserIds.has(userId)) {
-          newAssignees.push(WbsAssignee.create({ userId, rate: 100 }));
+          newAssignees.push(WbsAssignee.create({ wbsId, userId, rate: 100, seq: 0 }));
           seenAssigneeUserIds.add(userId);
         }
       } else {
@@ -313,7 +313,7 @@ export class WbsSyncService implements IWbsSyncService {
 
           // 同時に担当者も作成（同一ユーザーは一度だけ）
           if (!existingAssigneeUserIds.has(tempId) && !seenAssigneeUserIds.has(tempId)) {
-            newAssignees.push(WbsAssignee.create({ userId: tempId, rate: 100 }));
+            newAssignees.push(WbsAssignee.create({ wbsId, userId: tempId, rate: 100, seq: 0 }));
             seenAssigneeUserIds.add(tempId);
           }
         }

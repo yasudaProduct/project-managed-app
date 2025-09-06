@@ -6,6 +6,7 @@ export interface NotificationRuleCondition {
   type: string;
   field: string;
   operator: 'eq' | 'gte' | 'lte' | 'gt' | 'lt' | 'in' | 'contains';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any;
 }
 
@@ -76,6 +77,7 @@ export class NotificationRule {
     type: string;
     priority: string;
     channels: string[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     conditions: any;
     titleTemplate: string;
     messageTemplate: string;
@@ -98,6 +100,7 @@ export class NotificationRule {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public evaluateConditions(data: Record<string, any>): boolean {
     if (this.conditions.length === 0) {
       return true;
@@ -106,6 +109,7 @@ export class NotificationRule {
     return this.conditions.every(condition => this.evaluateCondition(condition, data));
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private evaluateCondition(condition: NotificationRuleCondition, data: Record<string, any>): boolean {
     const fieldValue = this.getFieldValue(condition.field, data);
 
@@ -123,14 +127,15 @@ export class NotificationRule {
       case 'in':
         return Array.isArray(condition.value) && condition.value.includes(fieldValue);
       case 'contains':
-        return typeof fieldValue === 'string' && 
-               typeof condition.value === 'string' && 
-               fieldValue.includes(condition.value);
+        return typeof fieldValue === 'string' &&
+          typeof condition.value === 'string' &&
+          fieldValue.includes(condition.value);
       default:
         return false;
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private getFieldValue(field: string, data: Record<string, any>): any {
     const fieldParts = field.split('.');
     let value = data;
@@ -145,14 +150,17 @@ export class NotificationRule {
     return value;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public generateTitle(data: Record<string, any>): string {
     return this.interpolateTemplate(this.titleTemplate, data);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public generateMessage(data: Record<string, any>): string {
     return this.interpolateTemplate(this.messageTemplate, data);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private interpolateTemplate(template: string, data: Record<string, any>): string {
     return template.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (match, field) => {
       const value = this.getFieldValue(field, data);

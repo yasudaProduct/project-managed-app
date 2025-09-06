@@ -39,7 +39,6 @@ import {
   AlertTriangle,
   ChevronRight,
   ChevronDown,
-  GripVertical,
   Users,
   Plus,
   FolderPlus,
@@ -101,54 +100,51 @@ const TaskRow: React.FC<TaskRowProps> = ({
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleEdit = useCallback((field: TaskKey, value: any) => {
     setEditingField(field);
-    setEditedData(prev => ({ ...prev, [field]: value } as Partial<Task>));
+    setEditedData((prev) => ({ ...prev, [field]: value } as Partial<Task>));
   }, []);
 
-  const handleSave = useCallback(
-    (field: TaskKey) => {
-      // const updatedTask = { ...task, ...editedData };
-
-      // if (field === "resources" && typeof editedData[field] === "string") {
-      //   updatedTask.resources = editedData[field]
-      //     .split(",")
-      //     .map((r: string) => r.trim())
-      //     .filter(Boolean);
-      // }
-
-      // if (field === "progress") {
-      //   const progress = Math.max(
-      //     0,
-      //     Math.min(100, parseInt(editedData[field] as string) || 0)
-      //   );
-      //   updatedTask.progress = progress;
-      // }
-
-      // // Recalculate duration if dates changed
-      // if (field === "startDate" || field === "endDate") {
-      //   if (
-      //     updatedTask.startDate &&
-      //     updatedTask.endDate &&
-      //     !updatedTask.isMilestone
-      //   ) {
-      //     updatedTask.duration = Math.max(
-      //       1,
-      //       Math.ceil(
-      //         (updatedTask.endDate.getTime() -
-      //           updatedTask.startDate.getTime()) /
-      //           (1000 * 60 * 60 * 24)
-      //       )
-      //     );
-      //   }
-      // }
-
-      // onTaskUpdate(updatedTask);
-      // setEditingField(null);
-      // setEditedData({});
-    },
-    [task, editedData, onTaskUpdate]
-  );
+  // const handleSave = useCallback(
+  //   // (field: TaskKey) => {
+  //     // const updatedTask = { ...task, ...editedData };
+  //     // if (field === "resources" && typeof editedData[field] === "string") {
+  //     //   updatedTask.resources = editedData[field]
+  //     //     .split(",")
+  //     //     .map((r: string) => r.trim())
+  //     //     .filter(Boolean);
+  //     // }
+  //     // if (field === "progress") {
+  //     //   const progress = Math.max(
+  //     //     0,
+  //     //     Math.min(100, parseInt(editedData[field] as string) || 0)
+  //     //   );
+  //     //   updatedTask.progress = progress;
+  //     // }
+  //     // // Recalculate duration if dates changed
+  //     // if (field === "startDate" || field === "endDate") {
+  //     //   if (
+  //     //     updatedTask.startDate &&
+  //     //     updatedTask.endDate &&
+  //     //     !updatedTask.isMilestone
+  //     //   ) {
+  //     //     updatedTask.duration = Math.max(
+  //     //       1,
+  //     //       Math.ceil(
+  //     //         (updatedTask.endDate.getTime() -
+  //     //           updatedTask.startDate.getTime()) /
+  //     //           (1000 * 60 * 60 * 24)
+  //     //       )
+  //     //     );
+  //     //   }
+  //     // }
+  //     // onTaskUpdate(updatedTask);
+  //     // setEditingField(null);
+  //     // setEditedData({});
+  //   // },
+  //   [task, editedData, onTaskUpdate]
+  // );
 
   const handleCancel = useCallback(() => {
     setEditingField(null);
@@ -156,7 +152,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
   }, []);
 
   const handleDateChange = useCallback(
-    (field: 'startDate' | 'endDate', date: Date | undefined) => {
+    (field: "startDate" | "endDate", date: Date | undefined) => {
       if (!date) return;
 
       const updatedTask = { ...task, [field]: date };
@@ -212,13 +208,19 @@ const TaskRow: React.FC<TaskRowProps> = ({
               <Textarea
                 value={String(editedData[field] ?? "")}
                 onChange={(e) =>
-                  setEditedData(prev => ({ ...prev, [field]: e.target.value } as Partial<Task>))
+                  setEditedData(
+                    (prev) =>
+                      ({ ...prev, [field]: e.target.value } as Partial<Task>)
+                  )
                 }
                 className="min-h-[60px]"
                 autoFocus
               />
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => handleSave(field)}>
+                <Button
+                  size="sm"
+                  // onClick={() => handleSave(field)}
+                >
                   <Check className="w-4 h-4" />
                 </Button>
                 <Button size="sm" variant="outline" onClick={handleCancel}>
@@ -232,19 +234,29 @@ const TaskRow: React.FC<TaskRowProps> = ({
             <div className="flex items-center gap-2">
               <Input
                 type="number"
-                value={typeof editedData[field] === 'number' ? (editedData[field] as number) : 0}
+                value={
+                  typeof editedData[field] === "number"
+                    ? (editedData[field] as number)
+                    : 0
+                }
                 onChange={(e) =>
-                  setEditedData(prev => ({
-                    ...prev,
-                    [field]: parseInt(e.target.value) || 0,
-                  } as Partial<Task>))
+                  setEditedData(
+                    (prev) =>
+                      ({
+                        ...prev,
+                        [field]: parseInt(e.target.value) || 0,
+                      } as Partial<Task>)
+                  )
                 }
                 className="w-20"
                 min="0"
                 max={field === "progress" ? 100 : undefined}
                 autoFocus
               />
-              <Button size="sm" onClick={() => handleSave(field)}>
+              <Button
+                size="sm"
+                // onClick={() => handleSave(field)}
+              >
                 <Check className="w-4 h-4" />
               </Button>
               <Button size="sm" variant="outline" onClick={handleCancel}>
@@ -256,14 +268,24 @@ const TaskRow: React.FC<TaskRowProps> = ({
           return (
             <div className="flex items-center gap-2">
               <Input
-                value={typeof editedData[field] === 'string' ? (editedData[field] as string) : ""}
+                value={
+                  typeof editedData[field] === "string"
+                    ? (editedData[field] as string)
+                    : ""
+                }
                 onChange={(e) =>
-                  setEditedData(prev => ({ ...prev, [field]: e.target.value } as Partial<Task>))
+                  setEditedData(
+                    (prev) =>
+                      ({ ...prev, [field]: e.target.value } as Partial<Task>)
+                  )
                 }
                 className="flex-1"
                 autoFocus
               />
-              <Button size="sm" onClick={() => handleSave(field)}>
+              <Button
+                size="sm"
+                // onClick={() => handleSave(field)}
+              >
                 <Check className="w-4 h-4" />
               </Button>
               <Button size="sm" variant="outline" onClick={handleCancel}>
@@ -278,7 +300,10 @@ const TaskRow: React.FC<TaskRowProps> = ({
     switch (field) {
       case "category":
         return (
-          <Select value={typeof value === 'string' ? value : undefined} onValueChange={handleCategoryChange}>
+          <Select
+            value={typeof value === "string" ? value : undefined}
+            onValueChange={handleCategoryChange}
+          >
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
@@ -298,7 +323,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
           </Select>
         );
       case "progress":
-        const progressValue = typeof value === 'number' ? value : 0;
+        const progressValue = typeof value === "number" ? value : 0;
         return (
           <div
             className="cursor-pointer"
@@ -353,13 +378,15 @@ const TaskRow: React.FC<TaskRowProps> = ({
             className="cursor-pointer hover:bg-muted/50 p-2 rounded min-h-[32px] transition-colors"
             onClick={() => handleEdit(field, value)}
           >
-            <span className="text-sm">{(value as string) || "Click to edit..."}</span>
+            <span className="text-sm">
+              {(value as string) || "Click to edit..."}
+            </span>
           </div>
         );
     }
   };
 
-  const renderDateField = (field: 'startDate' | 'endDate', date: Date) => {
+  const renderDateField = (field: "startDate" | "endDate", date: Date) => {
     return (
       <Popover>
         <PopoverTrigger asChild>
@@ -955,7 +982,9 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
             <TableRow>
               <TableHead className="w-20">
                 <Checkbox
-                  checked={selectedTasks.size === tasks.length && tasks.length > 0}
+                  checked={
+                    selectedTasks.size === tasks.length && tasks.length > 0
+                  }
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>

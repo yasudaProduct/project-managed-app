@@ -23,14 +23,14 @@ export default function ScheduleImportPage() {
     reader.onload = async (event) => {
       try {
         const buffer = event.target?.result as ArrayBuffer;
-        
+
         // SJISからUTF-8に変換
         let text: string;
         try {
           // まずSJISとしてデコードを試みる
           const decoder = new TextDecoder("shift_jis");
           text = decoder.decode(buffer);
-        } catch (e) {
+        } catch {
           // SJISのデコードに失敗した場合はUTF-8として試みる
           const decoder = new TextDecoder("utf-8");
           text = decoder.decode(buffer);

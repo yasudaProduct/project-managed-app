@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { test, expect } from '@playwright/test';
 
 test.describe('Push notifications', () => {
@@ -8,6 +11,7 @@ test.describe('Push notifications', () => {
         await page.addInitScript(() => {
             // @ts-ignore
             window.__notifications = [];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const MockNotification: any = function (this: any, title: string, options?: NotificationOptions) {
                 // @ts-ignore
                 window.__notifications.push({ title, options });

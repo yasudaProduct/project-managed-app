@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, it } from '@jest/globals';
 
 describe('ガントチャート位置計算デバッグ', () => {
   // 実際の日付範囲でテスト
@@ -72,7 +72,7 @@ describe('ガントチャート位置計算デバッグ', () => {
 
         const totalDays = Math.ceil(
           (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
-            (1000 * 60 * 60 * 24)
+          (1000 * 60 * 60 * 24)
         );
 
         const dayPosition = (position / chartWidth) * totalDays;
@@ -101,7 +101,7 @@ describe('ガントチャート位置計算デバッグ', () => {
 
         const totalDays = Math.ceil(
           (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
-            (1000 * 60 * 60 * 24)
+          (1000 * 60 * 60 * 24)
         );
 
         const dayPosition = (position / chartWidth) * totalDays;
@@ -112,7 +112,7 @@ describe('ガントチャート位置計算デバッグ', () => {
       };
 
       console.log('\n=== ドラッグシミュレーション ===');
-      
+
       // 1月10日のタスクを50px右にドラッグ
       const originalPosition = 322.58; // 1月10日の位置（約）
       const dragDistance = 50;
@@ -133,7 +133,7 @@ describe('ガントチャート位置計算デバッグ', () => {
 
     it('日付計算の精度問題を検証', () => {
       console.log('\n=== 日付計算の精度問題 ===');
-      
+
       const normalizedRangeStart = new Date(dateRange.start);
       normalizedRangeStart.setHours(0, 0, 0, 0);
 
@@ -142,7 +142,7 @@ describe('ガントチャート位置計算デバッグ', () => {
 
       const totalDays = Math.ceil(
         (normalizedRangeEnd.getTime() - normalizedRangeStart.getTime()) /
-          (1000 * 60 * 60 * 24)
+        (1000 * 60 * 60 * 24)
       );
 
       console.log(`開始日: ${normalizedRangeStart.toISOString()}`);

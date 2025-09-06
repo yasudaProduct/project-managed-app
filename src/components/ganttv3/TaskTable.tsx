@@ -99,6 +99,7 @@ export const TaskTable = ({
   };
 
   const handleCellEdit = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (taskId: string, field: string, value: any) => {
       const task = tasks.find((t) => t.id === taskId);
       if (!task) return;
@@ -286,6 +287,7 @@ export const TaskTable = ({
   const renderEditableCell = (
     task: Task,
     field: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any,
     type:
       | "text"
@@ -295,6 +297,7 @@ export const TaskTable = ({
       | "checkbox"
       | "color"
       | "textarea" = "text",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options?: any[]
   ) => {
     const isEditing =

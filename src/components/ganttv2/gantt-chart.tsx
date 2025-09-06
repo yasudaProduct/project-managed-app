@@ -274,6 +274,7 @@ export default function GanttChart({
         }
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       isDragging,
       isResizing,
@@ -328,10 +329,14 @@ export default function GanttChart({
           // 開始日のリサイズ：開始日のみ変更、終了日は固定
           newStartDate = positionToDate(draggedTask.startPosition);
           // 元の終了日を保持
-          newEndDate = draggedTask.yoteiEnd ? new Date(draggedTask.yoteiEnd) : new Date();
+          newEndDate = draggedTask.yoteiEnd
+            ? new Date(draggedTask.yoteiEnd)
+            : new Date();
         } else if (resizeDirection === "end") {
           // 終了日のリサイズ：終了日のみ変更、開始日は固定
-          newStartDate = draggedTask.yoteiStart ? new Date(draggedTask.yoteiStart) : new Date();
+          newStartDate = draggedTask.yoteiStart
+            ? new Date(draggedTask.yoteiStart)
+            : new Date();
           // 終了位置から終了日を計算
           const endPosition = draggedTask.startPosition + draggedTask.width;
           newEndDate = positionToDate(endPosition);

@@ -334,8 +334,9 @@ export class TaskRepository implements ITaskRepository {
         });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async findTasksByPeriod(startDate: Date, endDate: Date): Promise<Task[]> {
-        
+
         // TODO: 未実装
         return [];
     }

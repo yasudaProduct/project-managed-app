@@ -6,7 +6,6 @@ import {
   checkGeppoConnection,
   getGeppoFilterOptions,
   searchGeppoWorkEntries,
-  exportGeppoToCsv,
 } from "./geppo-actions";
 import {
   Card,
@@ -36,7 +35,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Search,
   RefreshCw,
-  Download,
   Calendar,
   Users,
   AlertTriangle,
