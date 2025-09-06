@@ -11,7 +11,6 @@ test.describe('Push notifications', () => {
         await page.addInitScript(() => {
             // @ts-ignore
             window.__notifications = [];
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const MockNotification: any = function (this: any, title: string, options?: NotificationOptions) {
                 // @ts-ignore
                 window.__notifications.push({ title, options });
