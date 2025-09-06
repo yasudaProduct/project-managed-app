@@ -5,309 +5,285 @@ const addDays = (days: number): Date => {
     return date;
 };
 
-export const mockData = {
+interface MockData {
     project: {
-        id: 1,
-        name: "新規機能開発",
-        status: "ACTIVE",
-        description: "テストプロジェクト",
-        startDate: baseDate,
-        endDate: addDays(90),
-    },
-    wbs: [
-        {
-            id: 1,
-            projectId: 1,
-            name: "新規機能開発",
-            status: "NOT_STARTED",
-        },
-    ],
-    wbsAssignee: [
-        {
-            wbsId: 1,
-            assigneeId: "dummy01",
-        },
-        {
-            wbsId: 1,
-            assigneeId: "dummy02",
-        },
-        {
-            wbsId: 1,
-            assigneeId: "dummy03",
-        },
-        {
-            wbsId: 1,
-            assigneeId: "dummy04",
-        },
-
-    ],
-    wbsPhase: [
-        {
-            wbsId: 1,
-            name: "詳細設計",
-            code: "D2",
-            seq: 1,
-        },
-        {
-            wbsId: 1,
-            name: "開発",
-            code: "D3",
-            seq: 2,
-        },
-        {
-            wbsId: 1,
-            name: "単体テスト",
-            code: "D4",
-            seq: 3,
-        },
-        {
-            wbsId: 1,
-            name: "ユーザーテスト",
-            code: "D5",
-            seq: 4,
-        },
-    ],
-    wbsTask: [
-        {
-            id: 1,
-            taskNo: "D2-0001",
-            wbsId: 1,
-            phaseCode: "D2",
-            name: "機能A設計書",
-            assigneeUserId: "dummy01",
-            status: "NOT_STARTED",
-            startDate: baseDate,
-            endDate: addDays(5),
-            kosu: 15,
-        },
-        {
-            id: 2,
-            taskNo: "D2-0002",
-            wbsId: 1,
-            phaseCode: "D2",
-            name: "機能B設計書",
-            assigneeUserId: "dummy02",
-            status: "NOT_STARTED",
-            startDate: addDays(1),
-            endDate: addDays(7),
-            kosu: 20,
-        },
-        {
-            id: 3,
-            taskNo: "D2-0003",
-            wbsId: 1,
-            phaseCode: "D2",
-            name: "機能C設計書",
-            assigneeUserId: "dummy03",
-            status: "NOT_STARTED",
-            startDate: addDays(2),
-            endDate: addDays(9),
-            kosu: 25,
-        },
-        {
-            id: 4,
-            taskNo: "D3-0001",
-            wbsId: 1,
-            phaseCode: "D3",
-            name: "機能A開発",
-            assigneeUserId: "dummy01",
-            status: "NOT_STARTED",
-            startDate: addDays(10),
-            endDate: addDays(45),
-            kosu: 40,
-        },
-        {
-            id: 5,
-            taskNo: "D3-0002",
-            wbsId: 1,
-            phaseCode: "D3",
-            name: "機能B開発",
-            assigneeUserId: "dummy02",
-            status: "NOT_STARTED",
-            startDate: addDays(12),
-            endDate: addDays(30),
-            kosu: 30,
-        },
-        {
-            id: 6,
-            taskNo: "D3-0003",
-            wbsId: 1,
-            phaseCode: "D3",
-            name: "機能C開発",
-            assigneeUserId: "dummy03",
-            status: "NOT_STARTED",
-            startDate: addDays(15),
-            endDate: addDays(50),
-            kosu: 35,
-        },
-        {
-            id: 7,
-            taskNo: "D4-0001",
-            wbsId: 1,
-            phaseCode: "D4",
-            name: "機能A単体テスト",
-            assigneeUserId: "dummy01",
-            status: "NOT_STARTED",
-            startDate: addDays(46),
-            endDate: addDays(55),
-            kosu: 15,
-        },
-        {
-            id: 8,
-            taskNo: "D4-0002",
-            wbsId: 1,
-            phaseCode: "D4",
-            name: "機能B単体テスト",
-            assigneeUserId: "dummy02",
-            status: "NOT_STARTED",
-            startDate: addDays(51),
-            endDate: addDays(60),
-            kosu: 15,
-        },
-        {
-            id: 9,
-            taskNo: "D5-0001",
-            wbsId: 1,
-            phaseCode: "D5",
-            name: "機能Aユーザーテスト",
-            assigneeUserId: "dummy01",
-            status: "NOT_STARTED",
-            startDate: addDays(61),
-            endDate: addDays(65),
-            kosu: 10,
-        },
-        {
-            id: 10,
-            taskNo: "D5-0002",
-            wbsId: 1,
-            phaseCode: "D5",
-            name: "機能Bユーザーテスト",
-            assigneeUserId: "dummy02",
-            status: "NOT_STARTED",
-            startDate: addDays(61),
-            endDate: addDays(65),
-            kosu: 10,
-        },
-        {
-            id: 11,
-            taskNo: "D5-0003",
-            wbsId: 1,
-            phaseCode: "D5",
-            name: "機能Cユーザーテスト",
-            assigneeUserId: "dummy03",
-            status: "NOT_STARTED",
-            startDate: addDays(61),
-            endDate: addDays(65),
-            kosu: 10,
-        },
-        {
-            id: 12,
-            taskNo: "D2-0004",
-            wbsId: 1,
-            phaseCode: "D2",
-            name: "機能D設計書",
-            assigneeUserId: "dummy04",
-            status: "NOT_STARTED",
-            startDate: addDays(1),
-            endDate: addDays(40),
-            kosu: 50,
-        },
-    ],
-    wbsBuffer: [
-        {
-            wbsId: 1,
-            name: "リスク対策工数",
-            buffer: 50,
-            bufferType: "RISK",
-        },
-    ],
-    workRecords: [
-        {
-            userId: "dummy01",
-            taskId: 1,
-            date: addDays(0),
-            hours_worked: 7.5,
-        },
-        {
-            userId: "dummy01",
-            taskId: 1,
-            date: addDays(1),
-            hours_worked: 7.5,
-        },
-        {
-            userId: "dummy01",
-            taskId: 4,
-            date: addDays(11),
-            hours_worked: 8,
-        },
-        {
-            userId: "dummy01",
-            taskId: 4,
-            date: addDays(12),
-            hours_worked: 8,
-        },
-        {
-            userId: "dummy02",
-            taskId: 2,
-            date: addDays(2),
-            hours_worked: 8,
-        },
-        {
-            userId: "dummy02",
-            taskId: 2,
-            date: addDays(3),
-            hours_worked: 8,
-        },
-        {
-            userId: "dummy02",
-            taskId: 5,
-            date: addDays(13),
-            hours_worked: 8,
-        },
-        {
-            userId: "dummy02",
-            taskId: 5,
-            date: addDays(14),
-            hours_worked: 8,
-        },
-        {
-            userId: "dummy03",
-            taskId: 3,
-            date: addDays(4),
-            hours_worked: 8,
-        },
-        {
-            userId: "dummy03",
-            taskId: 6,
-            date: addDays(16),
-            hours_worked: 8,
-        },
-    ],
-    milestone: [
-        {
-            wbsId: 1,
-            name: "キックオフ",
-            date: addDays(0),
-        },
-        {
-            wbsId: 1,
-            name: "設計完了",
-            date: addDays(9),
-        },
-        {
-            wbsId: 1,
-            name: "開発完了",
-            date: addDays(50),
-        },
-        {
-            wbsId: 1,
-            name: "リリース",
-            date: addDays(70),
-        },
-    ],
-    companyHolidays: [],
-    userSchedules: []
+        id: string;
+        name: string;
+        status: string;
+        description: string;
+        startDate: Date;
+        endDate: Date;
+    };
+    wbs: {
+        id: number;
+        projectId: string;
+        name: string;
+        status: string;
+    }[];
+    wbsAssignee: {
+        id: number;
+        wbsId: number;
+        assigneeId: string;
+        rate: number;
+    }[];
+    wbsPhase: {
+        id: number;
+        wbsId: number;
+        name: string;
+        code: string;
+        seq: number;
+    }[];
+    wbsTask: {
+        id: number;
+        taskNo: string;
+        wbsId: number;
+        phaseId: number;
+        name: string;
+        assigneeId: number;
+        status: string;
+        startDate: Date;
+        endDate: Date;
+        kosu: number;
+    }[];
+    wbsBuffer: {
+        id: number;
+        wbsId: number;
+        name: string;
+        buffer: number;
+        bufferType: string;
+    }[];
+    workRecords: {
+        id: number;
+        userId: string;
+        taskId: number;
+        date: Date;
+        hours_worked: number;
+    }[];
+    milestone: {
+        id: number;
+        wbsId: number;
+        name: string;
+        date: Date;
+    }[];
+    companyHolidays: {
+        id: number;
+        date: Date;
+        name: string;
+        type: string;
+    }[];
+    userSchedules: {
+        id: number;
+        userId: string;
+        date: Date;
+        title: string;
+        startTime: string;
+        endTime: string;
+        location: string;
+        description: string;
+    }[];
 };
+
+export function getMockData(): MockData[] {
+
+    const mockData: (projectId: string, wbsId: number, multiId: number) => MockData = (projectId: string, wbsId: number, multiId: number) => {
+        const wbsAssigneeId = wbsId * multiId;
+        const wbsPhaseId = wbsId * multiId;
+        const wbsTaskId = wbsId * multiId;
+        const wbsBufferId = wbsId * multiId;
+        const wbsMilestoneId = wbsId * multiId;
+
+        return {
+            project: {
+                id: projectId,
+                name: "新規機能開発案件",
+                status: "ACTIVE",
+                description: "テストプロジェクト",
+                startDate: baseDate,
+                endDate: addDays(90),
+            },
+            wbs: [
+                {
+                    id: wbsId,
+                    projectId: projectId,
+                    name: "新規機能開発A",
+                    status: "ACTIVE",
+                },
+                {
+                    id: wbsId + 1,
+                    projectId: projectId,
+                    name: "新規機能開発B",
+                    status: "ACTIVE",
+                },
+            ],
+            wbsAssignee: [
+                {
+                    id: wbsAssigneeId,
+                    wbsId: wbsId,
+                    assigneeId: "dummy01",
+                    rate: 1.0,
+                },
+                {
+                    id: wbsAssigneeId + 1,
+                    wbsId: wbsId,
+                    assigneeId: "dummy02",
+                    rate: 0.8,
+                },
+                {
+                    id: wbsAssigneeId + 2,
+                    wbsId: wbsId,
+                    assigneeId: "dummy03",
+                    rate: 0.5,
+                },
+                {
+                    id: wbsAssigneeId + 3,
+                    wbsId: wbsId,
+                    assigneeId: "dummy04",
+                    rate: 1,
+                },
+            ],
+            wbsPhase: [
+                {
+                    id: wbsPhaseId,
+                    wbsId: wbsId,
+                    name: "詳細設計",
+                    code: "D2",
+                    seq: 1,
+                },
+                {
+                    id: wbsPhaseId + 1,
+                    wbsId: wbsId + 1,
+                    name: "開発",
+                    code: "D3",
+                    seq: 2,
+                },
+                {
+                    id: wbsPhaseId + 2,
+                    wbsId: wbsId,
+                    name: "単体テスト",
+                    code: "D4",
+                    seq: 3,
+                },
+                {
+                    id: wbsPhaseId + 3,
+                    wbsId: wbsId,
+                    name: "ユーザーテスト",
+                    code: "D5",
+                    seq: 4,
+                },
+            ],
+            wbsTask: [
+                {
+                    id: wbsTaskId,
+                    taskNo: "D2-0001",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "機能A設計書",
+                    assigneeId: wbsAssigneeId,
+                    status: "NOT_STARTED",
+                    startDate: baseDate,
+                    endDate: addDays(5),
+                    kosu: 15,
+                },
+                {
+                    id: wbsTaskId + 1,
+                    taskNo: "D2-0002",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "機能B設計書",
+                    assigneeId: wbsAssigneeId + 1,
+                    status: "IN_PROGRESS",
+                    startDate: baseDate,
+                    endDate: addDays(5),
+                    kosu: 15,
+                },
+                {
+                    id: wbsTaskId + 2,
+                    taskNo: "D2-0003",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "機能C設計書",
+                    assigneeId: wbsAssigneeId + 2,
+                    status: "COMPLETED",
+                    startDate: baseDate,
+                    endDate: addDays(5),
+                    kosu: 15,
+                },
+                {
+                    id: wbsTaskId + 3,
+                    taskNo: "D2-0004",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "機能D設計書",
+                    assigneeId: wbsAssigneeId + 3,
+                    status: "ON_HOLD",
+                    startDate: baseDate,
+                    endDate: addDays(5),
+                    kosu: 15,
+                },
+                // {
+                //     id: wbsTaskId + 4,
+                //     taskNo: "D3-0001",
+                //     wbsId: wbsId,
+                //     phaseId: wbsPhaseId + 1,
+                //     name: "機能A開発",
+                //     assigneeId: wbsAssigneeId,
+                //     status: "NOT_STARTED",
+                //     startDate: baseDate,
+                //     endDate: addDays(5),
+                //     kosu: 15,
+                // },
+                // {
+                //     id: wbsTaskId + 4,
+                //     taskNo: "D3-0002",
+                //     wbsId: wbsId,
+                //     phaseId: wbsPhaseId + 1,
+                //     name: "機能B開発",
+                //     assigneeId: wbsAssigneeId + 1,
+                //     status: "NOT_STARTED",
+                //     startDate: baseDate,
+                //     endDate: addDays(5),
+                //     kosu: 15,
+                // },
+                // {
+                //     id: wbsTaskId + 5,
+                //     taskNo: "D3-0003",
+                //     wbsId: wbsId,
+                //     phaseId: wbsPhaseId + 1,
+                //     name: "機能C開発",
+                //     assigneeId: wbsAssigneeId + 2,
+                //     status: "IN_PROGRESS",
+                //     startDate: baseDate,
+                //     endDate: addDays(5),
+                //     kosu: 15,
+                // },
+            ],
+            wbsBuffer: [
+                {
+                    id: wbsBufferId,
+                    wbsId: wbsId,
+                    name: "リスク対策工数",
+                    buffer: 50,
+                    bufferType: "RISK",
+                },
+            ],
+            workRecords: [],
+            milestone: [
+                {
+                    id: wbsMilestoneId,
+                    wbsId: wbsId,
+                    name: "キックオフ",
+                    date: addDays(0),
+                },
+            ],
+            companyHolidays: [],
+            userSchedules: [],
+        }
+    }
+
+    return [
+        mockData("test-project-1", 1, 10),
+    ]
+}
 
 // 大量データ
 export const mockDataLarge = {
@@ -391,266 +367,6 @@ export const mockDataLarge = {
         name: `マイルストーン${i + 1} `,
         date: addDays(i),
     })),
-    companyHolidays: [],
-    userSchedules: []
-}
-
-// プロジェクトデータ
-export const mockDataProjects = [
-    {
-        id: 10,
-        name: "未開始プロジェクト",
-        status: "INACTIVE",
-        description: "未開始プロジェクト",
-        startDate: addDays(10),
-        endDate: addDays(20),
-    },
-    {
-        id: 11,
-        name: "進行中プロジェクト",
-        status: "ACTIVE",
-        description: "進行中プロジェクト",
-        startDate: addDays(-10),
-        endDate: addDays(20),
-    },
-    {
-        id: 12,
-        name: "完了プロジェクト",
-        status: "DONE",
-        description: "完了プロジェクト",
-        startDate: addDays(-20),
-        endDate: addDays(-10),
-    },
-    {
-        id: 13,
-        name: "キャンセルプロジェクト",
-        status: "CANCELLED",
-        description: "キャンセルプロジェクト",
-        startDate: addDays(10),
-        endDate: addDays(20),
-    },
-    {
-        id: 14,
-        name: "保留プロジェクト",
-        status: "PENDING",
-        description: "保留プロジェクト",
-        startDate: addDays(10),
-        endDate: addDays(20),
-    },
-    {
-        id: 15,
-        name: "期限前プロジェクト",
-        status: "ACTIVE",
-        description: "期限前プロジェクト",
-        startDate: addDays(-10),
-        endDate: addDays(5),
-    },
-    {
-        id: 16,
-        name: "期限後プロジェクト",
-        status: "ACTIVE",
-        description: "期限後プロジェクト",
-        startDate: addDays(-10),
-        endDate: addDays(-1),
-    },
-]
-
-export const importTestData = {
-    project: {
-        id: 20,
-        name: "インポートテスト",
-        status: "ACTIVE",
-        description: "インポートテスト",
-        startDate: baseDate,
-        endDate: addDays(10),
-    },
-    wbs: [
-        {
-            id: 20,
-            projectId: 20,
-            name: "インポートテスト",
-        },
-    ],
-    wbsAssignee: [
-        {
-            wbsId: 20,
-            assigneeId: "dummy01",
-        },
-        {
-            wbsId: 20,
-            assigneeId: "dummy02",
-        }
-    ],
-    wbsPhase: [
-        {
-            wbsId: 20,
-            name: "詳細設計",
-            code: "D2",
-            seq: 1,
-        },
-        {
-            wbsId: 20,
-            name: "単体開発",
-            code: "D3",
-            seq: 2,
-        },
-    ],
-    wbsTask: [
-        {
-            taskNo: "D2-0001",
-            wbsId: 20,
-            phaseCode: "D2",
-            name: "ドキュメント作成",
-            assigneeUserId: "dummy01",
-            status: "NOT_STARTED",
-            startDate: baseDate,
-            endDate: addDays(5),
-            kosu: 15,
-        },
-        {
-            taskNo: "D2-0002",
-            wbsId: 20,
-            phaseCode: "D2",
-            name: "ドキュメント作成",
-            assigneeUserId: "dummy02",
-            status: "NOT_STARTED",
-            startDate: addDays(1),
-            endDate: addDays(7),
-            kosu: 20,
-        }
-    ],
-    wbsBuffer: [
-        {
-            id: 1,
-            wbsId: 1,
-            name: "リスク対策工数",
-            buffer: 50,
-            bufferType: "RISK",
-        },
-    ],
-
-    workRecords: [
-        {
-            userId: "dummy01",
-            taskId: 20,
-            date: addDays(0),
-            hours_worked: 7.5,
-        },
-        {
-            userId: "dummy01",
-            taskId: 21,
-            date: addDays(1),
-            hours_worked: 30,
-        }
-    ],
-    milestone: [
-        {
-            wbsId: 20,
-            name: "キックオフ",
-            date: addDays(0),
-        },
-        {
-            wbsId: 20,
-            name: "設計完了",
-            date: addDays(9),
-        },
-        {
-            wbsId: 20,
-            name: "開発完了",
-            date: addDays(50),
-        },
-        {
-            wbsId: 20,
-            name: "リリース",
-            date: addDays(70),
-        },
-    ],
-    companyHolidays: [],
-    userSchedules: []
-}
-
-export const importTestData2 = {
-    project: {
-        id: 30,
-        name: "インポートテスト2",
-        status: "ACTIVE",
-        description: "インポートテスト2",
-        startDate: baseDate,
-        endDate: addDays(10),
-    },
-    wbs: [
-        {
-            id: 30,
-            projectId: 30,
-            name: "インポートテスト2",
-        },
-    ],
-    wbsAssignee: [
-        {
-            wbsId: 30,
-            assigneeId: "dummy01",
-        },
-        {
-            wbsId: 30,
-            assigneeId: "dummy02",
-        },
-    ],
-    wbsPhase: [
-        {
-            wbsId: 30,
-            name: "詳細設計",
-            code: "D2",
-            seq: 1,
-        },
-    ],
-    wbsTask: [
-        {
-            taskNo: "D2-0001",
-            wbsId: 30,
-            phaseCode: "D2",
-            name: "更新前のタスク",
-            assigneeUserId: "dummy01",
-            status: "NOT_STARTED",
-            startDate: baseDate,
-            endDate: addDays(5),
-            kosu: 15,
-        },
-        {
-            taskNo: "D2-0002",
-            wbsId: 30,
-            phaseCode: "D2",
-            name: "削除されるタスク",
-            assigneeUserId: "dummy02",
-            status: "NOT_STARTED",
-            startDate: addDays(1),
-            endDate: addDays(15),
-            kosu: 20,
-        },
-    ],
-    wbsBuffer: [
-        {
-            id: 1,
-            wbsId: 1,
-            name: "リスク対策工数",
-            buffer: 50,
-            bufferType: "RISK",
-        },
-    ],
-    workRecords: [
-        {
-            userId: "dummy01",
-            taskId: 30,
-            date: addDays(0),
-            hours_worked: 7.5,
-        },
-    ],
-    milestone: [
-        {
-            wbsId: 30,
-            name: "キックオフ",
-            date: addDays(0),
-        },
-    ],
     companyHolidays: [],
     userSchedules: []
 }

@@ -1,4 +1,4 @@
-import { assigneeGanttMonthlyTestData, importTestData, importTestData2, mockData, mockDataProjects } from "../src/data/mock-data";
+import { getMockData } from "../src/data/mock-data";
 import { phases } from "../src/data/phases";
 import { users } from "../src/data/users";
 import prisma from "../src/lib/prisma";
@@ -8,7 +8,7 @@ async function main() {
     console.log("▶️シードデータの挿入を開始します");
 
     // 初期データ挿入
-    for (const user of users.users) {
+    for (const user of users) {
         await prisma.users.upsert({
             where: { id: user.id },
             update: {
@@ -21,31 +21,6 @@ async function main() {
                 name: user.name,
                 email: user.email,
                 displayName: user.displayName,
-            },
-        })
-    }
-
-    for (const userSchedule of users.userSchedules) {
-        await prisma.userSchedule.upsert({
-            where: { id: userSchedule.id },
-            create: {
-                id: userSchedule.id,
-                userId: userSchedule.userId,
-                date: new Date(userSchedule.date),
-                startTime: userSchedule.startTime,
-                endTime: userSchedule.endTime,
-                title: userSchedule.title,
-                location: userSchedule.location,
-                description: userSchedule.description,
-            },
-            update: {
-                userId: userSchedule.userId,
-                date: userSchedule.date,
-                startTime: userSchedule.startTime,
-                endTime: userSchedule.endTime,
-                title: userSchedule.title,
-                location: userSchedule.location,
-                description: userSchedule.description,
             },
         })
     }
@@ -67,34 +42,7 @@ async function main() {
         })
     }
 
-    for (const project of mockDataProjects) {
-        await prisma.projects.upsert({
-            where: { id: project.id.toString() },
-            update: {
-                name: project.name,
-                status: project.status as ProjectStatus,
-                description: project.description,
-                startDate: project.startDate,
-                endDate: project.endDate,
-            },
-            create: {
-                id: project.id.toString(),
-                name: project.name,
-                status: project.status as ProjectStatus,
-                description: project.description,
-                startDate: project.startDate,
-                endDate: project.endDate,
-            },
-        })
-    }
-
-    const mocks = [
-        mockData,
-        importTestData,
-        importTestData2,
-        //mockDataLarge,
-        assigneeGanttMonthlyTestData,
-    ]
+    const mocks = getMockData()
 
     for (const mock of mocks) {
         // モックデータ挿入
@@ -133,13 +81,9 @@ async function main() {
             })
         }
 
-        const phaseIdByCodeSeq = new Map<string, number>();
-        const phaseIdByCode = new Map<string, number>();
         for (const phase of mock.wbsPhase) {
-            const phaseAny = phase as any;
-            const phaseId = (phaseAny.id ?? stableId(`${phase.wbsId}:${phase.code}:${phase.seq ?? ''}`));
             await prisma.wbsPhase.upsert({
-                where: { id: phaseId },
+                where: { id: phase.id },
                 update: {
                     wbsId: phase.wbsId,
                     name: phase.name,
@@ -147,66 +91,47 @@ async function main() {
                     seq: phase.seq,
                 },
                 create: {
-                    id: phaseId,
+                    id: phase.id,
                     wbsId: phase.wbsId,
                     name: phase.name,
                     code: phase.code,
                     seq: phase.seq,
                 },
             })
-            const keyWithSeq = `${phase.wbsId}:${phase.code}:${phase.seq ?? ''}`;
-            phaseIdByCodeSeq.set(keyWithSeq, phaseId);
-            const keyCodeOnly = `${phase.wbsId}:${phase.code}`;
-            if (!phaseIdByCode.has(keyCodeOnly)) {
-                phaseIdByCode.set(keyCodeOnly, phaseId);
-            }
         }
 
         for (const assignee of mock.wbsAssignee) {
-            const assigneeAny = assignee as any;
-            const wbsAssigneeId = (assigneeAny.id ?? stableId(`${assignee.wbsId}:${assignee.assigneeId}`));
             await prisma.wbsAssignee.upsert({
-                where: { id: wbsAssigneeId },
+                where: { id: assignee.id },
                 update: {
                     wbsId: assignee.wbsId,
                     assigneeId: assignee.assigneeId,
+                    rate: assignee.rate,
                 },
                 create: {
-                    id: wbsAssigneeId,
+                    id: assignee.id,
                     wbsId: assignee.wbsId,
                     assigneeId: assignee.assigneeId,
+                    rate: assignee.rate,
                 },
             })
         }
 
         for (const task of mock.wbsTask) {
-            const tAny = task as any;
-            const taskId = (tAny.id ?? stableId(`${task.wbsId}:${task.taskNo}`));
-            let resolvedPhaseId: number | undefined = tAny.phaseId;
-            if (!resolvedPhaseId && tAny.phaseCode) {
-                if (tAny.phaseSeq !== undefined) {
-                    resolvedPhaseId = phaseIdByCodeSeq.get(`${task.wbsId}:${tAny.phaseCode}:${tAny.phaseSeq ?? ''}`);
-                } else {
-                    resolvedPhaseId = phaseIdByCode.get(`${task.wbsId}:${tAny.phaseCode}`);
-                }
-            }
-            const resolvedAssigneeId = (tAny.assigneeId ?? (tAny.assigneeUserId ? stableId(`${task.wbsId}:${tAny.assigneeUserId}`) : undefined));
-
             const taskData = await prisma.wbsTask.upsert({
                 where: { taskNo_wbsId: { taskNo: task.taskNo, wbsId: task.wbsId } },
                 update: {
                     wbsId: task.wbsId,
-                    phaseId: resolvedPhaseId!,
+                    phaseId: task.phaseId!,
                     name: task.name,
-                    assigneeId: resolvedAssigneeId!,
                     status: task.status as TaskStatus,
                 },
                 create: {
                     taskNo: task.taskNo,
                     wbsId: task.wbsId,
-                    phaseId: resolvedPhaseId!,
+                    phaseId: task.phaseId!,
                     name: task.name,
-                    assigneeId: resolvedAssigneeId!,
+                    assigneeId: task.assigneeId,
                     status: task.status as TaskStatus,
                 },
             })
@@ -242,10 +167,8 @@ async function main() {
         }
 
         for (const buffer of mock.wbsBuffer) {
-            const bufferAny = buffer as any;
-            const bufferId = (bufferAny.id ?? stableId(`${buffer.wbsId}:${buffer.name}:${buffer.bufferType}`));
             await prisma.wbsBuffer.upsert({
-                where: { id: bufferId },
+                where: { id: buffer.id },
                 update: {
                     wbsId: buffer.wbsId,
                     name: buffer.name,
@@ -253,7 +176,7 @@ async function main() {
                     bufferType: buffer.bufferType as BufferType,
                 },
                 create: {
-                    id: bufferId,
+                    id: buffer.id,
                     wbsId: buffer.wbsId,
                     name: buffer.name,
                     buffer: buffer.buffer,
@@ -264,17 +187,15 @@ async function main() {
 
         for (const milestone of mock.milestone) {
             const d = new Date(milestone.date);
-            const milestoneAny = milestone as any;
-            const milestoneId = (milestoneAny.id ?? stableId(`${milestone.wbsId}:${milestone.name}:${d.toISOString().slice(0,10)}`));
             await prisma.milestone.upsert({
-                where: { id: milestoneId },
+                where: { id: milestone.id },
                 update: {
                     wbsId: milestone.wbsId,
                     name: milestone.name,
                     date: d,
                 },
                 create: {
-                    id: milestoneId,
+                    id: milestone.id,
                     wbsId: milestone.wbsId,
                     name: milestone.name,
                     date: d,
@@ -284,10 +205,8 @@ async function main() {
 
         for (const workRecord of mock.workRecords) {
             const d = new Date(workRecord.date);
-            const wrAny = workRecord as any;
-            const workRecordId = (wrAny.id ?? stableId(`${workRecord.userId}:${workRecord.taskId}:${d.toISOString().slice(0,10)}`));
             await prisma.workRecord.upsert({
-                where: { id: workRecordId },
+                where: { id: workRecord.id },
                 update: {
                     userId: workRecord.userId,
                     taskId: workRecord.taskId,
@@ -295,7 +214,7 @@ async function main() {
                     hours_worked: workRecord.hours_worked,
                 },
                 create: {
-                    id: workRecordId,
+                    id: workRecord.id,
                     userId: workRecord.userId,
                     taskId: workRecord.taskId,
                     date: d,
@@ -306,18 +225,16 @@ async function main() {
 
         for (const companyHoliday of mock.companyHolidays) {
             const d = new Date(companyHoliday.date);
-            const chAny = companyHoliday as any;
-            const companyHolidayId = (chAny.id ?? stableId(`${d.toISOString().slice(0,10)}:${companyHoliday.name}:${companyHoliday.type}`));
             await prisma.companyHoliday.upsert({
-                where: { 
-                    id: companyHolidayId,
+                where: {
+                    id: companyHoliday.id,
                 },
                 update: {
                     name: companyHoliday.name,
                     type: companyHoliday.type as CompanyHolidayType,
                 },
                 create: {
-                    id: companyHolidayId,
+                    id: companyHoliday.id,
                     date: d,
                     name: companyHoliday.name,
                     type: companyHoliday.type as CompanyHolidayType,
@@ -327,10 +244,8 @@ async function main() {
 
         for (const userSchedule of mock.userSchedules) {
             const d = new Date(userSchedule.date);
-            const usAny = userSchedule as any;
-            const userScheduleId = (usAny.id ?? stableId(`${userSchedule.userId}:${d.toISOString().slice(0,10)}:${userSchedule.startTime}:${userSchedule.endTime}:${userSchedule.title}`));
             await prisma.userSchedule.upsert({
-                where: { id: userScheduleId },
+                where: { id: userSchedule.id },
                 update: {
                     userId: userSchedule.userId,
                     date: d,
@@ -341,7 +256,7 @@ async function main() {
                     description: userSchedule.description,
                 },
                 create: {
-                    id: userScheduleId,
+                    id: userSchedule.id,
                     userId: userSchedule.userId,
                     date: d,
                     startTime: userSchedule.startTime,
@@ -397,12 +312,12 @@ async function main() {
 }
 
 /**
- * 文字列を32ビットの正の整数に変換する
+ * IDを生成する
  * @param input 
- * @returns
+ * @returns 
  */
 function stableId(input: string): number {
-    let h = 2166136261; // FNV-1a 32bit
+    let h = 2166136261;
     for (let i = 0; i < input.length; i++) {
         h ^= input.charCodeAt(i);
         h = Math.imul(h, 16777619);
