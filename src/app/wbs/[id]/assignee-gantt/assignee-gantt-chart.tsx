@@ -59,7 +59,8 @@ interface DailyWorkAllocation {
   overloadedHours: number; // 過負荷時間
   isWeekend: boolean; // 土日かどうか
   isCompanyHoliday: boolean; // 会社休日かどうか
-  userSchedules: { // 個人予定
+  userSchedules: {
+    // 個人予定
     title: string; // タイトル
     startTime: string; // 開始時間
     endTime: string; // 終了時間
@@ -85,25 +86,26 @@ interface AssigneeWorkload {
 
 /**
  * 担当者別ガントチャート
- * @returns 
+ * @returns
  */
-export function AssigneeGanttChart({
-  wbsId,
-}: AssigneeGanttChartProps) {
+export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
   const [workloads, setWorkloads] = useState<AssigneeWorkload[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // 警告（実現不可能タスク）
-  const [warnings, setWarnings] = useState<{
-    taskId: string;
-    taskName: string;
-    assigneeId?: string;
-    assigneeName?: string;
-    periodStart?: string;
-    periodEnd?: string;
-    reason: 'NO_WORKING_DAYS';
-  }[]>([]);
+  const [warnings, setWarnings] = useState<
+    {
+      taskId: number;
+      taskNo: string;
+      taskName: string;
+      assigneeId?: string;
+      assigneeName?: string;
+      periodStart?: string;
+      periodEnd?: string;
+      reason: "NO_WORKING_DAYS";
+    }[]
+  >([]);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -153,12 +155,13 @@ export function AssigneeGanttChart({
   // 警告（実現不可能タスク）の期間を担当者別・日付セットに展開
   const warningDateMap: Record<string, Set<string>> = useMemo(() => {
     const map: Record<string, Set<string>> = {};
-    if (!warnings || warnings.length === 0 || dateRange.length === 0) return map;
-   
+    if (!warnings || warnings.length === 0 || dateRange.length === 0)
+      return map;
+
     const toLocalYMD = (d: Date) => {
       const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
       return `${y}-${m}-${day}`;
     };
 
@@ -213,15 +216,16 @@ export function AssigneeGanttChart({
       const workloadObjects: AssigneeWorkload[] = data.map((workloadData) => {
         const dailyAllocations: DailyWorkAllocation[] =
           workloadData.dailyAllocations.map((daily) => {
-            const taskAllocations: TaskAllocation[] =
-              daily.taskAllocations.map((task) => ({
+            const taskAllocations: TaskAllocation[] = daily.taskAllocations.map(
+              (task) => ({
                 taskId: task.taskId,
                 taskName: task.taskName,
                 allocatedHours: task.allocatedHours,
                 totalHours: task.totalHours,
                 periodStart: task.periodStart,
                 periodEnd: task.periodEnd,
-              }));
+              })
+            );
 
             return {
               date: new Date(daily.date),
@@ -430,19 +434,30 @@ export function AssigneeGanttChart({
             <div className="mt-2 p-3 rounded border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm">
               <div className="flex items-center gap-2 mb-1">
                 <AlertTriangle className="h-4 w-4" />
-                <span>実現不可能なタスクが見つかりました（すべて非稼働日）</span>
+                <span>
+                  実現不可能なタスクが見つかりました（すべて非稼働日）
+                </span>
               </div>
               <ul className="list-disc pl-6 space-y-1">
                 {warnings.slice(0, 5).map((w, i) => (
                   <li key={i} className="truncate">
+                    {w.taskNo + " / "}
                     {w.taskName}
-                    {w.assigneeName ? ` / ${w.assigneeName}` : ''}
-                    {w.periodStart && w.periodEnd ? `（${new Date(w.periodStart).toLocaleDateString('ja-JP')} - ${new Date(w.periodEnd).toLocaleDateString('ja-JP')}）` : ''}
+                    {w.assigneeName ? ` / ${w.assigneeName}` : ""}
+                    {w.periodStart && w.periodEnd
+                      ? `（${new Date(w.periodStart).toLocaleDateString(
+                          "ja-JP"
+                        )} - ${new Date(w.periodEnd).toLocaleDateString(
+                          "ja-JP"
+                        )}）`
+                      : ""}
                   </li>
                 ))}
               </ul>
               {warnings.length > 5 && (
-                <div className="text-xs text-gray-600 mt-1">他 {warnings.length - 5} 件</div>
+                <div className="text-xs text-gray-600 mt-1">
+                  他 {warnings.length - 5} 件
+                </div>
               )}
             </div>
           )}
@@ -545,7 +560,9 @@ export function AssigneeGanttChart({
                     </div>
                   </div>
                   <div className="text-sm col-span-2">
-                    <div className="text-gray-500">レート基準({selectedAssignee.assigneeRate * 100}%)</div>
+                    <div className="text-gray-500">
+                      レート基準({selectedAssignee.assigneeRate * 100}%)
+                    </div>
                     <div
                       className={
                         selectedAllocation.isOverRateCapacity
@@ -572,7 +589,10 @@ export function AssigneeGanttChart({
                             {t.taskName}
                           </div>
                           <div className="text-xs text-gray-600 flex items-center gap-2">
-                            <span>{t.totalHours.toFixed(2)}h <br />(内訳:{t.allocatedHours.toFixed(2)}h)</span>
+                            <span>
+                              {t.totalHours.toFixed(2)}h <br />
+                              (内訳:{t.allocatedHours.toFixed(2)}h)
+                            </span>
                             {t.periodStart && t.periodEnd && (
                               <span className="text-xs text-gray-500">
                                 {new Date(t.periodStart).toLocaleDateString(

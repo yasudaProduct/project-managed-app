@@ -46,7 +46,8 @@ export interface AssigneeGanttResponse {
   success: boolean;
   data?: WorkloadData[];
   warnings?: {
-    taskId: string;
+    taskId: number;
+    taskNo: string;
     taskName: string;
     assigneeId?: string;
     assigneeName?: string;
@@ -67,11 +68,10 @@ export async function getAssigneeWorkloads(
     if (!wbsId || !startDate || !endDate) {
       return {
         success: false,
-        error: 'wbsId, startDate, endDate are required'
+        error: 'wbsid、startdate、enddateが必要です'
       };
     }
 
-    // DIコンテナからサービスを取得
     const assigneeGanttService = container.get<IAssigneeGanttService>(SYMBOL.IAssigneeGanttService);
 
     // YYYY-MM-DD をUTC深夜に変換してサービスへ
@@ -80,16 +80,17 @@ export async function getAssigneeWorkloads(
     // データを取得
     const [workloads, warnings] = await Promise.all([
       assigneeGanttService.getAssigneeWorkloads(
-      wbsId,
-      toUtcMidnight(startDate),
-      toUtcMidnight(endDate)
-    ),
+        wbsId,
+        toUtcMidnight(startDate),
+        toUtcMidnight(endDate)
+      ),
       assigneeGanttService.getAssigneeWarnings(
         wbsId,
         toUtcMidnight(startDate),
         toUtcMidnight(endDate)
       )
     ]);
+    console.log(warnings);
 
     // プレーンオブジェクトに変換
     const plainWorkloads: WorkloadData[] = workloads.map(workload => ({
@@ -127,6 +128,7 @@ export async function getAssigneeWorkloads(
       data: plainWorkloads,
       warnings: warnings.map(w => ({
         taskId: w.taskId,
+        taskNo: w.taskNo,
         taskName: w.taskName,
         assigneeId: w.assigneeId,
         assigneeName: w.assigneeName,

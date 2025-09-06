@@ -75,12 +75,20 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     return workloads;
   }
 
+  /**
+   * 担当者別の作業負荷を取得
+   * @param wbsId 
+   * @param startDate 
+   * @param endDate 
+   * @returns 
+   */
   async getAssigneeWarnings(
     wbsId: number,
     startDate: Date,
     endDate: Date
   ): Promise<{
-    taskId: string;
+    taskId: number;
+    taskNo: string;
     taskName: string;
     assigneeId?: string;
     assigneeName?: string;
@@ -104,14 +112,15 @@ export class AssigneeGanttService implements IAssigneeGanttService {
         assigneeIdToUser.set(a.id, { userId: a.userId, userName: a.userName });
       }
     }
-    
+
     const assigneeIdToEntity = new Map<number, WbsAssignee>();
     for (const a of assignees) {
       if (a.id != null) assigneeIdToEntity.set(a.id, a);
     }
 
     const warnings: {
-      taskId: string;
+      taskId: number;
+      taskNo: string;
       taskName: string;
       assigneeId?: string;
       assigneeName?: string;
@@ -150,7 +159,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
           // const assigneeInfo = assigneeIdToUser.get(wbsAssignee.id!); // TODO:assigneeIdToEntityから取得したら？
           const assigneeInfo = assigneeIdToEntity.get(wbsAssignee.id!);
           warnings.push({
-            taskId: task.id?.toString() || '0',
+            taskId: task.id!,
+            taskNo: task.taskNo.getValue(),
             taskName: task.name,
             assigneeId: assigneeInfo?.userId,
             assigneeName: assigneeInfo?.userName || assigneeInfo?.userId,
@@ -172,7 +182,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
         if (workingDays <= 0) {
           const assigneeInfo = task.assigneeId != null ? assigneeIdToUser.get(task.assigneeId) : undefined;
           warnings.push({
-            taskId: task.id?.toString() || '0',
+            taskId: task.id!,
+            taskNo: task.taskNo.getValue(),
             taskName: task.name,
             assigneeId: assigneeInfo?.userId,
             assigneeName: assigneeInfo?.userName || assigneeInfo?.userId,

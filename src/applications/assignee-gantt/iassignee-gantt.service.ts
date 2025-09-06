@@ -37,7 +37,8 @@ export interface IAssigneeGanttService {
     startDate: Date,
     endDate: Date
   ): Promise<{
-    taskId: string;
+    taskId: number;
+    taskNo: string;
     taskName: string;
     assigneeId?: string;
     assigneeName?: string;
