@@ -83,6 +83,7 @@ model WbsAssignee {
   wbsId     Int
   assigneeId String
   rate      Float      @default(1.0) // 参画率（0.01〜1.0）
+  seq       Int        @default(0)
   wbs       Wbs        @relation(fields: [wbsId], references: [id])
   assignee  Users      @relation("WbsAssignee", fields: [assigneeId], references: [id])
   tasks     WbsTask[]  @relation("TaskAssignee")

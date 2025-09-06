@@ -20,9 +20,11 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
 
         return WbsAssignee.createFromDb({
             id: wbsAssignee.id,
+            wbsId: wbsAssignee.wbsId,
             userId: wbsAssignee.assignee.id,
             rate: wbsAssignee.rate,
             userName: wbsAssignee.assignee.name,
+            seq: wbsAssignee.seq,
         });
     }
 
@@ -38,9 +40,11 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
 
         return wbsAssigneeList.map(wbsAssignee => WbsAssignee.createFromDb({
             id: wbsAssignee.id,
+            wbsId: wbsAssignee.wbsId,
             userId: wbsAssignee.assignee.id,
             rate: wbsAssignee.rate,
             userName: wbsAssignee.assignee.displayName,
+            seq: wbsAssignee.seq,
         }));
 
     }
@@ -55,9 +59,11 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
 
         return wbsAssigneeList.map(wbsAssignee => WbsAssignee.createFromDb({
             id: wbsAssignee.id,
+            wbsId: wbsAssignee.wbsId,
             userId: wbsAssignee.assignee.id,
             rate: wbsAssignee.rate,
             userName: wbsAssignee.assignee.name,
+            seq: wbsAssignee.seq,
         }));
     }
 
@@ -78,9 +84,11 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
 
         return WbsAssignee.createFromDb({
             id: createdWbsAssignee.id,
+            wbsId: wbsId,
             userId: createdWbsAssignee.assigneeId,
             rate: createdWbsAssignee.rate,
             userName: user.name,
+            seq: createdWbsAssignee.seq,
         });
     }
 
@@ -100,9 +108,11 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
 
         return WbsAssignee.createFromDb({
             id: updatedWbsAssignee.id,
+            wbsId: wbsAssignee.wbsId,
             userId: updatedWbsAssignee.assigneeId,
             rate: updatedWbsAssignee.rate,
             userName: user.name,
+            seq: updatedWbsAssignee.seq,
         });
     }
 

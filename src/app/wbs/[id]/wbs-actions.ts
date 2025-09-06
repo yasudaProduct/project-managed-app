@@ -59,7 +59,7 @@ export async function createWbsPhase(wbsId: number, wbsPhaseData: { name: string
     return { success: true, wbsPhase: newWbsPhase };
 }
 
-export async function createWbsAssignee(wbsId: number, assigneeId: string, rate: number) {
+export async function createWbsAssignee(wbsId: number, assigneeId: string, rate: number, seq: number) {
     const existingAssignee = await prisma.wbsAssignee.findFirst({
         where: {
             wbsId: Number(wbsId),
@@ -76,13 +76,14 @@ export async function createWbsAssignee(wbsId: number, assigneeId: string, rate:
             wbsId: Number(wbsId),
             assigneeId: assigneeId,
             rate: rate / 100,
+            seq: seq,
         },
     });
 
     return { success: true, assignee: newAssignee };
 }
 
-export async function updateWbsAssignee(id: number, assigneeId: string, rate: number) {
+export async function updateWbsAssignee(id: number, assigneeId: string, rate: number, seq: number) {
 
     const existingAssignee = await prisma.wbsAssignee.findFirst({
         where: {
@@ -98,7 +99,8 @@ export async function updateWbsAssignee(id: number, assigneeId: string, rate: nu
         where: { id: Number(id) },
         data: {
             assigneeId: assigneeId,
-            rate: rate / 100
+            rate: rate / 100,
+            seq: seq,
         },
     });
     return { success: true, assignee: assignee };
@@ -123,5 +125,6 @@ export async function getAssignees(wbsId: number): Promise<Assignee[]> {
         id: Number(assignee.assignee.id),
         userId: assignee.assignee.id,
         rate: assignee.rate,
+        seq: assignee.seq,
     }));
 }

@@ -34,6 +34,7 @@ import { Input } from "../ui/input";
 const formSchema = z.object({
   assigneeId: z.string().nonempty("担当者を選択してください。"),
   rate: z.number().min(0).max(100).default(100),
+  seq: z.number().min(0).default(0),
 });
 
 type WbsAssigneeFormProps = {
@@ -43,6 +44,7 @@ type WbsAssigneeFormProps = {
     assigneeId: string;
     name: string;
     rate: number;
+    seq: number;
   };
 };
 
@@ -57,10 +59,12 @@ export function WbsAssigneeForm({ wbsId, assignee }: WbsAssigneeFormProps) {
       ? {
           assigneeId: assignee.assigneeId,
           rate: assignee.rate * 100,
+          seq: assignee.seq,
         }
       : {
           assigneeId: "",
-          rate: 1,
+          rate: 100,
+          seq: 0,
         },
   });
 
@@ -79,9 +83,15 @@ export function WbsAssigneeForm({ wbsId, assignee }: WbsAssigneeFormProps) {
         ? await updateWbsAssignee(
             Number(assignee.id),
             values.assigneeId,
-            values.rate
+            values.rate,
+            values.seq
           )
-        : await createWbsAssignee(wbsId, values.assigneeId, values.rate);
+        : await createWbsAssignee(
+            wbsId,
+            values.assigneeId,
+            values.rate,
+            values.seq
+          );
       if (result.success) {
         toast({
           title: assignee ? "担当者更新成功" : "担当者追加成功",
@@ -178,6 +188,25 @@ export function WbsAssigneeForm({ wbsId, assignee }: WbsAssigneeFormProps) {
               </FormControl>
               <FormDescription>
                 担当者の割合を入力してください。
+              </FormDescription>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="seq"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>順序</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormDescription>
+                担当者の表示順序を入力してください。
               </FormDescription>
             </FormItem>
           )}

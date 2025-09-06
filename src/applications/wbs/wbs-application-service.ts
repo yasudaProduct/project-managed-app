@@ -99,6 +99,7 @@ export class WbsApplicationService implements IWbsApplicationService {
                     name: assignee.userName!,
                     displayName: assignee.userName!,
                     rate: assignee.getRate() ?? 0,
+                    seq: assignee.seq,
                 },
             }
         });
@@ -108,13 +109,14 @@ export class WbsApplicationService implements IWbsApplicationService {
         const assignee = await this.wbsAssigneeRepository.findById(id);
         if (!assignee) return { assignee: null, wbsId: undefined };
         return {
-            wbsId: assignee.id!,
+            wbsId: assignee.wbsId,
             assignee: {
                 id: assignee.id!,
                 userId: assignee.userId,
                 name: assignee.userName!,
                 displayName: assignee.userName!,
                 rate: assignee.getRate() ?? 0,
+                seq: assignee.seq,
             },
         }
     }

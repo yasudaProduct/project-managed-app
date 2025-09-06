@@ -15,12 +15,13 @@ import Link from "next/link";
 
 export type WbsAssignee = {
   id: number;
+  wbsId: number;
   assignee: {
     id: string;
     name: string;
     rate: number;
+    seq: number;
   };
-  wbsId: number;
 };
 
 export const columns: ColumnDef<WbsAssignee & { link?: string }>[] = [
@@ -33,8 +34,12 @@ export const columns: ColumnDef<WbsAssignee & { link?: string }>[] = [
     header: "担当者",
   },
   {
-    accessorKey: "rate",
+    accessorKey: "assignee.rate",
     header: "割合",
+  },
+  {
+    accessorKey: "assignee.seq",
+    header: "順序",
   },
   {
     id: "actions",

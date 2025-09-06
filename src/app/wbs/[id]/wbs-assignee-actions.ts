@@ -14,9 +14,9 @@ export async function getWbsAssignees(wbsId: number): Promise<WbsAssignee[]> {
             id: assignee.assignee.id,
             name: assignee.assignee.name,
             rate: assignee.rate,
+            seq: assignee.seq,
         },
         wbsId: assignee.wbsId,
-        rate: assignee.rate,
     }))
 }
 

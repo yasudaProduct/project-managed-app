@@ -45,6 +45,7 @@ erDiagram
   Int wbsId FK
   String assigneeId FK
   Float rate
+  Int seq
   DateTime createdAt
   DateTime updatedAt
 }
@@ -327,6 +328,7 @@ erDiagram
   - `wbsId`: 
   - `assigneeId`: 
   - `rate`: 
+  - `seq`: 
   - `createdAt`: 
   - `updatedAt`: 
 

@@ -4,7 +4,11 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache"
 
 export async function getUsers() {
-    return await prisma.users.findMany();
+    return await prisma.users.findMany({
+        orderBy: {
+            createdAt: 'asc',
+        },
+    });
 }
 
 // TODO: サービス呼び出し

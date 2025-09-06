@@ -78,6 +78,7 @@ export type Assignee = {
   name: string
   displayName: string
   rate: number
+  seq: number
 }
 
 // export interface WbsWithTasksAndUserSchedule {
