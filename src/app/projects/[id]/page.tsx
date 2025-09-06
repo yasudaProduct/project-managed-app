@@ -6,14 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { getProjectById } from "../project-actions";
 import { getWbsByProjectId } from "./wbs/wbs-actions";
 import { ProjectDetailClient } from "@/components/projects/project-detail-client";
-import {
-  Calendar,
-  FileText,
-  Edit,
-  Plus,
-  BarChart3,
-  ArrowLeft,
-} from "lucide-react";
+import { Calendar, FileText, Edit, Plus, ArrowLeft } from "lucide-react";
 import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
 import { getProjectStatusName } from "@/lib/utils";
 
@@ -105,7 +98,7 @@ export default async function ProjectPage({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
+              <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
                   プロジェクトID
                 </h3>
