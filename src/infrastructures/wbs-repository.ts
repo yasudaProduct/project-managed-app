@@ -26,7 +26,7 @@ export class WbsRepository implements IWbsRepository {
 
         const wbsList = await prisma.wbs.findMany({
             where: { projectId },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: 'asc' },
         });
 
         return wbsList.map(wbs => Wbs.createFromDb({
