@@ -1,4 +1,5 @@
-import { NotificationTypeVO, NotificationType } from './notification-type';
+import { NotificationTypeVO } from './notification-type';
+import { NotificationType } from '@/types/notification';
 import { NotificationPriorityVO, NotificationPriority } from './notification-priority';
 import { NotificationChannelVO, NotificationChannel } from './notification-channel';
 
@@ -18,6 +19,9 @@ export interface NotificationData {
   [key: string]: any;
 }
 
+/**
+ * 通知エンティティ
+ */
 export class Notification {
   public readonly id?: number;
   public readonly userId: string;
@@ -128,6 +132,11 @@ export class Notification {
     });
   }
 
+  /**
+   * 通知を既読にする
+   * @param readAt: {Date} 既読日時
+   * @returns 
+   */
   public markAsRead(readAt: Date = new Date()): Notification {
     if (this.isRead) {
       return this; // 既に既読の場合は変更しない
@@ -151,6 +160,11 @@ export class Notification {
     });
   }
 
+  /**
+   * 通知を送信済みにする
+   * @param sentAt: {Date} 送信時刻
+   * @returns 
+   */
   public markAsSent(sentAt: Date = new Date()): Notification {
     return new Notification({
       id: this.id,
@@ -170,28 +184,53 @@ export class Notification {
     });
   }
 
+  /**
+   * 通知がスケジュールされているかどうかを判断する
+   * @returns {boolean} スケジュールされているかどうか
+   */
   public isScheduled(): boolean {
     return this.scheduledAt !== undefined && this.scheduledAt > new Date();
   }
 
+  /**
+   * 通知が送信済みかどうかを判断する
+   * @returns {boolean} 送信済みかどうか
+   */
   public isSent(): boolean {
     return this.sentAt !== undefined;
   }
 
+  /**
+   * 通知が未送信かどうかを判断する
+   * @returns {boolean} 未送信かどうか
+   */
   public isPending(): boolean {
     return !this.isSent() && !this.isScheduled();
   }
 
+  /**
+   * 通知が期限切れかどうかを判断する
+   * @returns {boolean} 期限切れかどうか
+   */
   public isOverdue(): boolean {
     return this.scheduledAt !== undefined &&
       this.scheduledAt < new Date() &&
       !this.isSent();
   }
 
+  /**
+   * 通知が指定のチャンネルに送信されるかどうかを判断する
+   * @param channel: {NotificationChannelVO} チャンネル
+   * @returns {boolean} 送信されるかどうか
+   */
   public shouldSendToChannel(channel: NotificationChannelVO): boolean {
     return this.channels.some(c => c.equals(channel));
   }
 
+  /**
+   * 通知のアクションURLを取得する
+   * @returns {string | undefined} アクションURL
+   */
   public getActionUrl(): string | undefined {
     if (!this.data) return undefined;
 

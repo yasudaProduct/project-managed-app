@@ -1,6 +1,6 @@
 import { Notification, NotificationData } from '@/domains/notification/notification';
 import { NotificationPreference } from '@/domains/notification/notification-preference';
-import { NotificationType } from '@/domains/notification/notification-type';
+import { NotificationType } from '@/types/notification';
 import { NotificationPriority } from '@/domains/notification/notification-priority';
 import { NotificationChannel } from '@/domains/notification/notification-channel';
 import { PushSubscriptionData } from './INotificationRepository';

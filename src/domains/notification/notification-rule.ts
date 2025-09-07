@@ -1,4 +1,5 @@
-import { NotificationTypeVO, NotificationType } from './notification-type';
+import { NotificationTypeVO } from './notification-type';
+import { NotificationType } from '@/types/notification';
 import { NotificationPriorityVO, NotificationPriority } from './notification-priority';
 import { NotificationChannelVO, NotificationChannel } from './notification-channel';
 

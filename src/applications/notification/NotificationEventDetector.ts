@@ -1,5 +1,5 @@
 import { injectable, inject } from 'inversify';
-import { NotificationType } from '@/domains/notification/notification-type';
+import { NotificationType } from '@/types/notification';
 import { NotificationPriority } from '@/domains/notification/notification-priority';
 import { NotificationChannel } from '@/domains/notification/notification-channel';
 import type { INotificationService } from './INotificationService';

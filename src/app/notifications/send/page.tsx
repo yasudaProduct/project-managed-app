@@ -16,19 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
+import {
+  getNotificationTypeDisplayName,
+  NotificationType,
+} from "@/types/notification";
 
 type Channel = "PUSH" | "IN_APP" | "EMAIL";
-
-const NOTIFICATION_TYPES = [
-  "TASK_DEADLINE_WARNING",
-  "TASK_DEADLINE_OVERDUE",
-  "TASK_MANHOUR_WARNING",
-  "TASK_MANHOUR_EXCEEDED",
-  "TASK_ASSIGNED",
-  "TASK_UPDATED",
-  "SCHEDULE_DELAY",
-  "PROJECT_STATUS_CHANGED",
-] as const;
 
 const PRIORITIES = ["URGENT", "HIGH", "MEDIUM", "LOW"] as const;
 
@@ -37,8 +30,8 @@ export default function SendNotificationPage() {
 
   const [targetUserId, setTargetUserId] = useState("");
   const [selfSend, setSelfSend] = useState(true);
-  const [type, setType] = useState<(typeof NOTIFICATION_TYPES)[number]>(
-    "PROJECT_STATUS_CHANGED"
+  const [type, setType] = useState<NotificationType>(
+    NotificationType.PROJECT_STATUS_CHANGED
   );
   const [priority, setPriority] =
     useState<(typeof PRIORITIES)[number]>("MEDIUM");
@@ -178,30 +171,28 @@ export default function SendNotificationPage() {
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="type">タイプ</Label>
+                  <span className="text-sm font-medium mr-2">タイプ</span>
                   <select
                     id="type"
-                    className="border rounded-md h-9 px-2"
+                    className="border rounded-md h-9 px-2 text-sm"
                     value={type}
                     onChange={(e) =>
-                      setType(
-                        e.target.value as (typeof NOTIFICATION_TYPES)[number]
-                      )
+                      setType(e.target.value as NotificationType)
                     }
                   >
-                    {NOTIFICATION_TYPES.map((t) => (
+                    {Object.values(NotificationType).map((t) => (
                       <option key={t} value={t}>
-                        {t}
+                        {getNotificationTypeDisplayName(t)}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="priority">優先度</Label>
+                  <span className="text-sm font-medium mr-2">優先度</span>
                   <select
                     id="priority"
-                    className="border rounded-md h-9 px-2"
+                    className="border rounded-md h-9 px-2 text-sm"
                     value={priority}
                     onChange={(e) =>
                       setPriority(e.target.value as (typeof PRIORITIES)[number])

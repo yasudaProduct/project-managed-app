@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Bell, Settings, CheckCheck } from "lucide-react";
+import { Bell, Settings, CheckCheck, Send } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationList } from "./NotificationList";
 import { Button } from "@/components/ui/button";
@@ -148,12 +148,19 @@ export function NotificationCenter({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
                     onClick={() => {
-                      // 通知設定画面への遷移
                       window.location.href = "/settings/notifications";
                     }}
                   >
                     <Settings size={14} className="mr-2" />
                     通知設定
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      window.location.href = "/notifications/send";
+                    }}
+                  >
+                    <Send size={14} className="mr-2" />
+                    通知送信
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

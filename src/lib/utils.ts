@@ -49,7 +49,6 @@ export const getTaskStatusName = (status: TaskStatus) => {
       return "完了";
   }
 };
-
 interface Holiday {
   date: Date;
   name: string;
