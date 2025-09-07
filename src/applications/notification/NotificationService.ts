@@ -31,6 +31,16 @@ export class NotificationService implements INotificationService {
   /**
    * 通知の作成
    * 通知の作成は通知設定に応じてチャンネルを調整します
+   * @param request: {CreateNotificationRequest} 通知の作成リクエスト
+   * @param request.userId: {string} ユーザーID
+   * @param request.type: {NotificationType} 通知タイプ
+   * @param request.priority: {NotificationPriority} 通知優先度
+   * @param request.title: {string} 通知タイトル
+   * @param request.message: {string} 通知メッセージ
+   * @param request.data: {NotificationData} 通知データ
+   * @param request.channels: {NotificationChannel[]} 通知チャンネル
+   * @param request.scheduledAt: {Date} 通知スケジュール時間
+   * @returns {Promise<Notification>} 作成された通知
    */
   async createNotification(request: CreateNotificationRequest): Promise<Notification> {
     // ユーザーの通知設定を確認

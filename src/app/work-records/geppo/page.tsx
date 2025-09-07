@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import {
   checkGeppoConnection,
@@ -46,6 +46,7 @@ import { User } from "@/types/user";
 import { Geppo } from "@/domains/geppo/types";
 import { MonthPicker } from "@/components/month-picker";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 interface SearchFilters {
   PROJECT_ID: string;
@@ -59,7 +60,8 @@ interface FilterOptions {
   users: User[];
 }
 
-export default function GeppoPage() {
+function GeppoPageContent() {
+  const searchParams = useSearchParams();
   const [entries, setEntries] = useState<Geppo[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     projects: [],
@@ -92,6 +94,14 @@ export default function GeppoPage() {
     void checkConnection();
   }, []);
 
+  // URLパラメータからプロジェクトIDを取得して設定
+  useEffect(() => {
+    const projectId = searchParams.get("projectId");
+    if (projectId) {
+      // TODO:プロジェクトの選択値を設定
+    }
+  }, [searchParams]);
+
   // データベース接続テスト
   const checkConnection = async () => {
     try {
@@ -107,6 +117,7 @@ export default function GeppoPage() {
     setLoadingFilters(true);
     try {
       const result = await getGeppoFilterOptions();
+      console.log(result.filterOptions);
 
       if (result.success) {
         setFilterOptions(result.filterOptions);
@@ -389,9 +400,7 @@ export default function GeppoPage() {
               <Calendar className="h-5 w-5" />
               <span>作業実績</span>
               {pagination.total > 0 && (
-                <Badge variant="secondary">
-                  {pagination.total.toLocaleString()}件
-                </Badge>
+                <Badge variant="secondary">{String(pagination.total)}件</Badge>
               )}
             </div>
             {pagination.totalPages > 1 && (
@@ -742,5 +751,20 @@ export default function GeppoPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function GeppoPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span>読み込み中...</span>
+        </div>
+      }
+    >
+      <GeppoPageContent />
+    </Suspense>
   );
 }

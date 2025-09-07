@@ -52,7 +52,8 @@
         "icon": "browser",
         "color": "terminal.ansiBlue",
         "commands": [
-          "npm run mysql:setup"
+          "echo npm run mysql:setup",
+          "docker compose -f compose.mysql.yml up -d db-test"
         ]
       }
     ]

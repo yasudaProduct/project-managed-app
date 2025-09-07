@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const userId = await getCurrentUserIdOrThrow();
     const body = await request.json();
 
-    // 管理者権限のチェック（必要に応じて追加）
+    // 管理者権限のチェック TODO: ロール機能追加後に実装予定
     // const isAdmin = await checkAdminPermission(userId);
     // if (!isAdmin) {
     //   return NextResponse.json({ error: 'Admin permission required' }, { status: 403 });

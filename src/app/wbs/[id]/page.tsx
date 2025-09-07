@@ -11,7 +11,7 @@ import {
   Table,
   Trello,
   Users,
-  Import,
+  RefreshCcw,
 } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { getWbsPhases } from "./wbs-phase-actions";
@@ -89,7 +89,7 @@ export default async function WbsManagementPage({
           </Button>
         </Link>
         <TaskModal wbsId={wbs.id}>
-          <Button className="bg-white text-black ml-2">
+          <Button className="bg-white text-black ml-2 mr-2">
             <CirclePlus className="h-4 w-4" />
             <CalendarCheck className="h-4 w-4" />
           </Button>
@@ -104,7 +104,14 @@ export default async function WbsManagementPage({
         />
         <Link href={`/wbs/${wbs.id}/import`}>
           <Button className="bg-white text-black ml-2">
-            <Import className="h-4 w-4" />
+            <RefreshCcw className="h-4 w-4" />
+            Excel同期
+          </Button>
+        </Link>
+        <Link href={`/work-records/geppo?projectId=${project.id}`}>
+          <Button className="bg-white text-black ml-2">
+            <RefreshCcw className="h-4 w-4" />
+            月報同期
           </Button>
         </Link>
         <Suspense
