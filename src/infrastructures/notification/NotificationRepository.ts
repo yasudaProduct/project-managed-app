@@ -362,8 +362,6 @@ export class NotificationRepository implements INotificationRepository {
       scheduleDelay: record.scheduleDelay,
       taskAssignment: record.taskAssignment,
       projectStatusChange: record.projectStatusChange,
-      quietHoursStart: record.quietHoursStart ?? undefined,
-      quietHoursEnd: record.quietHoursEnd ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
@@ -386,8 +384,6 @@ export class NotificationRepository implements INotificationRepository {
         scheduleDelay: preference.scheduleDelay,
         taskAssignment: preference.taskAssignment,
         projectStatusChange: preference.projectStatusChange,
-        quietHoursStart: preference.quietHoursStart,
-        quietHoursEnd: preference.quietHoursEnd,
       },
     });
 
@@ -402,8 +398,6 @@ export class NotificationRepository implements INotificationRepository {
       scheduleDelay: record.scheduleDelay,
       taskAssignment: record.taskAssignment,
       projectStatusChange: record.projectStatusChange,
-      quietHoursStart: record.quietHoursStart ?? undefined,
-      quietHoursEnd: record.quietHoursEnd ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
@@ -430,8 +424,6 @@ export class NotificationRepository implements INotificationRepository {
         scheduleDelay: preference.scheduleDelay,
         taskAssignment: preference.taskAssignment,
         projectStatusChange: preference.projectStatusChange,
-        quietHoursStart: preference.quietHoursStart,
-        quietHoursEnd: preference.quietHoursEnd,
       },
     });
 
@@ -446,8 +438,6 @@ export class NotificationRepository implements INotificationRepository {
       scheduleDelay: record.scheduleDelay,
       taskAssignment: record.taskAssignment,
       projectStatusChange: record.projectStatusChange,
-      quietHoursStart: record.quietHoursStart ?? undefined,
-      quietHoursEnd: record.quietHoursEnd ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });

@@ -36,12 +36,7 @@ export class NotificationService implements INotificationService {
     // ユーザーの通知設定を確認
     const preferences = await this.getPreferencesDomain(request.userId);
 
-    // クワイエットアワーのチェック
-    if (preferences.isInQuietHours()) {
-      // クワイエットアワー中は送信時刻を調整
-      const scheduledAt = this.calculateNextSendTime(preferences);
-      request.scheduledAt = scheduledAt;
-    }
+    // クワイエットアワー機能は廃止
 
     // 通知設定に応じてチャンネルを調整
     const enabledChannels = this.getEnabledChannels(request, preferences);
@@ -55,7 +50,7 @@ export class NotificationService implements INotificationService {
     const savedNotification = await this.notificationRepository.create(notification);
 
     // リアルタイム通知の送信
-    if (this.shouldSendImmediately(savedNotification, preferences)) {
+    if (this.shouldSendImmediately(savedNotification)) {
       // リアルタイム通知の送信
       await this.sendNotification(savedNotification);
     }
@@ -199,7 +194,7 @@ export class NotificationService implements INotificationService {
   }
 
   /**
-   * 通知設定の取得（プレゼンテーション層向け: プレーンオブジェクトを返す）
+   * 通知設定の取得
    */
   async getPreferences(userId: string): Promise<NotificationPreferencePlain> {
     const preferences = await this.getPreferencesDomain(userId);
@@ -213,7 +208,7 @@ export class NotificationService implements INotificationService {
     let preferences = await this.notificationRepository.findPreferenceByUserId(userId);
 
     if (!preferences) {
-      // デフォルト設定を作成
+      // 存在しない場合はデフォルト設定を作成
       preferences = NotificationPreference.createDefault(userId);
       preferences = await this.notificationRepository.savePreference(preferences);
     }
@@ -311,16 +306,13 @@ export class NotificationService implements INotificationService {
     return enabledChannels;
   }
 
-  private shouldSendImmediately(notification: Notification, preferences: NotificationPreference): boolean {
+  private shouldSendImmediately(notification: Notification): boolean {
     // スケジュール済みの通知は後で送信
     if (notification.isScheduled()) {
       return false;
     }
 
-    // クワイエットアワー中は送信しない
-    if (preferences.isInQuietHours()) {
-      return false;
-    }
+    // クワイエットアワー機能は廃止
 
     return true;
   }
@@ -342,8 +334,6 @@ export class NotificationService implements INotificationService {
       scheduleDelay: preferences.scheduleDelay,
       taskAssignment: preferences.taskAssignment,
       projectStatusChange: preferences.projectStatusChange,
-      quietHoursStart: preferences.quietHoursStart,
-      quietHoursEnd: preferences.quietHoursEnd,
       createdAt: preferences.createdAt,
       updatedAt: preferences.updatedAt,
     };
@@ -375,18 +365,13 @@ export class NotificationService implements INotificationService {
     };
   }
 
-  private calculateNextSendTime(preferences: NotificationPreference): Date {
+  private calculateNextSendTime(): Date {
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // クワイエットアワー終了時刻に設定
-    if (preferences.quietHoursEnd !== undefined) {
-      tomorrow.setHours(preferences.quietHoursEnd, 0, 0, 0);
-    } else {
-      tomorrow.setHours(9, 0, 0, 0); // デフォルトは9時
-    }
-
+    // クワイエットアワー機能は廃止。既定の翌日9時に設定
+    tomorrow.setHours(9, 0, 0, 0);
     return tomorrow;
   }
 

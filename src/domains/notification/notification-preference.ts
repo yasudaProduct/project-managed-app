@@ -17,8 +17,6 @@ export class NotificationPreference {
   public readonly scheduleDelay: boolean;
   public readonly taskAssignment: boolean;
   public readonly projectStatusChange: boolean;
-  public readonly quietHoursStart?: number; // 0-23
-  public readonly quietHoursEnd?: number;   // 0-23
   public readonly createdAt?: Date;
   public readonly updatedAt?: Date;
 
@@ -33,8 +31,6 @@ export class NotificationPreference {
     scheduleDelay?: boolean;
     taskAssignment?: boolean;
     projectStatusChange?: boolean;
-    quietHoursStart?: number;
-    quietHoursEnd?: number;
     createdAt?: Date;
     updatedAt?: Date;
   }) {
@@ -48,8 +44,6 @@ export class NotificationPreference {
     this.scheduleDelay = args.scheduleDelay ?? true;
     this.taskAssignment = args.taskAssignment ?? true;
     this.projectStatusChange = args.projectStatusChange ?? true;
-    this.quietHoursStart = args.quietHoursStart;
-    this.quietHoursEnd = args.quietHoursEnd;
     this.createdAt = args.createdAt;
     this.updatedAt = args.updatedAt;
   }
@@ -68,8 +62,6 @@ export class NotificationPreference {
     scheduleDelay?: boolean;
     taskAssignment?: boolean;
     projectStatusChange?: boolean;
-    quietHoursStart?: number;
-    quietHoursEnd?: number;
   }): NotificationPreference {
     return new NotificationPreference(args);
   }
@@ -87,8 +79,6 @@ export class NotificationPreference {
     scheduleDelay: boolean;
     taskAssignment: boolean;
     projectStatusChange: boolean;
-    quietHoursStart?: number;
-    quietHoursEnd?: number;
     createdAt: Date;
     updatedAt: Date;
   }): NotificationPreference {
@@ -103,8 +93,6 @@ export class NotificationPreference {
       scheduleDelay: args.scheduleDelay,
       taskAssignment: args.taskAssignment,
       projectStatusChange: args.projectStatusChange,
-      quietHoursStart: args.quietHoursStart,
-      quietHoursEnd: args.quietHoursEnd,
       createdAt: args.createdAt,
       updatedAt: args.updatedAt,
     });
@@ -119,8 +107,6 @@ export class NotificationPreference {
     scheduleDelay?: boolean;
     taskAssignment?: boolean;
     projectStatusChange?: boolean;
-    quietHoursStart?: number;
-    quietHoursEnd?: number;
   }): NotificationPreference {
     return new NotificationPreference({
       id: this.id,
@@ -133,27 +119,9 @@ export class NotificationPreference {
       scheduleDelay: args.scheduleDelay ?? this.scheduleDelay,
       taskAssignment: args.taskAssignment ?? this.taskAssignment,
       projectStatusChange: args.projectStatusChange ?? this.projectStatusChange,
-      quietHoursStart: args.quietHoursStart ?? this.quietHoursStart,
-      quietHoursEnd: args.quietHoursEnd ?? this.quietHoursEnd,
       createdAt: this.createdAt,
       updatedAt: new Date(),
     });
-  }
-
-  public isInQuietHours(time: Date = new Date()): boolean {
-    if (this.quietHoursStart === undefined || this.quietHoursEnd === undefined) {
-      return false;
-    }
-
-    const currentHour = time.getHours();
-    const startHour = this.quietHoursStart;
-    const endHour = this.quietHoursEnd;
-
-    if (startHour <= endHour) {
-      return currentHour >= startHour && currentHour < endHour;
-    } else {
-      return currentHour >= startHour || currentHour < endHour;
-    }
   }
 
   public shouldNotifyForTaskDeadline(daysRemaining: number): boolean {
@@ -182,20 +150,5 @@ export class NotificationPreference {
     }
 
     return channels;
-  }
-
-  public validateQuietHours(): boolean {
-    if (this.quietHoursStart === undefined && this.quietHoursEnd === undefined) {
-      return true;
-    }
-
-    if (this.quietHoursStart === undefined || this.quietHoursEnd === undefined) {
-      return false; // 片方だけが設定されているのは無効
-    }
-
-    return this.quietHoursStart >= 0 &&
-      this.quietHoursStart <= 23 &&
-      this.quietHoursEnd >= 0 &&
-      this.quietHoursEnd <= 23;
   }
 }

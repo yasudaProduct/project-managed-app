@@ -14,20 +14,20 @@ import {
 export interface NotificationPreferences {
   id?: number;
   userId: string;
-  enablePush: boolean;
-  enableInApp: boolean;
-  enableEmail: boolean;
-  taskDeadline: {
-    days: number[];
+  enablePush: boolean; // プッシュ通知有効フラグ
+  enableInApp: boolean; // アプリ内通知有効フラグ
+  enableEmail: boolean; // メール通知有効フラグ
+  taskDeadline: { // タスク期限警告設定
+    days: number[]; // 通知する日数の配列
   };
-  manhourThreshold: {
-    percentages: number[];
+  manhourThreshold: { // 工数警告設定
+    percentages: number[]; // 通知する工数の配列
   };
-  scheduleDelay: boolean;
-  taskAssignment: boolean;
-  projectStatusChange: boolean;
-  quietHoursStart?: number;
-  quietHoursEnd?: number;
+  scheduleDelay: boolean; // スケジュール遅延通知有効フラグ
+  taskAssignment: boolean; // タスクアサイン通知有効フラグ
+  projectStatusChange: boolean; // プロジェクト状態変更通知有効フラグ
+  quietHoursStart?: number; // 通知停止開始時刻（0-23）
+  quietHoursEnd?: number; // 通知停止終了時刻（0-23）
   createdAt?: string;
   updatedAt?: string;
 }
@@ -50,7 +50,7 @@ export function useNotificationPreferences() {
       if (result.success) {
         return result.data;
       } else {
-        throw new Error(result.error || 'Failed to get preferences');
+        throw new Error(result.error || '設定の取得に失敗しました');
       }
     },
     staleTime: 5 * 60 * 1000, // 5分間はフレッシュとみなす
@@ -62,8 +62,8 @@ export function useNotificationPreferences() {
    * 通知設定の更新はupdateNotificationPreferencesを使用します
    */
   const [updateState, updateAction] = useActionState(
-    async (prevState: NotificationActionResult | null, formData: FormData) => {
-      const result = await updateNotificationPreferences(prevState, formData);
+    async (_prevState: NotificationActionResult | null, formData: FormData) => {
+      const result = await updateNotificationPreferences(formData);
 
       // 成功時はキャッシュを更新
       if (result.success && result.data) {
@@ -75,11 +75,17 @@ export function useNotificationPreferences() {
     null
   );
 
+  /**
+   * Push通知購読管理
+   */
   const [pushSubscriptionState, pushSubscriptionAction] = useActionState(
     savePushSubscription,
     null
   );
 
+  /**
+   * Push通知購読解除管理
+   */
   const [pushUnsubscriptionState, pushUnsubscriptionAction] = useActionState(
     removePushSubscription,
     null

@@ -26,8 +26,6 @@ export interface NotificationPreferencePlain {
   scheduleDelay: boolean;
   taskAssignment: boolean;
   projectStatusChange: boolean;
-  quietHoursStart?: number;
-  quietHoursEnd?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }

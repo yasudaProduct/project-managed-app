@@ -307,10 +307,6 @@ model NotificationPreference {
   taskAssignment        Boolean  @default(true)
   projectStatusChange   Boolean  @default(true)
   
-  // 通知時間帯設定
-  quietHoursStart       Int?     // 通知停止開始時刻（0-23）
-  quietHoursEnd         Int?     // 通知停止終了時刻（0-23）
-  
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
   

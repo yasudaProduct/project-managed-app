@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Bell, Smartphone, Clock, TestTube, RotateCcw } from "lucide-react";
+import React from "react";
+import { Bell, Smartphone, TestTube, RotateCcw } from "lucide-react";
 import { useNotificationPreferences } from "@/hooks/useNotificationPreferences";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +25,6 @@ export function NotificationSettings() {
     isLoading,
     updatePreferences,
     resetToDefaults,
-    validateQuietHours,
     updateState,
   } = useNotificationPreferences();
 
@@ -36,17 +34,36 @@ export function NotificationSettings() {
     isSupported,
     subscribe,
     unsubscribe,
+    requestPermission,
     sendTestNotification,
     isLoading: pushLoading,
     error: pushError,
   } = usePushNotifications();
 
-  const [localQuietStart, setLocalQuietStart] = useState<string>(
-    preferences?.quietHoursStart?.toString().padStart(2, "0") || ""
-  );
-  const [localQuietEnd, setLocalQuietEnd] = useState<string>(
-    preferences?.quietHoursEnd?.toString().padStart(2, "0") || ""
-  );
+  // ユーザー意図（enablePush）と端末状態（permission / 購読）を自己修復
+  React.useEffect(() => {
+    if (!preferences) return;
+    if (!isSupported) return;
+
+    if (!preferences.enablePush) return;
+
+    if (permission === "denied") {
+      updatePreferences({ enablePush: false });
+      return;
+    }
+
+    if (permission === "granted" && !isSubscribed && !pushLoading) {
+      subscribe().catch(() => updatePreferences({ enablePush: false }));
+    }
+  }, [
+    preferences,
+    isSupported,
+    permission,
+    isSubscribed,
+    pushLoading,
+    subscribe,
+    updatePreferences,
+  ]);
 
   if (isLoading) {
     return <div>設定を読み込み中...</div>;
@@ -68,30 +85,37 @@ export function NotificationSettings() {
     updatePreferences({ manhourThreshold: { percentages } });
   };
 
-  const handleQuietHoursUpdate = () => {
-    const start = localQuietStart ? parseInt(localQuietStart) : undefined;
-    const end = localQuietEnd ? parseInt(localQuietEnd) : undefined;
-
-    if (validateQuietHours(start, end)) {
-      updatePreferences({
-        quietHoursStart: start,
-        quietHoursEnd: end,
-      });
-    }
-  };
-
   /**
-   * プッシュ通知の有効/無効を切り替え
+   * プッシュ通知の有効/無効（ユーザー意図）を切り替え
+   * - 有効化: 権限要求→購読→enablePush=true（失敗時はfalseへ戻す）
+   * - 無効化: 購読解除→enablePush=false
    */
-  const handlePushToggle = async () => {
+  const handlePushToggle = async (enabled: boolean) => {
     try {
-      if (isSubscribed) {
-        await unsubscribe();
+      if (enabled) {
+        if (permission === "default") {
+          await requestPermission();
+        }
+
+        if (Notification.permission !== "granted") {
+          updatePreferences({ enablePush: false });
+          return;
+        }
+
+        if (!isSubscribed) {
+          await subscribe();
+        }
+
+        updatePreferences({ enablePush: true });
       } else {
-        await subscribe();
+        if (isSubscribed) {
+          await unsubscribe();
+        }
+        updatePreferences({ enablePush: false });
       }
     } catch (error) {
       console.error("Push notification toggle failed:", error);
+      updatePreferences({ enablePush: false });
     }
   };
 
@@ -137,6 +161,19 @@ export function NotificationSettings() {
           プロジェクト管理に関する通知の受信設定を管理できます。
         </p>
       </div>
+
+      {/* 状態メッセージ */}
+      {updateState?.success && (
+        <Alert>
+          <AlertDescription>設定が正常に更新されました。</AlertDescription>
+        </Alert>
+      )}
+
+      {updateState?.error && (
+        <Alert variant="destructive">
+          <AlertDescription>{updateState.error}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Push通知設定 */}
       <Card>
@@ -185,9 +222,9 @@ export function NotificationSettings() {
               </p>
             </div>
             <Switch
-              checked={isSubscribed}
+              checked={preferences.enablePush}
               onCheckedChange={handlePushToggle}
-              disabled={!isSupported || permission === "denied" || pushLoading}
+              disabled={!isSupported || pushLoading}
             />
           </div>
 
@@ -406,68 +443,6 @@ export function NotificationSettings() {
         </CardContent>
       </Card>
 
-      {/* クワイエットアワー設定 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock size={20} />
-            クワイエットアワー
-          </CardTitle>
-          <CardDescription>指定した時間帯は通知を停止します</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="quiet-start">開始時刻</Label>
-              <Input
-                id="quiet-start"
-                type="number"
-                min="0"
-                max="23"
-                placeholder="22"
-                value={localQuietStart}
-                onChange={(e) => setLocalQuietStart(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="quiet-end">終了時刻</Label>
-              <Input
-                id="quiet-end"
-                type="number"
-                min="0"
-                max="23"
-                placeholder="8"
-                value={localQuietEnd}
-                onChange={(e) => setLocalQuietEnd(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleQuietHoursUpdate}
-            disabled={
-              !validateQuietHours(
-                localQuietStart ? parseInt(localQuietStart) : undefined,
-                localQuietEnd ? parseInt(localQuietEnd) : undefined
-              )
-            }
-          >
-            クワイエットアワーを更新
-          </Button>
-
-          {preferences.quietHoursStart && preferences.quietHoursEnd && (
-            <p className="text-sm text-gray-600">
-              現在の設定: {preferences.quietHoursStart}:00 〜{" "}
-              {preferences.quietHoursEnd}:00
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
       {/* 操作ボタン */}
       <div className="flex gap-2">
         <Button
@@ -479,19 +454,6 @@ export function NotificationSettings() {
           デフォルトに戻す
         </Button>
       </div>
-
-      {/* 状態メッセージ */}
-      {updateState?.success && (
-        <Alert>
-          <AlertDescription>設定が正常に更新されました。</AlertDescription>
-        </Alert>
-      )}
-
-      {updateState?.error && (
-        <Alert variant="destructive">
-          <AlertDescription>{updateState.error}</AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 }

@@ -169,8 +169,6 @@ erDiagram
   Boolean scheduleDelay
   Boolean taskAssignment
   Boolean projectStatusChange
-  Int quietHoursStart "nullable"
-  Int quietHoursEnd "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -476,8 +474,6 @@ erDiagram
   - `scheduleDelay`: 
   - `taskAssignment`: 
   - `projectStatusChange`: 
-  - `quietHoursStart`: 
-  - `quietHoursEnd`: 
   - `createdAt`: 
   - `updatedAt`: 
 

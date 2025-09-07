@@ -30,8 +30,6 @@ const PreferencesSchema = z.object({
   scheduleDelay: z.boolean().default(true),
   taskAssignment: z.boolean().default(true),
   projectStatusChange: z.boolean().default(true),
-  quietHoursStart: z.number().min(0).max(23).nullable().optional(),
-  quietHoursEnd: z.number().min(0).max(23).nullable().optional(),
 });
 
 // 型定義
@@ -146,10 +144,8 @@ export async function deleteNotification(
  * 通知設定を更新する
  */
 export async function updateNotificationPreferences(
-  prevState: NotificationActionResult | null,
   formData: FormData
 ): Promise<NotificationActionResult> {
-  console.log('updateNotificationPreferences');
   try {
     const userId = await getCurrentUserIdOrThrow();
 
@@ -163,16 +159,10 @@ export async function updateNotificationPreferences(
       scheduleDelay: formData.get('scheduleDelay') === 'true',
       taskAssignment: formData.get('taskAssignment') === 'true',
       projectStatusChange: formData.get('projectStatusChange') === 'true',
-      quietHoursStart: formData.get('quietHoursStart') ? Number(formData.get('quietHoursStart')) : null,
-      quietHoursEnd: formData.get('quietHoursEnd') ? Number(formData.get('quietHoursEnd')) : null,
     };
 
     const validatedData = PreferencesSchema.parse(rawData);
-    const payload = {
-      ...validatedData,
-      quietHoursStart: validatedData.quietHoursStart ?? undefined,
-      quietHoursEnd: validatedData.quietHoursEnd ?? undefined,
-    };
+    const payload = { ...validatedData };
 
     const updatedPreferences = await notificationService.updatePreferences(userId, payload);
 
@@ -251,22 +241,20 @@ export async function getUnreadCount(): Promise<NotificationActionResult> {
  * 通知設定を取得する
  */
 export async function getNotificationPreferences(): Promise<NotificationActionResult> {
-  console.log('getNotificationPreferences');
   try {
     const userId = await getCurrentUserIdOrThrow();
 
     const preferences = await notificationService.getPreferences(userId);
-    console.log('preferences', preferences);
 
     return {
       success: true,
       data: preferences
     };
   } catch (error) {
-    console.error('Failed to get notification preferences:', error);
+    console.error('通知設定を取得できませんでした:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get notification preferences'
+      error: error instanceof Error ? error.message : '通知設定を取得できませんでした'
     };
   }
 }

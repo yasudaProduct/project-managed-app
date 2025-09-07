@@ -129,6 +129,17 @@ export class PushNotificationManager {
    * Push通知の購読を解除する
    */
   async unsubscribeFromPush(): Promise<void> {
+    // 既存のService Worker登録が無い場合でも、readyから取得を試みる
+    if (!this.registration && 'serviceWorker' in navigator) {
+      try {
+        // 明示的にスコープ指定の登録を取得 → 無ければreadyを待つ
+        const existing = await navigator.serviceWorker.getRegistration('/') || await navigator.serviceWorker.ready;
+        this.registration = existing ?? null;
+      } catch {
+        // 取得できない場合は処理を継続（下でガード）
+      }
+    }
+
     if (!this.registration) {
       console.log('No service worker registration found');
       return;
@@ -166,6 +177,20 @@ export class PushNotificationManager {
     permission: NotificationPermission;
   }> {
     const permission = this.getNotificationPermission();
+    console.log('getSubscriptionStatus');
+    console.log('permission', permission);
+    console.log('this.registration', this.registration);
+
+    // ページ初期表示時はクラスのregistrationが未設定なことがあるため、
+    // 既存のService Worker登録を取得してから購読状態を確認する
+    if (!this.registration && 'serviceWorker' in navigator) {
+      try {
+        const existing = await navigator.serviceWorker.getRegistration('/') || await navigator.serviceWorker.ready;
+        this.registration = existing ?? null;
+      } catch {
+        // 無視して下で未登録として扱う
+      }
+    }
 
     if (!this.registration) {
       return {
