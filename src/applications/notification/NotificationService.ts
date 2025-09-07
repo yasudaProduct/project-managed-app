@@ -161,7 +161,6 @@ export class NotificationService implements INotificationService {
 
     const result = await this.notificationRepository.findByFilter(filter, listOptions);
 
-    // ドメインモデルをプレゼンテーション層用の型に変換
     return {
       notifications: result.data.map(notification => this.convertNotificationToPlain(notification)),
       totalCount: result.total,

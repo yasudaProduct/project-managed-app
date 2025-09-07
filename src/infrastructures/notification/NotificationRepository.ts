@@ -56,6 +56,8 @@ export class NotificationRepository implements INotificationRepository {
     filter: NotificationFilter,
     options: NotificationListOptions = { page: 1, limit: 20 }
   ): Promise<NotificationListResult> {
+    console.log('filter', filter);
+    console.log('options', options);
     const where: Prisma.NotificationWhereInput = {
       userId: filter.userId,
     };

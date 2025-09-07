@@ -30,7 +30,18 @@ export async function GET(request: NextRequest) {
 
     const notifications = await notificationService.getNotifications(options);
 
-    return NextResponse.json(notifications, {
+    // フロントのフックが期待するレスポンス形に正規化
+    const normalized = {
+      data: notifications.notifications,
+      total: notifications.totalCount,
+      page: notifications.page,
+      limit: notifications.limit,
+      totalPages: notifications.totalPages,
+      hasNext: notifications.page < notifications.totalPages,
+      hasPrev: notifications.page > 1,
+    };
+
+    return NextResponse.json(normalized, {
       headers: {
         'Cache-Control': 'private, no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
