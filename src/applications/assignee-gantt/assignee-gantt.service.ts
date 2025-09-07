@@ -362,7 +362,17 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     if (!yoteiStart || !yoteiEnd) {
       return false;
     }
-    return date >= yoteiStart && date <= yoteiEnd;
+    // タイムゾーン起因のずれを避けるため、ローカル日付(YYYY-MM-DD)で比較する
+    const toYmd = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    const target = toYmd(date);
+    const start = toYmd(yoteiStart);
+    const end = toYmd(yoteiEnd);
+    return target >= start && target <= end;
   }
 
   private calculateTaskHoursForDate(

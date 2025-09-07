@@ -196,8 +196,13 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
       const startDate = currentDateRange[0];
       const endDate = currentDateRange[currentDateRange.length - 1];
 
-      // YYYY-MM-DD に正規化して送信（サーバ側でUTC深夜に変換）
-      const toYMD = (d: Date) => d.toISOString().split("T")[0];
+      // YYYY-MM-DD（ローカル）に正規化して送信（サーバ側でUTC深夜に変換）
+      const toYMD = (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      };
 
       const result = await getAssigneeWorkloads(
         wbsId,
