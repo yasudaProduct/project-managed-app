@@ -338,8 +338,8 @@ const importTestData = [
     {
         FILE_NAME: 'seed.csv',
         ROW_NO: 1,
-        PROJECT_ID: 'インポートテスト',
-        PROJECT_NAME: 'インポートテスト',
+        PROJECT_ID: 'インポート検証',
+        PROJECT_NAME: 'インポート検証',
         WBS_ID: 'D0-0001',
         PHASE: '存在しないフェーズ',
         ACTIVITY: 'ドキュメント',

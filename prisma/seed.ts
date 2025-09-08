@@ -269,6 +269,11 @@ async function main() {
         }
     }
 
+    // MySQLの検証データと突合せできるように、対応するプロジェクト/タスクを補完
+    // - プロジェクト名: geppo.PROJECT_ID と照合（完全一致/部分一致）
+    // - タスク番号: geppo.WBS_NO と照合（taskNo）
+    await ensureImportCompatibilityData()
+
 
     // 自動採番テーブルのシーケンスを MAX(id)+1 に再調整（PostgreSQL）
     // 空テーブルは次回の nextval が 1 になるように第3引数を false、
@@ -309,6 +314,91 @@ async function main() {
 
     console.log("✅シードデータの挿入とシーケンス再調整が完了しました");
 
+}
+
+/**
+ * MySQL検証データ（geppo）との突合せに必要な最低限のデータを投入
+ * - プロジェクト: 「インポート検証」「インポートテスト」「インポートテスト2」
+ * - WBS/タスク: D系の taskNo を必要数作成
+ */
+async function ensureImportCompatibilityData() {
+    // 対象プロジェクト
+    const targetProjects = [
+        { id: "test-project-4", name: "インポート検証" },
+        { id: "import-test-1", name: "インポートテスト" },
+        { id: "import-test-2", name: "インポートテスト2" },
+    ] as const;
+
+    for (const p of targetProjects) {
+        await prisma.projects.upsert({
+            where: { id: p.id },
+            update: { name: p.name, status: ProjectStatus.ACTIVE },
+            create: {
+                id: p.id,
+                name: p.name,
+                status: ProjectStatus.ACTIVE,
+                description: p.name,
+                startDate: new Date("2025-07-01"),
+                endDate: new Date("2025-12-31"),
+            },
+        })
+
+        // WBS を1件用意
+        const wbs = await prisma.wbs.upsert({
+            where: { id: stableId(`${p.id}:wbs:1`) },
+            update: { name: p.name, projectId: p.id },
+            create: { id: stableId(`${p.id}:wbs:1`), name: p.name, projectId: p.id },
+        })
+
+        // Phase を1件用意（D1）
+        const phase = await prisma.wbsPhase.upsert({
+            where: { id: stableId(`${p.id}:phase:D1`) },
+            update: { wbsId: wbs.id, name: p.name, code: "D1", seq: 1 },
+            create: { id: stableId(`${p.id}:phase:D1`), wbsId: wbs.id, name: p.name, code: "D1", seq: 1 },
+        })
+
+        // 担当者（dummy01）をWBSに割当
+        const assignee = await prisma.wbsAssignee.upsert({
+            where: { id: stableId(`${p.id}:assignee:dummy01`) },
+            update: { wbsId: wbs.id, assigneeId: "dummy01", rate: 1.0 },
+            create: { id: stableId(`${p.id}:assignee:dummy01`), wbsId: wbs.id, assigneeId: "dummy01", rate: 1.0 },
+        })
+
+        // 必要な taskNo 群（MySQL検証データより）
+        const taskNos = [
+            "D0-0001",
+            "D1-0001",
+            "D2-0001",
+            "D2-0002",
+            "D2-0003",
+            "D2-0004",
+            "D3-0001",
+            "D3-0002",
+            "D3-0003",
+            "D3-0004",
+            "D3-0005",
+        ] as const;
+
+        for (const no of taskNos) {
+            const task = await prisma.wbsTask.upsert({
+                where: { taskNo_wbsId: { taskNo: no, wbsId: wbs.id } },
+                update: { wbsId: wbs.id, phaseId: phase.id, name: `${p.name}:${no}`, status: TaskStatus.NOT_STARTED },
+                create: { taskNo: no, wbsId: wbs.id, phaseId: phase.id, name: `${p.name}:${no}`, assigneeId: assignee.id, status: TaskStatus.NOT_STARTED },
+            })
+
+            const period = await prisma.taskPeriod.upsert({
+                where: { id: task.id },
+                update: { taskId: task.id, startDate: new Date("2025-09-01"), endDate: new Date("2025-09-05"), type: 'YOTEI' },
+                create: { taskId: task.id, startDate: new Date("2025-09-01"), endDate: new Date("2025-09-05"), type: 'YOTEI' },
+            })
+
+            await prisma.taskKosu.upsert({
+                where: { id: period.id },
+                update: { kosu: 8 },
+                create: { wbsId: wbs.id, periodId: period.id, kosu: 8, type: 'NORMAL' },
+            })
+        }
+    }
 }
 
 /**
