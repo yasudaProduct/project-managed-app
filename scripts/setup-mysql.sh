@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# MySQL環境セットアップスクリプト
+# 開発用MySQL環境セットアップスクリプト
 # geppo・wbsテーブルの作成とシードデータの投入
 
 set -e
@@ -43,30 +43,30 @@ else
 fi
 
 # 2. geppoテーブルの作成（既存テーブルがあれば削除して再作成）
-echo "🏗️  geppoテーブルを作成しています..."
-echo "   ↳ 既存テーブルがある場合は削除して再作成します"
+# echo "🏗️  geppoテーブルを作成しています..."
+# echo "   ↳ 既存テーブルがある場合は削除して再作成します"
 
 # 外部SQLファイルを実行
-if [ -f "mysql/init/create-geppo-table.sql" ]; then
-    docker exec -i project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test < mysql/init/create-geppo-table.sql
-    echo "✅ geppoテーブルが作成されました（外部SQLファイルから）"
-else
-    echo "❌ SQLファイルが見つかりません: mysql/init/create-geppo-table.sql"
-    exit 1
-fi
+# if [ -f "mysql/init/create-geppo-table.sql" ]; then
+#     docker exec -i project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test < mysql/init/create-geppo-table.sql
+#     echo "✅ geppoテーブルが作成されました（外部SQLファイルから）"
+# else
+#     echo "❌ SQLファイルが見つかりません: mysql/init/create-geppo-table.sql"
+#     exit 1
+# fi
 
 # 3. wbsテーブルの作成（既存テーブルがあれば削除して再作成）
-echo "🏗️  wbsテーブルを作成しています..."
-echo "   ↳ 既存テーブルがある場合は削除して再作成します"
+# echo "🏗️  wbsテーブルを作成しています..."
+# echo "   ↳ 既存テーブルがある場合は削除して再作成します"
 
 # 外部SQLファイルを実行
-if [ -f "mysql/init/create-wbs-table.sql" ]; then
-    docker exec -i project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test < mysql/init/create-wbs-table.sql
-    echo "✅ wbsテーブルが作成されました（外部SQLファイルから）"
-else
-    echo "❌ SQLファイルが見つかりません: mysql/init/create-wbs-table.sql"
-    exit 1
-fi
+# if [ -f "mysql/init/create-wbs-table.sql" ]; then
+#     docker exec -i project-managed-mysql-test mysql -u test_user -ptest_password project_managed_test < mysql/init/create-wbs-table.sql
+#     echo "✅ wbsテーブルが作成されました（外部SQLファイルから）"
+# else
+#     echo "❌ SQLファイルが見つかりません: mysql/init/create-wbs-table.sql"
+#     exit 1
+# fi
 
 # 4. シードデータの投入
 echo "🌱 シードデータを投入しています..."
