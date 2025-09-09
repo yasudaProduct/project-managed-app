@@ -1,0 +1,291 @@
+pipeline {
+    agent any
+    
+    environment {
+        BASE_URL = credentials('app-base-url')
+        SLACK_WEBHOOK = credentials('slack-webhook-url')
+        // WBS IDのリスト（環境に合わせて設定）
+        DEFAULT_WBS_IDS = '1,2,3'
+    }
+    
+    parameters {
+        string(
+            name: 'WBS_IDS',
+            defaultValue: '',
+            description: 'WBS IDのカンマ区切りリスト（空の場合はデフォルト値を使用）'
+        )
+        choice(
+            name: 'SYNC_MODE',
+            choices: ['replace'],
+            description: '同期モード'
+        )
+        booleanParam(
+            name: 'SKIP_VALIDATION',
+            defaultValue: false,
+            description: 'バリデーションをスキップ'
+        )
+        booleanParam(
+            name: 'PARALLEL_EXECUTION',
+            defaultValue: true,
+            description: '並列実行を有効にする'
+        )
+    }
+    
+    triggers {
+        // 毎日午前3時に自動実行
+        cron('0 3 * * *')
+        
+        // 平日の午前9時と午後6時にも実行
+        // cron('0 9,18 * * 1-5')
+    }
+    
+    stages {
+        stage('Preparation') {
+            steps {
+                script {
+                    // WBS IDリストの決定
+                    if (params.WBS_IDS.trim()) {
+                        env.TARGET_WBS_IDS = params.WBS_IDS
+                    } else {
+                        env.TARGET_WBS_IDS = env.DEFAULT_WBS_IDS
+                    }
+                    
+                    echo "WBS Sync configuration:"
+                    echo "- WBS IDs: ${env.TARGET_WBS_IDS}"
+                    echo "- Sync Mode: ${params.SYNC_MODE}"
+                    echo "- Skip Validation: ${params.SKIP_VALIDATION}"
+                    echo "- Parallel Execution: ${params.PARALLEL_EXECUTION}"
+                    
+                    // WBS IDリストを配列に変換
+                    env.WBS_ID_LIST = env.TARGET_WBS_IDS.split(',').collect { it.trim() }.join(',')
+                }
+            }
+        }
+        
+        stage('Pre-flight Check') {
+            steps {
+                script {
+                    echo "Performing pre-flight checks for all WBS instances..."
+                    
+                    def wbsIds = env.WBS_ID_LIST.split(',')
+                    def validWbsIds = []
+                    def invalidWbsIds = []
+                    
+                    for (wbsId in wbsIds) {
+                        try {
+                            def previewResponse = httpRequest(
+                                httpMode: 'GET',
+                                url: "${env.BASE_URL}/api/import/wbs?wbsId=${wbsId}",
+                                validResponseCodes: '200:299,404'
+                            )
+                            
+                            if (previewResponse.status == 200) {
+                                def previewResult = readJSON text: previewResponse.content
+                                if (previewResult.success) {
+                                    validWbsIds.add(wbsId)
+                                    echo "✓ WBS ${wbsId}: Valid"
+                                } else {
+                                    invalidWbsIds.add(wbsId)
+                                    echo "✗ WBS ${wbsId}: ${previewResult.error}"
+                                }
+                            } else {
+                                invalidWbsIds.add(wbsId)
+                                echo "✗ WBS ${wbsId}: Not found (404)"
+                            }
+                        } catch (Exception e) {
+                            invalidWbsIds.add(wbsId)
+                            echo "✗ WBS ${wbsId}: Exception - ${e.message}"
+                        }
+                    }
+                    
+                    env.VALID_WBS_IDS = validWbsIds.join(',')
+                    env.INVALID_WBS_IDS = invalidWbsIds.join(',')
+                    
+                    echo "Pre-flight check results:"
+                    echo "- Valid WBS IDs: ${env.VALID_WBS_IDS}"
+                    echo "- Invalid WBS IDs: ${env.INVALID_WBS_IDS}"
+                    
+                    if (validWbsIds.isEmpty()) {
+                        error("No valid WBS IDs found. Cannot proceed with sync.")
+                    }
+                }
+            }
+        }
+        
+        stage('WBS Sync Execution') {
+            steps {
+                script {
+                    def validWbsIds = env.VALID_WBS_IDS.split(',')
+                    def results = [:]
+                    
+                    if (params.PARALLEL_EXECUTION && validWbsIds.size() > 1) {
+                        // 並列実行
+                        echo "Executing WBS sync in parallel..."
+                        
+                        def parallelTasks = [:]
+                        
+                        validWbsIds.each { wbsId ->
+                            parallelTasks["WBS-${wbsId}"] = {
+                                syncWbs(wbsId.trim())
+                            }
+                        }
+                        
+                        parallel parallelTasks
+                        
+                    } else {
+                        // 逐次実行
+                        echo "Executing WBS sync sequentially..."
+                        
+                        validWbsIds.each { wbsId ->
+                            syncWbs(wbsId.trim())
+                            // 少し間隔をあける
+                            sleep(3)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            script {
+                def validCount = env.VALID_WBS_IDS ? env.VALID_WBS_IDS.split(',').size() : 0
+                def invalidCount = env.INVALID_WBS_IDS ? env.INVALID_WBS_IDS.split(',').size() : 0
+                
+                def message = """
+✅ WBS同期成功
+
+📊 結果:
+  • 成功したWBS: ${validCount}個
+  • 失敗したWBS: ${invalidCount}個
+  
+📋 詳細:
+  • 成功: ${env.VALID_WBS_IDS ?: 'なし'}
+  • 失敗: ${env.INVALID_WBS_IDS ?: 'なし'}
+
+🔗 詳細: ${env.BUILD_URL}
+                """.trim()
+                
+                // Slack通知
+                if (env.SLACK_WEBHOOK) {
+                    httpRequest(
+                        httpMode: 'POST',
+                        url: env.SLACK_WEBHOOK,
+                        customHeaders: [[name: 'Content-Type', value: 'application/json']],
+                        requestBody: writeJSON(returnText: true, json: [text: message])
+                    )
+                }
+                
+                // メール通知
+                emailext(
+                    subject: "WBS同期成功",
+                    body: message,
+                    to: "${env.NOTIFICATION_EMAIL ?: 'admin@company.com'}"
+                )
+            }
+        }
+        
+        failure {
+            script {
+                def message = """
+❌ WBS同期失敗
+
+💥 エラーが発生しました
+
+🔗 ログ: ${env.BUILD_URL}console
+                """.trim()
+                
+                // Slack通知
+                if (env.SLACK_WEBHOOK) {
+                    httpRequest(
+                        httpMode: 'POST',
+                        url: env.SLACK_WEBHOOK,
+                        customHeaders: [[name: 'Content-Type', value: 'application/json']],
+                        requestBody: writeJSON(returnText: true, json: [text: message])
+                    )
+                }
+                
+                // メール通知
+                emailext(
+                    subject: "🚨 WBS同期失敗",
+                    body: message,
+                    to: "${env.ERROR_NOTIFICATION_EMAIL ?: env.NOTIFICATION_EMAIL ?: 'admin@company.com'}"
+                )
+            }
+        }
+        
+        always {
+            script {
+                // アーティファクトとしてログを保存
+                def logContent = """
+WBS Sync Job Log
+================
+Build Number: ${env.BUILD_NUMBER}
+WBS IDs: ${env.TARGET_WBS_IDS}
+Sync Mode: ${params.SYNC_MODE}
+Skip Validation: ${params.SKIP_VALIDATION}
+Parallel Execution: ${params.PARALLEL_EXECUTION}
+
+Results:
+--------
+Valid WBS IDs: ${env.VALID_WBS_IDS}
+Invalid WBS IDs: ${env.INVALID_WBS_IDS}
+
+Build URL: ${env.BUILD_URL}
+Timestamp: ${new Date()}
+"""
+                
+                writeFile file: 'wbs-sync-log.txt', text: logContent
+                archiveArtifacts artifacts: 'wbs-sync-log.txt', allowEmptyArchive: true
+            }
+        }
+    }
+}
+
+// WBS同期の実行関数
+def syncWbs(String wbsId) {
+    try {
+        echo "Starting sync for WBS ${wbsId}..."
+        
+        def requestBody = [
+            wbsId: wbsId as Integer,
+            syncMode: params.SYNC_MODE,
+            skipValidation: params.SKIP_VALIDATION
+        ]
+        
+        def syncResponse = httpRequest(
+            httpMode: 'POST',
+            url: "${env.BASE_URL}/api/import/wbs",
+            customHeaders: [
+                [name: 'Content-Type', value: 'application/json']
+            ],
+            requestBody: writeJSON(returnText: true, json: requestBody),
+            validResponseCodes: '200:299,400:499,500:599'
+        )
+        
+        def syncResult = readJSON text: syncResponse.content
+        
+        if (syncResult.success) {
+            echo "✅ WBS ${wbsId} sync completed successfully"
+            echo "   - Success: ${syncResult.data.successCount}"
+            echo "   - Created: ${syncResult.data.createdCount}"
+            echo "   - Updated: ${syncResult.data.updatedCount}"
+            echo "   - Errors: ${syncResult.data.errorCount}"
+            
+            if (syncResult.data.errors && syncResult.data.errors.size() > 0) {
+                echo "   Errors:"
+                syncResult.data.errors.each { error ->
+                    echo "     - ${error.message}"
+                }
+            }
+        } else {
+            echo "❌ WBS ${wbsId} sync failed: ${syncResult.error}"
+            // 個別のエラーはジョブ全体を失敗させない
+        }
+        
+    } catch (Exception e) {
+        echo "❌ WBS ${wbsId} sync exception: ${e.message}"
+        // 個別のエラーはジョブ全体を失敗させない
+    }
+}

@@ -1,0 +1,270 @@
+pipeline {
+    agent any
+    
+    environment {
+        BASE_URL = credentials('app-base-url')
+        SLACK_WEBHOOK = credentials('slack-webhook-url')
+    }
+    
+    parameters {
+        choice(
+            name: 'TARGET_MONTH',
+            choices: [
+                'auto', // 自動で前月を選択
+                '2024-12',
+                '2024-11',
+                '2024-10'
+            ],
+            description: 'インポート対象月 (YYYY-MM形式、またはautoで前月)'
+        )
+        booleanParam(
+            name: 'DRY_RUN',
+            defaultValue: false,
+            description: 'ドライランモードで実行'
+        )
+        booleanParam(
+            name: 'SKIP_VALIDATION',
+            defaultValue: false,
+            description: 'バリデーションをスキップ'
+        )
+        text(
+            name: 'TARGET_PROJECTS',
+            defaultValue: '',
+            description: 'インポート対象プロジェクト名（JSON配列形式、空の場合は全プロジェクト）'
+        )
+    }
+    
+    triggers {
+        // 毎月1日の午前2時に自動実行
+        cron('0 2 1 * *')
+        
+        // 手動実行も可能
+        // parameterizedCron('''
+        //     # 毎月1日は前月データを自動インポート
+        //     0 2 1 * * %TARGET_MONTH=auto;DRY_RUN=false;SKIP_VALIDATION=false
+        // ''')
+    }
+    
+    stages {
+        stage('Preparation') {
+            steps {
+                script {
+                    // 対象月の決定
+                    if (params.TARGET_MONTH == 'auto') {
+                        env.IMPORT_MONTH = sh(
+                            script: "date -d 'last month' +%Y-%m",
+                            returnStdout: true
+                        ).trim()
+                    } else {
+                        env.IMPORT_MONTH = params.TARGET_MONTH
+                    }
+                    
+                    // 対象プロジェクトの処理
+                    if (params.TARGET_PROJECTS.trim()) {
+                        try {
+                            // JSON文字列の検証
+                            sh "echo '${params.TARGET_PROJECTS}' | jq ."
+                            env.TARGET_PROJECTS_JSON = params.TARGET_PROJECTS
+                        } catch (Exception e) {
+                            error("Invalid JSON format for TARGET_PROJECTS: ${e.message}")
+                        }
+                    } else {
+                        env.TARGET_PROJECTS_JSON = 'null'
+                    }
+                    
+                    echo "Import configuration:"
+                    echo "- Target Month: ${env.IMPORT_MONTH}"
+                    echo "- Dry Run: ${params.DRY_RUN}"
+                    echo "- Skip Validation: ${params.SKIP_VALIDATION}"
+                    echo "- Target Projects: ${env.TARGET_PROJECTS_JSON}"
+                }
+            }
+        }
+        
+        stage('Health Check') {
+            steps {
+                script {
+                    echo "Performing API health check..."
+                    
+                    def healthResponse = httpRequest(
+                        httpMode: 'GET',
+                        url: "${env.BASE_URL}/api/import/geppo?targetMonth=${env.IMPORT_MONTH}",
+                        validResponseCodes: '200:299,400:499'
+                    )
+                    
+                    if (healthResponse.status >= 400) {
+                        error("API health check failed with status ${healthResponse.status}")
+                    }
+                    
+                    def healthResult = readJSON text: healthResponse.content
+                    
+                    if (!healthResult.success) {
+                        error("API health check failed: ${healthResult.error}")
+                    }
+                    
+                    echo "API health check passed. Available projects: ${healthResult.data.projects.size()}"
+                }
+            }
+        }
+        
+        stage('Import Execution') {
+            steps {
+                script {
+                    echo "Starting Geppo import..."
+                    
+                    // リクエストボディの構築
+                    def requestBody = [
+                        targetMonth: env.IMPORT_MONTH,
+                        updateMode: 'replace',
+                        dryRun: params.DRY_RUN,
+                        skipValidation: params.SKIP_VALIDATION
+                    ]
+                    
+                    if (env.TARGET_PROJECTS_JSON != 'null') {
+                        requestBody.targetProjectNames = readJSON text: env.TARGET_PROJECTS_JSON
+                    }
+                    
+                    def importResponse = httpRequest(
+                        httpMode: 'POST',
+                        url: "${env.BASE_URL}/api/import/geppo",
+                        customHeaders: [
+                            [name: 'Content-Type', value: 'application/json']
+                        ],
+                        requestBody: writeJSON returnText: true, json: requestBody,
+                        validResponseCodes: '200:299,400:499,500:599'
+                    )
+                    
+                    def importResult = readJSON text: importResponse.content
+                    
+                    // 結果をJenkinsプロパティに保存（通知で使用）
+                    env.IMPORT_STATUS = importResult.success ? 'SUCCESS' : 'FAILED'
+                    env.SUCCESS_COUNT = importResult.data?.successCount ?: '0'
+                    env.CREATED_COUNT = importResult.data?.createdCount ?: '0'
+                    env.UPDATED_COUNT = importResult.data?.updatedCount ?: '0'
+                    env.ERROR_COUNT = importResult.data?.errorCount ?: '0'
+                    env.EXECUTION_TIME = importResult.data?.executionTime ?: '0'
+                    env.ERROR_MESSAGE = importResult.error ?: ''
+                    
+                    if (!importResult.success) {
+                        error("Import failed: ${importResult.error}")
+                    }
+                    
+                    echo "Import completed successfully!"
+                    echo "- Success Count: ${env.SUCCESS_COUNT}"
+                    echo "- Created Count: ${env.CREATED_COUNT}"
+                    echo "- Updated Count: ${env.UPDATED_COUNT}"
+                    echo "- Error Count: ${env.ERROR_COUNT}"
+                    echo "- Execution Time: ${env.EXECUTION_TIME}ms"
+                    
+                    // エラーがある場合は詳細を表示
+                    if (importResult.data?.errors && importResult.data.errors.size() > 0) {
+                        echo "Error details:"
+                        importResult.data.errors.each { error ->
+                            echo "- ${error.recordId}: ${error.message}"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            script {
+                def mode = params.DRY_RUN ? "ドライラン" : "本実行"
+                def message = """
+✅ Geppoインポート成功 (${mode})
+
+📅 対象月: ${env.IMPORT_MONTH}
+📊 結果:
+  • 成功: ${env.SUCCESS_COUNT}件
+  • 作成: ${env.CREATED_COUNT}件  
+  • 更新: ${env.UPDATED_COUNT}件
+  • エラー: ${env.ERROR_COUNT}件
+⏱ 実行時間: ${env.EXECUTION_TIME}ms
+
+🔗 詳細: ${env.BUILD_URL}
+                """.trim()
+                
+                // Slack通知
+                if (env.SLACK_WEBHOOK) {
+                    httpRequest(
+                        httpMode: 'POST',
+                        url: env.SLACK_WEBHOOK,
+                        customHeaders: [[name: 'Content-Type', value: 'application/json']],
+                        requestBody: writeJSON(returnText: true, json: [text: message])
+                    )
+                }
+                
+                // メール通知（オプション）
+                emailext(
+                    subject: "Geppoインポート成功 - ${env.IMPORT_MONTH}",
+                    body: message,
+                    to: "${env.NOTIFICATION_EMAIL ?: 'admin@company.com'}"
+                )
+            }
+        }
+        
+        failure {
+            script {
+                def mode = params.DRY_RUN ? "ドライラン" : "本実行"
+                def message = """
+❌ Geppoインポート失敗 (${mode})
+
+📅 対象月: ${env.IMPORT_MONTH}
+💥 エラー: ${env.ERROR_MESSAGE}
+
+🔗 ログ: ${env.BUILD_URL}console
+                """.trim()
+                
+                // Slack通知
+                if (env.SLACK_WEBHOOK) {
+                    httpRequest(
+                        httpMode: 'POST',
+                        url: env.SLACK_WEBHOOK,
+                        customHeaders: [[name: 'Content-Type', value: 'application/json']],
+                        requestBody: writeJSON(returnText: true, json: [text: message])
+                    )
+                }
+                
+                // メール通知
+                emailext(
+                    subject: "🚨 Geppoインポート失敗 - ${env.IMPORT_MONTH}",
+                    body: message,
+                    to: "${env.ERROR_NOTIFICATION_EMAIL ?: env.NOTIFICATION_EMAIL ?: 'admin@company.com'}"
+                )
+            }
+        }
+        
+        always {
+            script {
+                // アーティファクトとしてログを保存
+                def logContent = """
+Geppo Import Job Log
+====================
+Build Number: ${env.BUILD_NUMBER}
+Target Month: ${env.IMPORT_MONTH}
+Dry Run: ${params.DRY_RUN}
+Skip Validation: ${params.SKIP_VALIDATION}
+Target Projects: ${env.TARGET_PROJECTS_JSON}
+
+Results:
+--------
+Status: ${env.IMPORT_STATUS}
+Success Count: ${env.SUCCESS_COUNT}
+Created Count: ${env.CREATED_COUNT}
+Updated Count: ${env.UPDATED_COUNT}
+Error Count: ${env.ERROR_COUNT}
+Execution Time: ${env.EXECUTION_TIME}ms
+Error Message: ${env.ERROR_MESSAGE}
+
+Build URL: ${env.BUILD_URL}
+Timestamp: ${new Date()}
+"""
+                
+                writeFile file: 'geppo-import-log.txt', text: logContent
+                archiveArtifacts artifacts: 'geppo-import-log.txt', allowEmptyArchive: true
+            }
+        }
+    }
+}

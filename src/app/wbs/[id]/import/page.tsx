@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import prisma from "@/lib/prisma";
-import { WbsSyncClient } from "@/components/wbs/sync/WbsSyncClient";
+import { WbsImportClient } from "./wbs-import-client";
 
 export default async function WbsImportPage({
   params,
@@ -36,10 +36,13 @@ export default async function WbsImportPage({
             WBSに戻る
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold">Excel → WBS 同期</h1>
       </div>
 
-      <WbsSyncClient wbsId={wbs.id} projectName={project.name} />
+      <WbsImportClient 
+        wbsId={wbs.id} 
+        projectId={project.id.toString()}
+        projectName={project.name} 
+      />
     </div>
   );
 }
