@@ -10,6 +10,7 @@ import {
   Users,
   History,
   CalendarCheck,
+  TrendingUp,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { AuthStatus } from "./auth/auth-status";
@@ -102,6 +103,13 @@ export function SideMenu() {
             >
               <CalendarCheck className="h-4 w-4" />
               会社休日管理
+            </Link>
+            <Link
+              href="/evm"
+              className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
+              <TrendingUp className="h-4 w-4" />
+              EVM
             </Link>
 
             {wbsId && (
