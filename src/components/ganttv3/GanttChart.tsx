@@ -171,7 +171,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         // フェーズ行
         rows.push({
           type: "category",
-          id: `category-${group.name}`,
+          id: `category-${group.id ?? group.name}`,
           y: currentY,
           height: CATEGORY_HEIGHT,
           categoryName: group.name,

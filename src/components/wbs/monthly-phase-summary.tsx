@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Calendar, Layers } from "lucide-react";
+import { Calendar, Layers, Download } from "lucide-react";
 import React, { useMemo } from "react";
 import { MonthlyAssigneeSummary as MonthlyAssigneeSummaryData } from "@/applications/wbs/query/wbs-summary-result";
 import {
@@ -17,6 +17,19 @@ import {
   convertHours,
   getUnitSuffix,
 } from "@/utils/hours-converter";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Copy } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import {
+  copyMonthlyPhaseSummaryToClipboard,
+  exportMonthlyPhaseSummary,
+} from "@/utils/export-table";
 
 interface MonthlyPhaseSummaryProps {
   monthlyData: MonthlyAssigneeSummaryData;
@@ -170,6 +183,87 @@ export function MonthlyPhaseSummary({
             <Layers className="h-5 w-5 text-blue-600" />
             月別・工程別集計表
           </CardTitle>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={async () => {
+                try {
+                  await copyMonthlyPhaseSummaryToClipboard(
+                    {
+                      months: monthlyData.months,
+                      phases,
+                      cells,
+                      monthlyTotals,
+                      phaseTotals,
+                      grandTotal,
+                    },
+                    hoursUnit
+                  );
+                  toast({
+                    description: "TSV形式でクリップボードにコピーしました",
+                  });
+                } catch (error) {
+                  toast({
+                    description:
+                      "コピーに失敗しました" +
+                      (error instanceof Error ? error.message : ""),
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              <Copy className="h-4 w-4" />
+              コピー
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  出力
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() =>
+                    exportMonthlyPhaseSummary(
+                      {
+                        months: monthlyData.months,
+                        phases,
+                        cells,
+                        monthlyTotals,
+                        phaseTotals,
+                        grandTotal,
+                      },
+                      "csv",
+                      hoursUnit
+                    )
+                  }
+                >
+                  CSV形式で出力
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    exportMonthlyPhaseSummary(
+                      {
+                        months: monthlyData.months,
+                        phases,
+                        cells,
+                        monthlyTotals,
+                        phaseTotals,
+                        grandTotal,
+                      },
+                      "tsv",
+                      hoursUnit
+                    )
+                  }
+                >
+                  TSV形式で出力
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-1">
