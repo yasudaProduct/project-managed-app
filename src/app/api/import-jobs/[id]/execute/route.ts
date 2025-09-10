@@ -1,0 +1,175 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { container } from '@/lib/inversify.config'
+import { SYMBOL } from '@/types/symbol'
+import { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service'
+import { IGeppoImportApplicationService } from '@/applications/geppo-import/geppo-import-application-service'
+import { IWbsSyncApplicationService } from '@/applications/excel-sync/IWbsSyncApplicationService'
+import { ImportJob } from '@/domains/import-job/import-job'
+
+interface Params {
+  id: string
+}
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<Params> }
+) {
+  const { id } = await context.params
+  
+  try {
+    const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
+    
+    const job = await importJobService.getJob(id)
+    if (!job) {
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+    }
+
+    if (job.status !== 'PENDING') {
+      return NextResponse.json(
+        { error: 'Job is not in pending state' },
+        { status: 400 }
+      )
+    }
+
+    // ジョブを開始状態にする
+    await importJobService.startJob(id)
+
+    // バックグラウンドで実際のインポート処理を実行
+    executeImportInBackground(id)
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Failed to execute import job:', error)
+    return NextResponse.json(
+      { error: 'Failed to execute import job' },
+      { status: 500 }
+    )
+  }
+}
+
+async function executeImportInBackground(jobId: string) {
+  const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
+  
+  try {
+    const job = await importJobService.getJob(jobId)
+    if (!job) {
+      throw new Error('Job not found')
+    }
+
+    await importJobService.addProgress(jobId, {
+      message: 'インポート処理を開始しています...',
+      level: 'info',
+    })
+
+    if (job.type === 'GEPPO') {
+      await executeGeppoImport(jobId, job)
+    } else if (job.type === 'WBS') {
+      await executeWbsImport(jobId, job)
+    } else {
+      throw new Error(`Unsupported job type: ${job.type}`)
+    }
+  } catch (error) {
+    console.error('Background import failed:', error)
+    await importJobService.failJob(jobId, {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      error: error,
+    })
+  }
+}
+
+async function executeGeppoImport(jobId: string, job: ImportJob) {
+  const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
+  const geppoImportService = container.get<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService)
+
+  try {
+    await importJobService.addProgress(jobId, {
+      message: 'Geppoデータの取得を開始しています...',
+      level: 'info',
+    })
+
+    // インポート実行
+    if (!job.targetMonth) {
+      throw new Error('Target month is required for Geppo import')
+    }
+    
+    const updateMode = (job.options.updateMode as string) || 'merge'
+    const result = await geppoImportService.executeImport({
+      targetMonth: job.targetMonth,
+      targetProjectNames: job.targetProjectIds,
+      updateMode: updateMode === 'replace' ? 'replace' : 'merge',
+      dryRun: (job.options.dryRun as boolean) || false,
+    })
+
+    // 進捗更新
+    await importJobService.updateJobProgress(
+      jobId,
+      result.totalWorkRecords,
+      result.successCount,
+      result.errorCount
+    )
+
+    // 完了
+    await importJobService.completeJob(jobId, {
+      totalGeppoRecords: result.totalGeppoRecords,
+      totalWorkRecords: result.totalWorkRecords,
+      successCount: result.successCount,
+      errorCount: result.errorCount,
+      createdCount: result.createdCount,
+      updatedCount: result.updatedCount,
+      deletedCount: result.deletedCount,
+    })
+
+    await importJobService.addProgress(jobId, {
+      message: `Geppoインポートが完了しました（成功: ${result.successCount}件、エラー: ${result.errorCount}件）`,
+      level: 'info',
+    })
+  } catch (error) {
+    throw error
+  }
+}
+
+async function executeWbsImport(jobId: string, job: ImportJob) {
+  const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
+  const wbsSyncService = container.get<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService)
+
+  try {
+    await importJobService.addProgress(jobId, {
+      message: 'WBSデータの同期を開始しています...',
+      level: 'info',
+    })
+
+    if (!job.wbsId) {
+      throw new Error('WBS ID is required for WBS import')
+    }
+
+    // WBS同期実行
+    const result = await wbsSyncService.executeSync(job.wbsId)
+
+    if (!result.success) {
+      throw new Error('WBS sync failed')
+    }
+
+    // 進捗更新（仮のデータ）
+    await importJobService.updateJobProgress(
+      jobId,
+      1,
+      1,
+      0
+    )
+
+    // 完了
+    await importJobService.completeJob(jobId, {
+      recordCount: 1,
+      addedCount: 0,
+      updatedCount: 1,
+      deletedCount: 0,
+    })
+
+    await importJobService.addProgress(jobId, {
+      message: 'WBS同期が完了しました',
+      level: 'info',
+    })
+  } catch (error) {
+    throw error
+  }
+}

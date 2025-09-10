@@ -106,6 +106,12 @@ import { IEvmRepository } from '@/applications/evm/ievm-repository';
 import { EvmRepository } from '@/infrastructures/evm/evm-repository';
 import { EvmApplicationService } from '@/applications/evm/evm-application-service';
 
+// Import Job関連
+import type { IImportJobRepository } from '@/applications/import-job/iimport-job.repository';
+import { ImportJobPrismaRepository } from '@/infrastructures/import-job/import-job-prisma.repository';
+import type { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service';
+import { ImportJobApplicationService } from '@/applications/import-job/import-job-application.service';
+
 const container: Container = new Container();
 // アプリケーションサービス
 container.bind<IProjectApplicationService>(SYMBOL.IProjectApplicationService).to(ProjectApplicationService).inSingletonScope();
@@ -124,6 +130,7 @@ container.bind<TaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDepe
 container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<IMilestoneApplicationService>(SYMBOL.IMilestoneApplicationService).to(MilestoneApplicationService).inSingletonScope();
 container.bind<EvmApplicationService>(SYMBOL.IEvmApplicationService).to(EvmApplicationService).inSingletonScope();
+container.bind<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService).to(ImportJobApplicationService).inSingletonScope();
 container.bind<INotificationService>('NotificationService').to(NotificationService).inSingletonScope();
 container.bind<PushNotificationService>('PushNotificationService').to(PushNotificationService).inSingletonScope();
 container.bind<NotificationEventDetector>('NotificationEventDetector').to(NotificationEventDetector).inSingletonScope();
@@ -153,6 +160,7 @@ container.bind<IMilestoneRepository>(SYMBOL.IMilestoneRepository).to(MilestoneRe
 container.bind<ICompanyHolidayRepository>(SYMBOL.ICompanyHolidayRepository).to(CompanyHolidayRepository).inSingletonScope();
 container.bind<IUserScheduleRepository>(SYMBOL.IUserScheduleRepository).to(UserScheduleRepository).inSingletonScope();
 container.bind<IEvmRepository>(SYMBOL.IEvmRepository).to(EvmRepository).inSingletonScope();
+container.bind<IImportJobRepository>(SYMBOL.IImportJobRepository).to(ImportJobPrismaRepository).inSingletonScope();
 container.bind<INotificationRepository>('NotificationRepository').to(NotificationRepository).inSingletonScope();
 
 // Geppo Import関連サービス

@@ -83,7 +83,7 @@ export class ProjectEvm {
     if (!latest || latest.schedulePerformanceIndex <= 0) return null;
 
     const remainingWork = this.budgetAtCompletion - latest.ev;
-    const currentRate = latest.schedulePerformanceIndex;
+    // const currentRate = latest.schedulePerformanceIndex;
     const daysToComplete = remainingWork / (latest.ev / this.getProjectDurationDays());
     
     const completionDate = new Date(latest.date);

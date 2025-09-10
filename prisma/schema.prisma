@@ -44,6 +44,7 @@ model Users {
   notifications Notification[] @relation("UserNotifications")
   notificationPreference NotificationPreference? @relation("UserNotificationPreferences")
   pushSubscriptions PushSubscription[] @relation("UserPushSubscriptions")
+  importJobs ImportJob[]
   @@map("users")
 }
 
@@ -72,6 +73,7 @@ model Wbs {
   milestones Milestone[]
   progressHistories WbsProgressHistory[]
   taskDependencies TaskDependency[]
+  importJobs ImportJob[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -470,4 +472,65 @@ enum CompanyHolidayType {
   NATIONAL
   COMPANY
   SPECIAL
+}
+
+// インポートジョブ管理
+model ImportJob {
+  id               String                @id @default(cuid())
+  type             ImportJobType         // WBS or GEPPO
+  status           ImportJobStatus       @default(PENDING)
+  targetMonth      String?               // Geppo用
+  targetProjectIds String[]              // 対象プロジェクトID配列
+  wbsId           Int?                  // WBS用
+  options         Json                  // インポートオプション
+  totalRecords    Int                   @default(0)
+  processedRecords Int                  @default(0)
+  successCount    Int                   @default(0)
+  errorCount      Int                   @default(0)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  errorDetails    Json?                 // エラー詳細
+  result          Json?                 // 実行結果
+  createdBy       String                // ユーザーID
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  
+  // リレーション
+  user            Users                  @relation(fields: [createdBy], references: [id])
+  wbs             Wbs?                  @relation(fields: [wbsId], references: [id])
+  progress        ImportJobProgress[]
+  
+  @@index([type, status])
+  @@index([createdBy, createdAt])
+  @@map("import_jobs")
+}
+
+// インポートジョブタイプ
+enum ImportJobType {
+  WBS
+  GEPPO
+}
+
+// インポートジョブステータス
+enum ImportJobStatus {
+  PENDING    // 実行待ち
+  RUNNING    // 実行中
+  COMPLETED  // 完了
+  FAILED     // 失敗
+  CANCELLED  // キャンセル
+}
+
+// インポートジョブ進捗詳細
+model ImportJobProgress {
+  id          String      @id @default(cuid())
+  jobId       String
+  message     String      // 進捗メッセージ
+  detail      Json?       // 詳細情報
+  level       String      @default("info") // info, warning, error
+  recordedAt  DateTime    @default(now())
+  
+  job         ImportJob   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  
+  @@index([jobId, recordedAt])
+  @@map("import_job_progress")
 }

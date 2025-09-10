@@ -8,13 +8,13 @@ import Link from "next/link";
 import { getProjectEvmData } from "../../evm-actions";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     projectId: string;
-  };
+  }>;
 }
 
 export default async function ProjectEvmPage({ params }: PageProps) {
-  const { projectId } = params;
+  const { projectId } = await params;
 
   let data;
   let error: string | null = null;

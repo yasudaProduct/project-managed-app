@@ -249,6 +249,34 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"import_jobs" {
+  String id PK
+  ImportJobType type
+  ImportJobStatus status
+  String targetMonth "nullable"
+  String targetProjectIds
+  Int wbsId FK "nullable"
+  Json options
+  Int totalRecords
+  Int processedRecords
+  Int successCount
+  Int errorCount
+  DateTime startedAt "nullable"
+  DateTime completedAt "nullable"
+  Json errorDetails "nullable"
+  Json result "nullable"
+  String createdBy FK
+  DateTime createdAt
+  DateTime updatedAt
+}
+"import_job_progress" {
+  String id PK
+  String jobId FK
+  String message
+  Json detail "nullable"
+  String level
+  DateTime recordedAt
+}
 "user_sessions" }o--|| "users" : user
 "wbs" }o--|| "projects" : project
 "wbs_assignee" }o--|| "wbs" : wbs
@@ -275,6 +303,9 @@ erDiagram
 "task_dependencies" }o--|| "wbs_task" : predecessorTask
 "task_dependencies" }o--|| "wbs_task" : successorTask
 "task_dependencies" }o--|| "wbs" : wbs
+"import_jobs" }o--|| "users" : user
+"import_jobs" }o--o| "wbs" : wbs
+"import_job_progress" }o--|| "import_jobs" : job
 ```
 
 ### `projects`
@@ -565,3 +596,35 @@ erDiagram
   - `type`: 
   - `createdAt`: 
   - `updatedAt`: 
+
+### `import_jobs`
+
+**Properties**
+  - `id`: 
+  - `type`: 
+  - `status`: 
+  - `targetMonth`: 
+  - `targetProjectIds`: 
+  - `wbsId`: 
+  - `options`: 
+  - `totalRecords`: 
+  - `processedRecords`: 
+  - `successCount`: 
+  - `errorCount`: 
+  - `startedAt`: 
+  - `completedAt`: 
+  - `errorDetails`: 
+  - `result`: 
+  - `createdBy`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `import_job_progress`
+
+**Properties**
+  - `id`: 
+  - `jobId`: 
+  - `message`: 
+  - `detail`: 
+  - `level`: 
+  - `recordedAt`: 

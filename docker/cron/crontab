@@ -10,3 +10,9 @@
 
 # 毎日午前0時にログローテーション
 0 0 * * * find /var/log/cron -name '*.log' -mtime +7 -delete
+
+# 毎日午前3時にWBSインポートを実行
+0 3 * * * /usr/local/bin/run-wbs-import.sh
+
+# 毎月1日午前4時にGeppoインポートを実行（前月分）
+0 4 1 * * /usr/local/bin/run-geppo-import.sh
