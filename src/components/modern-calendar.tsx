@@ -14,15 +14,8 @@ import {
   isSameMonth,
 } from "date-fns";
 import { ja } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, Calendar, Clock, MapPin, User, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Calendar, Clock, MapPin, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import Link from "next/link";
 
 interface User {
@@ -79,11 +72,8 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(() =>
     startOfMonth(new Date())
   );
-  const [visibleUsers, setVisibleUsers] = useState<Set<string>>(
-    new Set(users.map((u) => u.id))
-  );
-  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleEntry | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Create user color mapping
   const userColorMap = useMemo(() => {
@@ -107,32 +97,24 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
     end: calendarEnd,
   });
 
-  // Filter schedules by visible users and group by date
-  const filteredSchedules = schedules.filter((schedule) =>
-    visibleUsers.has(schedule.userId)
-  );
-
+  // Group schedules by date
   const schedulesByDate = useMemo(() => {
     const grouped: { [date: string]: ScheduleEntry[] } = {};
-    filteredSchedules.forEach((schedule) => {
+    schedules.forEach((schedule) => {
       const dateKey = format(new Date(schedule.date), "yyyy-MM-dd");
       if (!grouped[dateKey]) grouped[dateKey] = [];
       grouped[dateKey].push(schedule);
     });
     return grouped;
-  }, [filteredSchedules]);
+  }, [schedules]);
 
-  const toggleUserVisibility = (userId: string) => {
-    setVisibleUsers((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(userId)) {
-        newSet.delete(userId);
-      } else {
-        newSet.add(userId);
-      }
-      return newSet;
-    });
-  };
+  // Get schedules for selected date
+  const selectedDateSchedules = useMemo(() => {
+    if (!selectedDate) return [];
+    const dateKey = format(selectedDate, "yyyy-MM-dd");
+    return schedulesByDate[dateKey] || [];
+  }, [selectedDate, schedulesByDate]);
+
 
   const navigateMonth = (direction: "prev" | "next") => {
     setCurrentMonth((prev) =>
@@ -140,57 +122,13 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
     );
   };
 
-  const handleScheduleClick = (schedule: ScheduleEntry) => {
-    setSelectedSchedule(schedule);
-    setIsDialogOpen(true);
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date);
+    setIsSidebarOpen(true);
   };
 
   return (
     <div className="flex h-screen bg-gray-50 mx-8">
-      {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 p-4 overflow-y-auto">
-        <div className="mt-12 mb-6">
-          <Link href="/schedule/import">
-            <Button className="w-full justify-start" size="lg">
-              <Plus className="w-4 h-4 mr-2" />
-              インポート
-            </Button>
-          </Link>
-        </div>
-
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-gray-900 mb-3">
-            マイカレンダー
-          </h3>
-          <div className="space-y-2">
-            {users.map((user) => {
-              const colors = userColorMap.get(user.id);
-              return (
-                <div key={user.id} className="flex items-center space-x-3">
-                  <Checkbox
-                    checked={visibleUsers.has(user.id)}
-                    onCheckedChange={() => toggleUserVisibility(user.id)}
-                    className="data-[state=checked]:bg-blue-600"
-                  />
-                  <div className="flex items-center space-x-2 flex-1">
-                    <div
-                      className={`w-3 h-3 rounded-full ${
-                        colors?.color || "bg-gray-400"
-                      }`}
-                    />
-                    <div className="text-sm">
-                      <div className="font-medium text-gray-900">
-                        {user.name}
-                      </div>
-                      <div className="text-xs text-gray-500">{user.email}</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
 
       {/* Main Calendar */}
       <div className="flex-1 flex flex-col">
@@ -262,9 +200,10 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
                 return (
                   <div
                     key={dateKey}
-                    className={`bg-white p-2 min-h-[120px] overflow-hidden ${
+                    className={`bg-white p-2 min-h-[120px] overflow-hidden cursor-pointer hover:bg-gray-50 transition-colors ${
                       !isCurrentMonth ? "bg-gray-50" : ""
                     }`}
+                    onClick={() => handleDateClick(date)}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span
@@ -290,11 +229,10 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
                         return (
                           <div
                             key={schedule.id}
-                            className={`px-2 py-1 rounded text-xs font-medium truncate cursor-pointer hover:opacity-80 ${
+                            className={`px-2 py-1 rounded text-xs font-medium truncate ${
                               colors?.lightColor || "bg-gray-100 text-gray-800"
                             }`}
                             title={`${schedule.title} (${schedule.name})`}
-                            onClick={() => handleScheduleClick(schedule)}
                           >
                             {schedule.startTime && (
                               <span className="mr-1">{schedule.startTime}</span>
@@ -317,85 +255,89 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
         </div>
       </div>
 
-      {/* Schedule Detail Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
-              {selectedSchedule?.title}
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedSchedule && (
-            <div className="mt-4 space-y-4">
-              {/* Date and Time */}
-              <div className="flex items-start space-x-3">
-                <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
-                <div>
-                  <p className="font-medium text-gray-900">
-                    {format(new Date(selectedSchedule.date), "yyyy年M月d日（E）", { locale: ja })}
-                  </p>
-                  {selectedSchedule.startTime && selectedSchedule.endTime && (
-                    <div className="flex items-center space-x-1 text-sm text-gray-600 mt-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{selectedSchedule.startTime} - {selectedSchedule.endTime}</span>
+      {/* Schedule Details Sidebar */}
+      {isSidebarOpen && (
+        <div className="w-96 bg-white border-l border-gray-200 p-6 overflow-y-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {selectedDate && format(selectedDate, "yyyy年M月d日（E）", { locale: ja })}
+            </h2>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+          </div>
+
+          {selectedDateSchedules.length > 0 ? (
+            <div className="space-y-4">
+              {selectedDateSchedules.map((schedule) => {
+                const colors = userColorMap.get(schedule.userId);
+                return (
+                  <div
+                    key={schedule.id}
+                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium text-gray-900">{schedule.title}</h3>
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          colors?.color || "bg-gray-400"
+                        }`}
+                      />
                     </div>
-                  )}
-                </div>
-              </div>
 
-              {/* User */}
-              <div className="flex items-center space-x-3">
-                <User className="w-5 h-5 text-gray-500" />
-                <div>
-                  <p className="font-medium text-gray-900">{selectedSchedule.name}</p>
-                  <p className="text-sm text-gray-600">
-                    {users.find(u => u.id === selectedSchedule.userId)?.email}
-                  </p>
-                </div>
-              </div>
+                    {/* Time */}
+                    {schedule.startTime && schedule.endTime && (
+                      <div className="flex items-center space-x-1 text-sm text-gray-600 mb-2">
+                        <Clock className="w-4 h-4" />
+                        <span>{schedule.startTime} - {schedule.endTime}</span>
+                      </div>
+                    )}
 
-              {/* Location */}
-              {selectedSchedule.location && (
-                <div className="flex items-start space-x-3">
-                  <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-gray-900">場所</p>
-                    <p className="text-sm text-gray-600">{selectedSchedule.location}</p>
+                    {/* User */}
+                    <div className="flex items-center space-x-1 text-sm text-gray-600 mb-2">
+                      <User className="w-4 h-4" />
+                      <span>{schedule.name}</span>
+                    </div>
+
+                    {/* Location */}
+                    {schedule.location && (
+                      <div className="flex items-center space-x-1 text-sm text-gray-600 mb-2">
+                        <MapPin className="w-4 h-4" />
+                        <span>{schedule.location}</span>
+                      </div>
+                    )}
+
+                    {/* Description */}
+                    {schedule.description && (
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                          {schedule.description}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
-
-              {/* Description */}
-              {selectedSchedule.description && (
-                <div className="flex items-start space-x-3">
-                  <FileText className="w-5 h-5 text-gray-500 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900 mb-1">内容</p>
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                      {selectedSchedule.description}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* User Color Indicator */}
-              <div className="pt-2 border-t">
-                <div className="flex items-center space-x-2">
-                  <div 
-                    className={`w-3 h-3 rounded-full ${
-                      userColorMap.get(selectedSchedule.userId)?.color || "bg-gray-400"
-                    }`} 
-                  />
-                  <span className="text-sm text-gray-600">
-                    {selectedSchedule.name}のスケジュール
-                  </span>
-                </div>
-              </div>
+                );
+              })}
             </div>
+          ) : (
+            <p className="text-gray-500 text-center mt-8">
+              この日の予定はありません
+            </p>
           )}
-        </DialogContent>
-      </Dialog>
+
+          <div className="mt-6">
+            <Link href="/schedule/import">
+              <Button className="w-full justify-center" size="lg">
+                <Plus className="w-4 h-4 mr-2" />
+                インポート
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
