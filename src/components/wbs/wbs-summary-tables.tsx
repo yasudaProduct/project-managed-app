@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Layers, Users, Download } from "lucide-react";
 import { MonthlyAssigneeSummary } from "./monthly-assignee-summary";
+import { MonthlyPhaseSummary } from "./monthly-phase-summary";
 import { useWbsSummary } from "@/hooks/use-wbs-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -429,6 +430,12 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
 
       {/* 月別・担当者別集計表 */}
       <MonthlyAssigneeSummary
+        monthlyData={summary.monthlyAssigneeSummary}
+        hoursUnit={hoursUnit}
+      />
+
+      {/* 月別・工程別集計表 */}
+      <MonthlyPhaseSummary
         monthlyData={summary.monthlyAssigneeSummary}
         hoursUnit={hoursUnit}
       />

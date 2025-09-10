@@ -17,6 +17,7 @@ export interface AssigneeSummary {
 export interface TaskAllocationDetail {
   taskId: string;
   taskName: string;
+  phase?: string;
   assignee: string;
   startDate: string;
   endDate: string;

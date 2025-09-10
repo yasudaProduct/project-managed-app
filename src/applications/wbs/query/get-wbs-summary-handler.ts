@@ -230,6 +230,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         const taskDetail: TaskAllocationDetail = {
           taskId: task.id,
           taskName: task.name,
+          phase: task.phase?.name || (typeof task.phase === "string" ? task.phase : undefined),
           assignee: assigneeName,
           startDate: task.yoteiStart.toISOString().split('T')[0],
           endDate: task.yoteiStart.toISOString().split('T')[0],
@@ -288,6 +289,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         const taskDetail: TaskAllocationDetail = {
           taskId: task.id,
           taskName: task.name,
+          phase: task.phase?.name || (typeof task.phase === "string" ? task.phase : undefined),
           assignee: assigneeName,
           startDate: startDate.toISOString().split('T')[0],
           endDate: endDate.toISOString().split('T')[0],
@@ -511,6 +513,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       const taskDetail: TaskAllocationDetail = {
         taskId: task.id,
         taskName: task.name,
+        phase: task.phase?.name || (typeof task.phase === "string" ? task.phase : undefined),
         assignee: assigneeName,
         startDate: date.toISOString().split('T')[0],
         endDate: endDate.toISOString().split('T')[0],
