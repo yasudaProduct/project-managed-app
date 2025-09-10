@@ -50,7 +50,7 @@ services:
   notification-cron:
     build:
       context: .
-      dockerfile: docker/dockerfile-cron
+      dockerfile: docker/cron/dockerfile-cron
     container_name: project-managed-cron
     environment:
       - NODE_ENV=development
