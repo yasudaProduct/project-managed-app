@@ -46,10 +46,8 @@ export class NotificationService implements INotificationService {
     // ユーザーの通知設定を確認
     const preferences = await this.getPreferencesDomain(request.userId);
 
-    // クワイエットアワー機能は廃止
-
     // 通知設定に応じてチャンネルを調整
-    const enabledChannels = this.getEnabledChannels(request, preferences);
+    const enabledChannels = this.getEnabledChannels(request.channels, preferences);
 
     const notification = Notification.create({
       ...request,
@@ -74,7 +72,7 @@ export class NotificationService implements INotificationService {
     const preferences = await this.getPreferencesDomain(userId);
 
     const notifications = requests.map(request => {
-      const enabledChannels = this.getEnabledChannels(request, preferences);
+      const enabledChannels = this.getEnabledChannels(request.channels, preferences);
       return Notification.create({
         ...request,
         channels: enabledChannels,
@@ -285,16 +283,23 @@ export class NotificationService implements INotificationService {
     await this.cleanupOldNotifications();
   }
 
+  /**
+   * 通知の有効なチャンネルを取得
+   * @param requestedChannels {NotificationChannel[]} 要求されたチャンネル
+   * @param preferences {NotificationPreference} 通知設定
+   * @returns {NotificationChannel[]} 有効なチャンネル
+   * @description 要求されたチャンネルが有効な場合はそのまま返し、有効でない場合は通知設定に応じて有効なチャンネルを返します
+   */
   private getEnabledChannels(
-    request: CreateNotificationRequest,
+    requestedChannels: NotificationChannel[] | undefined,
     preferences: NotificationPreference
   ): NotificationChannel[] {
-    const requestedChannels = request.channels ?? [
+    const channels = requestedChannels ?? [
       NotificationChannel.PUSH,
       NotificationChannel.IN_APP,
     ];
 
-    const enabledChannels = requestedChannels.filter(channel => {
+    const enabledChannels = channels.filter(channel => {
       switch (channel) {
         case NotificationChannel.PUSH:
           return preferences.enablePush;

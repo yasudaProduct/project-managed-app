@@ -30,22 +30,25 @@ Content-Type: application/json
 # 通知関連エンドポイント
 # ========================================
 
-@cookie=cookie_token=1234567890
+@cookie=session_token=0715cbfa-86f0-480b-8be7-ea397e2a5031-mf9f7mbr
 
 ### 通知一覧取得
 GET {{URL}}/notifications?page=1&limit=20&unreadOnly=false
 Content-Type: application/json
+cookie: {{cookie}}
 
 ### 通知一覧取得（未読のみ）
 GET {{URL}}/notifications?page=1&limit=20&unreadOnly=true
 Content-Type: application/json
+cookie: {{cookie}}
 
-### 通知作成（管理者用）
+### 通知作成
 POST {{URL}}/notifications
 Content-Type: application/json
+cookie: {{cookie}}
 
 {
-  "targetUserId": "user123",
+  "targetUserId": "dummy02",
   "type": "TASK_DEADLINE_WARNING",
   "priority": "HIGH",
   "title": "タスク期限警告",
@@ -60,55 +63,19 @@ Content-Type: application/json
 ### 未読通知数取得
 GET {{URL}}/notifications/count
 Content-Type: application/json
-
-### Push通知購読登録
-POST {{URL}}/notifications/subscribe
-Content-Type: application/json
-
-{
-  "endpoint": "https://fcm.googleapis.com/fcm/send/example",
-  "keys": {
-    "p256dh": "example-p256dh-key",
-    "auth": "example-auth-key"
-  },
-  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-}
-
-### Push通知購読解除
-DELETE {{URL}}/notifications/subscribe
-Content-Type: application/json
-
-### Push通知購読状態取得
-GET {{URL}}/notifications/subscribe
-Content-Type: application/json
+cookie: {{cookie}}
 
 # ========================================
 # テスト用データ
 # ========================================
 
-### テスト通知作成
-POST {{URL}}/notifications
-Content-Type: application/json
-
-{
-  "targetUserId": "test-user",
-  "type": "TASK_ASSIGNED",
-  "priority": "MEDIUM",
-  "title": "テスト通知",
-  "message": "これはテスト用の通知です",
-  "data": {
-    "taskId": "test-task-001",
-    "projectId": "test-project"
-  },
-  "channels": ["IN_APP"]
-}
-
 ### 複数通知作成（バッチテスト）
 POST {{URL}}/notifications
 Content-Type: application/json
+cookie: {{cookie}}
 
 {
-  "targetUserId": "batch-user",
+  "targetUserId": "dummy02",
   "type": "SCHEDULE_DELAY",
   "priority": "HIGH",
   "title": "スケジュール遅延警告",
