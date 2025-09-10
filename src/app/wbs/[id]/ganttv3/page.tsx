@@ -16,7 +16,7 @@ import { useParams } from "next/navigation";
 import { getGanttTasks as getGanttTasks, getPhases } from "./action";
 
 const defaultGanttStyle: GanttStyle = {
-  theme: 'modern',
+  theme: "modern",
   showGrid: true,
   showProgress: true,
   showDependencies: true,
@@ -25,16 +25,16 @@ const defaultGanttStyle: GanttStyle = {
   showTodayLine: true,
   taskHeight: 16,
   rowSpacing: 4,
-  labelPosition: 'inside',
+  labelPosition: "inside",
   colors: {
-      primary: '#3B82F6',
-      secondary: '#6B7280',
-      accent: '#10B981',
-      milestone: '#EF4444',
-      criticalPath: '#DC2626',
-      weekend: '#F3F4F6',
-      today: '#F59E0B'
-  }
+    primary: "#3B82F6",
+    secondary: "#6B7280",
+    accent: "#10B981",
+    milestone: "#EF4444",
+    criticalPath: "#DC2626",
+    weekend: "#F3F4F6",
+    today: "#F59E0B",
+  },
 };
 
 export default function App() {
@@ -354,13 +354,6 @@ export default function App() {
 
   return (
     <div className="h-screen bg-background flex flex-col">
-      {/* Project Header */}
-      {/* <ProjectHeader
-        projectStats={projectStats}
-        onExport={() => console.log("Export")}
-        onImport={() => console.log("Import")}
-      /> */}
-
       {/* Main Navigation */}
       <div className="border-b bg-card px-2 py-2">
         <div className="flex items-center justify-between">

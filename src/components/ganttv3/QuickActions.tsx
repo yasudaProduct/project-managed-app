@@ -60,16 +60,16 @@ export const QuickActions = ({
   onAddTask,
   onDeleteTasks,
   onDuplicateTasks,
-  groupBy = 'none',
+  groupBy = "none",
   onGroupByChange,
 }: QuickActionsProps) => {
   const getGroupIcon = (group: GroupBy) => {
     switch (group) {
-      case 'phase':
+      case "phase":
         return <Layers className="w-4 h-4" />;
-      case 'assignee':
+      case "assignee":
         return <Users className="w-4 h-4" />;
-      case 'status':
+      case "status":
         return <Activity className="w-4 h-4" />;
       default:
         return <List className="w-4 h-4" />;
@@ -85,6 +85,7 @@ export const QuickActions = ({
           onClick={onAddTask}
           className="gap-2 disabled:bg-gray-400"
           variant="outline"
+          disabled={false}
         >
           <Plus className="w-4 h-4" />
           🚧タスク追加
