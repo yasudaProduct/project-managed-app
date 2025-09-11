@@ -18,7 +18,10 @@ export class WbsQueryRepository implements IWbsQueryRepository {
         wr."jissekiStart" AS "jissekiStart",
         wr."jissekiEnd" AS "jissekiEnd",
         JSON_BUILD_OBJECT('id', p.id, 'name', p.name) AS phase,
-        JSON_BUILD_OBJECT('id', u.id, 'displayName', u."displayName") AS assignee
+        CASE 
+          WHEN u.id IS NOT NULL THEN JSON_BUILD_OBJECT('id', u.id, 'displayName', u."displayName")
+          ELSE NULL
+        END AS assignee
       FROM
         "wbs_task" AS t
       LEFT JOIN

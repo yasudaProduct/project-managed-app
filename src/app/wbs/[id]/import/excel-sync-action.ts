@@ -104,7 +104,6 @@ export async function getWbsSyncHistory(wbsId: number, limit?: number) {
 
 export async function getWbsLastSync(wbsId: number) {
     try {
-        // WBSからプロジェクトIDを取得
         const wbs = await prisma.wbs.findUnique({
             where: { id: wbsId },
             include: { project: true },
@@ -114,7 +113,6 @@ export async function getWbsLastSync(wbsId: number) {
             throw new Error('WBSが見つかりません');
         }
 
-        // 同期サービスを取得
         const syncService = container.get<IWbsSyncApplicationService>(
             SYMBOL.IWbsSyncApplicationService
         );

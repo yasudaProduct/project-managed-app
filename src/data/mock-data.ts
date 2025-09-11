@@ -39,7 +39,7 @@ interface MockData {
         wbsId: number;
         phaseId: number;
         name: string;
-        assigneeId: number;
+        assigneeId: number | undefined;
         status: string;
         startDate: Date;
         endDate: Date;
@@ -555,6 +555,20 @@ export function getMockData(): MockData[] {
                     status: "NOT_STARTED",
                     startDate: addDays(44),
                     endDate: addDays(52),
+                    kosu: 24,
+                },
+
+                // 追加: 未割当
+                {
+                    id: wbsTaskId + 28,
+                    taskNo: "D5-0003",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId + 3,
+                    name: "未割当タスク",
+                    assigneeId: undefined,
+                    status: "NOT_STARTED",
+                    startDate: addDays(56),
+                    endDate: addDays(64),
                     kosu: 24,
                 },
             ],
@@ -1260,14 +1274,119 @@ export function getMockData(): MockData[] {
         }
     }
 
+    // インポート検証用
+    const mockDataImportValidationError = (projectId: string, wbsId: number, multiId: number) => {
+        const wbsTaskId = wbsId * multiId;
+        const wbsPhaseId = wbsId * multiId;
+        const wbsAssigneeId = wbsId * multiId;
+        return {
+            project: {
+                id: projectId,
+                name: "インポート検証エラーあり",
+                status: "ACTIVE",
+                description: "インポート検証",
+                startDate: addDays(0),
+                endDate: addDays(3),
+            },
+            wbs: [{
+                id: wbsId,
+                projectId: projectId,
+                name: "インポート検証",
+                status: "ACTIVE",
+            }],
+            wbsAssignee: [{
+                id: wbsAssigneeId,
+                wbsId: wbsId,
+                assigneeId: "dummy01",
+                rate: 1.0,
+            }],
+            wbsPhase: [{
+                id: wbsPhaseId,
+                wbsId: wbsId,
+                name: "設計",
+                code: "D1",
+                seq: 1,
+            }],
+            wbsTask: [{
+                id: wbsTaskId,
+                taskNo: "D1-0002",
+                wbsId: wbsId,
+                phaseId: wbsPhaseId,
+                name: "インポート検証(既存タスク)",
+                status: "NOT_STARTED",
+                assigneeId: wbsAssigneeId,
+                startDate: addDays(0),
+                endDate: addDays(3),
+                kosu: 12,
+            }],
+            wbsBuffer: [],
+            workRecords: [],
+            milestone: [],
+            companyHolidays: [],
+            userSchedules: [],
+        }
+    }
+
+    const mockDataImportValidation = (projectId: string, wbsId: number, multiId: number) => {
+        const wbsTaskId = wbsId * multiId;
+        const wbsPhaseId = wbsId * multiId;
+        const wbsAssigneeId = wbsId * multiId;
+        return {
+            project: {
+                id: projectId,
+                name: "インポート検証",
+                status: "ACTIVE",
+                description: "インポート検証",
+                startDate: addDays(0),
+                endDate: addDays(3),
+            },
+            wbs: [{
+                id: wbsId,
+                projectId: projectId,
+                name: "インポート検証",
+                status: "ACTIVE",
+            }],
+            wbsAssignee: [{
+                id: wbsAssigneeId,
+                wbsId: wbsId,
+                assigneeId: "dummy01",
+                rate: 1.0,
+            }],
+            wbsPhase: [{
+                id: wbsPhaseId,
+                wbsId: wbsId,
+                name: "設計",
+                code: "D1",
+                seq: 1,
+            }],
+            wbsTask: [{
+                id: wbsTaskId,
+                taskNo: "D1-0002",
+                wbsId: wbsId,
+                phaseId: wbsPhaseId,
+                name: "インポート検証(既存タスク)",
+                status: "NOT_STARTED",
+                assigneeId: wbsAssigneeId,
+                startDate: addDays(0),
+                endDate: addDays(3),
+                kosu: 12,
+            }],
+            wbsBuffer: [],
+            workRecords: [],
+            milestone: [],
+            companyHolidays: [],
+            userSchedules: [],
+        }
+    }
+
     return [
         mockData("test-project-1", 1, 10),
         // mockDataLarge("test-project-2", 2, 1000),
         mockDataAssigneeGanttMonthlyTest("test-project-3", 3, 100),
+        mockDataImportValidationError("test-project-4", 4, 100),
+        mockDataImportValidation("test-project-5", 5, 100),
     ]
 }
-
-// 大量データ
 // export const mockDataLarge = {
 //     project: {
 //         id: 2,

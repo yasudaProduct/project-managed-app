@@ -21,6 +21,12 @@ async function ensureTableExists(tableName: string, createSqlAbsolutePath: strin
 }
 
 const baseDate = new Date()
+const addDays = (days: number): Date => {
+    const date = new Date(baseDate);
+    date.setDate(date.getDate() + days);
+    return date;
+};
+
 let geppoRowNo = 1
 
 // seed.tsで生成しているデータと合わせる
@@ -35,7 +41,7 @@ const dummyWBS_NAME = "新規機能開発"
 const geppoData = [
     {
         MEMBER_ID: "dummy01",
-        GEPPO_YYYYMM: GEPPO_YYYYMM(baseDate),
+        GEPPO_YYYYMM: formatGEPPO_YYYYMM(baseDate),
         ROW_NO: geppoRowNo++,
         COMPANY_NAME: dummyCOMPANY_NAME,
         MEMBER_NAME: dummyMEMBER_NAME,
@@ -55,7 +61,7 @@ const geppoData = [
     },
     {
         MEMBER_ID: "dummy02",
-        GEPPO_YYYYMM: GEPPO_YYYYMM(baseDate),
+        GEPPO_YYYYMM: formatGEPPO_YYYYMM(baseDate),
         ROW_NO: geppoRowNo++,
         COMPANY_NAME: dummyCOMPANY_NAME,
         MEMBER_NAME: dummyMEMBER_NAME,
@@ -75,7 +81,7 @@ const geppoData = [
     },
     {
         MEMBER_ID: "dummy02",
-        GEPPO_YYYYMM: GEPPO_YYYYMM(baseDate),
+        GEPPO_YYYYMM: formatGEPPO_YYYYMM(baseDate),
         ROW_NO: geppoRowNo++,
         COMPANY_NAME: dummyCOMPANY_NAME,
         MEMBER_NAME: dummyMEMBER_NAME,
@@ -95,7 +101,7 @@ const geppoData = [
     },
     {
         MEMBER_ID: "dummy03",
-        GEPPO_YYYYMM: GEPPO_YYYYMM(baseDate),
+        GEPPO_YYYYMM: formatGEPPO_YYYYMM(baseDate),
         ROW_NO: geppoRowNo++,
         COMPANY_NAME: dummyCOMPANY_NAME,
         MEMBER_NAME: dummyMEMBER_NAME,
@@ -115,7 +121,7 @@ const geppoData = [
     },
     {
         MEMBER_ID: "dummy03",
-        GEPPO_YYYYMM: GEPPO_YYYYMM(baseDate),
+        GEPPO_YYYYMM: formatGEPPO_YYYYMM(baseDate),
         ROW_NO: geppoRowNo++,
         COMPANY_NAME: dummyCOMPANY_NAME,
         MEMBER_NAME: dummyMEMBER_NAME,
@@ -135,7 +141,7 @@ const geppoData = [
     },
     {
         MEMBER_ID: "dummy03",
-        GEPPO_YYYYMM: GEPPO_YYYYMM(baseDate),
+        GEPPO_YYYYMM: formatGEPPO_YYYYMM(baseDate),
         ROW_NO: geppoRowNo++,
         COMPANY_NAME: dummyCOMPANY_NAME,
         MEMBER_NAME: dummyMEMBER_NAME,
@@ -343,6 +349,81 @@ const wbsData = [
         BIKO: 'seed: 見積もり作成 D0-0001',
         PROGRESS_RATE: 0,
     },
+    // インポート検証用
+    {
+        FILE_NAME: 'seed.csv',
+        ROW_NO: wbsRowNo++,
+        PROJECT_ID: 'インポート検証エラーあり',
+        PROJECT_NAME: 'インポート検証エラーあり',
+        WBS_ID: 'D1-0001',
+        PHASE: '設計',
+        ACTIVITY: '新規タスク',
+        TASK: 'インポート検証',
+        KINO_SBT: '',
+        SUBSYSTEM: '',
+        TANTO: 'dummy01',
+        TANTO_REV: null,
+        KIJUN_START_DATE: formatWbsDate(baseDate),
+        KIJUN_END_DATE: formatWbsDate(addDays(3)),
+        KIJUN_KOSU: 8,
+        KIJUN_KOSU_BUFFER: 1,
+        YOTEI_START_DATE: formatWbsDate(baseDate),
+        YOTEI_END_DATE: formatWbsDate(addDays(3)),
+        YOTEI_KOSU: 8,
+        JISSEKI_START_DATE: null,
+        JISSEKI_END_DATE: null,
+        JISSEKI_KOSU: 2,
+        STATUS: '着手中',
+        IPV_DATE: null,
+        IBPV_DATE: null,
+        PV_DATE: null,
+        EV_DATE: null,
+        AC_DATE: null,
+        IPV_KOSU: null,
+        IBPV_KOSU: null,
+        PV_KOSU: null,
+        EV_KOSU: null,
+        AC_KOSU: null,
+        BIKO: 'seed: 見積もり作成 D0-0001',
+        PROGRESS_RATE: 0,
+    },
+    {
+        FILE_NAME: 'seed.csv',
+        ROW_NO: wbsRowNo++,
+        PROJECT_ID: 'インポート検証',
+        PROJECT_NAME: 'インポート検証',
+        WBS_ID: 'D1-0001',
+        PHASE: '設計',
+        ACTIVITY: '新規タスク',
+        TASK: 'インポート検証',
+        KINO_SBT: '',
+        SUBSYSTEM: '',
+        TANTO: '安田',
+        TANTO_REV: null,
+        KIJUN_START_DATE: formatWbsDate(baseDate),
+        KIJUN_END_DATE: formatWbsDate(addDays(3)),
+        KIJUN_KOSU: 8,
+        KIJUN_KOSU_BUFFER: 1,
+        YOTEI_START_DATE: formatWbsDate(baseDate),
+        YOTEI_END_DATE: formatWbsDate(addDays(3)),
+        YOTEI_KOSU: 8,
+        JISSEKI_START_DATE: null,
+        JISSEKI_END_DATE: null,
+        JISSEKI_KOSU: 2,
+        STATUS: '着手中',
+        IPV_DATE: null,
+        IBPV_DATE: null,
+        PV_DATE: null,
+        EV_DATE: null,
+        AC_DATE: null,
+        IPV_KOSU: null,
+        IBPV_KOSU: null,
+        PV_KOSU: null,
+        EV_KOSU: null,
+        AC_KOSU: null,
+        BIKO: 'seed: 見積もり作成 D0-0001',
+        PROGRESS_RATE: 0,
+    },
 ]
 
 const sampleWbsData = [...wbsData]
@@ -509,7 +590,7 @@ async function insertSeedData() {
     }
 }
 
-function GEPPO_YYYYMM(date: Date): string {
+function formatGEPPO_YYYYMM(date: Date): string {
     // YYYY-MM形式に変換
     const year = date.getFullYear()
     const month = date.getMonth() + 1
@@ -517,5 +598,13 @@ function GEPPO_YYYYMM(date: Date): string {
     return `${year}${month.toString().padStart(2, '0')}`
 }
 
+function formatWbsDate(date: Date): string {
+    // YYYY-MM-DD形式に変換
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    console.log(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`)
+    return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+}
 // スクリプト実行
 insertSeedData() 

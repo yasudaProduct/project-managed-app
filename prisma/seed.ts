@@ -152,18 +152,27 @@ async function main() {
                 },
             })
 
-            await prisma.taskKosu.upsert({
-                where: { id: taskPeriod.id },
-                update: {
-                    kosu: task.kosu,
-                },
-                create: {
-                    wbsId: task.wbsId,
-                    periodId: taskPeriod.id,
-                    kosu: task.kosu,
-                    type: 'NORMAL',
-                },
+            const taskKosu = await prisma.taskKosu.findFirst({
+                where: { periodId: taskPeriod.id },
+                orderBy: { id: 'desc' },
             })
+            if (taskKosu) {
+                await prisma.taskKosu.update({
+                    where: { id: taskKosu.id },
+                    data: {
+                        kosu: task.kosu,
+                    },
+                })
+            } else {
+                await prisma.taskKosu.create({
+                    data: {
+                        wbsId: task.wbsId,
+                        periodId: taskPeriod.id,
+                        kosu: task.kosu,
+                        type: 'NORMAL',
+                    },
+                })
+            }
         }
 
         for (const buffer of mock.wbsBuffer) {
@@ -272,7 +281,7 @@ async function main() {
     // MySQLの検証データと突合せできるように、対応するプロジェクト/タスクを補完
     // - プロジェクト名: geppo.PROJECT_ID と照合（完全一致/部分一致）
     // - タスク番号: geppo.WBS_NO と照合（taskNo）
-    await ensureImportCompatibilityData()
+    // await ensureImportCompatibilityData()
 
 
     // 自動採番テーブルのシーケンスを MAX(id)+1 に再調整（PostgreSQL）
@@ -321,6 +330,7 @@ async function main() {
  * - プロジェクト: 「インポート検証」「インポートテスト」「インポートテスト2」
  * - WBS/タスク: D系の taskNo を必要数作成
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function ensureImportCompatibilityData() {
     // 対象プロジェクト
     const targetProjects = [
