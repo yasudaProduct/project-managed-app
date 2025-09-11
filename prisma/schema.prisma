@@ -24,6 +24,7 @@ model Projects {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   wbs         Wbs[]
+  settings    ProjectSettings?
 
   @@map("projects")
 }
@@ -356,6 +357,17 @@ enum NotificationChannel {
   PUSH      // デスクトップ通知
   IN_APP    // アプリ内通知
   EMAIL     // メール通知
+}
+
+model ProjectSettings {
+  projectId      String   @id
+  roundToQuarter Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project        Projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_settings")
 }
 
 model WbsProgressHistory {

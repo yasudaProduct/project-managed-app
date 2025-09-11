@@ -182,6 +182,12 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"project_settings" {
+  String projectId PK
+  Boolean roundToQuarter
+  DateTime createdAt
+  DateTime updatedAt
+}
 "wbs_progress_history" {
   Int id PK
   Int wbsId FK
@@ -298,6 +304,7 @@ erDiagram
 "notifications" }o--|| "users" : user
 "notification_preferences" |o--|| "users" : user
 "push_subscriptions" }o--|| "users" : user
+"project_settings" |o--|| "projects" : project
 "wbs_progress_history" }o--|| "wbs" : wbs
 "task_progress_history" }o--|| "wbs_progress_history" : wbsProgressHistory
 "task_dependencies" }o--|| "wbs_task" : predecessorTask
@@ -517,6 +524,14 @@ erDiagram
   - `keys`: 
   - `userAgent`: 
   - `isActive`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `project_settings`
+
+**Properties**
+  - `projectId`: 
+  - `roundToQuarter`: 
   - `createdAt`: 
   - `updatedAt`: 
 

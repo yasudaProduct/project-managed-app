@@ -21,6 +21,8 @@ import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TaskModal } from "@/components/wbs/task-modal";
+import { Settings } from "lucide-react";
+import { ProjectSettings } from "../../../components/wbs/project-settings";
 import { TaskDependencyModal } from "@/components/wbs/task-dependency-modal";
 import { ProjectInfoCard } from "@/components/wbs/project-info-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -148,6 +150,9 @@ export default async function WbsManagementPage({
               >
                 <Users className="h-4 w-4" />
               </TabsTrigger>
+              <TabsTrigger value="settings" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="summary">
               <ProjectInfoCard
@@ -156,6 +161,9 @@ export default async function WbsManagementPage({
                 assignees={assignees || []}
                 buffers={buffers}
               />
+            </TabsContent>
+            <TabsContent value="settings">
+              <ProjectSettings projectId={project.id} />
             </TabsContent>
             <TabsContent value="list">
               <TaskTableViewPage wbsTasks={tasks} wbsId={wbs.id} />

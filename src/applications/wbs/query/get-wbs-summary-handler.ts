@@ -13,6 +13,7 @@ import type { ICompanyHolidayRepository } from "@/applications/calendar/icompany
 import type { IUserScheduleRepository } from "@/applications/calendar/iuser-schedule-repository";
 import type { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-repository";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
+import prisma from "@/lib/prisma";
 
 @injectable()
 export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, WbsSummaryResult> {
@@ -43,8 +44,12 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     const assigneeSummaries = this.calculateAssigneeSummary(tasks);
     const assigneeTotal = this.calculateTotal(assigneeSummaries);
 
+    // 設定取得（0.25単位量子化フラグ）
+    const settings = await prisma.projectSettings.findUnique({ where: { projectId: query.projectId } });
+    const roundToQuarter = settings?.roundToQuarter === true;
+
     // 月別・担当者別集計
-    const monthlyAssigneeSummary = await this.calculateMonthlyAssigneeSummary(tasks, query.wbsId, query.calculationMode);
+    const monthlyAssigneeSummary = await this.calculateMonthlyAssigneeSummary(tasks, query.wbsId, query.calculationMode, roundToQuarter);
 
     return {
       phaseSummaries,
@@ -135,10 +140,10 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
    * 月別・担当者別集計を行う
    * 月別・担当者別集計は、月ごとにタスク数、予定工数、実績工数、差分を計算する
    */
-  private async calculateMonthlyAssigneeSummary(tasks: WbsTaskData[], wbsId: number, calculationMode: AllocationCalculationMode) {
+  private async calculateMonthlyAssigneeSummary(tasks: WbsTaskData[], wbsId: number, calculationMode: AllocationCalculationMode, roundToQuarter: boolean) {
     switch (calculationMode) {
       case AllocationCalculationMode.BUSINESS_DAY_ALLOCATION:
-        return this.calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks, wbsId);
+        return this.calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks, wbsId, roundToQuarter);
       case AllocationCalculationMode.START_DATE_BASED:
         return this.calculateMonthlyAssigneeSummaryWithStartDateBased(tasks);
       default:
@@ -149,7 +154,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
   /**
    * 営業日案分による月別・担当者別集計
    */
-  private async calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks: WbsTaskData[], wbsId: number) {
+  private async calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks: WbsTaskData[], wbsId: number, roundToQuarter: boolean) {
     const monthlyData: MonthlyAssigneeData[] = [];
     const assignees = new Set<string>();
     const months = new Set<string>();
@@ -244,7 +249,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           []
         );
 
-        const allocatedHours = workingHoursAllocationService.allocateTaskHoursByAssigneeWorkingDays(
+        const allocatedHoursRaw = workingHoursAllocationService.allocateTaskHoursByAssigneeWorkingDays(
           {
             yoteiStart: startDate,
             yoteiEnd: endDate,
@@ -253,6 +258,11 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           fallbackAssignee,
           []
         );
+
+        // 0.25単位量子化（予定工数のみ）
+        const allocatedHours = roundToQuarter
+          ? this.quantizeAllocatedHours(allocatedHoursRaw, Number(task.yoteiKosu || 0))
+          : allocatedHoursRaw;
 
         const businessDaysByMonth = period.getBusinessDaysByMonth();
         const availableHoursByMonth = period.getAvailableHoursByMonth();
@@ -393,7 +403,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         );
 
         // 営業日案分を実行
-        const allocatedHours = workingHoursAllocationService.allocateTaskHoursByAssigneeWorkingDays(
+        const allocatedHoursRaw = workingHoursAllocationService.allocateTaskHoursByAssigneeWorkingDays(
           {
             yoteiStart: startDate,
             yoteiEnd: endDate,
@@ -402,6 +412,11 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           wbsAssignee,
           userSchedules
         );
+
+        // 0.25単位量子化（予定工数のみ）
+        const allocatedHours = roundToQuarter
+          ? this.quantizeAllocatedHours(allocatedHoursRaw, Number(task.yoteiKosu || 0))
+          : allocatedHoursRaw;
 
         // 月別の営業日数と利用可能時間を取得
         const businessDaysByMonth = period.getBusinessDaysByMonth();
@@ -597,6 +612,48 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
   private formatYearMonth(date: Date): string {
     const d = new Date(date);
     return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  /**
+   * 0.25単位に量子化（予定工数のみ）
+   * - ハミルトン方式相当: 床取り + 残ユニットを小数部の大きい順に配分
+   * - タイブレーク: 年月昇順
+   */
+  private quantizeAllocatedHours(raw: Map<string, number>, totalHours: number): Map<string, number> {
+    if (raw.size === 0) return raw;
+    // 合計はrawの合計を採用（計算誤差対策）
+    const rawTotal = Array.from(raw.values()).reduce((a, b) => a + b, 0);
+    const unit = 0.25;
+    const totalUnits = Math.round(rawTotal / unit);
+
+    const entries = Array.from(raw.entries()).map(([month, hours]) => {
+      const unitsRaw = hours / unit;
+      const floorUnits = Math.floor(unitsRaw + 1e-9);
+      const frac = unitsRaw - floorUnits;
+      return { month, hours, unitsRaw, floorUnits, frac };
+    });
+
+    let usedUnits = entries.reduce((sum, e) => sum + e.floorUnits, 0);
+    let remaining = Math.max(0, totalUnits - usedUnits);
+
+    entries.sort((a, b) => {
+      if (b.frac !== a.frac) return b.frac - a.frac;
+      return a.month.localeCompare(b.month);
+    });
+
+    for (let i = 0; i < entries.length && remaining > 0; i++) {
+      entries[i].floorUnits += 1;
+      remaining -= 1;
+    }
+
+    // 昇順で安定化
+    entries.sort((a, b) => a.month.localeCompare(b.month));
+
+    const result = new Map<string, number>();
+    entries.forEach(e => {
+      result.set(e.month, e.floorUnits * unit);
+    });
+    return result;
   }
 
   /**
