@@ -50,8 +50,8 @@ export function MonthlyPhaseSummary({
   const formatNumber = (num: number) => {
     const converted = convertHours(num, hoursUnit);
     return converted.toLocaleString("ja-JP", {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
   };
 
