@@ -20,7 +20,7 @@ export class ImportJob {
     public readonly id: string,
     public readonly type: ImportJobType,
     public status: ImportJobStatus,
-    public readonly createdBy: string,
+    public readonly createdBy: string | null,
     public readonly createdAt: Date,
     public updatedAt: Date,
     public targetMonth?: string,
@@ -35,15 +35,15 @@ export class ImportJob {
     public completedAt?: Date,
     public errorDetails?: Record<string, unknown>,
     public result?: Record<string, unknown>
-  ) {}
+  ) { }
 
-  static create(options: ImportJobOptions & { createdBy: string }): ImportJob {
+  static create(options: ImportJobOptions & { createdBy?: string | null }): ImportJob {
     const now = new Date()
     return new ImportJob(
       '', // IDは永続化時に生成
       options.type,
       ImportJobStatus.PENDING,
-      options.createdBy,
+      options.createdBy ?? null,
       now,
       now,
       options.targetMonth,

@@ -13,6 +13,7 @@ export class ImportJobPrismaRepository implements IImportJobRepository {
       data: {
         type: job.type,
         status: job.status,
+        createdBy: job.createdBy ?? undefined,
         targetMonth: job.targetMonth,
         targetProjectIds: job.targetProjectIds,
         wbsId: job.wbsId,
@@ -25,7 +26,6 @@ export class ImportJobPrismaRepository implements IImportJobRepository {
         completedAt: job.completedAt,
         errorDetails: job.errorDetails as Prisma.InputJsonValue,
         result: job.result as Prisma.InputJsonValue,
-        createdBy: job.createdBy,
       },
     })
 

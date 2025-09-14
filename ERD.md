@@ -271,7 +271,7 @@ erDiagram
   DateTime completedAt "nullable"
   Json errorDetails "nullable"
   Json result "nullable"
-  String createdBy FK
+  String createdBy FK "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -310,7 +310,7 @@ erDiagram
 "task_dependencies" }o--|| "wbs_task" : predecessorTask
 "task_dependencies" }o--|| "wbs_task" : successorTask
 "task_dependencies" }o--|| "wbs" : wbs
-"import_jobs" }o--|| "users" : user
+"import_jobs" }o--o| "users" : user
 "import_jobs" }o--o| "wbs" : wbs
 "import_job_progress" }o--|| "import_jobs" : job
 ```

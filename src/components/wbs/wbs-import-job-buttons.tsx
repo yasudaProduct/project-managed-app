@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CirclePlus, Radio, RefreshCcw } from "lucide-react";
+import { CirclePlus, RefreshCcw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/auth-context";
 
 type Props = {
   wbsId: number;
@@ -17,18 +16,9 @@ export default function WbsImportJobButtons({
   onCreated,
   onRefresh,
 }: Props) {
-  const { user } = useAuth();
   const [creating, setCreating] = useState(false);
 
   const createWbsJob = async () => {
-    if (!user?.id) {
-      toast({
-        title: "エラー",
-        description: "ユーザー情報を取得できません。",
-        variant: "destructive",
-      });
-      return;
-    }
     setCreating(true);
     try {
       const res = await fetch(`/api/import-jobs`, {
@@ -36,7 +26,6 @@ export default function WbsImportJobButtons({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "WBS",
-          createdBy: user.id,
           wbsId,
           options: {},
         }),
@@ -62,14 +51,6 @@ export default function WbsImportJobButtons({
   };
 
   const createGeppoJob = async () => {
-    if (!user?.id) {
-      toast({
-        title: "エラー",
-        description: "ユーザー情報を取得できません。",
-        variant: "destructive",
-      });
-      return;
-    }
     const month = window.prompt("対象月を入力してください (YYYY-MM)");
     if (!month) return;
     if (!/^\d{4}-\d{2}$/.test(month)) {
@@ -87,7 +68,6 @@ export default function WbsImportJobButtons({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "GEPPO",
-          createdBy: user.id,
           targetMonth: month,
           options: {},
         }),

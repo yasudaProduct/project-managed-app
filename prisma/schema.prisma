@@ -503,12 +503,12 @@ model ImportJob {
   completedAt     DateTime?
   errorDetails    Json?                 // エラー詳細
   result          Json?                 // 実行結果
-  createdBy       String                // ユーザーID
+  createdBy       String?               // ユーザーID（未ログインでも作成できるようNULL許容）
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   
   // リレーション
-  user            Users                  @relation(fields: [createdBy], references: [id])
+  user            Users?                 @relation(fields: [createdBy], references: [id])
   wbs             Wbs?                  @relation(fields: [wbsId], references: [id])
   progress        ImportJobProgress[]
   
