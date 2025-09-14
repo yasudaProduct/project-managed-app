@@ -5,6 +5,7 @@ export interface IImportJobRepository {
   create(job: ImportJob): Promise<ImportJob>
   update(job: ImportJob): Promise<ImportJob>
   findById(id: string): Promise<ImportJob | null>
+  findAll(limit?: number): Promise<ImportJob[]>
   findByUser(userId: string, limit?: number): Promise<ImportJob[]>
   findByStatus(status: ImportJobStatus): Promise<ImportJob[]>
   findByTypeAndStatus(type: ImportJobType, status: ImportJobStatus): Promise<ImportJob[]>

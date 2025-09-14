@@ -13,6 +13,7 @@ export interface IImportJobApplicationService {
   cancelJob(jobId: string): Promise<void>
   addProgress(jobId: string, progress: Omit<ImportJobProgress, 'recordedAt'>): Promise<void>
   getJob(jobId: string): Promise<ImportJob | null>
+  getAllJobs(limit?: number): Promise<ImportJob[]>
   getUserJobs(userId: string): Promise<ImportJob[]>
   getPendingJobs(): Promise<ImportJob[]>
   getRunningJobs(): Promise<ImportJob[]>
@@ -25,11 +26,21 @@ export class ImportJobApplicationService implements IImportJobApplicationService
     @inject(SYMBOL.IImportJobRepository) private importJobRepository: IImportJobRepository
   ) { }
 
+  /**
+   * インポートジョブを作成
+   * @param options 
+   * @returns 
+   */
   async createJob(options: ImportJobOptions & { createdBy: string }): Promise<ImportJob> {
     const job = ImportJob.create(options)
     return await this.importJobRepository.create(job)
   }
 
+  /**
+   * インポートジョブを開始
+   * @param jobId 
+   * @returns 
+   */
   async startJob(jobId: string): Promise<void> {
     const job = await this.importJobRepository.findById(jobId)
     if (!job) {
@@ -44,6 +55,13 @@ export class ImportJobApplicationService implements IImportJobApplicationService
     })
   }
 
+  /**
+   * インポートジョブの進捗を更新
+   * @param jobId 
+   * @param processed 
+   * @param success 
+   * @param error 
+   */
   async updateJobProgress(
     jobId: string,
     processed: number,
@@ -59,6 +77,11 @@ export class ImportJobApplicationService implements IImportJobApplicationService
     await this.importJobRepository.update(job)
   }
 
+  /**
+   * インポートジョブを完了
+   * @param jobId 
+   * @param result 
+   */
   async completeJob(jobId: string, result: Record<string, unknown>): Promise<void> {
     const job = await this.importJobRepository.findById(jobId)
     if (!job) {
@@ -74,6 +97,11 @@ export class ImportJobApplicationService implements IImportJobApplicationService
     })
   }
 
+  /**
+   * インポートジョブを失敗
+   * @param jobId 
+   * @param errorDetails 
+   */
   async failJob(jobId: string, errorDetails: Record<string, unknown>): Promise<void> {
     const job = await this.importJobRepository.findById(jobId)
     if (!job) {
@@ -89,6 +117,10 @@ export class ImportJobApplicationService implements IImportJobApplicationService
     })
   }
 
+  /**
+   * インポートジョブをキャンセル
+   * @param jobId 
+   */
   async cancelJob(jobId: string): Promise<void> {
     const job = await this.importJobRepository.findById(jobId)
     if (!job) {
@@ -103,6 +135,11 @@ export class ImportJobApplicationService implements IImportJobApplicationService
     })
   }
 
+  /**
+   * インポートジョブの進捗を追加
+   * @param jobId 
+   * @param progress 
+   */
   async addProgress(
     jobId: string,
     progress: Omit<ImportJobProgress, 'recordedAt'>
@@ -113,22 +150,54 @@ export class ImportJobApplicationService implements IImportJobApplicationService
     })
   }
 
+  /**
+   * インポートジョブを取得
+   * @param jobId 
+   * @returns 
+   */
   async getJob(jobId: string): Promise<ImportJob | null> {
     return await this.importJobRepository.findById(jobId)
   }
 
+  /**
+   * すべてのインポートジョブを取得
+   * @param limit
+   * @returns
+   */
+  async getAllJobs(limit: number = 100): Promise<ImportJob[]> {
+    return await this.importJobRepository.findAll(limit)
+  }
+
+  /**
+   * ユーザーのインポートジョブを取得
+   * @param userId 
+   * @returns 
+   */
   async getUserJobs(userId: string): Promise<ImportJob[]> {
     return await this.importJobRepository.findByUser(userId)
   }
 
+  /**
+   * 待機中のインポートジョブを取得
+   * @returns 
+   */
   async getPendingJobs(): Promise<ImportJob[]> {
     return await this.importJobRepository.findByStatus(ImportJobStatus.PENDING)
   }
 
+  /**
+   * 実行中のインポートジョブを取得
+   * @returns 
+   */
   async getRunningJobs(): Promise<ImportJob[]> {
     return await this.importJobRepository.findByStatus(ImportJobStatus.RUNNING)
   }
 
+  /**
+   * インポートジョブの進捗を取得
+   * @param jobId 
+   * @returns 
+   */
   async getJobProgress(jobId: string): Promise<ImportJobProgress[]> {
     return await this.importJobRepository.getProgress(jobId)
   }

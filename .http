@@ -30,7 +30,7 @@ Content-Type: application/json
 # 通知関連エンドポイント
 # ========================================
 
-@cookie=session_token=0715cbfa-86f0-480b-8be7-ea397e2a5031-mf9f7mbr
+@cookie=session_token=eaf0cb02-081f-43be-b1c0-9bbe21e8060a-mfi1gldd
 
 ### 通知一覧取得
 GET {{URL}}/notifications?page=1&limit=20&unreadOnly=false
@@ -60,15 +60,6 @@ cookie: {{cookie}}
   "channels": ["PUSH", "IN_APP"]
 }
 
-### 未読通知数取得
-GET {{URL}}/notifications/count
-Content-Type: application/json
-cookie: {{cookie}}
-
-# ========================================
-# テスト用データ
-# ========================================
-
 ### 複数通知作成（バッチテスト）
 POST {{URL}}/notifications
 Content-Type: application/json
@@ -90,4 +81,27 @@ cookie: {{cookie}}
     ]
   },
   "channels": ["PUSH", "IN_APP", "EMAIL"]
+}
+
+### 未読通知数取得
+GET {{URL}}/notifications/count
+Content-Type: application/json
+cookie: {{cookie}}
+
+# ========================================
+# インポートジョブ
+# ========================================
+
+### インポートジョブを取得
+GET {{URL}}/import-jobs?userId=dummy02
+Content-Type: application/json
+
+### インポートジョブを作成
+POST {{URL}}/import-jobs
+Content-Type: application/json
+
+{
+  "type": "WBS",
+  "createdBy": "dummy02",
+  "wbsId": 1
 }

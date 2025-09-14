@@ -10,15 +10,20 @@ interface Params {
   id: string
 }
 
+/**
+ * インポートジョブを実行
+ * @param request 
+ * @param context
+ */
 export async function POST(
   request: NextRequest,
   context: { params: Promise<Params> }
 ) {
   const { id } = await context.params
-  
+
   try {
     const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
-    
+
     const job = await importJobService.getJob(id)
     if (!job) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 })
@@ -47,13 +52,17 @@ export async function POST(
   }
 }
 
+/**
+ * インポートジョブを実行
+ * @param jobId 
+ */
 async function executeImportInBackground(jobId: string) {
   const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
-  
+
   try {
     const job = await importJobService.getJob(jobId)
     if (!job) {
-      throw new Error('Job not found')
+      throw new Error('ジョブが見つかりません')
     }
 
     await importJobService.addProgress(jobId, {
@@ -66,17 +75,22 @@ async function executeImportInBackground(jobId: string) {
     } else if (job.type === 'WBS') {
       await executeWbsImport(jobId, job)
     } else {
-      throw new Error(`Unsupported job type: ${job.type}`)
+      throw new Error(`サポートされていないジョブタイプです: ${job.type}`)
     }
   } catch (error) {
-    console.error('Background import failed:', error)
+    console.error('バックグラウンドインポートに失敗しました。:', error)
     await importJobService.failJob(jobId, {
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? error.message : '不明なエラー',
       error: error,
     })
   }
 }
 
+/**
+ * Geppoインポートを実行
+ * @param jobId 
+ * @param job 
+ */
 async function executeGeppoImport(jobId: string, job: ImportJob) {
   const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
   const geppoImportService = container.get<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService)
@@ -89,9 +103,9 @@ async function executeGeppoImport(jobId: string, job: ImportJob) {
 
     // インポート実行
     if (!job.targetMonth) {
-      throw new Error('Target month is required for Geppo import')
+      throw new Error('対象月が必要です')
     }
-    
+
     const updateMode = (job.options.updateMode as string) || 'merge'
     const result = await geppoImportService.executeImport({
       targetMonth: job.targetMonth,

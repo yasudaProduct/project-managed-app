@@ -59,6 +59,15 @@ export class ImportJobPrismaRepository implements IImportJobRepository {
     return job ? this.toDomain(job) : null
   }
 
+  async findAll(limit: number = 100): Promise<ImportJob[]> {
+    const jobs = await this.prisma.importJob.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    })
+
+    return jobs.map(job => this.toDomain(job))
+  }
+
   async findByUser(userId: string, limit: number = 50): Promise<ImportJob[]> {
     const jobs = await this.prisma.importJob.findMany({
       where: { createdBy: userId },

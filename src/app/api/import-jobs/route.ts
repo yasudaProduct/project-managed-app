@@ -3,18 +3,43 @@ import { container } from '@/lib/inversify.config'
 import { SYMBOL } from '@/types/symbol'
 import { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service'
 import { ImportJobType } from '@prisma/client'
+import type { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
 
+/**
+ * インポートジョブを取得
+ * @param request 
+ * @returns 
+ */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
-    }
-
     const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
-    const jobs = await importJobService.getUserJobs(userId)
+    const jobs = userId
+      ? await importJobService.getUserJobs(userId)
+      : await importJobService.getAllJobs()
+
+    // WBS名を取得
+    const wbsService = container.get<IWbsApplicationService>(SYMBOL.IWbsApplicationService)
+    const wbsIdSet = new Set<number>()
+    for (const job of jobs) {
+      if (job.type === 'WBS' && job.wbsId) {
+        wbsIdSet.add(job.wbsId)
+      }
+    }
+    const wbsIdList = Array.from(wbsIdSet)
+    const wbsMap = new Map<number, string>()
+    if (wbsIdList.length > 0) {
+      const results = await Promise.all(
+        wbsIdList.map(async (id) => {
+          const wbs = await wbsService.getWbsById(id)
+          return [id, wbs?.name ?? ''] as const
+        })
+      )
+      for (const [id, name] of results) {
+        wbsMap.set(id, name)
+      }
+    }
 
     return NextResponse.json(jobs.map(job => ({
       id: job.id,
@@ -30,16 +55,22 @@ export async function GET(request: NextRequest) {
       completedAt: job.completedAt?.toISOString(),
       targetMonth: job.targetMonth,
       wbsId: job.wbsId,
+      wbsName: job.wbsId ? (wbsMap.get(job.wbsId) ?? null) : null,
     })))
   } catch (error) {
-    console.error('Failed to get import jobs:', error)
+    console.error(error)
     return NextResponse.json(
-      { error: 'Failed to get import jobs' },
+      { error: 'インポートジョブの取得に失敗しました' },
       { status: 500 }
     )
   }
 }
 
+/**
+ * インポートジョブを作成
+ * @param request 
+ * @returns 
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -53,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
-    
+
     const job = await importJobService.createJob({
       type: type as ImportJobType,
       createdBy,
@@ -78,6 +109,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * バックグラウンドでインポート処理を実行
+ * @param jobId 
+ */
 async function startBackgroundImport(jobId: string) {
   // バックグラウンドでインポート処理を実行
   // この関数は非同期で実行され、レスポンスを待たない
@@ -88,7 +123,7 @@ async function startBackgroundImport(jobId: string) {
         'Content-Type': 'application/json',
       },
     })
-    
+
     if (!response.ok) {
       console.error('Failed to start background import:', await response.text())
     }
