@@ -1291,7 +1291,7 @@ export function getMockData(): MockData[] {
             wbs: [{
                 id: wbsId,
                 projectId: projectId,
-                name: "インポート検証",
+                name: "インポート検証エラーあり",
                 status: "ACTIVE",
             }],
             wbsAssignee: [{

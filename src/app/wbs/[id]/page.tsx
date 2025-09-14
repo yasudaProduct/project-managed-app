@@ -31,6 +31,7 @@ import { getMilestones } from "./milestone-actions";
 import MilestoneManagement from "@/components/milestone/milestone-management";
 import { WbsSummaryTables } from "@/components/wbs/wbs-summary-tables";
 import { AssigneeGanttChart } from "./assignee-gantt/assignee-gantt-chart";
+import WbsImportJobButtons from "@/components/wbs/wbs-import-job-buttons";
 
 export default async function WbsManagementPage({
   params,
@@ -68,6 +69,9 @@ export default async function WbsManagementPage({
     <>
       <div className="container mx-auto mt-2">
         {/* ヘッダメニュー */}
+        <div className="mb-2">
+          <WbsImportJobButtons wbsId={wbs.id} />
+        </div>
         <Link href={`/wbs/${wbs.id}/phase/new`}>
           <Button className="bg-white text-black">
             <CirclePlus className="h-4 w-4" />

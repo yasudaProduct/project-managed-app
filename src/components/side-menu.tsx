@@ -11,6 +11,7 @@ import {
   History,
   CalendarCheck,
   TrendingUp,
+  RefreshCcw,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { AuthStatus } from "./auth/auth-status";
@@ -110,6 +111,13 @@ export function SideMenu() {
             >
               <TrendingUp className="h-4 w-4" />
               EVM
+            </Link>
+            <Link
+              href="/import-jobs"
+              className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
+              <RefreshCcw className="h-4 w-4" />
+              インポートジョブ
             </Link>
 
             {wbsId && (

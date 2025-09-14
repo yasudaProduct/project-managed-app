@@ -36,7 +36,36 @@ export function AuthProvider({
   useEffect(() => {
     // 初期ユーザー情報を設定
     setUser(initialUser);
-    setIsLoading(false);
+    // 自動で最新のユーザーを取得
+    (async () => {
+      try {
+        const response = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          if (userData.user) {
+            setUser(
+              new User(
+                userData.user.id,
+                userData.user.email,
+                userData.user.name,
+                userData.user.displayName
+              )
+            );
+          } else {
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Failed to refresh user:", error);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, [initialUser]);
 
   const login = (user: User) => {
