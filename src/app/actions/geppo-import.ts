@@ -4,14 +4,19 @@ import { container } from '@/lib/inversify.config'
 import { SYMBOL } from '@/types/symbol'
 import { IGeppoImportApplicationService } from '@/applications/geppo-import/geppo-import-application-service'
 import { ProjectMappingService } from '@/infrastructures/geppo-import/project-mapping.service'
-import { 
-  GeppoImportOptions, 
-  GeppoImportResult, 
-  GeppoImportValidation, 
+import {
+  GeppoImportOptions,
+  GeppoImportResult,
+  GeppoImportValidation,
   GeppoImportPreview,
   ProjectImportOption
 } from '@/domains/geppo-import/geppo-import-result'
 
+/**
+ * Geppoインポートバリデーション
+ * @param options 
+ * @returns 
+ */
 export async function validateGeppoImport(options: GeppoImportOptions): Promise<GeppoImportValidation> {
   try {
     const service = container.get<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService)
@@ -22,6 +27,11 @@ export async function validateGeppoImport(options: GeppoImportOptions): Promise<
   }
 }
 
+/**
+ * Geppoインポート実行
+ * @param options 
+ * @returns 
+ */
 export async function executeGeppoImport(options: GeppoImportOptions): Promise<GeppoImportResult> {
   try {
     const service = container.get<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService)

@@ -8,6 +8,11 @@ import prisma from '@/lib/prisma'
 export class ImportJobPrismaRepository implements IImportJobRepository {
   private prisma: PrismaClient = prisma
 
+  /**
+   * インポートジョブを作成
+   * @param job 
+   * @returns 
+   */
   async create(job: ImportJob): Promise<ImportJob> {
     const created = await this.prisma.importJob.create({
       data: {
@@ -32,6 +37,11 @@ export class ImportJobPrismaRepository implements IImportJobRepository {
     return this.toDomain(created)
   }
 
+  /**
+   * インポートジョブを更新
+   * @param job 
+   * @returns 
+   */
   async update(job: ImportJob): Promise<ImportJob> {
     const updated = await this.prisma.importJob.update({
       where: { id: job.id },

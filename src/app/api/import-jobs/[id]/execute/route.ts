@@ -26,12 +26,12 @@ export async function POST(
 
     const job = await importJobService.getJob(id)
     if (!job) {
-      return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+      return NextResponse.json({ error: 'ジョブが見つかりません' }, { status: 404 })
     }
 
     if (job.status !== 'PENDING') {
       return NextResponse.json(
-        { error: 'Job is not in pending state' },
+        { error: 'ジョブは保留中ではありません' },
         { status: 400 }
       )
     }
@@ -44,9 +44,9 @@ export async function POST(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Failed to execute import job:', error)
+    console.error('インポートジョブの実行に失敗しました', error)
     return NextResponse.json(
-      { error: 'Failed to execute import job' },
+      { error: 'インポートジョブの実行に失敗しました' },
       { status: 500 }
     )
   }
@@ -101,16 +101,16 @@ async function executeGeppoImport(jobId: string, job: ImportJob) {
       level: 'info',
     })
 
-    // インポート実行
+    // パラメータチェック
     if (!job.targetMonth) {
       throw new Error('対象月が必要です')
     }
 
-    const updateMode = (job.options.updateMode as string) || 'merge'
+    // Geppoインポート実行
     const result = await geppoImportService.executeImport({
       targetMonth: job.targetMonth,
       targetProjectNames: job.targetProjectIds,
-      updateMode: updateMode === 'replace' ? 'replace' : 'merge',
+      updateMode: job.options.updateMode === 'replace' ? 'replace' : 'merge',
       dryRun: (job.options.dryRun as boolean) || false,
     })
 
@@ -142,6 +142,11 @@ async function executeGeppoImport(jobId: string, job: ImportJob) {
   }
 }
 
+/**
+ * 指定されたジョブIdのWBSインポートを実行
+ * @param jobId 
+ * @param job 
+ */
 async function executeWbsImport(jobId: string, job: ImportJob) {
   const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
   const wbsSyncService = container.get<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService)
@@ -152,15 +157,19 @@ async function executeWbsImport(jobId: string, job: ImportJob) {
       level: 'info',
     })
 
+    // パラメータチェック
     if (!job.wbsId) {
-      throw new Error('WBS ID is required for WBS import')
+      throw new Error('WBS IDはWBSのインポートに必要です')
     }
 
     // WBS同期実行
     const result = await wbsSyncService.executeReplaceAll(job.wbsId)
 
     if (!result.success) {
-      throw new Error('WBS sync failed')
+      await importJobService.failJob(jobId, {
+        message: 'WBS同期に失敗しました',
+        error: result.errorDetails,
+      })
     }
 
     // 進捗更新（仮のデータ）

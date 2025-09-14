@@ -58,7 +58,13 @@ export async function GET(request: NextRequest) {
       completedAt: job.completedAt?.toISOString(),
       targetMonth: job.targetMonth,
       wbsId: job.wbsId,
-      wbsName: job.wbsId ? (wbsMap.get(job.wbsId) ?? null) : null,
+      wbsName: job.type === 'WBS'
+        ? (job.wbsId ? (wbsMap.get(job.wbsId) ?? null) : null)
+        : (job.targetProjectIds && job.targetProjectIds.length > 0
+          ? job.targetProjectIds.join(',')
+          : null),
+      errorDetails: job.errorDetails,
+      result: job.result,
     })))
   } catch (error) {
     console.error(error)

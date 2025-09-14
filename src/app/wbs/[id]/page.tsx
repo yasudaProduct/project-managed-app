@@ -70,7 +70,7 @@ export default async function WbsManagementPage({
       <div className="container mx-auto mt-2">
         {/* ヘッダメニュー */}
         <div className="mb-2">
-          <WbsImportJobButtons wbsId={wbs.id} />
+          <WbsImportJobButtons wbsId={wbs.id} wbsName={wbs.name} />
         </div>
         <Link href={`/wbs/${wbs.id}/phase/new`}>
           <Button className="bg-white text-black">

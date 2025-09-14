@@ -7,12 +7,14 @@ import { toast } from "@/hooks/use-toast";
 
 type Props = {
   wbsId: number;
+  wbsName: string;
   onCreated?: (jobId: string) => void;
   onRefresh?: () => void;
 };
 
 export default function WbsImportJobButtons({
   wbsId,
+  wbsName,
   onCreated,
   onRefresh,
 }: Props) {
@@ -69,6 +71,7 @@ export default function WbsImportJobButtons({
         body: JSON.stringify({
           type: "GEPPO",
           targetMonth: month,
+          targetProjectIds: [wbsName],
           options: {},
         }),
       });

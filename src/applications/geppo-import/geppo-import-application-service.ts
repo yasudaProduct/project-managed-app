@@ -112,6 +112,19 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
     }
   }
 
+  /**
+   * Geppoインポート実行
+   * @param options 
+   * @returns 
+   * @description
+   * 1. バリデーション
+   * 2. Geppoデータ取得とフィルタリング
+   * 3. データ変換・マッピング
+   * 4. ドライランの場合は実際の更新は行わない
+   * 5. 更新モードに応じた処理
+   * 6. WorkRecordへの保存（トランザクション処理）
+   * 7. 結果レポート生成
+   */
   async executeImport(options: GeppoImportOptions): Promise<GeppoImportResult> {
     try {
       // 1. バリデーション

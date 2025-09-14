@@ -12,7 +12,16 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, XCircle, RefreshCcw, Radio } from "lucide-react";
+import {
+  Loader2,
+  Play,
+  XCircle,
+  RefreshCcw,
+  Radio,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 type Job = {
@@ -29,12 +38,39 @@ type Job = {
   targetMonth?: string | null;
   wbsId?: number | null;
   wbsName?: string | null;
+  errorDetails?: Record<string, unknown>;
+  result?: Record<string, unknown>;
+};
+
+type GeppoImportError = {
+  memberId: string;
+  projectId?: string;
+  date: string;
+  errorType:
+    | "USER_NOT_FOUND"
+    | "PROJECT_NOT_FOUND"
+    | "TASK_NOT_FOUND"
+    | "INVALID_DATA"
+    | "DB_ERROR";
+  message: string;
+  originalData?: unknown;
+};
+
+type GeppoImportValidation = {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  userMapping: Record<string, unknown>;
+  projectMapping: Record<string, unknown>;
+  taskMapping: Record<string, unknown>;
+  statistics: Record<string, unknown>;
 };
 
 export default function ImportJobsClient() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [subscribingJobId, setSubscribingJobId] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -143,6 +179,104 @@ export default function ImportJobsClient() {
     []
   );
 
+  const toggleRowExpansion = (jobId: string) => {
+    setExpandedRows((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(jobId)) {
+        newSet.delete(jobId);
+      } else {
+        newSet.add(jobId);
+      }
+      return newSet;
+    });
+  };
+
+  // エラー詳細をレンダリング
+  const renderErrorDetails = (job: Job) => {
+    if (!job.errorDetails) return null;
+
+    const validation = job.result as GeppoImportValidation | undefined;
+    const errors = job.errorDetails as
+      | { errors?: GeppoImportError[] }
+      | undefined;
+
+    return (
+      <div className="p-4 bg-gray-50 border-t">
+        {validation && !validation.isValid && (
+          <div className="mb-4">
+            <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-500" />
+              バリデーションエラー
+            </h4>
+            {validation.errors.length > 0 && (
+              <div className="mb-2">
+                <p className="text-sm font-medium text-red-600 mb-1">エラー:</p>
+                <ul className="list-disc list-inside text-sm text-red-600 space-y-1">
+                  {validation.errors.map((error, idx) => (
+                    <li key={idx}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {validation.warnings.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-yellow-600 mb-1">
+                  警告:
+                </p>
+                <ul className="list-disc list-inside text-sm text-yellow-600 space-y-1">
+                  {validation.warnings.map((warning, idx) => (
+                    <li key={idx}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {errors?.errors && errors.errors.length > 0 && (
+          <div>
+            <h4 className="font-semibold text-sm mb-2">実行時エラー詳細</h4>
+            <div className="max-h-60 overflow-y-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-1 px-2">メンバーID</th>
+                    <th className="text-left py-1 px-2">日付</th>
+                    <th className="text-left py-1 px-2">エラータイプ</th>
+                    <th className="text-left py-1 px-2">メッセージ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(errors.errors as GeppoImportError[]).map((error, idx) => (
+                    <tr key={idx} className="border-b">
+                      <td className="py-1 px-2">{error.memberId}</td>
+                      <td className="py-1 px-2">{error.date}</td>
+                      <td className="py-1 px-2">
+                        <Badge variant="outline" className="text-xs">
+                          {error.errorType}
+                        </Badge>
+                      </td>
+                      <td className="py-1 px-2">{error.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {job.errorDetails && !errors?.errors && (
+          <div>
+            <h4 className="font-semibold text-sm mb-2">エラー詳細</h4>
+            <pre className="text-xs bg-white p-2 rounded border overflow-x-auto">
+              {JSON.stringify(job.errorDetails, null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Card className="rounded-none shadow-none">
       <CardHeader>
@@ -189,72 +323,99 @@ export default function ImportJobsClient() {
                   </TableCell>
                 </TableRow>
               ) : (
-                jobs.map((job) => (
-                  <TableRow key={job.id}>
-                    <TableCell className="font-mono text-xs">
-                      {job.type === "GEPPO" && job.targetMonth
-                        ? `月報: ${job.targetMonth}`
-                        : ""}
-                      {job.type === "WBS" && (job.wbsName || job.wbsId)
-                        ? `${job.wbsName ?? job.wbsId}`
-                        : ""}
-                    </TableCell>
-                    <TableCell>{job.type}</TableCell>
-                    <TableCell>{statusBadge(job.status)}</TableCell>
-                    <TableCell>
-                      {job.totalRecords > 0
-                        ? `${job.processedRecords}/${job.totalRecords} 成功:${job.successCount} エラー:${job.errorCount}`
-                        : job.status === "RUNNING"
-                        ? "実行中..."
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(job.createdAt).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      {job.startedAt
-                        ? new Date(job.startedAt).toLocaleString()
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {job.completedAt
-                        ? new Date(job.completedAt).toLocaleString()
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {job.status === "PENDING" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => startJob(job.id)}
-                          >
-                            <Play className="h-4 w-4" /> 実行
-                          </Button>
-                        )}
-                        {job.status === "RUNNING" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setSubscribingJobId(job.id)}
-                          >
-                            <Radio className="h-4 w-4" /> 監視
-                          </Button>
-                        )}
-                        {(job.status === "PENDING" ||
-                          job.status === "RUNNING") && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => cancelJob(job.id)}
-                          >
-                            <XCircle className="h-4 w-4" /> キャンセル
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                jobs.map((job) => {
+                  const hasErrors = job.errorDetails ? true : false;
+                  const isExpanded = expandedRows.has(job.id);
+
+                  return (
+                    <>
+                      <TableRow key={job.id}>
+                        <TableCell className="font-mono text-xs">
+                          {job.wbsName || job.wbsId
+                            ? `${job.wbsName ?? job.wbsId}`
+                            : ""}
+                        </TableCell>
+                        <TableCell>{job.type}</TableCell>
+                        <TableCell>{statusBadge(job.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {job.totalRecords > 0
+                              ? `${job.processedRecords}/${job.totalRecords} 成功:${job.successCount} エラー:${job.errorCount}`
+                              : job.status === "RUNNING"
+                              ? "実行中..."
+                              : "-"}
+                            {hasErrors && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => toggleRowExpansion(job.id)}
+                                className="h-6 w-6 p-0"
+                              >
+                                {isExpanded ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(job.createdAt).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          {job.startedAt
+                            ? new Date(job.startedAt).toLocaleString()
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {job.completedAt
+                            ? new Date(job.completedAt).toLocaleString()
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {job.status === "PENDING" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => startJob(job.id)}
+                              >
+                                <Play className="h-4 w-4" /> 実行
+                              </Button>
+                            )}
+                            {job.status === "RUNNING" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setSubscribingJobId(job.id)}
+                              >
+                                <Radio className="h-4 w-4" /> 監視
+                              </Button>
+                            )}
+                            {(job.status === "PENDING" ||
+                              job.status === "RUNNING") && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => cancelJob(job.id)}
+                              >
+                                <XCircle className="h-4 w-4" /> キャンセル
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && (
+                        <TableRow>
+                          <TableCell colSpan={columns.length} className="p-0">
+                            {renderErrorDetails(job)}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
+                  );
+                })
               )}
             </TableBody>
           </Table>

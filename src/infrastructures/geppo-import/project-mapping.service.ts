@@ -3,12 +3,12 @@ import { SYMBOL } from '@/types/symbol'
 import { Geppo } from '@/domains/geppo/types'
 import { ProjectImportOption, ProjectMappingValidation } from '@/domains/geppo-import/geppo-import-result'
 import type { IGeppoRepository } from '@/applications/geppo/repositories/igeppo.repository'
-import type { IProjectRepository } from '@/applications/projects/iproject-repository'
+import type { IWbsRepository } from '@/applications/wbs/iwbs-repository'
 
 @injectable()
 export class ProjectMappingService {
   constructor(
-    @inject(SYMBOL.IProjectRepository) private projectRepository: IProjectRepository,
+    @inject(SYMBOL.IWbsRepository) private wbsRepository: IWbsRepository,
     @inject(SYMBOL.IGeppoRepository) private geppoRepository: IGeppoRepository
   ) { }
 
@@ -16,29 +16,25 @@ export class ProjectMappingService {
     const projectMap = new Map<string, string>()
 
     try {
-      // 1. 既存プロジェクトを取得
-      const existingProjects = await this.projectRepository.findAll()
+      // 1. 既存WBSを取得
+      const existingWbsList = await this.wbsRepository.findAll()
 
-      // 2. geppo.PROJECT_ID と projects.name でマッピング
+      // 2. geppo.PROJECT_ID と wbs.name を完全一致でマッピング
       for (const geppoProjectId of geppoProjectIds) {
-        const matchedProject = existingProjects.find(p =>
-          p.name === geppoProjectId ||           // 完全一致
-          p.name.includes(geppoProjectId) ||     // 部分一致
-          geppoProjectId.includes(p.name)        // 逆部分一致
-        )
+        const matchedWbs = existingWbsList.find(w => w.name === geppoProjectId)
 
-        if (matchedProject) {
-          projectMap.set(geppoProjectId, matchedProject.id!)
+        if (matchedWbs) {
+          projectMap.set(geppoProjectId, String(matchedWbs.id!))
         } else {
-          // プロジェクトが見つからない場合のログ
-          console.warn(`Project mapping not found: ${geppoProjectId}`)
+          // WBSが見つからない場合のログ
+          console.warn(`WBS mapping not found for Geppo PROJECT_ID: ${geppoProjectId}`)
         }
       }
 
       return projectMap
     } catch (error) {
       console.error('Failed to create project map:', error)
-      throw new Error('プロジェクトマッピングの作成に失敗しました')
+      throw new Error('WBSマッピングの作成に失敗しました')
     }
   }
 
@@ -52,41 +48,12 @@ export class ProjectMappingService {
     }
 
     try {
-      // 1. 対象プロジェクト名に対応するGeppo PROJECT_IDを特定
-      const existingProjects = await this.projectRepository.findAll()
-      const targetProjects = existingProjects.filter(p =>
-        targetProjectNames.includes(p.name)
-      )
-
-      if (targetProjects.length === 0) {
-        console.warn('No matching projects found for target project names:', targetProjectNames)
-        return []
-      }
-
-      // 2. projects.name → geppo.PROJECT_ID の逆マッピングを作成
-      const targetGeppoProjectIds = new Set<string>()
-
-      for (const project of targetProjects) {
-        // projects.name に対応する geppo.PROJECT_ID を検索
-        const matchingGeppoProjectIds = geppoRecords
-          .map(g => g.PROJECT_ID)
-          .filter(Boolean)
-          .filter(geppoProjectId =>
-            project.name === geppoProjectId ||           // 完全一致
-            project.name.includes(geppoProjectId!) ||    // 部分一致
-            geppoProjectId!.includes(project.name)       // 逆部分一致
-          )
-
-        matchingGeppoProjectIds.forEach(id => targetGeppoProjectIds.add(id!))
-      }
-
-      // 3. 対象PROJECT_IDでフィルタリング
-      return geppoRecords.filter(record =>
-        record.PROJECT_ID && targetGeppoProjectIds.has(record.PROJECT_ID)
-      )
+      // 対象名 = WBS名として扱い、Geppo.PROJECT_ID の完全一致でフィルタ
+      const targetSet = new Set(targetProjectNames)
+      return geppoRecords.filter(record => record.PROJECT_ID && targetSet.has(record.PROJECT_ID))
     } catch (error) {
       console.error('Failed to filter geppo by target projects:', error)
-      throw new Error('プロジェクトフィルタリングに失敗しました')
+      throw new Error('WBS名によるフィルタリングに失敗しました')
     }
   }
 
@@ -99,26 +66,25 @@ export class ProjectMappingService {
     try {
       // 1. 対象月のGeppoデータからプロジェクトを取得
       const geppoRecords = await this.geppoRepository.searchWorkEntries(
-        { 
+        {
           dateFrom: new Date(`${targetMonth}-01`),
-          dateTo: new Date(`${targetMonth}-31`) },
+          dateTo: new Date(`${targetMonth}-31`)
+        },
         { page: 1, limit: 10000 }
       )
 
       const uniqueGeppoProjectIds = [...new Set(geppoRecords.geppos.map(g => g.PROJECT_ID).filter(Boolean))]
 
-      // 2. マッピング可能なプロジェクトを特定
-      const existingProjects = await this.projectRepository.findAll()
+      // 2. マッピング可能なWBSを特定（wbs.name === Geppo.PROJECT_ID）
+      const existingWbsList = await this.wbsRepository.findAll()
 
-      // 3. インポート可能なプロジェクト一覧を作成
+      // 3. インポート可能なWBS一覧を作成
       const availableProjects: ProjectImportOption[] = []
 
-      for (const project of existingProjects) {
-        // このプロジェクトに対応するGeppoデータがあるかチェック
+      for (const wbs of existingWbsList) {
+        // このWBSに対応するGeppoデータがあるかチェック（完全一致）
         const relatedGeppoProjectIds = uniqueGeppoProjectIds.filter(geppoProjectId =>
-          project.name === geppoProjectId ||
-          project.name.includes(geppoProjectId ?? '') ||
-          geppoProjectId?.includes(project.name ?? '')
+          wbs.name === geppoProjectId
         )
 
         if (relatedGeppoProjectIds.length > 0) {
@@ -133,8 +99,8 @@ export class ProjectMappingService {
           ).size
 
           availableProjects.push({
-            projectId: project.id ?? '',
-            projectName: project.name ?? '',
+            projectId: String(wbs.id ?? ''),
+            projectName: wbs.name ?? '',
             geppoProjectIds: relatedGeppoProjectIds.filter(id => id !== undefined) as string[],
             recordCount,
             userCount,
@@ -146,7 +112,7 @@ export class ProjectMappingService {
       return availableProjects
     } catch (error) {
       console.error('Failed to get available projects for import:', error)
-      throw new Error('インポート可能プロジェクトの取得に失敗しました')
+      throw new Error('インポート可能WBSの取得に失敗しました')
     }
   }
 
@@ -168,7 +134,7 @@ export class ProjectMappingService {
       }
     } catch (error) {
       console.error('Failed to validate project mapping:', error)
-      throw new Error('プロジェクトマッピング検証に失敗しました')
+      throw new Error('WBSマッピング検証に失敗しました')
     }
   }
 }
