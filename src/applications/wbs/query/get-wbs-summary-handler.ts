@@ -261,7 +261,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
 
         // 0.25単位量子化（予定工数のみ）
         const allocatedHours = roundToQuarter
-          ? this.quantizeAllocatedHours(allocatedHoursRaw, Number(task.yoteiKosu || 0))
+          ? this.quantizeAllocatedHours(allocatedHoursRaw)
           : allocatedHoursRaw;
 
         const businessDaysByMonth = period.getBusinessDaysByMonth();
@@ -415,7 +415,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
 
         // 0.25単位量子化（予定工数のみ）
         const allocatedHours = roundToQuarter
-          ? this.quantizeAllocatedHours(allocatedHoursRaw, Number(task.yoteiKosu || 0))
+          ? this.quantizeAllocatedHours(allocatedHoursRaw)
           : allocatedHoursRaw;
 
         // 月別の営業日数と利用可能時間を取得
@@ -619,7 +619,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
    * - ハミルトン方式相当: 床取り + 残ユニットを小数部の大きい順に配分
    * - タイブレーク: 年月昇順
    */
-  private quantizeAllocatedHours(raw: Map<string, number>, totalHours: number): Map<string, number> {
+  private quantizeAllocatedHours(raw: Map<string, number>): Map<string, number> {
     if (raw.size === 0) return raw;
     // 合計はrawの合計を採用（計算誤差対策）
     const rawTotal = Array.from(raw.values()).reduce((a, b) => a + b, 0);
@@ -633,7 +633,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       return { month, hours, unitsRaw, floorUnits, frac };
     });
 
-    let usedUnits = entries.reduce((sum, e) => sum + e.floorUnits, 0);
+    const usedUnits = entries.reduce((sum, e) => sum + e.floorUnits, 0);
     let remaining = Math.max(0, totalUnits - usedUnits);
 
     entries.sort((a, b) => {

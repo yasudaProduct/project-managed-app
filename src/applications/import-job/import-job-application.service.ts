@@ -31,7 +31,7 @@ export class ImportJobApplicationService implements IImportJobApplicationService
    * @param options 
    * @returns 
    */
-  async createJob(options: ImportJobOptions & { createdBy: string }): Promise<ImportJob> {
+  async createJob(options: ImportJobOptions & { createdBy?: string }): Promise<ImportJob> {
     const job = ImportJob.create(options)
     return await this.importJobRepository.create(job)
   }

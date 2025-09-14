@@ -4,8 +4,6 @@ import { SYMBOL } from '@/types/symbol'
 import { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service'
 import { ImportJobType } from '@prisma/client'
 import type { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
-import prisma from '@/lib/prisma'
-import { getCurrentUserId } from '@/lib/get-current-user-id'
 
 /**
  * インポートジョブを取得
@@ -79,7 +77,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, createdBy, ...options } = body
+    const { type, ...options } = body
 
     if (!type) {
       return NextResponse.json(
@@ -88,31 +86,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 未ログインでも使えるように createdBy をフォールバック解決
-    let creatorId: string | null = createdBy ?? (await getCurrentUserId())
-    if (!creatorId) {
-      const anyUser = await prisma.users.findFirst({ select: { id: true } })
-      creatorId = anyUser?.id ?? null
-    }
-    if (!creatorId) {
-      const systemUser = await prisma.users.upsert({
-        where: { id: 'system' },
-        update: {},
-        create: {
-          id: 'system',
-          name: 'System',
-          displayName: 'System',
-          email: 'system@example.com',
-        },
-      })
-      creatorId = systemUser.id
-    }
-
     const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
 
     const job = await importJobService.createJob({
       type: type as ImportJobType,
-      createdBy: creatorId,
+      createdBy: undefined,
       ...options
     })
 
@@ -139,8 +117,6 @@ export async function POST(request: NextRequest) {
  * @param jobId 
  */
 async function startBackgroundImport(jobId: string) {
-  // バックグラウンドでインポート処理を実行
-  // この関数は非同期で実行され、レスポンスを待たない
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/import-jobs/${jobId}/execute`, {
       method: 'POST',

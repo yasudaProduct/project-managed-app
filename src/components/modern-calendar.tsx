@@ -14,7 +14,14 @@ import {
   isSameMonth,
 } from "date-fns";
 import { ja } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, Calendar, Clock, MapPin, User } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Clock,
+  MapPin,
+  User,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -115,7 +122,6 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
     return schedulesByDate[dateKey] || [];
   }, [selectedDate, schedulesByDate]);
 
-
   const navigateMonth = (direction: "prev" | "next") => {
     setCurrentMonth((prev) =>
       direction === "prev" ? subMonths(prev, 1) : addMonths(prev, 1)
@@ -129,7 +135,6 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
 
   return (
     <div className="flex h-screen bg-gray-50 mx-8">
-
       {/* Main Calendar */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
@@ -260,7 +265,8 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
         <div className="w-96 bg-white border-l border-gray-200 p-6 overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900">
-              {selectedDate && format(selectedDate, "yyyy年M月d日（E）", { locale: ja })}
+              {selectedDate &&
+                format(selectedDate, "yyyy年M月d日（E）", { locale: ja })}
             </h2>
             <button
               onClick={() => setIsSidebarOpen(false)}
@@ -280,7 +286,9 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
                     className="border rounded-lg p-4 hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-gray-900">{schedule.title}</h3>
+                      <h3 className="font-medium text-gray-900">
+                        {schedule.title}
+                      </h3>
                       <div
                         className={`w-3 h-3 rounded-full ${
                           colors?.color || "bg-gray-400"
@@ -292,7 +300,9 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
                     {schedule.startTime && schedule.endTime && (
                       <div className="flex items-center space-x-1 text-sm text-gray-600 mb-2">
                         <Clock className="w-4 h-4" />
-                        <span>{schedule.startTime} - {schedule.endTime}</span>
+                        <span>
+                          {schedule.startTime} - {schedule.endTime}
+                        </span>
                       </div>
                     )}
 

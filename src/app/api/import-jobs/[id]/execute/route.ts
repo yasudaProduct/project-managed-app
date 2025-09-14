@@ -157,7 +157,7 @@ async function executeWbsImport(jobId: string, job: ImportJob) {
     }
 
     // WBS同期実行
-    const result = await wbsSyncService.executeSync(job.wbsId)
+    const result = await wbsSyncService.executeReplaceAll(job.wbsId)
 
     if (!result.success) {
       throw new Error('WBS sync failed')
