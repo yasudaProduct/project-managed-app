@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CirclePlus, RefreshCcw } from "lucide-react";
+import { RefreshCcw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 type Props = {
@@ -103,7 +103,7 @@ export default function WbsImportJobButtons({
         onClick={createGeppoJob}
         disabled={creating}
       >
-        <CirclePlus className="h-4 w-4" /> 月報インポート
+        <RefreshCcw className="h-4 w-4" /> 月報
       </Button>
       <Button
         variant="outline"
@@ -111,7 +111,7 @@ export default function WbsImportJobButtons({
         onClick={createWbsJob}
         disabled={creating}
       >
-        <CirclePlus className="h-4 w-4" /> WBSインポート
+        <RefreshCcw className="h-4 w-4" /> WBS
       </Button>
       {onRefresh && (
         <Button variant="outline" size="sm" onClick={onRefresh}>

@@ -11,7 +11,6 @@ import {
   Table,
   Trello,
   Users,
-  RefreshCcw,
 } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { getWbsPhases } from "./wbs-phase-actions";
@@ -69,57 +68,45 @@ export default async function WbsManagementPage({
     <>
       <div className="container mx-auto mt-2">
         {/* ヘッダメニュー */}
-        <div className="mb-2">
+        <div className="mt-2 flex flex-row items-center">
+          <Link href={`/wbs/${wbs.id}/phase/new`}>
+            <Button className="bg-white text-black">
+              <CirclePlus className="h-4 w-4" />
+              <Trello className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href={`/wbs/${wbs.id}/phase`}>
+            <Button className="bg-white text-black ml-2">
+              <Trello className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href={`/wbs/${wbs.id}/assignee/new`}>
+            <Button className="bg-white text-black ml-2">
+              <CirclePlus className="h-4 w-4" />
+              <Users className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href={`/wbs/${wbs.id}/assignee`}>
+            <Button className="bg-white text-black ml-2">
+              <Users className="h-4 w-4" />
+            </Button>
+          </Link>
+          <TaskModal wbsId={wbs.id}>
+            <Button className="bg-white text-black ml-2 mr-2">
+              <CirclePlus className="h-4 w-4" />
+              <CalendarCheck className="h-4 w-4" />
+            </Button>
+          </TaskModal>
+          <TaskDependencyModal
+            wbsId={wbs.id}
+            tasks={tasks.map((task) => ({
+              id: task.id,
+              taskNo: task.taskNo || "",
+              name: task.name,
+            }))}
+          />
           <WbsImportJobButtons wbsId={wbs.id} wbsName={wbs.name} />
         </div>
-        <Link href={`/wbs/${wbs.id}/phase/new`}>
-          <Button className="bg-white text-black">
-            <CirclePlus className="h-4 w-4" />
-            <Trello className="h-4 w-4" />
-          </Button>
-        </Link>
-        <Link href={`/wbs/${wbs.id}/phase`}>
-          <Button className="bg-white text-black ml-2">
-            <Trello className="h-4 w-4" />
-          </Button>
-        </Link>
-        <Link href={`/wbs/${wbs.id}/assignee/new`}>
-          <Button className="bg-white text-black ml-2">
-            <CirclePlus className="h-4 w-4" />
-            <Users className="h-4 w-4" />
-          </Button>
-        </Link>
-        <Link href={`/wbs/${wbs.id}/assignee`}>
-          <Button className="bg-white text-black ml-2">
-            <Users className="h-4 w-4" />
-          </Button>
-        </Link>
-        <TaskModal wbsId={wbs.id}>
-          <Button className="bg-white text-black ml-2 mr-2">
-            <CirclePlus className="h-4 w-4" />
-            <CalendarCheck className="h-4 w-4" />
-          </Button>
-        </TaskModal>
-        <TaskDependencyModal
-          wbsId={wbs.id}
-          tasks={tasks.map((task) => ({
-            id: task.id,
-            taskNo: task.taskNo || "",
-            name: task.name,
-          }))}
-        />
-        <Link href={`/wbs/${wbs.id}/import`}>
-          <Button className="bg-white text-black ml-2">
-            <RefreshCcw className="h-4 w-4" />
-            Excel同期
-          </Button>
-        </Link>
-        <Link href={`/work-records/geppo?projectId=${project.id}`}>
-          <Button className="bg-white text-black ml-2">
-            <RefreshCcw className="h-4 w-4" />
-            月報同期
-          </Button>
-        </Link>
         <Suspense
           fallback={
             <div className="flex justify-center">
