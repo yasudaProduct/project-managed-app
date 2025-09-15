@@ -1,7 +1,7 @@
 // Geppo月報システムのインポート結果ドメインタイプ定義
 
 export interface GeppoImportOptions {
-  targetMonth: string        // YYYY-MM形式
+  targetMonth?: string       // YYYY-MM形式（省略時は全期間）
   memberIds?: string[]       // 対象メンバーID（空の場合は全員）
   projectIds?: string[]      // 対象プロジェクトID（空の場合は全プロジェクト）
   targetProjectNames?: string[]  // インポート対象のprojects.name（複数選択可能）

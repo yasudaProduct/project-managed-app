@@ -39,7 +39,8 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
       let geppoRecords = await this.getGeppoRecords(options.targetMonth)
 
       if (geppoRecords.length === 0) {
-        return this.createEmptyValidation([`対象月 ${options.targetMonth} のGeppoデータが見つかりません`])
+        const periodDescription = options.targetMonth ? `対象月 ${options.targetMonth}` : '指定期間'
+        return this.createEmptyValidation([`${periodDescription}のGeppoデータが見つかりません`])
       }
 
       // 2. インポート対象プロジェクトによるフィルタリング
@@ -169,10 +170,22 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
       if (options.updateMode === 'replace') {
         // replaceモード: 既存データを削除してから新規作成
         const userIds = [...new Set(workRecords.map(wr => wr.userId!).filter(Boolean))]
-        const monthStart = new Date(`${options.targetMonth}-01`)
-        const monthEnd = new Date(`${options.targetMonth}-31`)
 
-        deletedCount = await this.workRecordService.deleteByUserAndDateRange(userIds, monthStart, monthEnd)
+        if (options.targetMonth) {
+          // 特定月の場合は月単位で削除
+          const monthStart = new Date(`${options.targetMonth}-01`)
+          const monthEnd = new Date(`${options.targetMonth}-31`)
+          deletedCount = await this.workRecordService.deleteByUserAndDateRange(userIds, monthStart, monthEnd)
+        } else {
+          // 全期間の場合は、インポートされたデータの日付範囲で削除
+          const dates = workRecords.map(wr => wr.startDate!).filter(Boolean)
+          if (dates.length > 0) {
+            const minDate = new Date(Math.min(...dates.map(d => d.getTime())))
+            const maxDate = new Date(Math.max(...dates.map(d => d.getTime())))
+            deletedCount = await this.workRecordService.deleteByUserAndDateRange(userIds, minDate, maxDate)
+          }
+        }
+
         await this.workRecordService.bulkCreate(workRecords)
         createdCount = workRecords.length
       } else {
@@ -235,11 +248,17 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
     }
   }
 
-  private async getGeppoRecords(targetMonth: string): Promise<Geppo[]> {
-    const filters: GeppoSearchFilters = {
-      dateFrom: new Date(`${targetMonth}-01`),
-      dateTo: new Date(`${targetMonth}-31`)
+  private async getGeppoRecords(targetMonth?: string): Promise<Geppo[]> {
+    const filters: GeppoSearchFilters = {}
+
+    if (targetMonth) {
+      // 特定の月が指定されている場合
+      filters.dateFrom = new Date(`${targetMonth}-01`)
+      filters.dateTo = new Date(`${targetMonth}-31`)
     }
+    // targetMonthが指定されていない場合は、全期間を対象とする（フィルタなし）
+
+    console.log(targetMonth)
 
     const result = await this.geppoRepository.searchWorkEntries(filters, { page: 1, limit: 10000 })
     return result.geppos

@@ -110,9 +110,7 @@ async function executeGeppoImport(jobId: string, job: ImportJob) {
     })
 
     // パラメータチェック
-    if (!job.targetMonth) {
-      throw new Error('対象月が必要です')
-    }
+    // targetMonthは任意 - 指定されていない場合は全期間をインポート
 
     // Geppoインポート実行
     const result = await geppoImportService.executeImport({
@@ -240,10 +238,10 @@ async function sendJobNotification(jobId: string, status: 'COMPLETED' | 'FAILED'
 
     let message = ''
     if (job.type === 'GEPPO') {
-      const targetMonth = job.targetMonth || '不明'
+      const periodDescription = job.targetMonth ? `（${job.targetMonth}）` : '（全期間）'
       message = isSuccess
-        ? `Geppoインポート（${targetMonth}）が完了しました。成功: ${job.successCount}件、エラー: ${job.errorCount}件`
-        : `Geppoインポート（${targetMonth}）が失敗しました。`
+        ? `Geppoインポート${periodDescription}が完了しました。成功: ${job.successCount}件、エラー: ${job.errorCount}件`
+        : `Geppoインポート${periodDescription}が失敗しました。`
     } else if (job.type === 'WBS') {
       const wbsName = job.wbsId ? `WBS ID: ${job.wbsId}` : 'WBS'
       message = isSuccess

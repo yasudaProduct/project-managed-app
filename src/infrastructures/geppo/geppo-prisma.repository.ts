@@ -26,6 +26,8 @@ export class GeppoPrismaRepository implements IGeppoRepository {
     filters: GeppoSearchFilters,
     pagination: GeppoPaginationOptions
   ): Promise<GeppoSearchResult> {
+    console.log("-------------------------")
+    console.log(filters)
     try {
       // WHERE条件の構築
       const where: Record<string, unknown> = {}
