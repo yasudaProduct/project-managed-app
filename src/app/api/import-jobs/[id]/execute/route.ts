@@ -176,33 +176,32 @@ async function executeWbsImport(jobId: string, job: ImportJob) {
     // WBS同期実行
     const result = await wbsSyncService.executeReplaceAll(job.wbsId)
 
-    if (!result.success) {
+    if (result.success) {
+
+      // 完了
+      await importJobService.completeJob(jobId, {
+        recordCount: 1,
+        addedCount: 0,
+        updatedCount: 1,
+        deletedCount: 0,
+      })
+
+      await importJobService.addProgress(jobId, {
+        message: 'WBS同期が完了しました',
+        level: 'info',
+      })
+    } else {
+
       await importJobService.failJob(jobId, {
         message: 'WBS同期に失敗しました',
         error: result.errorDetails,
       })
+
+      await importJobService.addProgress(jobId, {
+        message: 'WBS同期に失敗しました',
+        level: 'error',
+      })
     }
-
-    // 進捗更新（仮のデータ）
-    await importJobService.updateJobProgress(
-      jobId,
-      1,
-      1,
-      0
-    )
-
-    // 完了
-    await importJobService.completeJob(jobId, {
-      recordCount: 1,
-      addedCount: 0,
-      updatedCount: 1,
-      deletedCount: 0,
-    })
-
-    await importJobService.addProgress(jobId, {
-      message: 'WBS同期が完了しました',
-      level: 'info',
-    })
 
     // ジョブ完了時の通知送信
     await sendJobNotification(jobId, 'COMPLETED')
