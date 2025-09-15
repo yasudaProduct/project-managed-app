@@ -18,8 +18,6 @@ import {
   XCircle,
   RefreshCcw,
   Radio,
-  ChevronDown,
-  ChevronUp,
   AlertCircle,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -122,7 +120,8 @@ export default function ImportJobsClient() {
     return () => eventSource.close();
   }, [subscribingJobId]);
 
-  const statusBadge = (status: Job["status"]) => {
+  const statusBadge = (job: Job) => {
+    const { status } = job;
     const color =
       status === "COMPLETED"
         ? "bg-green-100 text-green-700"
@@ -133,7 +132,24 @@ export default function ImportJobsClient() {
         : status === "CANCELLED"
         ? "bg-gray-100 text-gray-700"
         : "bg-yellow-100 text-yellow-700";
-    return <Badge className={`${color} rounded`}>{statusName(status)}</Badge>;
+
+    const hasErrors =
+      job.errorCount > 0 ||
+      job.errorDetails ||
+      (job.result as GeppoImportValidation)?.errors?.length > 0;
+    const isClickable =
+      (status === "FAILED" || status === "COMPLETED") && hasErrors;
+
+    return (
+      <Badge
+        className={`${color} rounded ${
+          isClickable ? "cursor-pointer hover:opacity-80" : ""
+        }`}
+        onClick={isClickable ? () => toggleRowExpansion(job.id) : undefined}
+      >
+        {statusName(status)}
+      </Badge>
+    );
   };
 
   const statusName = (status: Job["status"]) => {
@@ -193,7 +209,7 @@ export default function ImportJobsClient() {
 
   // エラー詳細をレンダリング
   const renderErrorDetails = (job: Job) => {
-    if (!job.errorDetails) return null;
+    if (!job.errorDetails && !job.result) return null;
 
     const validation = job.result as GeppoImportValidation | undefined;
     const errors = job.errorDetails as
@@ -324,7 +340,6 @@ export default function ImportJobsClient() {
                 </TableRow>
               ) : (
                 jobs.map((job) => {
-                  const hasErrors = job.errorDetails ? true : false;
                   const isExpanded = expandedRows.has(job.id);
 
                   return (
@@ -336,29 +351,13 @@ export default function ImportJobsClient() {
                             : ""}
                         </TableCell>
                         <TableCell>{job.type}</TableCell>
-                        <TableCell>{statusBadge(job.status)}</TableCell>
+                        <TableCell>{statusBadge(job)}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            {job.totalRecords > 0
-                              ? `${job.processedRecords}/${job.totalRecords} 成功:${job.successCount} エラー:${job.errorCount}`
-                              : job.status === "RUNNING"
-                              ? "実行中..."
-                              : "-"}
-                            {hasErrors && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => toggleRowExpansion(job.id)}
-                                className="h-6 w-6 p-0"
-                              >
-                                {isExpanded ? (
-                                  <ChevronUp className="h-4 w-4" />
-                                ) : (
-                                  <ChevronDown className="h-4 w-4" />
-                                )}
-                              </Button>
-                            )}
-                          </div>
+                          {job.totalRecords > 0
+                            ? `${job.processedRecords}/${job.totalRecords} 成功:${job.successCount} エラー:${job.errorCount}`
+                            : job.status === "RUNNING"
+                            ? "実行中..."
+                            : "-"}
                         </TableCell>
                         <TableCell>
                           {new Date(job.createdAt).toLocaleString()}
