@@ -75,6 +75,10 @@ export const SYMBOL = {
     IImportJobRepository: Symbol.for('IImportJobRepository'),
     IImportJobApplicationService: Symbol.for('IImportJobApplicationService'),
 
+    // Notification
+    INotificationService: Symbol.for('INotificationService'),
+    INotificationRepository: Symbol.for('INotificationRepository'),
+
     // Infrastructure
     PrismaClient: Symbol.for('PrismaClient'),
 }

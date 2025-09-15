@@ -5,6 +5,11 @@ import { IImportJobApplicationService } from '@/applications/import-job/import-j
 import { IGeppoImportApplicationService } from '@/applications/geppo-import/geppo-import-application-service'
 import { IWbsSyncApplicationService } from '@/applications/excel-sync/IWbsSyncApplicationService'
 import { ImportJob } from '@/domains/import-job/import-job'
+import { INotificationService } from '@/applications/notification/INotificationService'
+import { NotificationType } from '@/types/notification'
+import { NotificationPriority } from '@/domains/notification/notification-priority'
+import { NotificationChannel } from '@/domains/notification/notification-channel'
+import { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
 
 interface Params {
   id: string
@@ -16,7 +21,7 @@ interface Params {
  * @param context
  */
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<Params> }
 ) {
   const { id } = await context.params
@@ -83,6 +88,9 @@ async function executeImportInBackground(jobId: string) {
       message: error instanceof Error ? error.message : '不明なエラー',
       error: error,
     })
+
+    // ジョブ失敗時の通知送信
+    await sendJobNotification(jobId, 'FAILED')
   }
 }
 
@@ -137,6 +145,9 @@ async function executeGeppoImport(jobId: string, job: ImportJob) {
       message: `Geppoインポートが完了しました（成功: ${result.successCount}件、エラー: ${result.errorCount}件）`,
       level: 'info',
     })
+
+    // ジョブ完了時の通知送信
+    await sendJobNotification(jobId, 'COMPLETED')
   } catch (error) {
     throw error
   }
@@ -192,7 +203,77 @@ async function executeWbsImport(jobId: string, job: ImportJob) {
       message: 'WBS同期が完了しました',
       level: 'info',
     })
+
+    // ジョブ完了時の通知送信
+    await sendJobNotification(jobId, 'COMPLETED')
   } catch (error) {
     throw error
+  }
+}
+
+/**
+ * インポートジョブの完了/失敗通知を送信
+ * @param jobId 
+ * @param status 
+ */
+async function sendJobNotification(jobId: string, status: 'COMPLETED' | 'FAILED') {
+  try {
+    const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
+    const notificationService = container.get<INotificationService>(SYMBOL.INotificationService)
+    const wbsApplicationService = container.get<IWbsApplicationService>(SYMBOL.IWbsApplicationService)
+
+    const job = await importJobService.getJob(jobId)
+    if (!job) {
+      // 作成者がnullの場合は通知なし
+      return
+    }
+
+    // 作成者がnullの場合はWBSの担当者に通知
+    const assignees = await wbsApplicationService.getAssignees(job.wbsId!)
+    const sendUserIds = job.createdBy
+      ? [job.createdBy]
+      : assignees?.map((assignee) => assignee.assignee?.userId)
+        .filter((userId) => userId !== null) ?? []
+
+    const isSuccess = status === 'COMPLETED'
+    const notificationType = isSuccess ? NotificationType.IMPORT_JOB_COMPLETED : NotificationType.IMPORT_JOB_FAILED
+    const title = isSuccess ? 'インポートジョブが完了しました' : 'インポートジョブが失敗しました'
+
+    let message = ''
+    if (job.type === 'GEPPO') {
+      const targetMonth = job.targetMonth || '不明'
+      message = isSuccess
+        ? `Geppoインポート（${targetMonth}）が完了しました。成功: ${job.successCount}件、エラー: ${job.errorCount}件`
+        : `Geppoインポート（${targetMonth}）が失敗しました。`
+    } else if (job.type === 'WBS') {
+      const wbsName = job.wbsId ? `WBS ID: ${job.wbsId}` : 'WBS'
+      message = isSuccess
+        ? `${wbsName}の同期が完了しました。`
+        : `${wbsName}の同期が失敗しました。`
+    }
+
+    for (const userId of sendUserIds) {
+      if (!userId) continue
+      await notificationService.createNotification({
+        userId: userId,
+        type: notificationType,
+        priority: isSuccess ? NotificationPriority.MEDIUM : NotificationPriority.HIGH,
+        title,
+        message,
+        data: {
+          jobId: job.id,
+          jobType: job.type,
+          totalRecords: job.totalRecords,
+          processedRecords: job.processedRecords,
+          successCount: job.successCount,
+          errorCount: job.errorCount,
+          errorDetails: job.errorDetails,
+        },
+        channels: [NotificationChannel.IN_APP, NotificationChannel.PUSH],
+      })
+    }
+  } catch (error) {
+    // 通知送信エラーはログのみでジョブ処理は継続
+    console.error('通知送信に失敗しました:', error)
   }
 }

@@ -5,8 +5,9 @@ import { z } from 'zod';
 import { container } from '@/lib/inversify.config';
 import type { INotificationService } from '@/applications/notification/INotificationService';
 import { getCurrentUserIdOrThrow } from '@/lib/get-current-user-id';
+import { SYMBOL } from '@/types/symbol';
 
-const notificationService = container.get<INotificationService>('NotificationService');
+const notificationService = container.get<INotificationService>(SYMBOL.INotificationService);
 
 // バリデーションスキーマ
 const MarkAsReadSchema = z.object({

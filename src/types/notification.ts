@@ -7,6 +7,8 @@ export enum NotificationType {
     TASK_UPDATED = 'TASK_UPDATED',                       // タスク更新
     SCHEDULE_DELAY = 'SCHEDULE_DELAY',                   // スケジュール遅延
     PROJECT_STATUS_CHANGED = 'PROJECT_STATUS_CHANGED',   // プロジェクトステータス変更
+    IMPORT_JOB_COMPLETED = 'IMPORT_JOB_COMPLETED',       // インポートジョブ完了
+    IMPORT_JOB_FAILED = 'IMPORT_JOB_FAILED',             // インポートジョブ失敗
 }
 
 export const getNotificationTypeDisplayName = (type: NotificationType): string => {
@@ -27,6 +29,10 @@ export const getNotificationTypeDisplayName = (type: NotificationType): string =
             return 'スケジュール遅延';
         case NotificationType.PROJECT_STATUS_CHANGED:
             return 'プロジェクトステータス変更';
+        case NotificationType.IMPORT_JOB_COMPLETED:
+            return 'インポートジョブ完了';
+        case NotificationType.IMPORT_JOB_FAILED:
+            return 'インポートジョブ失敗';
         default:
             return '不明な通知';
     }
@@ -47,6 +53,10 @@ export const getNotificationTypeIcon = (type: NotificationType): string => {
             return '⚠️';
         case NotificationType.PROJECT_STATUS_CHANGED:
             return '🚀';
+        case NotificationType.IMPORT_JOB_COMPLETED:
+            return '✅';
+        case NotificationType.IMPORT_JOB_FAILED:
+            return '❌';
         default:
             return '📢';
     }

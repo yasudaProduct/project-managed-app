@@ -344,6 +344,8 @@ enum NotificationType {
   TASK_UPDATED              // タスク更新
   SCHEDULE_DELAY            // スケジュール遅延
   PROJECT_STATUS_CHANGED    // プロジェクトステータス変更
+  IMPORT_JOB_COMPLETED      // インポートジョブ成功
+  IMPORT_JOB_FAILED　　　　　 // インポートジョブ失敗
 }
 
 enum NotificationPriority {
