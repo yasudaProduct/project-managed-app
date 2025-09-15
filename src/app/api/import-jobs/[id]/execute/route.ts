@@ -116,7 +116,7 @@ async function executeGeppoImport(jobId: string, job: ImportJob) {
     const result = await geppoImportService.executeImport({
       targetMonth: job.targetMonth,
       targetProjectNames: job.targetProjectIds,
-      updateMode: job.options.updateMode === 'replace' ? 'replace' : 'merge',
+      updateMode: 'replace', //job.options.updateMode === 'replace' ? 'replace' : 'merge',
       dryRun: (job.options.dryRun as boolean) || false,
     })
 
