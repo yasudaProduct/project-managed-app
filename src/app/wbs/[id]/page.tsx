@@ -11,6 +11,7 @@ import {
   Table,
   Trello,
   Users,
+  Calendar,
 } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { getWbsPhases } from "./wbs-phase-actions";
@@ -106,6 +107,12 @@ export default async function WbsManagementPage({
             }))}
           />
           <WbsImportJobButtons wbsId={wbs.id} wbsName={wbs.name} />
+          <Link href={`/wbs/${wbs.id}/task-scheduling`}>
+            <Button className="bg-white text-black ml-2">
+              <Calendar className="h-4 w-4" />
+              スケジュール計算
+            </Button>
+          </Link>
         </div>
         <Suspense
           fallback={

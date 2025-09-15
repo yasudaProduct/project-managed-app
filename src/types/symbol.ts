@@ -79,6 +79,10 @@ export const SYMBOL = {
     INotificationService: Symbol.for('INotificationService'),
     INotificationRepository: Symbol.for('INotificationRepository'),
 
+    // Task Scheduling
+    ITaskSchedulingApplicationService: Symbol.for('ITaskSchedulingApplicationService'),
+    TaskSchedulingService: Symbol.for('TaskSchedulingService'),
+
     // Infrastructure
     PrismaClient: Symbol.for('PrismaClient'),
 }

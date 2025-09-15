@@ -94,6 +94,11 @@ import { NotificationRepository } from "@/infrastructures/notification/Notificat
 import { PushNotificationService } from "@/infrastructures/notification/PushNotificationService";
 import { NotificationEventDetector } from "@/applications/notification/NotificationEventDetector";
 
+// Task Scheduling関連
+import type { ITaskSchedulingApplicationService } from "@/applications/task-scheduling/itask-scheduling-application.service";
+import { TaskSchedulingApplicationService } from "@/applications/task-scheduling/task-scheduling-application.service";
+import { TaskSchedulingService } from "@/domains/task-scheduling/task-scheduling.service";
+
 // Prisma
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma';
@@ -134,11 +139,13 @@ container.bind<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService
 container.bind<INotificationService>(SYMBOL.INotificationService).to(NotificationService).inSingletonScope();
 container.bind<PushNotificationService>('PushNotificationService').to(PushNotificationService).inSingletonScope();
 container.bind<NotificationEventDetector>('NotificationEventDetector').to(NotificationEventDetector).inSingletonScope();
+container.bind<ITaskSchedulingApplicationService>(SYMBOL.ITaskSchedulingApplicationService).to(TaskSchedulingApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
 container.bind<ScheduleGenerate>(SYMBOL.ScheduleGenerate).to(ScheduleGenerate).inSingletonScope();
 container.bind<IWbsSyncService>(SYMBOL.IWbsSyncService).to(WbsSyncService).inSingletonScope();
+container.bind<TaskSchedulingService>(SYMBOL.TaskSchedulingService).to(TaskSchedulingService).inSingletonScope();
 
 // リポジトリ
 container.bind<IProjectRepository>(SYMBOL.IProjectRepository).to(ProjectRepository).inSingletonScope();
