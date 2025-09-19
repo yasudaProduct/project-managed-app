@@ -5,10 +5,15 @@ import { SYMBOL } from "@/types/symbol";
 import { ITaskSchedulingApplicationService } from "@/applications/task-scheduling/itask-scheduling-application.service";
 import { TaskSchedulingResult } from "@/domains/task-scheduling/task-scheduling.service";
 
-export async function calculateTaskSchedules(wbsId: number): Promise<TaskSchedulingResult[]> {
+export async function calculateTaskSchedules(wbsId: number | string): Promise<TaskSchedulingResult[]> {
   const taskSchedulingService = container.get<ITaskSchedulingApplicationService>(
     SYMBOL.ITaskSchedulingApplicationService
   );
-  
-  return await taskSchedulingService.calculateWbsTaskSchedules(wbsId);
+
+  const idNum = typeof wbsId === "string" ? Number(wbsId) : wbsId;
+  if (Number.isNaN(idNum)) {
+    throw new Error("Invalid wbsId");
+  }
+
+  return await taskSchedulingService.calculateWbsTaskSchedules(idNum);
 }

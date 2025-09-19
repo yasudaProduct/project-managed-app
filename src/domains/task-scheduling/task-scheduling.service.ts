@@ -4,6 +4,7 @@ import { CompanyCalendar } from '../calendar/company-calendar';
 import { AssigneeWorkingCalendar } from '../calendar/assignee-working-calendar';
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import { SYMBOL } from '@/types/symbol';
+import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 
 export interface TaskSchedulingResult {
   taskId: number;
@@ -22,6 +23,7 @@ export interface TaskSchedulingResult {
 export class TaskSchedulingService {
   constructor(
     @inject(SYMBOL.IUserScheduleRepository) private userScheduleRepository: IUserScheduleRepository,
+    @inject(SYMBOL.IWbsAssigneeRepository) private wbsAssigneeRepository: IWbsAssigneeRepository,
   ) { }
 
   /**
@@ -72,14 +74,29 @@ export class TaskSchedulingService {
         continue;
       }
 
+      // 担当者のuserIdを取得
+      const assignee = await this.wbsAssigneeRepository.findById(task.assigneeId);
+      if (!assignee) {
+        results.push({
+          taskId: task.id,
+          taskNo: task.taskNo.getValue(),
+          taskName: task.name,
+          assigneeId: task.assigneeId,
+          assigneeName: task.assignee.name,
+          hasAssignee: true,
+          errorMessage: '担当者が見つかりません',
+        })
+        continue;
+      }
+
       // 担当者のスケジュールを取得
-      const userSchedules = await this.userScheduleRepository.findByUserId(task.assigneeId);
+      const userSchedules = await this.userScheduleRepository.findByUserId(assignee.userId);
 
       // 担当者の稼働カレンダーを作成
       const assigneeCalendar = new AssigneeWorkingCalendar(
+        assignee,
         companyCalendar,
         userSchedules,
-        task.assignee.rate || 100 // デフォルト100%稼働
       );
 
       // この担当者の前のタスクの終了日を取得（なければプロジェクト開始日）
@@ -101,7 +118,7 @@ export class TaskSchedulingService {
       // 結果を追加
       results.push({
         taskId: task.id,
-        taskNo: task.taskNo.value,
+        taskNo: task.taskNo.getValue(),
         taskName: task.name,
         assigneeId: task.assigneeId,
         assigneeName: task.assignee.name,

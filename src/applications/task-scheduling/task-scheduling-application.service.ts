@@ -21,6 +21,7 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
    * @returns スケジューリング結果
    */
   async calculateWbsTaskSchedules(wbsId: number): Promise<TaskSchedulingResult[]> {
+    console.log("calculateWbsTaskSchedules", wbsId);
     // WBSを取得
     const wbs = await this.wbsRepository.findById(wbsId);
     if (!wbs) {
@@ -44,7 +45,7 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     // WBSに紐付くタスクを取得
     const tasks = await this.taskRepository.findByWbsId(wbsId);
 
-    // タスク番号でソート（前詰めのため）
+    // 前詰めのためタスク番号でソート（一旦TaskNo順とし、優先度の追加を検討する）
     const sortedTasks = tasks.sort((a, b) => {
       return a.taskNo.getValue().localeCompare(b.taskNo.getValue());
     });

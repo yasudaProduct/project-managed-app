@@ -9,11 +9,11 @@ import { TaskSchedulingPage } from "@/components/task-scheduling/task-scheduling
 export default async function TaskSchedulingPageWrapper({
   params,
 }: {
-  params: Promise<{ id: number }>;
+  params: { id: string };
 }) {
-  const { id } = await params;
+  const idNum = Number(params.id);
 
-  const wbs = await getWbsById(id);
+  const wbs = await getWbsById(idNum);
   if (!wbs) {
     notFound();
   }
@@ -23,7 +23,7 @@ export default async function TaskSchedulingPageWrapper({
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Link href={`/wbs/${id}`}>
+          <Link href={`/wbs/${idNum}`}>
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               WBSに戻る
@@ -51,7 +51,7 @@ export default async function TaskSchedulingPageWrapper({
           </div>
         }
       >
-        <TaskSchedulingPage wbsId={id} />
+        <TaskSchedulingPage wbsId={idNum} />
       </Suspense>
     </div>
   );

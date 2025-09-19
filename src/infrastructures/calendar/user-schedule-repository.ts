@@ -8,7 +8,16 @@ import { SYMBOL } from '@/types/symbol';
 export class UserScheduleRepository implements IUserScheduleRepository {
   constructor(
     @inject(SYMBOL.PrismaClient) private readonly prisma: PrismaClient
-  ) {}
+  ) { }
+
+  async findByUserId(userId: string): Promise<UserSchedule[]> {
+    const schedules = await this.prisma.userSchedule.findMany({
+      where: { userId },
+      orderBy: { date: 'asc' }
+    });
+
+    return schedules.map(this.toDomain);
+  }
 
   async findByUserIdAndDateRange(
     userId: string,
@@ -51,7 +60,7 @@ export class UserScheduleRepository implements IUserScheduleRepository {
   async findByUserIdAndDate(userId: string, date: Date): Promise<UserSchedule[]> {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 

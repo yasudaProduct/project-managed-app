@@ -12,12 +12,16 @@ export interface UserSchedule {
   description?: string;
 }
 
+/**
+ * 担当者の稼働カレンダー
+ * @description 担当者の稼働カレンダーは、担当者固有の稼働時間・休暇と会社既定の休日を考慮した営業日に応じて工数を案分する期間です。
+ */
 export class AssigneeWorkingCalendar {
   constructor(
     private readonly assignee: WbsAssignee,
     private readonly companyCalendar: CompanyCalendar,
     private readonly userSchedules: UserSchedule[]
-  ) {}
+  ) { }
 
   isWorkingDay(date: Date): boolean {
     // 1. 会社既定の休日チェック
@@ -88,7 +92,7 @@ export class AssigneeWorkingCalendar {
     // if (schedule.title.includes('半休') || schedule.title.includes('午前休') || schedule.title.includes('午後休')) {
     //   return this.companyCalendar.getStandardWorkingHours() / 2;
     // }
-    
+
     // 全日休暇の判定 休暇の場合は基準時間を返す
     if (this.isFullDayOff(schedule)) {
       return this.companyCalendar.getStandardWorkingHours();
