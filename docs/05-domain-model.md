@@ -38,10 +38,3 @@ ER図と実装中の`domains`配下を要約し、主要集約と境界を明確
 ## 境界づけられたコンテキスト
 - 計画（WBS）と実績（WorkRecord）は別境界。同期はインポートが担保
 - 通知は横断境界（イベント入力、配信出力）
-
-関連:
-- ER図: [../../ERD.md](../../ERD.md)
-- 実装: `src/domains/*`, `src/applications/*`, `src/infrastructures/*`
-
----
-最終更新: 2025-09-20

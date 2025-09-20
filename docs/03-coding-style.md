@@ -1,39 +1,179 @@
 # コーディング規約（TypeScript/Next.js）
 
-## 共通
+## Typescript
+
+### 命名規則
+
+#### 基本
+- 型/インターフェイス/クラス: PascalCase（例: User, UserRepository, CreateUserInput）
+- 変数/関数/メソッド/プロパティ: camelCase（例: userName, createUser）
+- 定数/環境・ビルド時定数: UPPER_SNAKE_CASE（例: API_BASE_URL, NODE_ENV）
+
+#### ブール値
+- 肯定形で接頭辞を付ける: is*/has*/can*/should*（例: isEnabled, hasAccess）
+- 否定名は避ける（isNot*ではなくis*で表現）
+
+#### 関数の命名
+- getX/fetchX: 失敗時は例外を投げる
+- findX: 見つからない場合はnull | undefinedを返す
+- listX: 複数取得（ReadonlyArray<T>を返す）
+- create/update/delete: 変更系
+- 例外を投げない安全APIはtryX/safeXで明示（Result型などと併用）
+
+#### 非同期
+- 基本は動詞のみ（createUser）。
+    「同期版と非同期版が併存」する時のみAsyncサフィックスを使用（例: readFile/readFileAsync）
+
+#### 集合/配列・単位
+- 複数は複数形（users）
+- 単位はサフィックスで明示（timeoutMs, sizeBytes, ratioPct）
+
+#### イベント/ハンドラ
+- イベント名: userCreated, orderPaid
+- ハンドラ: 外部に公開する受け口はonX、内部実装はhandleX
+```typescript
+function onUserCreated(e: UserCreatedEvent) {}
+function handleUserCreated(e: UserCreatedEvent) {}
+```
+
+#### 型エイリアスの接尾辞（役割を明示）
+- *DTO（外部契約）, *Input/*Params（入力）, *Options（オプション）, *Result（戻り値/結果）, *Error（エラー）
+- 例: CreateUserInput, UserDTO, FetchUsersOptions, GetUserResult, PermissionDeniedError
+
+#### ファイル/ディレクトリ
+- TypeScript: kebab-case.ts
+- Reactコンポーネント: PascalCase.tsx（コンポーネント名と一致）
+- テスト: *.test.ts または *.spec.ts（プロジェクトで統一）
+- 型のみ: *.types.ts
+- ユーティリティ: *.utils.ts
+- Next.js の規約ファイル（route.ts, page.tsxなど）はフレームワーク規約を優先
+
+#### 禁止・注意
+- 曖昧な名前（data, value, itemのみ）は避け、文脈語を付与（userData, orderItem）
+- 二重否定や略語乱用を避ける
+- ブール引数の多用は避け、Optionsオブジェクト化する
+---
+
+### 共通
 - Strict TypeScript（`strict: true`）
-- 関数/変数は意味のある命名。略語は避ける。
-- 早期returnでネストを浅く。
-- 例外は握りつぶさず、文脈あるメッセージで上位へ。
+- `@ts-ignore`などの型エラー無視を禁止
+- `@ts-expect-error`は根拠コメント必須
+- 公開APIの型安定: 外部に見える型は意図的に固定し、破壊的変更を避ける。
+    ```typescript
+    // NG: 内部のDomain型がそのまま漏れている
+    export function getUser(): User { // User(内部)を変えると外部が壊れる
+    return userRepo.find();
+    }
 
-## ディレクトリ/レイヤ
-- `src/app`（App Router）: ルート/ページ/サーバアクション
-- `src/components`: 再利用コンポーネント（UI/複合）
-- `src/applications`: ユースケース(アプリケーション)層
-- `src/domains`: エンティティ/値オブジェクト、ビジネスロジック
-- `src/infrastructures`:
-- `src/lib`: 
+    // OK: 外部契約のDTOを固定
+    export type UserDTO = Readonly<{
+    id: string;
+    name: string;
+    }>;
+    export function getUser(): UserDTO {
+    const u = userRepo.find();
+    return { id: u.id, name: u.displayName };
+    }
+    ```
 
-## TypeScript
-- パブリックAPI/エクスポートは明示的に型注釈
-- 便利型よりドメイン型を優先し、意図を表現
-- `experimentalDecorators`利用時はテストで担保
+- 境界で型を固める: I/O境界（API/DB/外部入力）でバリデーション・ナローイング。
+    外から入る/外へ出すデータは境界で検証・型ナローイングし、内部は「信頼できる型」だけで扱うようにする。
+- 表明より導出: 型はなるべく推論させ、必要な所だけ明示。
+  - ローカルは推論
+    ```typescript
+    // NG（冗長）:
+    const count: number = 0;
+    // OK:
+    const count = 0;
+    ```
+  - 公開関数の戻り値は明示
+    ```typescript
+    // OK:
+    export function sum(a: number, b: number): number {
+    return a + b;
+    }
+    // 内部関数は推論でOK(任意とする)
+    // 理由:利用範囲が限定され、実装と同時に呼び出し側のリファクタ可能。推論で冗長さを減らし、生産性を上られるため。
+    function mul(a: number, b: number) { return a * b; }
+    ```
 
-## React/Next.js
-- フォームは`react-hook-form` + `zod`でバリデーション
-- 非同期処理は`useQuery`等でデータ取得、ローディング/エラー状態を表示
-- パフォーマンス: `useMemo/useCallback`の適切な利用、巨大配列は仮想化検討
+  - コールバック引数は推論
+    ```typescript
+    const xs = [1, 2, 3];
+    // NG（冗長）:
+    xs.map((n: number) => n * 2);
+    // OK:
+    xs.map(n => n * 2);
+    ```
 
-## スタイル/Tailwind
-- レイアウトは`flex/grid`を優先。
-- クラス名は`clsx`/`tailwind-merge`で条件結合
-- 変数化されたデザイントークン（`--primary`等）を活用
+  - 空配列/空オブジェクトは注釈で初期化し導出（アサーションより）
+    ```typescript
+    // NG（アサーション依存）:
+    const names = [] as string[];
+    // OK
+    const names: string[] = [];
+    // オブジェクトも同様
+    const userById: Record<string, User> = {};
+    ```
 
-## エラーハンドリング/ログ
-- 予期しうるエラーはユーザーに分かる形で通知
-- インポート/ジョブ系は`import_jobs`/`import_job_progress`へ詳細を残す
+  - オブジェクトリテラルは`satisfies`で形チェックしつつリテラル型を保持(推奨)
+    ```typescript
+    type Mode = 'safe' | 'fast';
+    type Config = { retries: number; mode: Mode }; 
 
-## テスト
-- 単体: 重要ロジックはユニットテスト必須
-- 統合: アプリケーション層で主要ユースケースをカバー
-- E2E: 主要シナリオと回帰箇所をPlaywrightで
+    // 形は合うが、mode は 'safe' | 'fast' に広がる
+    const cfg1: Config = { retries: 3, mode: 'safe' };
+    // cfg1.mode の型: 'safe' | 'fast'
+
+    // satisfies: 形は検証、mode は 'safe' のまま保持
+    const cfg2 = { retries: 3, mode: 'safe' } satisfies Config;
+    // cfg2.mode の型: 'safe'（リテラル保持）
+
+    function setMode(m: Mode) { // 省略 // }
+    setMode(cfg2.mode); // OK（'safe' ⊆ Mode）
+    ```
+
+  - リテラル集合は`as const` + ユニオン導出
+    ```typescript
+    export const Roles = ['admin', 'member', 'guest'] as const;
+    export type Role = (typeof Roles)[number];
+
+    export function setRole(r: Role) {}
+    setRole('admin'); // OK
+    setRole('owner'); // 型エラー
+    ```
+
+  - 返却の明示（型が広がりやすい箇所）
+    ```typescript
+    // OK: 公開APIは戻り値を固定
+    export function createUser(input: CreateUserInput): Promise<UserDTO> {
+    }
+    ```
+  - 不要なアサーションを避ける
+    ```typescript
+    // NG:
+    const el = document.getElementById('app') as HTMLDivElement;
+    // OK（型ガードで導出）:
+    const el = document.getElementById('app');
+    if (el instanceof HTMLDivElement) {
+        el.style.display = 'none';
+    }
+    ```
+
+### 型設計
+- type vs interface
+  - interface: 公開オブジェクト形状、拡張/宣言マージしたいとき
+  - type: ユニオン/交差/関数型/条件型/テンプレートリテラル型
+- ユニオン/判別共用体: 安全な状態機械を表現。全列挙で網羅。
+- readonly/as const: 変更不可をデフォルトに近づける（データ構造の防御的設計）。
+- enumは原則非推奨: 代替としてユニオン＋as const。
+
+### 関数/API設計
+ - 公開関数は戻り値型を明示。内部は推論任せ可。
+
+
+### 非同期/エラー処理
+
+### モジュール/エクスポート
+
+### 代表的アンチパターン
