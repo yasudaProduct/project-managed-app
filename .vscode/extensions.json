@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "Gruntfuggly.todo-tree",
+    "nguyenngoclong.terminal-keeper",
+    "humao.rest-client",
+    "Orta.vscode-jest",
+    "firsttris.vscode-jest-runner",
+    "yzhang.markdown-all-in-one",
+    "bierner.markdown-mermaid"
+  ]
+}

@@ -1,7 +1,6 @@
 # MySQL Database Setup
 
 このプロジェクトでMySQLを使用する場合の設定手順です。
-既存のPostgreSQL設定とは分離されており、選択的に使用できます。
 
 ## ファイル構成
 
