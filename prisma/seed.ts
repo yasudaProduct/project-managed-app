@@ -1,4 +1,4 @@
-import { getMockData } from "../src/data/mock-data";
+import { getMockData } from "./mock-data";
 import { phases } from "../src/data/phases";
 import { users } from "../src/data/users";
 import prisma from "../src/lib/prisma";
