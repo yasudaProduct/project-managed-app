@@ -1,4 +1,41 @@
 {
+  "todo-tree.filtering.excludeGlobs": ["**/*.md"],
+  "todo-tree.general.tags": [
+    "BUG",
+    "FIXME",
+    "NOTE",
+    "TODO",
+    "WRN",
+    "[]",
+    "[X]"
+  ],
+  "todo-tree.highlights.customHighlight": {
+    "TODO": {
+      "icon": "check-circle-fill",
+      "foreground": "green",
+      "iconColour": "green"
+    },
+    "FIXME": {
+      "icon": "flame",
+      "foreground": "yellow",
+      "iconColour": "yellow"
+    },
+    "NOTE": {
+      "icon": "paintbrush",
+      "foreground": "#00bfff",
+      "iconColour": "#00bfff"
+    },
+    "WRN": {
+      "icon": "alert-fill",
+      "foreground": "orange",
+      "iconColour": "orange"
+    },
+    "BUG": {
+      "icon": "bug",
+      "foreground": "red",
+      "iconColour": "red"
+    }
+  },
   "jest.autoRun": {
     "watch": false,
     "onSave": "test-file"
@@ -7,33 +44,10 @@
     "enabled": true,
     "showInlineError": true
   },
-  // "jest.debugCodeLens.showWhenTestStateIn": ["fail", "unknown", "pass", "skip"],
-  // "jest.testPatterns": [
-  //   "**/__tests__/**/*.test.[jt]s?(x)",
-  //   "**/__integration_tests__/**/*.test.[jt]s?(x)",
-  //   "**/?(*.)+(spec|test).[jt]s?(x)"
-  // ],
   "jest.coverageColors": {
     "uncovered": "rgba(255, 99, 71, 0.7)",
     "partially-covered": "rgba(255, 215, 0, 0.7)",
     "covered": "rgba(50, 205, 50, 0.7)"
   },
-  // "jest.projects": [
-  //   {
-  //     "name": "unit",
-  //     "rootPath": ".",
-  //     "configPath": "./jest.config.js",
-  //     "displayName": "Unit Tests",
-  //     "jestCommandLine": "npm run test --"
-  //   },
-  //   {
-  //     "name": "integration",
-  //     "rootPath": ".",
-  //     "configPath": "./jest.integration.config.js",
-  //     "displayName": "Integration Tests",
-  //     "jestCommandLine": "npm run test:integration --"
-  //   }
-  // ],
-  // "jest.autoDetectTestFiles": true,
   "jest.showCoverageOnLoad": false
 }
