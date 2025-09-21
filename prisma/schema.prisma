@@ -19,8 +19,8 @@ model Projects {
   name        String
   status      ProjectStatus @default(ACTIVE)
   description String?
-  startDate   DateTime      @db.Timestamptz
-  endDate     DateTime      @db.Timestamptz
+  startDate   DateTime      @db.Date
+  endDate     DateTime      @db.Date
   createdAt   DateTime      @default(now()) @db.Timestamptz
   updatedAt   DateTime      @updatedAt @db.Timestamptz
   wbs         Wbs[]
@@ -160,8 +160,8 @@ model WbsTask {
 model TaskPeriod {
   id        Int        @id @default(autoincrement())
   taskId    Int
-  startDate DateTime @db.Timestamptz
-  endDate   DateTime @db.Timestamptz
+  startDate DateTime   @db.Date
+  endDate   DateTime   @db.Date
   type      PeriodType
   task      WbsTask    @relation("TaskPeriod", fields: [taskId], references: [id], onDelete: Cascade)
   kosus     TaskKosu[] @relation("TaskPeriodKosu")
@@ -189,7 +189,7 @@ model TaskStatusLog {
   id        Int        @id @default(autoincrement())
   taskId    Int
   status    TaskStatus
-  changedAt DateTime @db.Timestamptz
+  changedAt DateTime   @db.Timestamptz
   changedBy String?
   task      WbsTask    @relation("TaskStatusLogs",fields: [taskId], references: [id])
   changer   Users?     @relation("StatusChanger", fields: [changedBy], references: [id])
@@ -215,7 +215,7 @@ model WorkRecord {
   id                Int        @id @default(autoincrement())
   userId            String
   taskId            Int?
-  date              DateTime   @db.Timestamptz
+  date              DateTime   @db.Date
   hours_worked      Decimal
   createdAt         DateTime   @default(now()) @db.Timestamptz
   updatedAt         DateTime   @updatedAt @db.Timestamptz
@@ -228,15 +228,15 @@ model WorkRecord {
 model UserSchedule {
   id          Int      @id @default(autoincrement())
   userId      String
-  date        DateTime @db.Timestamptz
+  date        DateTime @db.Date
   startTime   String
   endTime     String
   title       String
   location    String?
   description String?
-  user      Users    @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now()) @db.Timestamptz
-  updatedAt DateTime @updatedAt @db.Timestamptz
+  user      Users      @relation(fields: [userId], references: [id])
+  createdAt DateTime   @default(now()) @db.Timestamptz
+  updatedAt DateTime   @updatedAt @db.Timestamptz
 
   @@index([userId, date])
   @@map("user_schedule")
@@ -408,7 +408,7 @@ model TaskProgressHistory {
   assigneeName          String?
   phaseId               Int?
   phaseName             String?
-  plannedStartDate      DateTime? @db.Timestamptz
+  plannedStartDate      DateTime? @db.Timestamptz // TODO: @db.Dateでも良い？
   plannedEndDate        DateTime? @db.Timestamptz
   actualStartDate       DateTime? @db.Timestamptz
   actualEndDate         DateTime? @db.Timestamptz

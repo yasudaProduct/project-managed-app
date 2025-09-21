@@ -7,21 +7,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/**
- * @deprecated Use formatUTCDateForDisplaySlash from date-display-utils.ts instead
- * この関数はローカルタイムゾーンを使用するため、日付のズレが発生する可能性があります
- */
-export const formatDateyyyymmdd = (dateString: string): string | undefined => {
-  if (!dateString) return undefined;
-  if (isNaN(Date.parse(dateString))) return undefined;
-
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = (`0${date.getMonth() + 1}`).slice(-2);
-  const day = (`0${date.getDate()}`).slice(-2);
-  return `${year}/${month}/${day}`;
-};
-
 export const getProjectStatusName = (status: ProjectStatus) => {
   switch (status) {
     case "INACTIVE":

@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 const prismaClientSingleton = () => {
-    return new PrismaClient({
+    const prisma = new PrismaClient({
         log: // https://www.prisma.io/docs/orm/prisma-client/observability-and-logging/logging
             [
                 // {
@@ -22,6 +22,8 @@ const prismaClientSingleton = () => {
                 },
             ],
     });
+
+    return prisma;
 };
 
 type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>;

@@ -3,11 +3,6 @@ import { ProjectApplicationService } from '@/applications/projects/project-appli
 import { ProjectRepository } from '@/infrastructures/project-repository';
 import { cleanupTestData, testIds } from '../helpers';
 
-// Ensure PrismaClient is not bundled for the browser
-// if (typeof window !== 'undefined') {
-//   throw new Error('This test must be run in a Node.js environment.');
-// }
-
 describe('ProjectApplicationService Integration Tests', () => {
   let projectApplicationService: ProjectApplicationService;
   let projectRepository: ProjectRepository;

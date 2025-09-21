@@ -3,7 +3,6 @@ import { IProjectRepository } from "@/applications/projects/iproject-repository"
 import { Project } from "@/domains/project/project";
 import { ProjectStatus } from "@/domains/project/project-status";
 import { injectable } from "inversify";
-import { ensureUTC } from "@/lib/date-utils-utc";
 
 @injectable()
 export class ProjectRepository implements IProjectRepository {
@@ -62,8 +61,8 @@ export class ProjectRepository implements IProjectRepository {
                 name: project.name,
                 status: project.getStatus(),
                 description: project.description ?? undefined,
-                startDate: ensureUTC(project.startDate)!,
-                endDate: ensureUTC(project.endDate)!,
+                startDate: project.startDate,
+                endDate: project.endDate,
             },
         });
 
@@ -84,8 +83,8 @@ export class ProjectRepository implements IProjectRepository {
                 name: project.name,
                 status: project.getStatus(),
                 description: project.description ?? undefined,
-                startDate: ensureUTC(project.startDate)!,
-                endDate: ensureUTC(project.endDate)!,
+                startDate: project.startDate,
+                endDate: project.endDate,
             },
         });
         return Project.createFromDb({

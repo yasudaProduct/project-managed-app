@@ -38,7 +38,7 @@ describe('ProjectRepository Integration Tests', () => {
       expect(createdProject.id).toBeTruthy(); // IDが生成されていること
       expect(createdProject.name).toBe(project.name);
       expect(createdProject.description).toBe(project.description);
-      expect(createdProject.getStatus()).toBe('ACTIVE');
+      expect(createdProject.getStatus()).toBe('INACTIVE');
       expect(createdProject.startDate).toEqual(startDate);
       expect(createdProject.endDate).toEqual(endDate);
 

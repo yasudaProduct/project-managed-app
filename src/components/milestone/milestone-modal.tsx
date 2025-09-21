@@ -29,7 +29,6 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Trash2, Calendar } from "lucide-react";
 import { utcToLocalDate } from "@/lib/date-display-utils";
-import { ensureUTC } from "@/lib/date-utils-utc";
 
 interface MilestoneModalProps {
   isOpen: boolean;
@@ -77,13 +76,9 @@ export function MilestoneModal({
     setIsLoading(true);
 
     try {
-      // ローカル日付をUTCに変換
-      const localDateObj = new Date(date + "T00:00:00");
-      const utcDate = ensureUTC(localDateObj);
-
       const milestoneData = {
         name: name.trim(),
-        date: utcDate!,
+        date: new Date(date),
         wbsId,
       };
 

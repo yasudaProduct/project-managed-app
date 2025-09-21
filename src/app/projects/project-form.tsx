@@ -42,8 +42,7 @@ const formSchema = z.object({
   endDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
     message: "終了予定日は YYYY/MM/DD 形式で入力してください。",
   }),
-  status: z.nativeEnum(ProjectStatus).optional() // TODO: 更新の場合は必須にする
-  , 
+  status: z.nativeEnum(ProjectStatus).optional(), // TODO: 更新の場合は必須にする
 });
 
 type ProjectFormProps = {
@@ -80,14 +79,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
+    console.log("values", values);
+    console.log("new Date(values.startDate)", new Date(values.startDate));
+    console.log("new Date(values.endDate)", new Date(values.endDate));
     try {
       if (project) {
-        console.log("values", values);
         const { project: updatedProject, error } = await updateProject(
           project.id,
           {
             ...values,
-            status: values.status!
+            status: values.status!,
           }
         );
         if (!updatedProject) {
@@ -103,7 +104,12 @@ export function ProjectForm({ project }: ProjectFormProps) {
           router.push(`/projects/${updatedProject.id}`);
         }
       } else {
-        const { project: newProject, error } = await createProject(values);
+        const { project: newProject, error } = await createProject({
+          name: values.name,
+          description: values.description,
+          startDate: new Date(values.startDate),
+          endDate: new Date(values.endDate),
+        });
         if (!newProject) {
           toast({
             title: "プロジェクトの作成に失敗しました",
@@ -122,6 +128,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
       toast({
         title: "プロジェクトの作成に失敗しました",
         description: "error: \n" + error,
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -210,29 +217,32 @@ export function ProjectForm({ project }: ProjectFormProps) {
             </FormItem>
           )}
         />
-        {project && 
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>ステータス</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="ステータスを選択" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="INACTIVE">計画中</SelectItem>
-                  <SelectItem value="ACTIVE">進行中</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      }
+        {project && (
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ステータス</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="ステータスを選択" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="INACTIVE">計画中</SelectItem>
+                    <SelectItem value="ACTIVE">進行中</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting
             ? "保存中..."
