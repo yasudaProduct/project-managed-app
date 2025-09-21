@@ -84,13 +84,13 @@ export function validateRequiredFields(
   requiredFields: string[]
 ): string[] {
   const errors: string[] = []
-  
+
   for (const field of requiredFields) {
     if (!body[field]) {
       errors.push(`${field} is required`)
     }
   }
-  
+
   return errors
 }
 
