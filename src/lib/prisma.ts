@@ -24,7 +24,6 @@ const prismaClientSingleton = () => {
     })
         .$extends(prismaWithQueryLogging)
         .$extends(prismaQueryWithTimeMod)
-    // .$extends(prismaResultWithTimeMod);
 
     return prisma;
 };
@@ -72,7 +71,7 @@ const prismaQueryWithTimeMod = Prisma.defineExtension({
     name: 'prismaQueryWithTimeMod',
     query: {
         $allModels: {
-            async $allOperations({ model, operation, args, query }) {
+            async $allOperations({ operation, args, query }) {
 
                 // create/update操作時に日付型のフィールドを処理
                 if ((operation === 'create' || operation === 'update')) {
@@ -93,34 +92,6 @@ const prismaQueryWithTimeMod = Prisma.defineExtension({
                     }
                 }
                 const result = await query(args);
-
-                // if ((operation === 'findMany' || operation === 'findUnique')) {
-                //     console.log('-------------prismaResultWithTimeMod--------------')
-                //     console.log(`model.operation: ${model}.${operation}`)
-                //     console.log('result:', result);
-
-                //     const dateFields = Object.keys(result as Record<string, unknown>).filter((key) => {
-                //         const value = (result as Record<string, unknown>)[key];
-                //         return Object.prototype.toString.call(value) === '[object Date]';
-                //     });
-                //     dateFields.forEach((field) => {
-                //         const value = (result as Record<string, unknown>)[field as keyof typeof result];
-                //         console.log('Modifying date field:', field, value);
-                //         // const normalized = new Date(format(value as Date, 'yyyy-MM-dd'));
-                //         // (result as Record<string, unknown>)[field] = normalized;
-                //         // console.log('normalized:', field, normalized);
-                //     });
-                // }
-
-                // debug
-                // const timeStampFields = Object.keys(result as Record<string, unknown>).filter((key) => {
-                //     const value = (result as Record<string, unknown>)[key];
-                //     return Object.prototype.toString.call(value) === '[object Timestamp]';
-                // });
-                // timeStampFields.forEach((field) => {
-                //     const value = (result as Record<string, unknown>)[field as keyof typeof result];
-                //     console.log('TimeStamp field:', field, value);
-                // });
 
                 return result;
             }
