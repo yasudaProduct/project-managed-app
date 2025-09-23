@@ -27,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { utcToLocalDate } from "@/lib/date-display-utils";
+import { formatDate } from "@/lib/date-util";
 
 interface MilestoneManagementProps {
   wbsId: number;
@@ -103,24 +103,8 @@ export default function MilestoneManagement({
     }
   };
 
-  const formatDate = (date: Date | string) => {
-    const localDate = utcToLocalDate(
-      typeof date === "string" ? new Date(date) : date
-    );
-    if (!localDate) return "無効な日付";
-
-    return localDate.toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "short",
-    });
-  };
-
   const getDaysFromNow = (date: Date | string) => {
-    const localDate = utcToLocalDate(
-      typeof date === "string" ? new Date(date) : date
-    );
+    const localDate = typeof date === "string" ? new Date(date) : date;
     if (!localDate) return 0;
 
     const today = new Date();
@@ -268,7 +252,9 @@ export default function MilestoneManagement({
                           {milestone.name}
                         </div>
                       </TableCell>
-                      <TableCell>{formatDate(milestone.date)}</TableCell>
+                      <TableCell>
+                        {formatDate(milestone.date, "YYYY/MM/DD")}
+                      </TableCell>
                       <TableCell>{getStatusBadge(daysFromNow)}</TableCell>
                       <TableCell>
                         {daysFromNow < 0 ? (

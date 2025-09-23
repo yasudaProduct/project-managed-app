@@ -4,7 +4,7 @@ import { Shield, Calendar, Clock, User, Trello } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getProjectStatusName } from "@/lib/utils";
-import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
+import { formatDate } from "@/lib/date-util";
 import { ProjectStatus } from "@/types/wbs";
 
 interface ProjectInfoCardProps {
@@ -74,9 +74,9 @@ export function ProjectInfoCard({
                     プロジェクト期間
                   </p>
                   <p className="text-gray-700">
-                    {formatUTCDateForDisplaySlash(project.startDate)}
+                    {formatDate(project.startDate, "YYYY/MM/DD")}
                     <span className="mx-2 text-gray-400">〜</span>
-                    {formatUTCDateForDisplaySlash(project.endDate)}
+                    {formatDate(project.endDate, "YYYY/MM/DD")}
                   </p>
                 </div>
               </div>

@@ -1,7 +1,6 @@
 import { WbsTask, Milestone } from "@/types/wbs";
 import { Project } from "@/types/project";
 import { getTaskStatusName } from "@/lib/utils";
-import { utcToLocalDate } from "@/lib/date-display-utils";
 
 export interface DateRange {
   start: Date;
@@ -55,8 +54,8 @@ export function calculateDateRange(
   }[]
 ): DateRange {
   // UTCで受け取った日付をローカル日付として解釈
-  const projectStart = utcToLocalDate(new Date(project.startDate))!;
-  const projectEnd = utcToLocalDate(new Date(project.endDate))!;
+  const projectStart = project.startDate;
+  const projectEnd = project.endDate;
 
   if (!projectStart || !projectEnd) {
     throw new Error("Invalid project date range");
@@ -66,7 +65,7 @@ export function calculateDateRange(
   const minTaskStart = periods && periods.length > 0 && periods.some((p) => p.startDate)
     ? new Date(
       Math.min(
-        ...periods.map((p) => utcToLocalDate(p.startDate)?.getTime() ?? Infinity)
+        ...periods.map((p) => p.startDate!.getTime() ?? Infinity)
       )
     )
     : undefined;
@@ -75,7 +74,7 @@ export function calculateDateRange(
   const maxTaskEnd = periods && periods.length > 0 && periods.some((p) => p.endDate)
     ? new Date(
       Math.max(
-        ...periods.map((p) => utcToLocalDate(p.endDate)?.getTime() ?? -Infinity)
+        ...periods.map((p) => p.endDate!.getTime() ?? -Infinity)
       )
     )
     : undefined;
@@ -179,8 +178,8 @@ export function calculateTaskPositions(
 
   return tasks.map((task) => {
     // UTCで受け取った日付をローカル日付として解釈
-    const taskStartLocal = task.yoteiStart ? utcToLocalDate(task.yoteiStart) : null;
-    const taskEndLocal = task.yoteiEnd ? utcToLocalDate(task.yoteiEnd) : null;
+    const taskStartLocal = task.yoteiStart ? task.yoteiStart : null;
+    const taskEndLocal = task.yoteiEnd ? task.yoteiEnd : null;
 
     const taskStart = taskStartLocal || normalizedRangeStart;
     const taskEnd = taskEndLocal || taskStart;
@@ -237,8 +236,8 @@ export function groupTasks(
   const sortTasksByStartDate = (taskList: TaskWithPosition[]) => {
     return [...taskList].sort((a, b) => {
       // 開始日がない場合は最後に配置
-      const aStart = a.yoteiStart ? utcToLocalDate(a.yoteiStart) : null;
-      const bStart = b.yoteiStart ? utcToLocalDate(b.yoteiStart) : null;
+      const aStart = a.yoteiStart ? a.yoteiStart : null;
+      const bStart = b.yoteiStart ? b.yoteiStart : null;
 
       if (!aStart && !bStart) return 0;
       if (!aStart) return 1;
@@ -337,7 +336,7 @@ export function calculateMilestonePositions(
 
   return milestones.map((milestone) => {
     // UTCで受け取った日付をローカル日付として解釈
-    const milestoneLocal = utcToLocalDate(milestone.date);
+    const milestoneLocal = milestone.date;
     if (!milestoneLocal) return { ...milestone, position: 0 };
 
     // 日付を正規化

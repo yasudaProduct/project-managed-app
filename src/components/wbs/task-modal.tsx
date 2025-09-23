@@ -48,7 +48,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { formatDateToLocalString } from "../ganttv2/gantt-utils";
-import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
+import { formatDate } from "@/lib/date-util";
 
 const formSchema = z
   .object({
@@ -367,7 +367,7 @@ export function TaskModal({
                       {task.yoteiStart
                         ? typeof task.yoteiStart === "string"
                           ? task.yoteiStart
-                          : formatUTCDateForDisplaySlash(task.yoteiStart)
+                          : formatDate(task.yoteiStart, "YYYY/MM/DD")
                         : "未設定"}
                     </span>
                   </div>
@@ -377,7 +377,7 @@ export function TaskModal({
                       {task.yoteiEnd
                         ? typeof task.yoteiEnd === "string"
                           ? task.yoteiEnd
-                          : formatUTCDateForDisplaySlash(task.yoteiEnd)
+                          : formatDate(task.yoteiEnd, "YYYY/MM/DD")
                         : "未設定"}
                     </span>
                   </div>

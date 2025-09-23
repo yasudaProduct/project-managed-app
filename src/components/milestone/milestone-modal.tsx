@@ -28,7 +28,6 @@ import {
 } from "@/app/wbs/[id]/milestone-actions";
 import { toast } from "@/hooks/use-toast";
 import { Trash2, Calendar } from "lucide-react";
-import { utcToLocalDate } from "@/lib/date-display-utils";
 
 interface MilestoneModalProps {
   isOpen: boolean;
@@ -58,7 +57,7 @@ export function MilestoneModal({
       if (milestone) {
         setName(milestone.name);
         // UTC日付をローカル日付に変換してフォーマット
-        const localDate = utcToLocalDate(milestone.date);
+        const localDate = milestone.date;
         if (localDate) {
           setDate(localDate.toISOString().split("T")[0]);
         }

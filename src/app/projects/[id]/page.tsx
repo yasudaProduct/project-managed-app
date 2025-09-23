@@ -7,8 +7,8 @@ import { getProjectById } from "../project-actions";
 import { getWbsByProjectId } from "./wbs/wbs-actions";
 import { ProjectDetailClient } from "@/components/projects/project-detail-client";
 import { Calendar, FileText, Edit, Plus, ArrowLeft } from "lucide-react";
-import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
 import { getProjectStatusName } from "@/lib/utils";
+import { formatDate } from "@/lib/date-util";
 
 export default async function ProjectPage({
   params,
@@ -113,7 +113,7 @@ export default async function ProjectPage({
                 </h3>
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4" />
-                  {formatUTCDateForDisplaySlash(project.startDate)}
+                  {formatDate(project.startDate, "YYYY/MM/DD")}
                 </div>
               </div>
               <div>
@@ -122,7 +122,7 @@ export default async function ProjectPage({
                 </h3>
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4" />
-                  {formatUTCDateForDisplaySlash(project.endDate)}
+                  {formatDate(project.endDate, "YYYY/MM/DD")}
                 </div>
               </div>
               <div>

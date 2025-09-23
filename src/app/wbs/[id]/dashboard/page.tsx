@@ -10,7 +10,6 @@ import { Assignee } from "@/types/wbs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { getProjectStatusName } from "@/lib/utils";
-import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
 import prisma from "@/lib/prisma";
 import {
   CalendarCheck,
@@ -32,6 +31,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { getMilestones } from "../milestone-actions";
+import { formatDate } from "@/lib/date-util";
 
 export default async function DashboardPage({
   params,
@@ -102,8 +102,8 @@ export default async function DashboardPage({
                   プロジェクト期間
                 </p>
                 <p className="text-sm text-gray-700">
-                  {formatUTCDateForDisplaySlash(project.startDate)} ~{" "}
-                  {formatUTCDateForDisplaySlash(project.endDate)}
+                  {formatDate(project.startDate, "YYYY/MM/DD")} ~{" "}
+                  {formatDate(project.endDate, "YYYY/MM/DD")}
                 </p>
               </div>
             </div>
@@ -313,7 +313,7 @@ export default async function DashboardPage({
                     </span>
                   </div>
                   <Badge variant="outline" className="text-xs">
-                    {formatUTCDateForDisplaySlash(milestone.date)}
+                    {formatDate(milestone.date, "YYYY/MM/DD")}
                   </Badge>
                 </div>
               ))}

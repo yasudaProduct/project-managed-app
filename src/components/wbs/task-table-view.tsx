@@ -58,7 +58,7 @@ import {
 } from "@/components/ui/table";
 import { TaskStatus, WbsTask } from "@/types/wbs";
 import { getTaskStatusName } from "@/lib/utils";
-import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
+import { formatDate } from "@/lib/date-util";
 import { TaskModal } from "./task-modal";
 
 export interface TaskTableViewPageProps {
@@ -200,7 +200,7 @@ export function TaskTableViewPage({
         header: "予定開始日",
         cell: ({ row }) => (
           <div className="capitalize">
-            {formatUTCDateForDisplaySlash(row.getValue("yoteiStart"))}
+            {formatDate(row.getValue("yoteiStart"), "YYYY/MM/DD")}
           </div>
         ),
         aggregatedCell: ({ row }) => {
@@ -219,8 +219,8 @@ export function TaskTableViewPage({
           const maxEnd = ends.length
             ? new Date(Math.max(...ends.map((d) => d.getTime())))
             : undefined;
-          const left = minStart ? formatUTCDateForDisplaySlash(minStart) : "-";
-          const right = maxEnd ? formatUTCDateForDisplaySlash(maxEnd) : "-";
+          const left = minStart ? formatDate(minStart, "YYYY/MM/DD") : "-";
+          const right = maxEnd ? formatDate(maxEnd, "YYYY/MM/DD") : "-";
           return (
             <div className="font-medium">
               {left} - {right}
@@ -233,7 +233,7 @@ export function TaskTableViewPage({
         header: "予定終了日",
         cell: ({ row }) => (
           <div className="capitalize">
-            {formatUTCDateForDisplaySlash(row.getValue("yoteiEnd"))}
+            {formatDate(row.getValue("yoteiEnd"), "YYYY/MM/DD")}
           </div>
         ),
         aggregatedCell: () => <span />,
@@ -254,7 +254,7 @@ export function TaskTableViewPage({
         header: "実績開始日",
         cell: ({ row }) => (
           <div className="capitalize">
-            {formatUTCDateForDisplaySlash(row.getValue("jissekiStart"))}
+            {formatDate(row.getValue("jissekiStart"), "YYYY/MM/DD")}
           </div>
         ),
         aggregatedCell: ({ row }) => {
@@ -273,8 +273,8 @@ export function TaskTableViewPage({
           const maxEnd = ends.length
             ? new Date(Math.max(...ends.map((d) => d.getTime())))
             : undefined;
-          const left = minStart ? formatUTCDateForDisplaySlash(minStart) : "-";
-          const right = maxEnd ? formatUTCDateForDisplaySlash(maxEnd) : "-";
+          const left = minStart ? formatDate(minStart, "YYYY/MM/DD") : "-";
+          const right = maxEnd ? formatDate(maxEnd, "YYYY/MM/DD") : "-";
           return (
             <div className="font-medium">
               {left} - {right}
@@ -287,7 +287,7 @@ export function TaskTableViewPage({
         header: "実績終了日",
         cell: ({ row }) => (
           <div className="capitalize">
-            {formatUTCDateForDisplaySlash(row.getValue("jissekiEnd"))}
+            {formatDate(row.getValue("jissekiEnd"), "YYYY/MM/DD")}
           </div>
         ),
         aggregatedCell: () => <span />,

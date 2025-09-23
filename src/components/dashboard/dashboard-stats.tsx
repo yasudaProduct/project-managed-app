@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { formatUTCDateForDisplaySlash } from "@/lib/date-display-utils";
 import {
   Calendar,
   Clock,
@@ -20,6 +19,7 @@ import {
   Activity,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { formatDate } from "@/lib/date-util";
 
 interface DashboardStatsProps {
   stats: {
@@ -198,7 +198,7 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
                     <div>
                       <p className="font-medium">{project.projectName}</p>
                       <p className="text-sm text-muted-foreground">
-                        {formatUTCDateForDisplaySlash(project.endDate)}
+                        {formatDate(project.endDate, "YYYY/MM/DD")}
                       </p>
                     </div>
                     <Badge variant="outline" className="text-orange-600">
@@ -231,7 +231,7 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
                     <div>
                       <p className="font-medium">{project.projectName}</p>
                       <p className="text-sm text-muted-foreground">
-                        {formatUTCDateForDisplaySlash(project.endDate)}
+                        {formatDate(project.endDate, "YYYY/MM/DD")}
                       </p>
                     </div>
                     <Badge variant="destructive">
