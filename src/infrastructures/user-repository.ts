@@ -1,7 +1,7 @@
 import { IUserRepository } from "@/applications/user/iuser-repositroy";
 import { User } from "@/domains/user/user";
 import { injectable } from "inversify";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 import type { Users as UserDb } from "@prisma/client";
 
 @injectable()
@@ -22,7 +22,7 @@ export class UserRepository implements IUserRepository {
 
         return usersDb.map(this.createUser);
     }
-    
+
     async save(user: User): Promise<User> {
         const userDb = await prisma.users.create({
             data: {
@@ -32,7 +32,7 @@ export class UserRepository implements IUserRepository {
                 email: user.email,
             },
         });
-        
+
         return this.createUser(userDb);
     }
 

@@ -10,9 +10,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WbsTask } from "@/types/wbs";
-import { getTaskStatusName } from "@/lib/utils";
+import { getTaskStatusName } from "@/utils/utils";
 import { Calendar, Filter, Eye, EyeOff, User, BarChart3 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 
 export type ViewMode = "day" | "week" | "month" | "quarter";
 export type GroupBy = "phase" | "assignee" | "status" | "none";

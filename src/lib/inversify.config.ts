@@ -101,7 +101,7 @@ import { TaskSchedulingService } from "@/domains/task-scheduling/task-scheduling
 
 // Prisma
 import { PrismaClient } from '@prisma/client';
-import prisma from '@/lib/prisma';
+import prisma from '@/lib/prisma/prisma';
 import { IMilestoneApplicationService, MilestoneApplicationService } from '@/applications/milestone/milestone-application-service';
 import { IMilestoneRepository } from '@/applications/milestone/milestone.interfase';
 import { MilestoneRepository } from '@/infrastructures/milestone/milestone.repository';

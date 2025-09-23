@@ -1,7 +1,7 @@
 import { Wbs } from "@/domains/wbs/wbs";
 import { IWbsRepository } from "@/applications/wbs/iwbs-repository";
 import { injectable } from "inversify";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 
 @injectable()
 export class WbsRepository implements IWbsRepository {

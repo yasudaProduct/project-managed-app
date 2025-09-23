@@ -1,6 +1,6 @@
 "use server";
 
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 import { scheduleCsvData, scheduleTsvData } from "@/types/csv";
 
 export interface ScheduleEntry {
@@ -35,7 +35,7 @@ export async function getSchedules(): Promise<ScheduleEntry[]> {
     }));
 }
 
-export async function getUsers(): Promise<Array<{id: string, name: string, email: string}>> {
+export async function getUsers(): Promise<Array<{ id: string, name: string, email: string }>> {
     const users = await prisma.users.findMany({
         select: {
             id: true,
@@ -170,7 +170,7 @@ export async function importScheduleTsv(tsvData: scheduleTsvData[]): Promise<{
                 // データの検証
                 const userId = schedule['個人ｺｰﾄﾞ']?.trim();
                 const dateTimeStr = schedule['年月日']?.trim();
-                
+
                 if (!userId || !dateTimeStr) {
                     console.warn(`無効なスケジュールデータをスキップ: ${JSON.stringify(schedule)}`);
                     continue;
@@ -191,7 +191,7 @@ export async function importScheduleTsv(tsvData: scheduleTsvData[]): Promise<{
                 // 日付の検証と変換（YYYY/MM/DD HH:mm:ss → Date）
                 const dateTimeRegex = /^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+\d{2}:\d{2}:\d{2}$/;
                 const match = dateTimeStr.match(dateTimeRegex);
-                
+
                 if (!match) {
                     console.warn(`無効な日付形式: ${dateTimeStr}`);
                     continue;
@@ -199,7 +199,7 @@ export async function importScheduleTsv(tsvData: scheduleTsvData[]): Promise<{
 
                 const [, year, month, day] = match;
                 const scheduleDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                
+
                 if (isNaN(scheduleDate.getTime())) {
                     console.warn(`無効な日付: ${dateTimeStr}`);
                     continue;
@@ -208,7 +208,7 @@ export async function importScheduleTsv(tsvData: scheduleTsvData[]): Promise<{
                 // 時間の検証
                 const startTime = schedule['開始時間']?.trim() || '';
                 const endTime = schedule['終了時間']?.trim() || '';
-                
+
                 // 時間形式の検証 (HH:mm)
                 const timeRegex = /^\d{1,2}:\d{2}$/;
                 if (startTime && !timeRegex.test(startTime)) {

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { WbsTask } from "@/types/wbs";
 import { GroupBy } from "./gantt-controls";
-import { getTaskStatusName } from "@/lib/utils";
+import { getTaskStatusName } from "@/utils/utils";
 import {
   ChevronDown,
   ChevronRight,
@@ -17,7 +17,7 @@ import {
   Maximize2,
   Edit,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import {
   getTaskRowStyleDynamic,
   getGroupHeaderStyle,

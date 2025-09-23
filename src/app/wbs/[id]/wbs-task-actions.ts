@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { KosuType, PeriodType, TaskStatus, WbsTask } from "@/types/wbs"
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 import { SYMBOL } from "@/types/symbol";
 import { container } from "@/lib/inversify.config"
 import { ITaskApplicationService } from "@/applications/task/task-application-service";

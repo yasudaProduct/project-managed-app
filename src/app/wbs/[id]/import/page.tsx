@@ -3,7 +3,7 @@ import { getWbsById } from "@/app/wbs/[id]/wbs-actions";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 import { WbsImportClient } from "./wbs-import-client";
 
 export default async function WbsImportPage({
@@ -38,10 +38,10 @@ export default async function WbsImportPage({
         </Link>
       </div>
 
-      <WbsImportClient 
-        wbsId={wbs.id} 
+      <WbsImportClient
+        wbsId={wbs.id}
         projectId={project.id.toString()}
-        projectName={project.name} 
+        projectName={project.name}
       />
     </div>
   );

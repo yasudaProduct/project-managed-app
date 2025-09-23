@@ -1,7 +1,6 @@
 import { ProjectStatus, TaskStatus } from "@/types/wbs";
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import * as holiday_jp from '@holiday-jp/holiday_jp';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -34,23 +33,6 @@ export const getTaskStatusName = (status: TaskStatus) => {
       return "完了";
   }
 };
-interface Holiday {
-  date: Date;
-  name: string;
-}
-
-// 祝日リストを取得
-export const getHolidays = (year: number): Holiday[] => {
-  const startDate = new Date(year, 0, 1)
-  const endDate = new Date(year, 0, 1)
-
-  return holiday_jp.between(startDate, endDate)
-}
-
-// 土日・祝日かどうかを判定
-export const isHoliday = (date: Date): boolean => {
-  return holiday_jp.isHoliday(date) || date.getDay() === 0 || date.getDay() === 6;
-}
 
 // ランダムな文字列を生成 A-Z, a-z
 export const randomString = (length: number = 10): string => {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 import { z } from "zod";
 
 // PUT: 会社休日更新
@@ -76,7 +76,7 @@ export async function PUT(
     return NextResponse.json(formattedHoliday);
   } catch (error) {
     console.error("会社休日更新エラー:", error);
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { message: "入力データが正しくありません", errors: error.errors },

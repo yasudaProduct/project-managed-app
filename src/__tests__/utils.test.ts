@@ -1,4 +1,5 @@
-import { getProjectStatusName, isHoliday } from "@/lib/utils";
+import { getProjectStatusName } from "@/utils/utils";
+import { isHoliday } from "@/utils/date-util";
 
 describe("utils", () => {
 

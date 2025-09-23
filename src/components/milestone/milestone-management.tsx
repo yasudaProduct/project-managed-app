@@ -27,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { formatDate } from "@/lib/date-util";
+import { formatDate } from "@/utils/date-util";
 
 interface MilestoneManagementProps {
   wbsId: number;

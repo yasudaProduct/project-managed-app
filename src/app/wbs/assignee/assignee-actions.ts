@@ -1,6 +1,6 @@
 "use server"
 
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 import { container } from "@/lib/inversify.config";
 import { IWbsApplicationService } from "@/applications/wbs/wbs-application-service";
 import { SYMBOL } from "@/types/symbol";

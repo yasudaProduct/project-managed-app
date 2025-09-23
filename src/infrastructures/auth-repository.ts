@@ -1,5 +1,5 @@
 import { injectable } from "inversify";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 import { IAuthRepository } from "@/domains/auth/auth-service";
 import { User } from "@/domains/auth/user";
 import { UserSession } from "@/domains/auth/user-session";

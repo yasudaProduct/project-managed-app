@@ -15,8 +15,8 @@ import {
   SelectValue,
 } from "../ui/select";
 import { ProjectStatus } from "@/types/wbs";
-import { getProjectStatusName } from "@/lib/utils";
-import { formatDate } from "@/lib/date-util";
+import { getProjectStatusName } from "@/utils/utils";
+import { formatDate } from "@/utils/date-util";
 import { toast } from "@/hooks/use-toast";
 import { ScheduleGenerateResult } from "@/applications/schedule-generator/schedule-generate.service";
 

@@ -11,7 +11,7 @@ import {
 import { useEffect, useState } from "react";
 import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
-import { getTaskStatusName } from "@/lib/utils";
+import { getTaskStatusName } from "@/utils/utils";
 import { getPhaseTemplates } from "@/app/wbs/phase/phase-actions";
 
 type SelectPhasesProp = {

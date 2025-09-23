@@ -1,6 +1,6 @@
 // filepath: /Users/yuta/Develop/project-managed-app/src/__tests__/infrastructures/phase-repository.test.ts
 import { PhaseRepository } from "@/infrastructures/phase-repository";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 
 // Prismaクライアントのモック化
 jest.mock('@/lib/prisma', () => ({

@@ -1,7 +1,7 @@
 "use server"
 
 import { WbsPhase } from '@/types/wbs'
-import prisma from '@/lib/prisma'
+import prisma from '@/lib/prisma/prisma'
 
 export async function getWbsPhases(wbsId: number) {
     const phases = await prisma.wbsPhase.findMany({

@@ -19,7 +19,7 @@ import {
   Activity,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { formatDate } from "@/lib/date-util";
+import { formatDate } from "@/utils/date-util";
 
 interface DashboardStatsProps {
   stats: {

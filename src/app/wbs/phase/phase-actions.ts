@@ -4,7 +4,7 @@ import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
 import { IPhaseApplicationService } from "@/applications/phase/phase-application-service";
 
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 
 const phaseApplicationService = container.get<IPhaseApplicationService>(SYMBOL.IPhaseApplicationService);
 

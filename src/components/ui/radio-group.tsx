@@ -1,22 +1,22 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { cn } from "@/utils/utils";
 
 interface RadioGroupContextType {
-  value?: string
-  onValueChange?: (value: string) => void
-  name?: string
+  value?: string;
+  onValueChange?: (value: string) => void;
+  name?: string;
 }
 
-const RadioGroupContext = React.createContext<RadioGroupContextType>({})
+const RadioGroupContext = React.createContext<RadioGroupContextType>({});
 
 interface RadioGroupProps {
-  className?: string
-  value?: string
-  onValueChange?: (value: string) => void
-  children: React.ReactNode
-  name?: string
+  className?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  children: React.ReactNode;
+  name?: string;
 }
 
 const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
@@ -32,22 +32,26 @@ const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
           {children}
         </div>
       </RadioGroupContext.Provider>
-    )
+    );
   }
-)
-RadioGroup.displayName = "RadioGroup"
+);
+RadioGroup.displayName = "RadioGroup";
 
 interface RadioGroupItemProps {
-  className?: string
-  value: string
-  id?: string
-  disabled?: boolean
+  className?: string;
+  value: string;
+  id?: string;
+  disabled?: boolean;
 }
 
 const RadioGroupItem = React.forwardRef<HTMLInputElement, RadioGroupItemProps>(
   ({ className, value, id, disabled, ...props }, ref) => {
-    const { value: groupValue, onValueChange, name } = React.useContext(RadioGroupContext)
-    
+    const {
+      value: groupValue,
+      onValueChange,
+      name,
+    } = React.useContext(RadioGroupContext);
+
     return (
       <input
         ref={ref}
@@ -64,9 +68,9 @@ const RadioGroupItem = React.forwardRef<HTMLInputElement, RadioGroupItemProps>(
         disabled={disabled}
         {...props}
       />
-    )
+    );
   }
-)
-RadioGroupItem.displayName = "RadioGroupItem"
+);
+RadioGroupItem.displayName = "RadioGroupItem";
 
-export { RadioGroup, RadioGroupItem }
+export { RadioGroup, RadioGroupItem };

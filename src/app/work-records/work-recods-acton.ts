@@ -1,7 +1,7 @@
 "use server"
 
-import { formatDate } from "@/lib/date-util";
-import prisma from "@/lib/prisma";
+import { formatDate } from "@/utils/date-util";
+import prisma from "@/lib/prisma/prisma";
 
 // TODO: サービス呼び出し
 export async function getWorkRecords() {

@@ -1,6 +1,6 @@
 import { WbsTask, Milestone } from "@/types/wbs";
 import { Project } from "@/types/project";
-import { getTaskStatusName } from "@/lib/utils";
+import { getTaskStatusName } from "@/utils/utils";
 
 export interface DateRange {
   start: Date;

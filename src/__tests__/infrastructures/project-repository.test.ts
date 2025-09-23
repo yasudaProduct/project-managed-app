@@ -2,7 +2,7 @@
 import { ProjectRepository } from "@/infrastructures/project-repository";
 import { Project } from "@/domains/project/project";
 import { ProjectStatus } from "@/domains/project/project-status";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 
 // Prismaクライアントのモック化
 jest.mock('@/lib/prisma', () => ({

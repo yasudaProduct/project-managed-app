@@ -1,4 +1,4 @@
-import { isHoliday } from "@/lib/utils";
+import { isHoliday } from "@/utils/date-util";
 import { Wbs } from "./wbs";
 import { Project } from "../project/project";
 import { WbsAssignee } from "./wbs-assignee";

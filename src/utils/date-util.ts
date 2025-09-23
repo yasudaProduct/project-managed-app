@@ -1,3 +1,5 @@
+import * as holiday_jp from '@holiday-jp/holiday_jp';
+
 type SupportedDateFormat =
     'YYYY/MM/DD' |
     'YYYY年M月D日(曜)' |
@@ -84,4 +86,27 @@ export function formatDate(value: Date, format: SupportedDateFormat): string {
         default:
             throw new Error(`Unsupported format: ${format}`);
     }
+}
+
+/**
+ * 土日・祝日かどうかを判定
+ * @param date 判定対象の日付
+ * @returns 土日・祝日かどうか
+ */
+export const isHoliday = (date: Date): boolean => {
+    return holiday_jp.isHoliday(date) || date.getDay() === 0 || date.getDay() === 6;
+}
+
+interface Holiday {
+    date: Date;
+    name: string;
+}
+
+/**
+ * 祝日リストを取得
+ * @param year 年
+ * @returns 祝日リスト
+ */
+export const getHolidays = (year: number): Holiday[] => {
+    return holiday_jp.between(new Date(year, 0, 1), new Date(year, 0, 1));
 }

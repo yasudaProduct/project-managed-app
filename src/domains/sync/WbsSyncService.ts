@@ -15,7 +15,7 @@ import type { IUserRepository } from '@/applications/user/iuser-repositroy';
 import { User } from '../user/user';
 import { WbsAssignee } from '../wbs/wbs-assignee';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
-import { randomString } from '@/lib/utils';
+import { randomString } from '@/utils/utils';
 import type { ITaskRepository } from '@/applications/task/itask-repository';
 import { TaskNo } from '../task/value-object/task-id';
 import { TaskStatus } from '../task/value-object/project-status';

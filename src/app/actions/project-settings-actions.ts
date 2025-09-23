@@ -1,6 +1,6 @@
 "use server";
 
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 
 export async function getProjectSettings(projectId: string) {
     const settings = await prisma.projectSettings.findUnique({ where: { projectId } });

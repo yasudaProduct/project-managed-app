@@ -13,7 +13,7 @@ import {
   Users,
   Calendar,
 } from "lucide-react";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 import { getWbsPhases } from "./wbs-phase-actions";
 import { getWbsAssignees } from "../assignee/assignee-actions";
 import { getTaskAll } from "./wbs-task-actions";

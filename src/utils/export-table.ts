@@ -5,7 +5,12 @@ interface ExportOptions {
   format: 'csv' | 'tsv';
 }
 
-export async function copyToClipboard(
+/**
+ * クリップボードにコピー
+ * @param headers ヘッダー
+ * @param rows データ
+ */
+async function copyToClipboard(
   headers: string[],
   rows: (string | number | undefined | null)[][],
 ): Promise<void> {
@@ -14,25 +19,23 @@ export async function copyToClipboard(
     return String(cell);
   };
 
+  // ヘッダーとデータを結合
   const headerRow = headers.map(formatCell).join('\t');
   const dataRows = rows.map(row => row.map(formatCell).join('\t'));
   const content = [headerRow, ...dataRows].join('\n');
 
-  try {
-    await navigator.clipboard.writeText(content);
-  } catch (err) {
-    console.error('Failed to copy to clipboard:', err);
-    // フォールバック: テキストエリアを使用したコピー
-    const textArea = document.createElement('textarea');
-    textArea.value = content;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-  }
+  // クリップボードにコピー
+  await navigator.clipboard.writeText(content);
+
 }
 
-export function exportTableData(
+/**
+ * テーブルデータをエクスポート
+ * @param headers ヘッダー
+ * @param rows データ
+ * @param options オプション
+ */
+function exportTableData(
   headers: string[],
   rows: (string | number | undefined | null)[][],
   options: ExportOptions
@@ -40,6 +43,7 @@ export function exportTableData(
   const delimiter = options.format === 'csv' ? ',' : '\t';
   const extension = options.format === 'csv' ? '.csv' : '.tsv';
 
+  // セルをフォーマット
   const formatCell = (cell: string | number | undefined | null): string => {
     if (cell === undefined || cell === null) return '';
     const value = String(cell);
@@ -50,19 +54,25 @@ export function exportTableData(
     return value;
   };
 
+  // ヘッダーとデータを結合
   const headerRow = headers.map(formatCell).join(delimiter);
   const dataRows = rows.map(row => row.map(formatCell).join(delimiter));
   const content = [headerRow, ...dataRows].join('\n');
 
+  // BOM付きのBlobを作成
   const bom = '\uFEFF';
   const blob = new Blob([bom + content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
+  // ダウンロードリンクを作成
   const link = document.createElement('a');
   link.href = url;
   link.download = options.filename + extension;
+  // ダウンロードリンクをクリック
   document.body.appendChild(link);
   link.click();
+  // ダウンロードリンクを削除
   document.body.removeChild(link);
+  // ダウンロードリンクを破棄
   URL.revokeObjectURL(url);
 }
 
@@ -74,6 +84,12 @@ interface PhaseSummaryData {
   difference: number;
 }
 
+/**
+ * 工程別集計表をクリップボードにコピー
+ * @param data 
+ * @param total 
+ * @param unit 
+ */
 export async function copyPhaseSummaryToClipboard(
   data: PhaseSummaryData[],
   total: Omit<PhaseSummaryData, 'phase'>,
@@ -81,6 +97,7 @@ export async function copyPhaseSummaryToClipboard(
 ): Promise<void> {
   const unitSuffix = getUnitSuffix(unit);
   const headers = ['工程', 'タスク数', `予定工数(${unitSuffix})`, `実績工数(${unitSuffix})`, '差分'];
+  // データを作成
   const rows = [
     ...data.map(item => [
       item.phase,
@@ -96,9 +113,17 @@ export async function copyPhaseSummaryToClipboard(
     ]
   ];
 
+  // クリップボードにコピー
   await copyToClipboard(headers, rows);
 }
 
+/**
+ * 工程別集計表をエクスポート
+ * @param data データ
+ * @param total 合計
+ * @param format フォーマット
+ * @param unit 単位
+ */
 export function exportPhaseSummary(
   data: PhaseSummaryData[],
   total: Omit<PhaseSummaryData, 'phase'>,
@@ -132,6 +157,12 @@ interface AssigneeSummaryData {
   difference: number;
 }
 
+/**
+ * 担当者別集計表をクリップボードにコピー
+ * @param data 
+ * @param total 
+ * @param unit 
+ */
 export async function copyAssigneeSummaryToClipboard(
   data: AssigneeSummaryData[],
   total: Omit<AssigneeSummaryData, 'assignee'>,
@@ -157,6 +188,13 @@ export async function copyAssigneeSummaryToClipboard(
   await copyToClipboard(headers, rows);
 }
 
+/**
+ * 担当者別集計表をエクスポート
+ * @param data データ
+ * @param total 合計
+ * @param format フォーマット
+ * @param unit 単位
+ */
 export function exportAssigneeSummary(
   data: AssigneeSummaryData[],
   total: Omit<AssigneeSummaryData, 'assignee'>,
@@ -209,6 +247,11 @@ interface MonthlyAssigneeData {
   };
 }
 
+/**
+ * 月別担当者別集計表をクリップボードにコピー
+ * @param data 
+ * @param unit 
+ */
 export async function copyMonthlyAssigneeSummaryToClipboard(
   data: MonthlyAssigneeData,
   unit: HoursUnit = 'hours'
@@ -263,6 +306,12 @@ export async function copyMonthlyAssigneeSummaryToClipboard(
   await copyToClipboard(headers, rows);
 }
 
+/**
+ * 月別担当者別集計表をエクスポート
+ * @param data データ
+ * @param format フォーマット
+ * @param unit 単位
+ */
 export function exportMonthlyAssigneeSummary(
   data: MonthlyAssigneeData,
   format: 'csv' | 'tsv',
@@ -350,6 +399,11 @@ function getCellFromContainer(
   return (container as Record<string, MonthlyPhaseDataCell>)[key];
 }
 
+/**
+ * 月別工程別集計表をクリップボードにコピー
+ * @param data データ
+ * @param unit 単位
+ */
 export async function copyMonthlyPhaseSummaryToClipboard(
   data: MonthlyPhaseSummaryExportInput,
   unit: HoursUnit = 'hours'
@@ -401,6 +455,12 @@ export async function copyMonthlyPhaseSummaryToClipboard(
   await copyToClipboard(headers, rows);
 }
 
+/**
+ * 月別工程別集計表をエクスポート
+ * @param data データ
+ * @param format フォーマット
+ * @param unit 単位
+ */
 export function exportMonthlyPhaseSummary(
   data: MonthlyPhaseSummaryExportInput,
   format: 'csv' | 'tsv',

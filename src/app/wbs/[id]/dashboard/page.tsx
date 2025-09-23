@@ -9,8 +9,8 @@ import {
 import { Assignee } from "@/types/wbs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { getProjectStatusName } from "@/lib/utils";
-import prisma from "@/lib/prisma";
+import { getProjectStatusName } from "@/utils/utils";
+import prisma from "@/lib/prisma/prisma";
 import {
   CalendarCheck,
   CirclePlus,
@@ -31,7 +31,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { getMilestones } from "../milestone-actions";
-import { formatDate } from "@/lib/date-util";
+import { formatDate } from "@/utils/date-util";
 
 export default async function DashboardPage({
   params,

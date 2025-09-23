@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Badge } from "@/components/ui/badge";
-import { getTaskStatusName } from "@/lib/utils";
+import { getTaskStatusName } from "@/utils/utils";
 import { WbsTask } from "@/types/wbs";
 import { createTask, updateTask } from "@/app/wbs/[id]/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
@@ -48,7 +48,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { formatDateToLocalString } from "../ganttv2/gantt-utils";
-import { formatDate } from "@/lib/date-util";
+import { formatDate } from "@/utils/date-util";
 
 const formSchema = z
   .object({

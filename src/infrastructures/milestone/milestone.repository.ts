@@ -1,7 +1,7 @@
 import { IMilestoneRepository } from "@/applications/milestone/milestone.interfase";
 import { Milestone } from "@/domains/milestone/milestone";
 import { injectable } from "inversify";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 import type { Milestone as MilestoneDbType } from "@prisma/client";
 
 @injectable()

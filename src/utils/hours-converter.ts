@@ -10,6 +10,12 @@ const HOURS_PER_DAY = 7.5;
 const DAYS_PER_MONTH = 20;
 const HOURS_PER_MONTH = HOURS_PER_DAY * DAYS_PER_MONTH;
 
+/**
+ * 時間を変換
+ * @param hours 時間
+ * @param unit 単位
+ * @returns 変換後の時間
+ */
 export function convertHours(hours: number, unit: HoursUnit): number {
   switch (unit) {
     case 'hours':
@@ -23,13 +29,19 @@ export function convertHours(hours: number, unit: HoursUnit): number {
   }
 }
 
+/**
+ * 時間をフォーマット
+ * @param hours 時間
+ * @param unit 単位
+ * @returns フォーマット後の時間
+ */
 export function formatHoursWithUnit(hours: number, unit: HoursUnit): string {
   const converted = convertHours(hours, unit);
   const formatted = converted.toLocaleString("ja-JP", {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });
-  
+
   switch (unit) {
     case 'hours':
       return `${formatted}h`;
@@ -42,6 +54,11 @@ export function formatHoursWithUnit(hours: number, unit: HoursUnit): string {
   }
 }
 
+/**
+ * 単位のサフィックスを取得
+ * @param unit 単位
+ * @returns サフィックス
+ */
 export function getUnitSuffix(unit: HoursUnit): string {
   switch (unit) {
     case 'hours':

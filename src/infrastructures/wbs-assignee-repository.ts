@@ -1,7 +1,7 @@
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
 import { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-repository";
 import { injectable } from "inversify";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 
 @injectable()
 export class WbsAssigneeRepository implements IWbsAssigneeRepository {

@@ -1,11 +1,11 @@
 import { injectable } from "inversify";
 import type { ITaskDependencyRepository } from "@/applications/task-dependency/itask-dependency-repository";
 import { TaskDependency } from "@/domains/task-dependency/task-dependency";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 
 @injectable()
 export class TaskDependencyRepository implements ITaskDependencyRepository {
-    
+
     async create(dependency: TaskDependency): Promise<TaskDependency> {
         const created = await prisma.taskDependency.create({
             data: {

@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { Milestone, TaskStatus, WbsTask } from "@/types/wbs";
 import { GroupBy } from "./gantt-controls";
 import { Target, Edit } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { MilestoneModal } from "@/components/milestone/milestone-modal";
 import { updateTask } from "@/app/wbs/[id]/wbs-task-actions";

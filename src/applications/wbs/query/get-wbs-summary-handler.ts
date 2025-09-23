@@ -13,7 +13,7 @@ import type { ICompanyHolidayRepository } from "@/applications/calendar/icompany
 import type { IUserScheduleRepository } from "@/applications/calendar/iuser-schedule-repository";
 import type { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-repository";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 
 @injectable()
 export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, WbsSummaryResult> {

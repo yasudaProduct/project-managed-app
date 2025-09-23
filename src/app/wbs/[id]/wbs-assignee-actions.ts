@@ -1,6 +1,6 @@
 "use server"
 
-import prisma from '@/lib/prisma'
+import prisma from '@/lib/prisma/prisma'
 import { WbsAssignee } from './assignee/columns'
 
 export async function getWbsAssignees(wbsId: number): Promise<WbsAssignee[]> {

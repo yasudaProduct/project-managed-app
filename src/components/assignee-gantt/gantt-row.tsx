@@ -1,7 +1,7 @@
 "use client";
 
 import { GanttCell } from "./gantt-cell";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 
 // UI用のデータ型定義
 interface TaskAllocationUI {

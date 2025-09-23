@@ -57,8 +57,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TaskStatus, WbsTask } from "@/types/wbs";
-import { getTaskStatusName } from "@/lib/utils";
-import { formatDate } from "@/lib/date-util";
+import { getTaskStatusName } from "@/utils/utils";
+import { formatDate } from "@/utils/date-util";
 import { TaskModal } from "./task-modal";
 
 export interface TaskTableViewPageProps {

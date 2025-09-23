@@ -1,9 +1,9 @@
 import { IPhaseRepository } from "@/applications/task/iphase-repository";
 import { Phase } from "@/domains/phase/phase";
 import { PhaseCode } from "@/domains/phase/phase-code";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 import { injectable } from "inversify";
-import type { WbsPhase as PhaseDbType} from "@prisma/client";
+import type { WbsPhase as PhaseDbType } from "@prisma/client";
 
 @injectable()
 export class PhaseRepository implements IPhaseRepository {

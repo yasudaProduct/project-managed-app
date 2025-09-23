@@ -27,7 +27,7 @@ import { createProject, deleteProject, updateProject } from "./project-actions";
 import { ProjectStatus } from "@prisma/client";
 import { toast } from "@/hooks/use-toast";
 import { DatePicker } from "@/components/date-picker";
-import { formatDate } from "@/lib/date-util";
+import { formatDate } from "@/utils/date-util";
 
 const formSchema = z.object({
   name: z.string().min(1, {

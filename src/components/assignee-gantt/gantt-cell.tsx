@@ -1,7 +1,12 @@
 "use client";
 
-import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from "@/utils/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // UI用のデータ型定義
 interface TaskAllocationUI {
@@ -20,7 +25,12 @@ interface DailyWorkAllocationUI {
   overloadedHours: number;
   isWeekend: boolean;
   isCompanyHoliday: boolean;
-  userSchedules: { title: string; startTime: string; endTime: string; durationHours: number }[];
+  userSchedules: {
+    title: string;
+    startTime: string;
+    endTime: string;
+    durationHours: number;
+  }[];
   isOverloadedByStandard: boolean;
   overloadedByStandardHours: number;
   isOverRateCapacity: boolean;
@@ -35,7 +45,13 @@ interface GanttCellProps {
   onClick?: (allocation: DailyWorkAllocationUI) => void;
 }
 
-export function GanttCell({ allocation, isWeekend, isHoliday, showWarning, onClick }: GanttCellProps) {
+export function GanttCell({
+  allocation,
+  isWeekend,
+  isHoliday,
+  showWarning,
+  onClick,
+}: GanttCellProps) {
   const utilizationRate = allocation.utilizationRate;
   const isOverloaded = allocation.isOverloaded;
   const isOverloadedByStandard = allocation.isOverloadedByStandard;
@@ -43,39 +59,39 @@ export function GanttCell({ allocation, isWeekend, isHoliday, showWarning, onCli
   // 色分けロジック
   const getCellColor = () => {
     if (isHoliday || isWeekend) {
-      return 'bg-gray-100 text-gray-400';
+      return "bg-gray-100 text-gray-400";
     }
 
     if (allocation.allocatedHours === 0) {
-      return 'bg-white hover:bg-gray-50';
+      return "bg-white hover:bg-gray-50";
     }
 
     if (isOverloaded) {
-      return 'bg-red-100 text-red-800 hover:bg-red-200';
+      return "bg-red-100 text-red-800 hover:bg-red-200";
     }
 
     if (utilizationRate >= 0.8) {
-      return 'bg-orange-100 text-orange-800 hover:bg-orange-200';
+      return "bg-orange-100 text-orange-800 hover:bg-orange-200";
     }
 
     if (utilizationRate >= 0.6) {
-      return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
+      return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200";
     }
 
-    return 'bg-green-100 text-green-800 hover:bg-green-200';
+    return "bg-green-100 text-green-800 hover:bg-green-200";
   };
 
   const formatHours = (hours: number) => {
-    if (hours === 0) return '-';
+    if (hours === 0) return "-";
     return hours.toFixed(2);
   };
 
   const cellContent = (
     <div
       className={cn(
-        'h-8 min-w-[60px] border-r border-b border-gray-200 flex items-center justify-center text-xs font-medium cursor-pointer transition-colors',
+        "h-8 min-w-[60px] border-r border-b border-gray-200 flex items-center justify-center text-xs font-medium cursor-pointer transition-colors",
         getCellColor(),
-        onClick && 'hover:shadow-sm'
+        onClick && "hover:shadow-sm"
       )}
       onClick={() => onClick?.(allocation)}
     >
@@ -90,11 +106,17 @@ export function GanttCell({ allocation, isWeekend, isHoliday, showWarning, onCli
           </span>
         )}
       </span>
-      {(isOverloaded || isOverloadedByStandard || allocation.isOverRateCapacity) && (
-        <span className="ml-1 text-red-600 font-bold" title="過負荷">!</span>
+      {(isOverloaded ||
+        isOverloadedByStandard ||
+        allocation.isOverRateCapacity) && (
+        <span className="ml-1 text-red-600 font-bold" title="過負荷">
+          !
+        </span>
       )}
       {allocation.isOverRateCapacity && (
-        <span className="ml-1 text-blue-600 font-bold" title="レート超過">R</span>
+        <span className="ml-1 text-blue-600 font-bold" title="レート超過">
+          R
+        </span>
       )}
     </div>
   );
@@ -106,23 +128,25 @@ export function GanttCell({ allocation, isWeekend, isHoliday, showWarning, onCli
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>
-          {cellContent}
-        </TooltipTrigger>
+        <TooltipTrigger asChild>{cellContent}</TooltipTrigger>
         <TooltipContent className="max-w-sm">
           <div className="space-y-2">
             <div className="font-semibold">
-              {allocation.date.toLocaleDateString('ja-JP')}
+              {allocation.date.toLocaleDateString("ja-JP")}
             </div>
-            
+
             <div className="space-y-1">
               <div className="text-xs">
                 <span className="text-gray-500">予定工数:</span>
-                <span className="ml-1 font-medium">{formatHours(allocation.allocatedHours)}h</span>
+                <span className="ml-1 font-medium">
+                  {formatHours(allocation.allocatedHours)}h
+                </span>
               </div>
               <div className="text-xs">
                 <span className="text-gray-500">稼働可能時間:</span>
-                <span className="ml-1 font-medium">{formatHours(allocation.availableHours)}h</span>
+                <span className="ml-1 font-medium">
+                  {formatHours(allocation.availableHours)}h
+                </span>
               </div>
               <div className="text-xs">
                 <span className="text-gray-500">標準勤務時間:</span>
@@ -130,10 +154,12 @@ export function GanttCell({ allocation, isWeekend, isHoliday, showWarning, onCli
               </div>
               <div className="text-xs">
                 <span className="text-gray-500">稼働率:</span>
-                <span className={cn(
-                  "ml-1 font-medium",
-                  isOverloaded ? "text-red-600" : "text-green-600"
-                )}>
+                <span
+                  className={cn(
+                    "ml-1 font-medium",
+                    isOverloaded ? "text-red-600" : "text-green-600"
+                  )}
+                >
                   {(utilizationRate * 100).toFixed(2)}%
                 </span>
               </div>
@@ -168,19 +194,24 @@ export function GanttCell({ allocation, isWeekend, isHoliday, showWarning, onCli
               </div>
             )}
 
-            {allocation.userSchedules && allocation.userSchedules.length > 0 && (
-              <div className="border-t pt-2 space-y-1">
-                <div className="text-xs font-medium">個人予定:</div>
-                {allocation.userSchedules.map((s, i) => (
-                  <div key={i} className="text-xs text-gray-600 flex justify-between">
-                    <span className="mr-2">{s.title}</span>
-                    <span>
-                      {s.startTime} - {s.endTime} ({s.durationHours.toFixed(2)}h)
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+            {allocation.userSchedules &&
+              allocation.userSchedules.length > 0 && (
+                <div className="border-t pt-2 space-y-1">
+                  <div className="text-xs font-medium">個人予定:</div>
+                  {allocation.userSchedules.map((s, i) => (
+                    <div
+                      key={i}
+                      className="text-xs text-gray-600 flex justify-between"
+                    >
+                      <span className="mr-2">{s.title}</span>
+                      <span>
+                        {s.startTime} - {s.endTime} (
+                        {s.durationHours.toFixed(2)}h)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
           </div>
         </TooltipContent>
       </Tooltip>

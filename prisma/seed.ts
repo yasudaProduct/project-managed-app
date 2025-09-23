@@ -1,7 +1,7 @@
 import { getMockData } from "./mock-data";
 import { phases } from "../src/data/phases";
 import { users } from "../src/data/users";
-import prisma from "../src/lib/prisma";
+import prisma from "../src/lib/prisma/prisma";
 import { ProjectStatus, TaskStatus, BufferType, CompanyHolidayType } from "@prisma/client";
 
 async function main() {

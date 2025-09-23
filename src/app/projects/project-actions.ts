@@ -1,7 +1,7 @@
 "use server"
 
 import { IProjectApplicationService } from "@/applications/projects/project-application-service"
-import prisma from "@/lib/prisma"
+import prisma from "@/lib/prisma/prisma"
 import { SYMBOL } from "@/types/symbol"
 import { ProjectStatus as ProjectStatusPrisma } from "@prisma/client"
 import { revalidatePath } from "next/cache"

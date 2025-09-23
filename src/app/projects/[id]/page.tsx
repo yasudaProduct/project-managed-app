@@ -7,8 +7,8 @@ import { getProjectById } from "../project-actions";
 import { getWbsByProjectId } from "./wbs/wbs-actions";
 import { ProjectDetailClient } from "@/components/projects/project-detail-client";
 import { Calendar, FileText, Edit, Plus, ArrowLeft } from "lucide-react";
-import { getProjectStatusName } from "@/lib/utils";
-import { formatDate } from "@/lib/date-util";
+import { getProjectStatusName } from "@/utils/utils";
+import { formatDate } from "@/utils/date-util";
 
 export default async function ProjectPage({
   params,

@@ -10,7 +10,7 @@ import { TaskStatus } from "@/domains/task/value-object/project-status";
 import { Task } from "@/domains/task/task";
 import { TaskNo } from "@/domains/task/value-object/task-id";
 import { WorkRecord } from "@/domains/work-records/work-recoed";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 import { injectable } from "inversify";
 
 

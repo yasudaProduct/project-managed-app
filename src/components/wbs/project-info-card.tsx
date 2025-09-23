@@ -3,8 +3,8 @@
 import { Shield, Calendar, Clock, User, Trello } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getProjectStatusName } from "@/lib/utils";
-import { formatDate } from "@/lib/date-util";
+import { getProjectStatusName } from "@/utils/utils";
+import { formatDate } from "@/utils/date-util";
 import { ProjectStatus } from "@/types/wbs";
 
 interface ProjectInfoCardProps {

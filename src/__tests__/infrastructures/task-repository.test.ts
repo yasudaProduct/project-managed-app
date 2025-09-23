@@ -7,7 +7,7 @@ import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";
 import { ManHourType } from "@/domains/task/value-object/man-hour-type";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 
 // Prismaクライアントのモック化
 jest.mock('@/lib/prisma', () => ({

@@ -2,7 +2,7 @@ import { injectable } from 'inversify'
 import type { PrismaClient, ImportJobType, ImportJobStatus, ImportJob as PrismaImportJob, Prisma } from '@prisma/client'
 import type { IImportJobRepository } from '@/applications/import-job/iimport-job.repository'
 import { ImportJob, ImportJobProgress } from '@/domains/import-job/import-job'
-import prisma from '@/lib/prisma'
+import prisma from '@/lib/prisma/prisma'
 
 @injectable()
 export class ImportJobPrismaRepository implements IImportJobRepository {

@@ -7,7 +7,7 @@ import type {
     DeadlineInfo,
     OverdueInfo
 } from "@/applications/dashboard/repositories/idashboard-query.repository";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 
 @injectable()
 export class DashboardQueryRepository implements IDashboardQueryRepository {

@@ -7,7 +7,7 @@ import { ja } from "date-fns/locale";
 import { Check, X, ExternalLink } from "lucide-react";
 import { NotificationData, useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 
 interface NotificationItemProps {
   notification: NotificationData;
