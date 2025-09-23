@@ -36,6 +36,7 @@ const prismaWithQueryLogging = Prisma.defineExtension({
         $allModels: {
             async $allOperations({ model, operation, args, query }) {
                 const start = process.hrtime.bigint();
+                console.log(`[Prisma] ${model}.${operation}`);
                 try {
                     const result = await query(args);
                     return result;
@@ -48,16 +49,6 @@ const prismaWithQueryLogging = Prisma.defineExtension({
         },
     },
 })
-
-// NOTE: 以前の拡張で使用していた補助関数。現在は未使用のためコメントアウト。
-// function prismaTimeMod(args: Date) {
-//     if (args instanceof Date) {
-//         const jstString = format(args, 'yyyy-MM-dd')
-//         const jstDate = new Date(jstString)
-//         return jstDate
-//     }
-//     return args;
-// }
 
 /**
  * クエリ実行時にPostgresのDateカラムに対して日本標準時に変換
@@ -89,6 +80,7 @@ const prismaQueryWithTimeMod = Prisma.defineExtension({
                             const normalized = new Date(format(value as Date, 'yyyy-MM-dd'));
                             (data as Record<string, unknown>)[field] = normalized;
                         });
+                        console.log(`[Prisma] prismaQueryWithTimeMod: ${dateFields}`);
                     }
                 }
                 const result = await query(args);
