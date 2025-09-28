@@ -1,4 +1,5 @@
-import { User } from "./user";
+
+import { User } from "../user/user";
 import { UserSession } from "./user-session";
 
 export interface IAuthRepository {
@@ -33,7 +34,7 @@ export class AuthService {
         // セッションを作成
         const token = UserSession.generateToken();
         const expiresAt = UserSession.createExpirationDate(30); // 30日間有効
-        const session = UserSession.create(user.id, token, expiresAt);
+        const session = UserSession.create(user.id!, token, expiresAt);
 
         const createdSession = await this.authRepository.createSession(session);
 
@@ -58,24 +59,6 @@ export class AuthService {
 
         const user = await this.authRepository.findUserById(session.userId);
         return user;
-    }
-
-    async register(email: string, name: string, displayName: string, password?: string): Promise<User> {
-        // 既存ユーザーチェック
-        const existingUser = await this.authRepository.findUserByEmail(email);
-        if (existingUser) {
-            throw new Error("このメールアドレスは既に登録されています");
-        }
-
-        // 新しいユーザーを作成
-        const userId = crypto.randomUUID();
-        const user = User.create(userId, email, name, displayName, password);
-
-        if (!user.isEmailValid()) {
-            throw new Error("無効なメールアドレスです");
-        }
-
-        return await this.authRepository.createUser(user);
     }
 
     async cleanupExpiredSessions(): Promise<void> {

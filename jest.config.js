@@ -32,6 +32,15 @@ const customJestConfig = {
       useESM: true,
     },
   },
+  collectCoverageFrom: [
+    "src/**/*.{ts,tsx,js,jsx}",
+    "!src/**/__tests__/**",
+    "!src/**/__integration_tests__/**",
+    "!src/**/*.d.ts",
+    "!src/**/types/**",
+  ],
+  coverageReporters: ["html"],
+  coverageDirectory: "<rootDir>/coverage",
 };
 
 // createJestConfigは使わず、直接設定をexport（SWC依存を回避）

@@ -8,6 +8,7 @@
     "Orta.vscode-jest",
     "firsttris.vscode-jest-runner",
     "yzhang.markdown-all-in-one",
-    "bierner.markdown-mermaid"
+    "bierner.markdown-mermaid",
+    "ms-vscode.live-server"
   ]
 }

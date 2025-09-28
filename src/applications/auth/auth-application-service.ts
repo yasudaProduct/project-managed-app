@@ -1,8 +1,9 @@
 import { inject, injectable } from "inversify";
 import { AuthService, type IAuthRepository } from "@/domains/auth/auth-service";
-import { User } from "@/domains/auth/user";
+// import { User } from "@/domains/auth/user";
 import { UserSession } from "@/domains/auth/user-session";
 import { SYMBOL } from "@/types/symbol";
+import { User } from "@/domains/user/user";
 
 export interface LoginRequest {
     email: string;
@@ -26,7 +27,6 @@ export interface AuthResult {
 export interface IAuthApplicationService {
     login(request: LoginRequest): Promise<AuthResult>;
     logout(sessionToken: string): Promise<{ success: boolean }>;
-    register(request: RegisterRequest): Promise<AuthResult>;
     validateSession(sessionToken: string): Promise<User | null>;
     getCurrentUser(sessionToken?: string): Promise<User | null>;
 }
@@ -72,39 +72,6 @@ export class AuthApplicationService implements IAuthApplicationService {
             return { success };
         } catch {
             return { success: false };
-        }
-    }
-
-    async register(request: RegisterRequest): Promise<AuthResult> {
-        try {
-            const user = await this.authService.register(
-                request.email,
-                request.name,
-                request.displayName,
-                request.password
-            );
-
-            // 登録後自動ログイン
-            const loginResult = await this.authService.login(request.email, request.password);
-
-            if (!loginResult) {
-                return {
-                    success: true,
-                    user,
-                    error: "ユーザー登録は成功しましたが、自動ログインに失敗しました"
-                };
-            }
-
-            return {
-                success: true,
-                user: loginResult.user,
-                session: loginResult.session
-            };
-        } catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : "ユーザー登録に失敗しました"
-            };
         }
     }
 
