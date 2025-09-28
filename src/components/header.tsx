@@ -6,10 +6,10 @@ import Link from "next/link";
 import { AuthHeader } from "./auth/auth-header";
 import { NotificationCenter } from "./notification/NotificationCenter";
 
-interface WbsInfo {
+interface ProjectInfo {
   id: string;
   name: string;
-  projectName: string;
+  wbsId?: number;
 }
 
 interface WbsTasksSummary {
@@ -19,60 +19,57 @@ interface WbsTasksSummary {
 
 export function Header() {
   const pathname = usePathname();
-  const [wbsInfo, setWbsInfo] = useState<WbsInfo | null>(null);
+  const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
   const [tasksSummary, setTasksSummary] = useState<WbsTasksSummary | null>(
     null
   );
   const [loading, setLoading] = useState(false);
 
-  const getWbsIdFromPath = (path: string): string | null => {
-    // 数値以外は除外
-    const match = path.match(/^\/wbs\/([0-9]+)/);
+  const getProjectIdFromPath = (path: string): string | null => {
+    // /projects/[id] のパターンにマッチ
+    const match = path.match(/^\/projects\/([^/]+)/);
     return match ? match[1] : null;
   };
 
   useEffect(() => {
-    const wbsId = getWbsIdFromPath(pathname);
+    const projectId = getProjectIdFromPath(pathname);
 
-    if (wbsId) {
+    if (projectId) {
       setLoading(true);
 
-      import("@/app/actions/wbs").then(({ getWbsById, getWbsTasksSummary }) => {
-        // WBS情報とタスク集計を並列で取得
-        Promise.all([getWbsById(wbsId), getWbsTasksSummary(wbsId)])
-          .then(([wbsData, summaryData]) => {
-            if (wbsData && wbsData.name) {
-              setWbsInfo({
-                id: wbsId,
-                name: wbsData.name,
-                projectName: wbsData.projectName,
-              });
-            } else {
-              setWbsInfo({
-                id: wbsId,
-                name: `WBS: ${wbsId}`,
-                projectName: `プロジェクト: ${wbsId}`,
-              });
-            }
-
-            if (summaryData) {
-              setTasksSummary(summaryData);
-            }
-          })
-          .catch((error) => {
-            console.error("Failed to fetch WBS info:", error);
-            setWbsInfo({
-              id: wbsId,
-              name: `WBS: ${wbsId}`,
-              projectName: `プロジェクト: ${wbsId}`,
+      // プロジェクト情報と最新のWBS情報を取得
+      Promise.all([
+        import("@/app/projects/project-actions").then(({ getProjectById }) => getProjectById(projectId)),
+        import("@/app/projects/[id]/wbs/wbs-actions").then(({ getLatestWbsByProjectId }) => getLatestWbsByProjectId(projectId)),
+      ])
+        .then(([projectData, wbsData]) => {
+          if (projectData) {
+            setProjectInfo({
+              id: projectId,
+              name: projectData.name,
+              wbsId: wbsData?.id,
             });
-          })
-          .finally(() => {
-            setLoading(false);
-          });
-      });
+
+            // WBSが存在する場合はタスクサマリーも取得
+            if (wbsData?.id) {
+              import("@/app/actions/wbs").then(({ getWbsTasksSummary }) => {
+                getWbsTasksSummary(String(wbsData.id)).then(summaryData => {
+                  if (summaryData) {
+                    setTasksSummary(summaryData);
+                  }
+                });
+              });
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to fetch project info:", error);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     } else {
-      setWbsInfo(null);
+      setProjectInfo(null);
       setTasksSummary(null);
     }
   }, [pathname]);
@@ -104,13 +101,13 @@ export function Header() {
             {getPageTitle()}
           </h1>
 
-          {wbsInfo && !loading && (
+          {projectInfo && !loading && (
             <>
               <span className="text-gray-400">|</span>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">プロジェクト:</span>
                 <span className="text-sm font-medium text-gray-900">
-                  <Link href={`/wbs/${wbsInfo.id}`}>{wbsInfo.projectName}</Link>
+                  <Link href={`/projects/${projectInfo.id}`}>{projectInfo.name}</Link>
                 </span>
               </div>
 

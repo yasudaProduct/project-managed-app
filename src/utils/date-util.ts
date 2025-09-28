@@ -49,6 +49,7 @@ export function formatDate(date: Date, format: 'YYYY/MM/DD HH:mm:ss'): string;
 
 // 実装
 export function formatDate(value: Date, format: SupportedDateFormat): string {
+    if (!value) return ""
     const date = toDate(value)
     switch (format) {
         case 'YYYY/MM/DD':

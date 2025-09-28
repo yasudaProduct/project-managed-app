@@ -1,6 +1,8 @@
 import { IProjectRepository } from "@/applications/projects/iproject-repository";
 import { ProjectApplicationService } from "@/applications/projects/project-application-service";
+import { IWbsRepository } from "@/applications/wbs/iwbs-repository";
 import { Project } from "@/domains/project/project";
+import { Wbs } from "@/domains/wbs/wbs";
 
 // Jestのモック機能を使用してリポジトリをモック化
 jest.mock("@/applications/projects/iproject-repository", () => ({
@@ -9,6 +11,7 @@ jest.mock("@/applications/projects/iproject-repository", () => ({
 
 describe('ProjectApplicationService', () => {
   let projectRepository: jest.Mocked<IProjectRepository>;
+  let wbsRepository: jest.Mocked<IWbsRepository>;
   let projectApplicationService: ProjectApplicationService;
   const startDate = new Date('2025-01-01');
   const endDate = new Date('2025-12-31');
@@ -24,7 +27,16 @@ describe('ProjectApplicationService', () => {
       delete: jest.fn(),
     };
 
-    projectApplicationService = new ProjectApplicationService(projectRepository);
+    wbsRepository = {
+      findById: jest.fn(),
+      findAll: jest.fn(),
+      findByProjectId: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
+
+    projectApplicationService = new ProjectApplicationService(projectRepository, wbsRepository);
   });
 
   describe('getProjectById', () => {
@@ -111,12 +123,19 @@ describe('ProjectApplicationService', () => {
     it('プロジェクトを新規作成できること', async () => {
       // findByName が null を返すようにモック（同名のプロジェクトが存在しない）
       projectRepository.findByName.mockResolvedValue(null);
-      
+
       // create が呼ばれたときに、IDを付与して返すようにモック
       projectRepository.create.mockImplementation((project) => {
         const newProject = { ...project };
         Object.defineProperty(newProject, 'id', { value: 'project-1' });
         return Promise.resolve(newProject);
+      });
+
+      // WBS作成もモック
+      wbsRepository.create.mockImplementation((wbs) => {
+        const newWbs = { ...wbs };
+        Object.defineProperty(newWbs, 'id', { value: 1 });
+        return Promise.resolve(newWbs);
       });
 
       // テスト対象メソッド実行

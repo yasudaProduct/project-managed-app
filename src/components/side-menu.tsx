@@ -19,12 +19,12 @@ import { useState } from "react";
 
 export function SideMenu() {
   const pathname = usePathname();
-  const wbsId = getWbsIdFromPath(pathname);
+  const projectId = getProjectIdFromPath(pathname);
   const [isOpen, setIsOpen] = useState(false);
 
-  function getWbsIdFromPath(pathname: string): string | null {
-    // /wbs/123, /wbs/123/xxx などにマッチ
-    const match = pathname.match(/^\/wbs\/([0-9]+)/);
+  function getProjectIdFromPath(pathname: string): string | null {
+    // /projects/xxx にマッチ
+    const match = pathname.match(/^\/projects\/([^/]+)/);
     return match ? match[1] : null;
   }
 
@@ -120,43 +120,43 @@ export function SideMenu() {
               インポートジョブ
             </Link>
 
-            {wbsId && (
+            {projectId && (
               <>
                 <hr className="my-4" />
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold">WBS管理</h3>
-                  <p className="text-sm text-muted-foreground">WBS管理</p>
+                  <h3 className="text-lg font-semibold">プロジェクト管理</h3>
+                  <p className="text-sm text-muted-foreground">プロジェクト管理</p>
                 </div>
                 <Link
-                  href={`/wbs/${wbsId}/dashboard`}
+                  href={`/projects/${projectId}/dashboard`}
                   className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
                 >
                   <Trello className="h-4 w-4" />
                   ダッシュボード
                 </Link>
                 <Link
-                  href={`/wbs/${wbsId}`}
+                  href={`/projects/${projectId}`}
                   className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
                 >
                   <Trello className="h-4 w-4" />
-                  WBS
+                  タスク管理
                 </Link>
                 <Link
-                  href={`/wbs/${wbsId}/ganttv2`}
+                  href={`/projects/${projectId}/ganttv2`}
                   className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
                 >
                   <Trello className="h-4 w-4" />
                   ガントチャートv2
                 </Link>
                 <Link
-                  href={`/wbs/${wbsId}/ganttv3`}
+                  href={`/projects/${projectId}/ganttv3`}
                   className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
                 >
                   <Trello className="h-4 w-4" />
                   ガントチャートv3
                 </Link>
                 <Link
-                  href={`/wbs/${wbsId}/history`}
+                  href={`/projects/${projectId}/history`}
                   className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
                 >
                   <History className="h-4 w-4" />

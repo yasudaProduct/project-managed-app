@@ -1,18 +1,21 @@
 // filepath: /Users/yuta/Develop/project-managed-app/src/__integration_tests__/applications/project-application-service.test.ts
 import { ProjectApplicationService } from '@/applications/projects/project-application-service';
 import { ProjectRepository } from '@/infrastructures/project-repository';
+import { WbsRepository } from '@/infrastructures/wbs-repository';
 import { cleanupTestData, testIds } from '../helpers';
 
 describe('ProjectApplicationService Integration Tests', () => {
   let projectApplicationService: ProjectApplicationService;
   let projectRepository: ProjectRepository;
+  let wbsRepository: WbsRepository;
   const startDate = new Date('2025-05-01');
   const endDate = new Date('2025-12-31');
 
   beforeAll(() => {
     // リポジトリと実際のアプリケーションサービスを準備
     projectRepository = new ProjectRepository();
-    projectApplicationService = new ProjectApplicationService(projectRepository);
+    wbsRepository = new WbsRepository();
+    projectApplicationService = new ProjectApplicationService(projectRepository, wbsRepository);
   });
 
   afterAll(async () => {

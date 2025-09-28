@@ -5,6 +5,8 @@ import type { Project as ProjectType } from "@/types/project";
 import { SYMBOL } from "@/types/symbol";
 import { ProjectStatus as ProjectStatusType} from "@/types/wbs";
 import { inject, injectable } from "inversify";
+import type { IWbsRepository } from "../wbs/iwbs-repository";
+import { Wbs } from "@/domains/wbs/wbs";
 
 export interface IProjectApplicationService {
     getProjectById(id: string): Promise<ProjectType | null>;
@@ -20,7 +22,10 @@ export interface IProjectApplicationService {
 @injectable()
 export class ProjectApplicationService implements IProjectApplicationService {
 
-    constructor(@inject(SYMBOL.IProjectRepository) private readonly projectRepository: IProjectRepository) {
+    constructor(
+        @inject(SYMBOL.IProjectRepository) private readonly projectRepository: IProjectRepository,
+        @inject(SYMBOL.IWbsRepository) private readonly wbsRepository: IWbsRepository
+    ) {
     }
 
     /**
@@ -79,6 +84,14 @@ export class ProjectApplicationService implements IProjectApplicationService {
         }
 
         const newProject = await this.projectRepository.create(project);
+
+        // プロジェクト作成時にWBSを自動作成
+        const wbs = Wbs.create({
+            name: project.name,  // WBS名はプロジェクト名と同一
+            projectId: newProject.id!,
+        });
+        await this.wbsRepository.create(wbs);
+
         return { success: true, id: newProject.id }
     }
 
@@ -88,16 +101,18 @@ export class ProjectApplicationService implements IProjectApplicationService {
      * @returns プロジェクト
      */
     public async updateProject(
-        args: { 
-            id: string; 
-            name?: string; 
-            description?: string; 
-            startDate?: Date; 
-            endDate?: Date; 
+        args: {
+            id: string;
+            name?: string;
+            description?: string;
+            startDate?: Date;
+            endDate?: Date;
             status?: ProjectStatusType
         }): Promise<{ success: boolean; error?: string; id?: string }> {
         const project: Project | null = await this.projectRepository.findById(args.id);
         if (!project) return { success: false, error: "プロジェクトが存在しません。" }
+
+        const oldName = project.name;
 
         if (args.name) project.updateName(args.name);
         if (args.description) project.updateDescription(args.description);
@@ -112,6 +127,22 @@ export class ProjectApplicationService implements IProjectApplicationService {
         }
 
         const udpatedProject = await this.projectRepository.update(project);
+
+        // プロジェクト名が変更された場合、最新のWBS名も更新
+        if (args.name && oldName !== args.name) {
+            const wbsList = await this.wbsRepository.findByProjectId(args.id);
+            if (wbsList && wbsList.length > 0) {
+                // 最新のWBSを取得（IDが大きいものが新しい）
+                const latestWbs = wbsList.reduce((latest, current) => {
+                    return current.id! > latest.id! ? current : latest;
+                });
+
+                // WBS名をプロジェクト名と同一に更新
+                latestWbs.updateName(args.name);
+                await this.wbsRepository.update(latestWbs);
+            }
+        }
+
         return { success: true, id: udpatedProject.id }
     }
 

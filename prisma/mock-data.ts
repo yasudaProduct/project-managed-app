@@ -108,12 +108,6 @@ export function getMockData(): MockData[] {
                     name: "新規機能開発A",
                     status: "ACTIVE",
                 },
-                {
-                    id: wbsId + 1,
-                    projectId: projectId,
-                    name: "新規機能開発B",
-                    status: "ACTIVE",
-                },
             ],
             wbsAssignee: [
                 {
