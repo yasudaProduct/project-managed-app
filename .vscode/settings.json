@@ -6,8 +6,8 @@
     "NOTE",
     "TODO",
     "WRN",
-    "[]",
-    "[X]"
+    "[ ]",
+    "[x]"
   ],
   "todo-tree.highlights.customHighlight": {
     "TODO": {
