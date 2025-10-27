@@ -79,11 +79,15 @@ export async function getAssigneeWorkloads(
 
     // データを取得
     const [workloads, warnings] = await Promise.all([
+
+      // 作業負荷を取得
       assigneeGanttService.getAssigneeWorkloads(
         wbsId,
         toUtcMidnight(startDate),
         toUtcMidnight(endDate)
       ),
+
+      // 警告を取得
       assigneeGanttService.getAssigneeWarnings(
         wbsId,
         toUtcMidnight(startDate),

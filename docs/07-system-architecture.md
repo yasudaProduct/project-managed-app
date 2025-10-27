@@ -115,6 +115,66 @@ graph TD
     INF1 --> |implements| APP2
 ```
 
+### インターフェイス（Ports）の配置と依存関係
+
+本プロジェクトではオニオンアーキテクチャに従い、「機能を横断できる抽象（インターフェイス/ポート）は内側のレイヤーに置き、具体は外側で実装」する方針です。配置場所と依存関係のルールを明記します。
+
+- 配置ポリシー（原則）
+  - アプリケーション層（UseCase/サービスの入口）
+    - ユースケースやアプリケーションサービスのインターフェイスを定義
+    - 例: `src/applications/*/*-application-service.ts` 内の `I*ApplicationService`
+    - 例: クエリ/コマンドハンドラのインターフェイス、バス等のポート
+  - ドメイン層（ビジネスルールの中心）
+    - リポジトリ、ファクトリ、ドメインサービスなど、ビジネスロジックが必要とするポートを定義
+    - 例: `src/domains/*/itask-repository.ts` の `ITaskRepository`
+  - インフラ層（外部技術詳細）
+    - インターフェイスは持たず、内側で定義されたポートを実装する具体クラスのみを配置
+    - 例: `src/infrastructures/*-repository.ts`, `src/infrastructures/**/**.repository.ts`
+
+- 依存関係ルール
+  - 依存の向きは常に内向き（UI → Application → Domain）。Infrastructure は Application/Domain のインターフェイスにのみ依存し、逆方向の依存は不可。
+  - Application は Domain のエンティティ/値オブジェクト/ドメインサービスおよびドメインのポート（例: Repository インターフェイス）に依存してよい。
+  - Domain は UI や Infrastructure に依存しない（フレームワーク非依存）。
+  - 依存性注入（DI）は `src/lib/inversify.config.ts` で行い、トークンは `src/types/symbol.ts` に集約。Infrastructure の実装を内側のポート（インターフェイス）にバインドする。
+
+補足（現状と整合性）:
+
+- 現在の実装では、一部のリポジトリインターフェイスが `src/applications/**` 配下に置かれています（例: `src/applications/projects/iproject-repository.ts` の `IProjectRepository`）。これは許容範囲ですが、原則としてはドメインに属するリポジトリポートは `src/domains/**` へ段階的に集約していきます。
+- DI の結合点は以下の通りです。
+  - トークン: `src/types/symbol.ts`
+  - 実装のバインド: `src/lib/inversify.config.ts`
+
+参考図（Ports の位置づけ）:
+
+```mermaid
+graph LR
+    subgraph UI
+        C[React/Next.js]
+    end
+
+    subgraph Application
+        AS[Application Service]
+        AP[(Ports: I*ApplicationService / Handlers)]
+    end
+
+    subgraph Domain
+        D[Entities/Domain Services]
+        DP[(Ports: Repository/Factory Interfaces)]
+    end
+
+    subgraph Infrastructure
+        R[Repository Impl]
+        A[Adapters/External API]
+    end
+
+    C --> AS
+    AS --> D
+    AS --> DP
+    AS --> AP
+    R -.implements.-> DP
+    A -.implements.-> AP
+```
+
 ## 3. 主要コンポーネント関連図
 
 ```mermaid
@@ -370,6 +430,7 @@ graph TB
 ## 9. 技術スタック詳細
 
 ### フロントエンド
+
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript
 - **UI Library**: React 19
@@ -380,6 +441,7 @@ graph TB
 - **Table**: TanStack Table
 
 ### バックエンド
+
 - **Runtime**: Node.js
 - **API**: Next.js API Routes
 - **ORM**: Prisma
@@ -387,12 +449,14 @@ graph TB
 - **DI Container**: Inversify
 
 ### インフラストラクチャ
+
 - **Container**: Docker
 - **Cache**: Redis (オプション)
 - **File Storage**: ローカルファイルシステム
 - **CI/CD**: GitHub Actions (想定)
 
 ### 開発ツール
+
 - **Testing**: Jest, Playwright
 - **Linting**: ESLint
 - **Build Tool**: Turbopack

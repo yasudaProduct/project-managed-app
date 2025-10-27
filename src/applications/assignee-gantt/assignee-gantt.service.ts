@@ -14,6 +14,16 @@ import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
 import { AssigneeWorkingCalendar } from '@/domains/calendar/assignee-working-calendar';
 
+// TODO: ロジックをドメインへ切り出す
+// 期間内のタスク配分アルゴリズム calculateDailyAllocations calculateTaskAllocationsForDate
+// タスクの期間判定(その日がタスク期間内か)
+// 警告（稼働可能日なし）の検出ロジック
+// 日付レンジ操作・時刻範囲の扱い（toYMDや分解ロジックの散在解消）
+
+/**
+ * 担当者ガントサービス
+ * 担当者の作業負荷を可視化するためのサービス
+ */
 @injectable()
 export class AssigneeGanttService implements IAssigneeGanttService {
   constructor(
@@ -23,6 +33,26 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: IWbsAssigneeRepository
   ) { }
 
+  /**
+   * 担当者の作業負荷を取得
+   * @param wbsId WBS ID
+   * @param startDate 開始日
+   * @param endDate 終了日
+   * @returns 担当者の作業負荷の配列
+   * @description
+   * 指定されたWBSに紐づく担当者ごとに、指定期間内の日別作業負荷を計算して返す
+   * 処理フロー：<br/>
+   * 1. WBSに紐づくタスクと担当者情報を取得 <br/>
+   * 2. 会社休日と担当者の個人予定を取得し、カレンダーに設定 <br/>
+   * 3. 各担当者について、以下を実施 <br/>
+   * 　a. 担当者に割り当てられたタスクを抽出 <br/>
+   * 　b. 担当者の個人予定を抽出 <br/>
+   * 　c. 指定期間内の日別にループし、以下を実施 <br/>
+   * 　　i. その日の稼働可能時間を計算（会社休日・個人予定・稼働率を考慮） <br/>
+   * 　　ii. その日にアサインされたタスクの配分を計算 <br/>
+   * 　　iii. 日別作業割り当てを作成 <br/>
+   * 4. 最終的に担当者別の作業負荷配列を返す <br/>
+   */
   async getAssigneeWorkloads(
     wbsId: number,
     startDate: Date,
@@ -38,6 +68,7 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       return [];
     }
 
+    // 個人予定と会社休日を取得
     const [userSchedules, companyHolidays] = await Promise.all([
       this.getUserSchedulesForAssignees(assignees, startDate, endDate),
       this.companyHolidayRepository.findByDateRange(startDate, endDate)
@@ -76,11 +107,22 @@ export class AssigneeGanttService implements IAssigneeGanttService {
   }
 
   /**
-   * 担当者別の作業負荷を取得
+   * 担当者別の警告を取得
    * @param wbsId 
    * @param startDate 
    * @param endDate 
    * @returns 
+   * @description
+   * 担当者に割り当てられたタスクの予定開始日〜終了日の期間内に<br/>
+   * 会社休日や個人予定を考慮した稼働可能日が存在しない場合に警告を返す
+   * 処理フロー：<br/>
+   * 1. WBSに紐づくタスクと担当者情報を取得 <br/>
+   * 2. 会社休日を取得し、カレンダーに設定 <br/>
+   * 3. 各タスクについて、予定開始日〜終了日の期間内に稼働可能日が存在するか判定 <br/>
+   * 　- 担当者が割り当てられている場合、個人予定も考慮した稼働可能時間の総和で判定 <br/>
+   * 　- 担当者が割り当てられていない場合、会社休日のみで判定 <br/>
+   * 4. 稼働可能日が存在しない場合、警告リストに追加 <br/>
+   * 5. 最終的に警告リストを返す <br/>
    */
   async getAssigneeWarnings(
     wbsId: number,
@@ -198,6 +240,14 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     return warnings;
   }
 
+  /**
+   * 担当者の作業負荷を取得
+   * @param wbsId 
+   * @param assigneeId 
+   * @param startDate 
+   * @param endDate 
+   * @returns 
+  */
   async getAssigneeWorkload(
     wbsId: number,
     assigneeId: string,
