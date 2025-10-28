@@ -1,5 +1,6 @@
 import { inject, injectable } from "inversify";
-import { AuthService, type IAuthRepository } from "@/domains/auth/auth-service";
+import { AuthService } from "@/domains/auth/auth-service";
+import type { IAuthRepository } from "@/applications/auth/iauth-repository";
 // import { User } from "@/domains/auth/user";
 import { UserSession } from "@/domains/auth/user-session";
 import { SYMBOL } from "@/types/symbol";

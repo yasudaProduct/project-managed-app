@@ -38,7 +38,7 @@ export class User {
         return new User(args);
     }
 
-    public static createFromDb(args: { id: string; name: string; displayName: string; email: string }): User {
+    public static createFromDb(args: { id: string; name: string; displayName: string; email: string; password?: string; createdAt?: Date; updatedAt?: Date }): User {
         return new User(args);
     }
 

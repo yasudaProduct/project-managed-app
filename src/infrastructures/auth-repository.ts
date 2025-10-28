@@ -1,7 +1,7 @@
 import { injectable } from "inversify";
 import prisma from "@/lib/prisma/prisma";
-import { IAuthRepository } from "@/domains/auth/auth-service";
-import { User } from "@/domains/auth/user";
+import type { IAuthRepository } from "@/applications/auth/iauth-repository";
+import { User } from "@/domains/user/user";
 import { UserSession } from "@/domains/auth/user-session";
 
 @injectable()
@@ -16,15 +16,15 @@ export class AuthRepository implements IAuthRepository {
             return null;
         }
 
-        return new User(
-            userData.id,
-            userData.email,
-            userData.name,
-            userData.displayName,
-            userData.password || undefined,
-            userData.createdAt,
-            userData.updatedAt
-        );
+        return User.createFromDb({
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            displayName: userData.displayName,
+            password: userData.password || undefined,
+            createdAt: userData.createdAt,
+            updatedAt: userData.updatedAt,
+        });
     }
 
     async findUserById(id: string): Promise<User | null> {
@@ -36,21 +36,21 @@ export class AuthRepository implements IAuthRepository {
             return null;
         }
 
-        return new User(
-            userData.id,
-            userData.email,
-            userData.name,
-            userData.displayName,
-            userData.password || undefined,
-            userData.createdAt,
-            userData.updatedAt
-        );
+        return User.createFromDb({
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            displayName: userData.displayName,
+            password: userData.password || undefined,
+            createdAt: userData.createdAt,
+            updatedAt: userData.updatedAt,
+        });
     }
 
     async createUser(user: User): Promise<User> {
         const userData = await prisma.users.create({
             data: {
-                id: user.id,
+                id: user.id!,
                 email: user.email,
                 name: user.name,
                 displayName: user.displayName,
@@ -58,15 +58,15 @@ export class AuthRepository implements IAuthRepository {
             }
         });
 
-        return new User(
-            userData.id,
-            userData.email,
-            userData.name,
-            userData.displayName,
-            userData.password || undefined,
-            userData.createdAt,
-            userData.updatedAt
-        );
+        return User.createFromDb({
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            displayName: userData.displayName,
+            password: userData.password || undefined,
+            createdAt: userData.createdAt,
+            updatedAt: userData.updatedAt,
+        });
     }
 
     async updateUser(user: User): Promise<User> {
@@ -80,15 +80,15 @@ export class AuthRepository implements IAuthRepository {
             }
         });
 
-        return new User(
-            userData.id,
-            userData.email,
-            userData.name,
-            userData.displayName,
-            userData.password || undefined,
-            userData.createdAt,
-            userData.updatedAt
-        );
+        return User.createFromDb({
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            displayName: userData.displayName,
+            password: userData.password || undefined,
+            createdAt: userData.createdAt,
+            updatedAt: userData.updatedAt,
+        });
     }
 
     async createSession(session: UserSession): Promise<UserSession> {

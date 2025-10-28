@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { container } from '@/lib/inversify.config'
 import { SYMBOL } from '@/types/symbol'
 import { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service'
-import { ImportJobType } from '@prisma/client'
+import type { ImportJobType } from '@/domains/import-job/import-job-enums'
 import type { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
 
 /**
@@ -93,6 +93,11 @@ export async function POST(request: NextRequest) {
     }
 
     const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
+
+    // 入力検証
+    if (type !== 'WBS' && type !== 'GEPPO') {
+      return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
+    }
 
     const job = await importJobService.createJob({
       type: type as ImportJobType,

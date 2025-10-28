@@ -1,4 +1,4 @@
-import { ImportJobType, ImportJobStatus } from './import-job-enums'
+import { ImportJobType, ImportJobStatus, ImportJobStatuses } from './import-job-enums'
 
 export interface ImportJobOptions {
   type: ImportJobType
@@ -42,7 +42,7 @@ export class ImportJob {
     return new ImportJob(
       '', // IDは永続化時に生成
       options.type,
-      ImportJobStatus.PENDING,
+      ImportJobStatuses.PENDING,
       options.createdBy ?? null,
       now,
       now,
@@ -54,16 +54,16 @@ export class ImportJob {
   }
 
   start(): void {
-    if (this.status !== ImportJobStatus.PENDING) {
+    if (this.status !== ImportJobStatuses.PENDING) {
       throw new Error('ジョブは開始可能な状態ではありません')
     }
-    this.status = ImportJobStatus.RUNNING
+    this.status = ImportJobStatuses.RUNNING
     this.startedAt = new Date()
     this.updatedAt = new Date()
   }
 
   updateProgress(processed: number, success: number, error: number): void {
-    if (this.status !== ImportJobStatus.RUNNING) {
+    if (this.status !== ImportJobStatuses.RUNNING) {
       throw new Error('実行中のジョブのみ進捗を更新できます')
     }
     this.processedRecords = processed
@@ -73,30 +73,30 @@ export class ImportJob {
   }
 
   complete(result: Record<string, unknown>): void {
-    if (this.status !== ImportJobStatus.RUNNING) {
+    if (this.status !== ImportJobStatuses.RUNNING) {
       throw new Error('実行中のジョブのみ完了できます')
     }
-    this.status = ImportJobStatus.COMPLETED
+    this.status = ImportJobStatuses.COMPLETED
     this.completedAt = new Date()
     this.result = result
     this.updatedAt = new Date()
   }
 
   fail(errorDetails: Record<string, unknown>): void {
-    if (this.status !== ImportJobStatus.RUNNING && this.status !== ImportJobStatus.PENDING) {
+    if (this.status !== ImportJobStatuses.RUNNING && this.status !== ImportJobStatuses.PENDING) {
       throw new Error('実行中または待機中のジョブのみ失敗にできます')
     }
-    this.status = ImportJobStatus.FAILED
+    this.status = ImportJobStatuses.FAILED
     this.completedAt = new Date()
     this.errorDetails = errorDetails
     this.updatedAt = new Date()
   }
 
   cancel(): void {
-    if (this.status === ImportJobStatus.COMPLETED || this.status === ImportJobStatus.FAILED) {
+    if (this.status === ImportJobStatuses.COMPLETED || this.status === ImportJobStatuses.FAILED) {
       throw new Error('完了または失敗したジョブはキャンセルできません')
     }
-    this.status = ImportJobStatus.CANCELLED
+    this.status = ImportJobStatuses.CANCELLED
     this.completedAt = new Date()
     this.updatedAt = new Date()
   }
@@ -107,19 +107,19 @@ export class ImportJob {
   }
 
   get isRunning(): boolean {
-    return this.status === ImportJobStatus.RUNNING
+    return this.status === ImportJobStatuses.RUNNING
   }
 
   get isCompleted(): boolean {
-    return this.status === ImportJobStatus.COMPLETED
+    return this.status === ImportJobStatuses.COMPLETED
   }
 
   get isFailed(): boolean {
-    return this.status === ImportJobStatus.FAILED
+    return this.status === ImportJobStatuses.FAILED
   }
 
   get isCancelled(): boolean {
-    return this.status === ImportJobStatus.CANCELLED
+    return this.status === ImportJobStatuses.CANCELLED
   }
 
   get isFinished(): boolean {

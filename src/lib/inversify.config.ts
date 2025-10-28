@@ -35,7 +35,7 @@ import type { IWbsQueryRepository } from "@/applications/wbs/query/wbs-query-rep
 import { WbsQueryRepository } from "@/infrastructures/wbs/wbs-query-repository";
 import type { IAuthApplicationService } from "@/applications/auth/auth-application-service";
 import { AuthApplicationService } from "@/applications/auth/auth-application-service";
-import type { IAuthRepository } from "@/domains/auth/auth-service";
+import type { IAuthRepository } from "@/applications/auth/iauth-repository";
 import { AuthRepository } from "@/infrastructures/auth-repository";
 
 // Geppo関連
@@ -173,7 +173,7 @@ container.bind<UserMappingService>(SYMBOL.UserMappingService).to(UserMappingServ
 container.bind<TaskMappingService>(SYMBOL.TaskMappingService).to(TaskMappingService).inSingletonScope();
 
 // インフラストラクチャ
-container.bind<PrismaClient>(SYMBOL.PrismaClient).toConstantValue(prisma);
+container.bind<PrismaClient>(SYMBOL.PrismaClient).toConstantValue(prisma as unknown as PrismaClient);
 
 // ファクトリ
 container.bind<ITaskFactory>(SYMBOL.ITaskFactory).to(TaskFactory).inSingletonScope();

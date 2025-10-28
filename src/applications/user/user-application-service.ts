@@ -1,6 +1,6 @@
 import { User } from "@/types/user";
 import { inject, injectable } from "inversify";
-import { IUserRepository } from "./iuser-repositroy";
+import type { IUserRepository } from "./iuser-repositroy";
 import { SYMBOL } from "@/types/symbol";
 
 export interface IUserApplicationService {
@@ -24,8 +24,6 @@ export class UserApplicationService implements IUserApplicationService {
             name: user.name,
             email: user.email,
             displayName: user.displayName,
-            createdAt: new Date(), // 実際はドメインオブジェクトから取得
-            updatedAt: new Date(), // 実際はドメインオブジェクトから取得
         }));
     }
 
@@ -38,8 +36,6 @@ export class UserApplicationService implements IUserApplicationService {
             name: domainUser.name,
             email: domainUser.email,
             displayName: domainUser.displayName,
-            createdAt: new Date(), // 実際はドメインオブジェクトから取得
-            updatedAt: new Date(), // 実際はドメインオブジェクトから取得
         };
     }
 
@@ -57,8 +53,6 @@ export class UserApplicationService implements IUserApplicationService {
                 name: domainUser.name,
                 email: domainUser.email,
                 displayName: domainUser.displayName,
-                createdAt: new Date(),
-                updatedAt: new Date(),
             };
 
             return { success: true, user };
@@ -85,8 +79,6 @@ export class UserApplicationService implements IUserApplicationService {
                 name: updatedDomainUser.name,
                 email: updatedDomainUser.email,
                 displayName: updatedDomainUser.displayName,
-                createdAt: new Date(),
-                updatedAt: new Date(),
             };
 
             return { success: true, user };

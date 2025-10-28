@@ -3,5 +3,7 @@ import { User } from "@/domains/user/user";
 export interface IUserRepository {
     findAll(): Promise<User[]>;
     findByWbsDisplayName(wbsDisplayName: string): Promise<User[]>;
-    save(user: User): Promise<User>;
+    findById(id: string): Promise<User | null>;
+    create(user: { id: string; name: string; email: string; displayName: string }): Promise<User>;
+    update(id: string, user: { name: string; email: string; displayName: string }): Promise<User>;
 }

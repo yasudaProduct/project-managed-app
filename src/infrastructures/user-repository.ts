@@ -23,16 +23,34 @@ export class UserRepository implements IUserRepository {
         return usersDb.map(this.createUser);
     }
 
-    async save(user: User): Promise<User> {
+    async findById(id: string): Promise<User | null> {
+        const userDb = await prisma.users.findUnique({
+            where: { id },
+        });
+        return userDb ? this.createUser(userDb) : null;
+    }
+
+    async create(user: { id: string; name: string; email: string; displayName: string }): Promise<User> {
         const userDb = await prisma.users.create({
             data: {
-                id: user.id!,
+                id: user.id,
                 name: user.name,
                 displayName: user.displayName,
                 email: user.email,
             },
         });
+        return this.createUser(userDb);
+    }
 
+    async update(id: string, user: { name: string; email: string; displayName: string }): Promise<User> {
+        const userDb = await prisma.users.update({
+            where: { id },
+            data: {
+                name: user.name,
+                displayName: user.displayName,
+                email: user.email,
+            },
+        });
         return this.createUser(userDb);
     }
 
