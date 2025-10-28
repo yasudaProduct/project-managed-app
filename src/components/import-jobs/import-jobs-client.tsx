@@ -45,11 +45,11 @@ type GeppoImportError = {
   projectId?: string;
   date: string;
   errorType:
-    | "USER_NOT_FOUND"
-    | "PROJECT_NOT_FOUND"
-    | "TASK_NOT_FOUND"
-    | "INVALID_DATA"
-    | "DB_ERROR";
+  | "USER_NOT_FOUND"
+  | "PROJECT_NOT_FOUND"
+  | "TASK_NOT_FOUND"
+  | "INVALID_DATA"
+  | "DB_ERROR";
   message: string;
   originalData?: unknown;
 };
@@ -63,7 +63,7 @@ type GeppoImportValidation = {
   taskMapping: Record<string, unknown>;
   statistics: Record<string, unknown>;
 };
-
+// TODO: app/import-jobs/配下に移動する
 export default function ImportJobsClient() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
@@ -74,7 +74,7 @@ export default function ImportJobsClient() {
     setLoading(true);
 
     try {
-      const res = await fetch(`/api/import-jobs`, { cache: "no-store" });
+      const res = await fetch(`/api/import-jobs`, { cache: "no-store" }); // TODO: server action対応
       if (res.ok) {
         const data = await res.json();
         setJobs(data as Job[]);
@@ -112,7 +112,7 @@ export default function ImportJobsClient() {
             )
           );
         }
-      } catch {}
+      } catch { }
     };
     eventSource.onerror = () => {
       eventSource.close();
@@ -126,12 +126,12 @@ export default function ImportJobsClient() {
       status === "COMPLETED"
         ? "bg-green-100 text-green-700"
         : status === "FAILED"
-        ? "bg-red-100 text-red-700"
-        : status === "RUNNING"
-        ? "bg-blue-100 text-blue-700"
-        : status === "CANCELLED"
-        ? "bg-gray-100 text-gray-700"
-        : "bg-yellow-100 text-yellow-700";
+          ? "bg-red-100 text-red-700"
+          : status === "RUNNING"
+            ? "bg-blue-100 text-blue-700"
+            : status === "CANCELLED"
+              ? "bg-gray-100 text-gray-700"
+              : "bg-yellow-100 text-yellow-700";
 
     const hasErrors =
       job.errorCount > 0 ||
@@ -142,9 +142,8 @@ export default function ImportJobsClient() {
 
     return (
       <Badge
-        className={`${color} rounded ${
-          isClickable ? "cursor-pointer hover:opacity-80" : ""
-        }`}
+        className={`${color} rounded ${isClickable ? "cursor-pointer hover:opacity-80" : ""
+          }`}
         onClick={isClickable ? () => toggleRowExpansion(job.id) : undefined}
       >
         {statusName(status)}
@@ -156,14 +155,14 @@ export default function ImportJobsClient() {
     return status === "COMPLETED"
       ? "完了"
       : status === "FAILED"
-      ? "失敗"
-      : status === "RUNNING"
-      ? "実行中"
-      : status === "CANCELLED"
-      ? "キャンセル"
-      : status === "PENDING"
-      ? "実行待ち"
-      : "不明";
+        ? "失敗"
+        : status === "RUNNING"
+          ? "実行中"
+          : status === "CANCELLED"
+            ? "キャンセル"
+            : status === "PENDING"
+              ? "実行待ち"
+              : "不明";
   };
 
   const startJob = async (id: string) => {
@@ -356,8 +355,8 @@ export default function ImportJobsClient() {
                           {job.totalRecords > 0
                             ? `${job.processedRecords}/${job.totalRecords} 成功:${job.successCount} エラー:${job.errorCount}`
                             : job.status === "RUNNING"
-                            ? "実行中..."
-                            : "-"}
+                              ? "実行中..."
+                              : "-"}
                         </TableCell>
                         <TableCell>
                           {new Date(job.createdAt).toLocaleString()}
@@ -394,14 +393,14 @@ export default function ImportJobsClient() {
                             )}
                             {(job.status === "PENDING" ||
                               job.status === "RUNNING") && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => cancelJob(job.id)}
-                              >
-                                <XCircle className="h-4 w-4" /> キャンセル
-                              </Button>
-                            )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => cancelJob(job.id)}
+                                >
+                                  <XCircle className="h-4 w-4" /> キャンセル
+                                </Button>
+                              )}
                           </div>
                         </TableCell>
                       </TableRow>

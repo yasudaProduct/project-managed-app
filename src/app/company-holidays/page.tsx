@@ -56,7 +56,7 @@ export default function CompanyHolidaysPage() {
   const fetchHolidays = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/company-holidays");
+      const response = await fetch("/api/company-holidays");// TODO:server actionに変更
       if (response.ok) {
         const data = await response.json();
         setHolidays(data);
@@ -79,7 +79,7 @@ export default function CompanyHolidaysPage() {
     if (!confirm("この休日を削除しますか？")) return;
 
     try {
-      const response = await fetch(`/api/company-holidays/${id}`, {
+      const response = await fetch(`/api/company-holidays/${id}`, {// TODO:server actionに変更
         method: "DELETE",
       });
 

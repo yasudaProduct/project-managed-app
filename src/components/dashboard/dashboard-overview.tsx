@@ -11,6 +11,7 @@ interface DashboardOverviewProps {
   };
 }
 
+// TODO: ダッシュボード関連のコンポーネントの配置場所について、他で利用がなければapp/配下に移動を検討
 export default function DashboardOverview({ stats }: DashboardOverviewProps) {
   const overviewCards = [
     {

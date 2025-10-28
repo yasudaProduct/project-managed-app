@@ -196,8 +196,51 @@ function handleUserCreated(e: UserCreatedEvent) {}
 
 - 公開関数は戻り値型を明示。内部は推論任せ可。
 
-### 非同期/エラー処理
+## Next.js
 
-### モジュール/エクスポート
+### Pageファイルのルール
 
-### 代表的アンチパターン
+- 命名/配置
+  - ルートはディレクトリkebab-case、page.tsx固定（app/users/page.tsx）。
+  - UI断片はページ直下にコンポーネントへ分離（PascalCase.tsx）。
+
+- Props定義（params/searchParams）
+  - 型は明示。paramsはstringのみ（Next仕様）。searchParamsはstring|string[]|undefined。
+  - zodでsearchParamsを境界バリデーションし、内部型へナローイング。
+
+- アンチパターン
+  - 大量ロジックをpageに直書き（サービス層へ分離）。
+  - searchParamsを未検証で使用。
+
+#### コンポーネントの配置（page.tsxからの切り出し）
+
+- 原則
+  - そのページ特有のUIは「同じルートセグメント配下」に配置する。
+  - 推奨: 同階層に _components フォルダを作り、その中に置く。
+    - 例: app/users/page.tsx → app/users/_components/UserTable.tsx
+    - 下線始まりは慣例（ルーティング対象外であることを示す目的）。Next.jsの必須要件ではない。
+
+- 共有度別の配置ルール
+  - ページ専用（1ページでのみ使用）
+    - app/xxx/_components/ 配下に配置。
+  - 機能横断（同一機能内の複数ページで共有）
+    - app/xxx/_components/ 配下に配置し、同機能内から参照。
+  - 全体共有（アプリ全体で再利用）
+    - src/components/ 配下に昇格して配置（プロジェクト共通のUIライブラリ）。
+
+- サーバー/クライアント境界
+  - page.tsxはサーバーコンポーネント（'use client'禁止）。
+  - クライアントが必要なUIは子コンポーネント側で 'use client' を宣言して分離。
+  - server-only な実装はpage側またはサーバーコンポーネント側に保持し、クライアントからは直接importしない。
+
+- インポート方針
+  - 同一セグメント内は相対パスでOK。
+  - 他セグメントの私有コンポーネントへは依存しない（共有したい場合は昇格してから参照）。
+  - 全体共有はパスエイリアス（@/components/...）を使用。
+
+### バリデーション
+
+- 入力値（クエリパラメータ、フォームデータ、APIリクエストボディなど）は必ずバリデーションを行う。
+- Zodを使用してスキーマ定義とバリデーションを行う。
+
+### Server Action
