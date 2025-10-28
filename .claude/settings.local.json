@@ -20,7 +20,8 @@
       "Bash(npm run lint:*)",
       "Bash(true)",
       "Bash(mkdir:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "additionalDirectories": [

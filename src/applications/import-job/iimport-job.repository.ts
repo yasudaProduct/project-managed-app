@@ -1,5 +1,5 @@
 import { ImportJob, ImportJobProgress } from '@/domains/import-job/import-job'
-import { ImportJobType, ImportJobStatus } from '@prisma/client'
+import { ImportJobType, ImportJobStatus } from '@/domains/import-job/import-job-enums'
 
 export interface IImportJobRepository {
   create(job: ImportJob): Promise<ImportJob>

@@ -2,7 +2,7 @@ import { injectable, inject } from 'inversify'
 import { SYMBOL } from '@/types/symbol'
 import type { IImportJobRepository } from './iimport-job.repository'
 import { ImportJob, ImportJobOptions, ImportJobProgress } from '@/domains/import-job/import-job'
-import { ImportJobStatus } from '@prisma/client'
+import { ImportJobStatus } from '@/domains/import-job/import-job-enums'
 
 export interface IImportJobApplicationService {
   createJob(options: ImportJobOptions & { createdBy: string }): Promise<ImportJob>

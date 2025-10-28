@@ -1,53 +1,38 @@
 "use server"
 
-import prisma from "@/lib/prisma/prisma";
 import { revalidatePath } from "next/cache"
+import { container } from "@/lib/inversify.config"
+import { IUserApplicationService } from "@/applications/user/user-application-service";
+import { SYMBOL } from "@/types/symbol";
+
+const userApplicationService = container.get<IUserApplicationService>(SYMBOL.IUserApplicationService);
 
 export async function getUsers() {
-    return await prisma.users.findMany({
-        orderBy: {
-            createdAt: 'asc',
-        },
-    });
+    return await userApplicationService.getAllUsers();
 }
 
-// TODO: サービス呼び出し
 export async function getUserById(id: string) {
-    return await prisma.users.findUnique({
-        where: {
-            id: id,
-        },
-    });
+    return await userApplicationService.getUserById(id);
 }
 
-// TODO: サービス呼び出し
 export async function createUser(userData: { id: string, name: string; email: string, displayName: string }) {
     console.log(userData);
-    const newUser = await prisma.users.create({
-        data: {
-            id: userData.id,
-            name: userData.name,
-            email: userData.email,
-            displayName: userData.displayName,
-        },
-    });
+    const result = await userApplicationService.createUser(userData);
 
-    revalidatePath("/users")
-    return { success: true, user: newUser }
+    if (result.success) {
+        revalidatePath("/users");
+    }
+
+    return result;
 }
 
-// TODO: サービス呼び出し
 export async function updateUser(id: string, userData: { name: string; email: string, displayName: string }) {
-    const updatedUser = await prisma.users.update({
-        where: { id: id },
-        data: {
-            name: userData.name,
-            email: userData.email,
-            displayName: userData.displayName,
-        },
-    });
+    const result = await userApplicationService.updateUser(id, userData);
 
-    revalidatePath("/users")
-    revalidatePath(`/users/${id}`)
-    return { success: true, user: updatedUser }
+    if (result.success) {
+        revalidatePath("/users");
+        revalidatePath(`/users/${id}`);
+    }
+
+    return result;
 }

@@ -1,4 +1,4 @@
-import { ImportJobType, ImportJobStatus } from '@prisma/client'
+import { ImportJobType, ImportJobStatus } from './import-job-enums'
 
 export interface ImportJobOptions {
   type: ImportJobType

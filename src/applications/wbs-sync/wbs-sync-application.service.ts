@@ -1,29 +1,28 @@
 import { injectable, inject } from 'inversify';
-import type { IWbsSyncService, PreviewResult } from './IWbsSyncService';
-import { ExcelWbs, SyncChanges, SyncResult, SyncError, SyncErrorType, ValidationError } from './ExcelWbs';
+import type { IWbsSyncService, PreviewResult } from '@/domains/sync/IWbsSyncService';
+import { ExcelWbs, SyncChanges, SyncResult, SyncError, SyncErrorType, ValidationError } from '@/domains/sync/ExcelWbs';
 import { Task } from '@/domains/task/task';
-import { SyncStatus, type PrismaClient } from '@prisma/client';
-import { WbsDataMapper } from './WbsDataMapper';
+import { SyncStatus, type DatabaseTransaction } from '@/domains/sync/sync-enums';
+import { WbsDataMapper } from '@/domains/sync/WbsDataMapper';
 import type { IExcelWbsRepository } from '@/applications/excel-sync/IExcelWbsRepository';
 import type { ISyncLogRepository } from '@/applications/excel-sync/ISyncLogRepository';
-// import prisma from '@/lib/prisma';
 import { SYMBOL } from '@/types/symbol';
-import { Phase } from '../phase/phase';
-import { PhaseCode } from '../phase/phase-code';
+import { Phase } from '@/domains/phase/phase';
+import { PhaseCode } from '@/domains/phase/phase-code';
 import type { IPhaseRepository } from '@/applications/task/iphase-repository';
 import type { IUserRepository } from '@/applications/user/iuser-repositroy';
-import { User } from '../user/user';
-import { WbsAssignee } from '../wbs/wbs-assignee';
+import { User } from '@/domains/user/user';
+import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import { randomString } from '@/utils/utils';
 import type { ITaskRepository } from '@/applications/task/itask-repository';
-import { TaskNo } from '../task/value-object/task-id';
-import { TaskStatus } from '../task/value-object/project-status';
+import { TaskNo } from '@/domains/task/value-object/task-id';
+import { TaskStatus } from '@/domains/task/value-object/project-status';
 
-type PrismaTransaction = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];
+// Removed PrismaTransaction type - using DatabaseTransaction from domain
 
 @injectable()
-export class WbsSyncService implements IWbsSyncService {
+export class WbsSyncApplicationService implements IWbsSyncService {
   constructor(
     @inject(SYMBOL.IExcelWbsRepository) private excelWbsRepository: IExcelWbsRepository,
     @inject(SYMBOL.ISyncLogRepository) private syncLogRepository: ISyncLogRepository,
@@ -324,7 +323,7 @@ export class WbsSyncService implements IWbsSyncService {
   }
 
   // フェーズを作成
-  private async ensurePhases(tx: PrismaTransaction, wbsId: number, changes: SyncChanges): Promise<Map<string, Record<string, unknown>>> {
+  private async ensurePhases(tx: DatabaseTransaction, wbsId: number, changes: SyncChanges): Promise<Map<string, Record<string, unknown>>> {
     const phaseMap = new Map<string, Record<string, unknown>>();
 
     // 既存のフェーズを取得

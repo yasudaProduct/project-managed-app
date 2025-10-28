@@ -9,6 +9,7 @@ export interface IPhaseApplicationService {
     getAllPhaseTemplates(): Promise<PhaseType[] | null>;
     createPhaseTemplate(phase: { name: string, code: string, seq: number }): Promise<{ success: boolean, phase?: PhaseType }>;
     updatePhaseTemplate(phase: { id: number, name: string, code: string, seq: number }): Promise<{ success: boolean, phase?: PhaseType }>;
+    getPhaseById(id: number): Promise<PhaseType | null>;
 }
 
 /**
@@ -98,6 +99,23 @@ export class PhaseApplicationService implements IPhaseApplicationService {
                 seq: updatedPhaseDb.seq,
                 code: updatedPhaseDb.code.value(),
             }
+        };
+    }
+
+    /**
+     * フェーズをIDで取得
+     * @param id フェーズID
+     * @returns フェーズ
+     */
+    public async getPhaseById(id: number): Promise<PhaseType | null> {
+        const phase = await this.phaseRepository.findById(id);
+        if (!phase) return null;
+
+        return {
+            id: phase.id!,
+            name: phase.name,
+            seq: phase.seq,
+            code: phase.code.value(),
         };
     }
 }

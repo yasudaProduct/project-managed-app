@@ -45,6 +45,7 @@ import type { IGeppoRepository } from "@/applications/geppo/repositories/igeppo.
 import { GeppoPrismaRepository } from "@/infrastructures/geppo/geppo-prisma.repository";
 import { IUserRepository } from "@/applications/user/iuser-repositroy";
 import { UserRepository } from "@/infrastructures/user-repository";
+import { IUserApplicationService, UserApplicationService } from "@/applications/user/user-application-service";
 
 // Work Records関連
 import type { IWorkRecordRepository } from "@/applications/work-record/repositories/iwork-record.repository";
@@ -72,13 +73,11 @@ import { TaskDependencyService } from "@/applications/task-dependency/task-depen
 
 // WBS Sync関連
 import type { IWbsSyncService } from "@/domains/sync/IWbsSyncService";
-import { WbsSyncService } from "@/domains/sync/WbsSyncService";
+import { WbsSyncApplicationService } from "@/applications/wbs-sync/wbs-sync-application.service";
 import type { IExcelWbsRepository } from "@/applications/excel-sync/IExcelWbsRepository";
 import { ExcelWbsRepository } from "@/infrastructures/sync/ExcelWbsRepository";
 import type { ISyncLogRepository } from "@/applications/excel-sync/ISyncLogRepository";
 import { SyncLogRepository } from "@/infrastructures/sync/SyncLogRepository";
-import type { IWbsSyncApplicationService } from "@/applications/excel-sync/IWbsSyncApplicationService";
-import { WbsSyncApplicationService } from "@/applications/excel-sync/WbsSyncApplicationService";
 
 // Calendar関連
 import type { ICompanyHolidayRepository } from "@/applications/calendar/icompany-holiday-repository";
@@ -97,7 +96,6 @@ import { NotificationEventDetector } from "@/applications/notification/Notificat
 // Task Scheduling関連
 import type { ITaskSchedulingApplicationService } from "@/applications/task-scheduling/itask-scheduling-application.service";
 import { TaskSchedulingApplicationService } from "@/applications/task-scheduling/task-scheduling-application.service";
-import { TaskSchedulingService } from "@/domains/task-scheduling/task-scheduling.service";
 
 // Prisma
 import { PrismaClient } from '@prisma/client';
@@ -129,10 +127,11 @@ container.bind<IPhaseApplicationService>(SYMBOL.IPhaseApplicationService).to(Pha
 container.bind<IAuthApplicationService>(SYMBOL.IAuthApplicationService).to(AuthApplicationService).inSingletonScope();
 container.bind<IGeppoApplicationService>(SYMBOL.IGeppoApplicationService).to(GeppoApplicationService).inSingletonScope();
 container.bind<IWorkRecordApplicationService>(SYMBOL.IWorkRecordApplicationService).to(WorkRecordApplicationService).inSingletonScope();
+container.bind<IUserApplicationService>(SYMBOL.IUserApplicationService).to(UserApplicationService).inSingletonScope();
 container.bind<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService).to(GeppoImportApplicationService).inSingletonScope();
 container.bind<IProgressHistoryApplicationService>(SYMBOL.IProgressHistoryApplicationService).to(ProgressHistoryApplicationService).inSingletonScope();
 container.bind<TaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDependencyService).inSingletonScope();
-container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(WbsSyncApplicationService).inSingletonScope();
+container.bind<IWbsSyncService>(SYMBOL.IWbsSyncService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<IMilestoneApplicationService>(SYMBOL.IMilestoneApplicationService).to(MilestoneApplicationService).inSingletonScope();
 container.bind<EvmApplicationService>(SYMBOL.IEvmApplicationService).to(EvmApplicationService).inSingletonScope();
 container.bind<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService).to(ImportJobApplicationService).inSingletonScope();
@@ -144,8 +143,6 @@ container.bind<ITaskSchedulingApplicationService>(SYMBOL.ITaskSchedulingApplicat
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
 container.bind<ScheduleGenerate>(SYMBOL.ScheduleGenerate).to(ScheduleGenerate).inSingletonScope();
-container.bind<IWbsSyncService>(SYMBOL.IWbsSyncService).to(WbsSyncService).inSingletonScope();
-container.bind<TaskSchedulingService>(SYMBOL.TaskSchedulingService).to(TaskSchedulingService).inSingletonScope();
 
 // リポジトリ
 container.bind<IProjectRepository>(SYMBOL.IProjectRepository).to(ProjectRepository).inSingletonScope();

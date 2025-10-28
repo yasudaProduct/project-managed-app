@@ -28,7 +28,10 @@ export interface ITaskApplicationService {
     getTaskAll(wbsId: number): Promise<WbsTask[]>;
     createTask(command: CreateTaskCommand): Promise<{ success: boolean; id?: number; error?: string }>;
     updateTask(args: { wbsId: number; updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }>;
-    // deleteTask(id: string): Promise<{ success: boolean; error?: string; id?: string }>;
+    deleteTask(id: number): Promise<{ success: boolean; error?: string }>;
+    getTaskStatusCount(wbsId: number): Promise<{ todo: number; inProgress: number; completed: number }>;
+    getTaskProgressByPhase(wbsId: number): Promise<Array<{ phase: string; total: number; todo: number; inProgress: number; completed: number }>>;
+    getKosuSummary(wbsId: number): Promise<Record<string, { kijun: number; yotei: number; jisseki: number }>>;
 }
 
 @injectable()
@@ -182,5 +185,120 @@ export class TaskApplicationService implements ITaskApplicationService {
 
         return { success: true, id: result.taskNo!.getValue() };
 
+    }
+
+    public async deleteTask(id: number): Promise<{ success: boolean; error?: string }> {
+        try {
+            const task = await this.taskRepository.findById(id);
+            if (!task) {
+                return { success: false, error: "タスクが存在しません" };
+            }
+
+            await this.taskRepository.delete(id);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error instanceof Error ? error.message : "タスクの削除に失敗しました" };
+        }
+    }
+
+    public async getTaskStatusCount(wbsId: number): Promise<{ todo: number; inProgress: number; completed: number }> {
+        const tasks = await this.taskRepository.findByWbsId(wbsId);
+
+        const statusCount = {
+            todo: 0,
+            inProgress: 0,
+            completed: 0,
+        };
+
+        tasks.forEach(task => {
+            const status = task.status.getStatus();
+            switch (status) {
+                case 'NOT_STARTED':
+                    statusCount.todo++;
+                    break;
+                case 'IN_PROGRESS':
+                    statusCount.inProgress++;
+                    break;
+                case 'COMPLETED':
+                    statusCount.completed++;
+                    break;
+            }
+        });
+
+        return statusCount;
+    }
+
+    public async getTaskProgressByPhase(wbsId: number): Promise<Array<{ phase: string; total: number; todo: number; inProgress: number; completed: number }>> {
+        // このメソッドの実装には PhaseRepository と Task の統合的な操作が必要
+        // 簡略化版として実装（実際の実装では適切なリポジトリ連携が必要）
+        const tasks = await this.taskRepository.findByWbsId(wbsId);
+
+        // フェーズごとにタスクをグループ化
+        const phaseGroups = new Map<number, Task[]>();
+        tasks.forEach(task => {
+            if (task.phaseId) {
+                if (!phaseGroups.has(task.phaseId)) {
+                    phaseGroups.set(task.phaseId, []);
+                }
+                phaseGroups.get(task.phaseId)!.push(task);
+            }
+        });
+
+        const progressData: Array<{ phase: string; total: number; todo: number; inProgress: number; completed: number }> = [];
+
+        for (const [phaseId, phaseTasks] of phaseGroups) {
+            const statusCount = { todo: 0, inProgress: 0, completed: 0 };
+
+            phaseTasks.forEach(task => {
+                const status = task.status.getStatus();
+                switch (status) {
+                    case 'NOT_STARTED':
+                        statusCount.todo++;
+                        break;
+                    case 'IN_PROGRESS':
+                        statusCount.inProgress++;
+                        break;
+                    case 'COMPLETED':
+                        statusCount.completed++;
+                        break;
+                }
+            });
+
+            progressData.push({
+                phase: `Phase ${phaseId}`, // 実際はPhaseRepositoryからフェーズ名を取得
+                total: phaseTasks.length,
+                ...statusCount
+            });
+        }
+
+        return progressData;
+    }
+
+    public async getKosuSummary(wbsId: number): Promise<Record<string, { kijun: number; yotei: number; jisseki: number }>> {
+        const tasks = await this.taskRepository.findByWbsId(wbsId);
+
+        const phaseSummary: Record<string, { kijun: number; yotei: number; jisseki: number }> = {};
+
+        tasks.forEach(task => {
+            const phaseName = `Phase ${task.phaseId || '未分類'}`;
+            if (!phaseSummary[phaseName]) {
+                phaseSummary[phaseName] = {
+                    kijun: 0,
+                    yotei: 0,
+                    jisseki: 0,
+                };
+            }
+
+            // ドメインオブジェクトから工数を取得
+            const kijunKosu = task.getKijunKosus();
+            const yoteiKosu = task.getYoteiKosus();
+            const jissekiKosu = task.getJissekiKosus();
+
+            if (kijunKosu) phaseSummary[phaseName].kijun += kijunKosu;
+            if (yoteiKosu) phaseSummary[phaseName].yotei += yoteiKosu;
+            if (jissekiKosu) phaseSummary[phaseName].jisseki += jissekiKosu;
+        });
+
+        return phaseSummary;
     }
 }

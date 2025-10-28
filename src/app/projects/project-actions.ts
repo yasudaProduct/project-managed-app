@@ -1,9 +1,8 @@
 "use server"
 
 import { IProjectApplicationService } from "@/applications/projects/project-application-service"
-import prisma from "@/lib/prisma/prisma"
 import { SYMBOL } from "@/types/symbol"
-import { ProjectStatus as ProjectStatusPrisma } from "@prisma/client"
+import { ProjectStatus } from "@/types/wbs"
 import { revalidatePath } from "next/cache"
 import { container } from "@/lib/inversify.config"
 import { Project } from "@/types/project"
@@ -16,14 +15,7 @@ const projectApplicationService = container.get<IProjectApplicationService>(SYMB
  * @returns プロジェクト
  */
 export async function getProjectById(id: string) {
-    const project = await prisma.projects.findUnique({
-        where: { id: id },
-    })
-    if (!project) {
-        return null
-    }
-    // データベースからのUTC日付はそのまま返す（クライアント側で表示変換）
-    return project
+    return await projectApplicationService.getProjectById(id);
 }
 
 /**
@@ -85,7 +77,7 @@ export async function updateProject(
         description?: string
         startDate?: string
         endDate?: string
-        status: ProjectStatusPrisma
+        status: ProjectStatus
     },
 ): Promise<{ success: boolean, error?: string, id?: string, project?: Project }> {
 
