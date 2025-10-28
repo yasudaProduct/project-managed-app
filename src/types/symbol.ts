@@ -1,7 +1,7 @@
 export const SYMBOL = {
     // アプリケーションサービス
     IProjectApplicationService: Symbol.for('IProjectApplicationService'),
-    IUserApplicationService: Symbol.for('IUserApplicationService')
+    IUserApplicationService: Symbol.for('IUserApplicationService'),
     IWbsApplicationService: Symbol.for('IWbsApplicationService'),
     ITaskApplicationService: Symbol.for('ITaskApplicationService'),
     IScheduleGenerateService: Symbol.for('IScheduleGenerateService'),

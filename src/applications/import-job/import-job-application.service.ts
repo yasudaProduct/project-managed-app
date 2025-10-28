@@ -2,7 +2,7 @@ import { injectable, inject } from 'inversify'
 import { SYMBOL } from '@/types/symbol'
 import type { IImportJobRepository } from './iimport-job.repository'
 import { ImportJob, ImportJobOptions, ImportJobProgress } from '@/domains/import-job/import-job'
-import { ImportJobStatus } from '@/domains/import-job/import-job-enums'
+import { ImportJobStatuses } from '@/domains/import-job/import-job-enums'
 
 export interface IImportJobApplicationService {
   createJob(options: ImportJobOptions & { createdBy: string }): Promise<ImportJob>
@@ -182,7 +182,7 @@ export class ImportJobApplicationService implements IImportJobApplicationService
    * @returns 
    */
   async getPendingJobs(): Promise<ImportJob[]> {
-    return await this.importJobRepository.findByStatus(ImportJobStatus.PENDING)
+    return await this.importJobRepository.findByStatus(ImportJobStatuses.PENDING)
   }
 
   /**
@@ -190,7 +190,7 @@ export class ImportJobApplicationService implements IImportJobApplicationService
    * @returns 
    */
   async getRunningJobs(): Promise<ImportJob[]> {
-    return await this.importJobRepository.findByStatus(ImportJobStatus.RUNNING)
+    return await this.importJobRepository.findByStatus(ImportJobStatuses.RUNNING)
   }
 
   /**
