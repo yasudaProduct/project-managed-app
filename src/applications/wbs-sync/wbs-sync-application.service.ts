@@ -322,36 +322,6 @@ export class WbsSyncApplicationService implements IWbsSyncService {
     return { users: newUsers, assignees: newAssignees };
   }
 
-  // フェーズを作成
-  private async ensurePhases(tx: DatabaseTransaction, wbsId: number, changes: SyncChanges): Promise<Map<string, Record<string, unknown>>> {
-    const phaseMap = new Map<string, Record<string, unknown>>();
-
-    // 既存のフェーズを取得
-    const existingPhases = await tx.wbsPhase.findMany({
-      where: { wbsId },
-    });
-
-    for (const phase of existingPhases) {
-      phaseMap.set(phase.name, phase);
-    }
-
-    // 新しいフェーズを作成
-    const uniquePhases = new Set<{ name: string, code: string }>();
-    [...changes.toAdd, ...changes.toUpdate].forEach(excelWbs => {
-      // フェーズが存在しない場合は追加
-      if (excelWbs.PHASE && !phaseMap.has(excelWbs.PHASE)) {
-        // ExcelWbsのWBS_IDとのハイフンより左側をフェーズコードとする
-        const code = excelWbs.WBS_ID.split('-')[0];
-        uniquePhases.add({ name: excelWbs.PHASE, code });
-      }
-    });
-
-    // フェーズを作成
-    // seq 採番は将来の永続化時に使用予定
-
-    return phaseMap;
-  }
-
   private buildTaskDomainFromExcel(args: {
     excelWbs: ExcelWbs,
     wbsId: number,
