@@ -228,21 +228,12 @@ function GeppoPageContent() {
                 className="flex items-center space-x-1"
               >
                 <div
-                  className={`w-2 h-2 rounded-full ${
-                    connectionStatus ? "bg-green-500" : "bg-red-500"
-                  }`}
+                  className={`w-2 h-2 rounded-full ${connectionStatus ? "bg-green-500" : "bg-red-500"
+                    }`}
                 />
                 <span>{connectionStatus ? "接続済み" : "接続エラー"}</span>
               </Badge>
             )}
-          </div>
-          <div className="flex items-center space-x-4">
-            <Link href="/work-records/geppo-import">
-              <Button>
-                <Upload className="h-4 w-4" />
-                月報データ取込
-              </Button>
-            </Link>
           </div>
         </div>
       </div>

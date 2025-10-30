@@ -114,6 +114,9 @@ import type { IImportJobRepository } from '@/applications/import-job/iimport-job
 import { ImportJobPrismaRepository } from '@/infrastructures/import-job/import-job-prisma.repository';
 import type { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service';
 import { ImportJobApplicationService } from '@/applications/import-job/import-job-application.service';
+import { IWbsSyncApplicationService } from '@/applications/excel-sync/IWbsSyncApplicationService';
+import { WbsSyncApplicationService as ExcelWbsSyncApplicationService } from '@/applications/excel-sync/WbsSyncApplicationService';
+
 
 const container: Container = new Container();
 // アプリケーションサービス
@@ -139,6 +142,8 @@ container.bind<INotificationService>(SYMBOL.INotificationService).to(Notificatio
 container.bind<PushNotificationService>('PushNotificationService').to(PushNotificationService).inSingletonScope();
 container.bind<NotificationEventDetector>('NotificationEventDetector').to(NotificationEventDetector).inSingletonScope();
 container.bind<ITaskSchedulingApplicationService>(SYMBOL.ITaskSchedulingApplicationService).to(TaskSchedulingApplicationService).inSingletonScope();
+// Excel WBS Sync Application Service
+container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(ExcelWbsSyncApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
