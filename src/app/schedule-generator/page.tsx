@@ -1,4 +1,4 @@
-import { ScheduleGenerator } from "@/components/wbs/schedule-generator";
+import { ScheduleGenerator } from "@/app/schedule-generator/schedule-generator";
 import { getProjects } from "./action";
 
 export default async function ScheduleGeneratorPage() {

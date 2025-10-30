@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2 } from "lucide-react";
-import { CompanyHolidayForm } from "@/components/company-holidays/company-holiday-form";
+import { CompanyHolidayForm } from "@/app/company-holidays/company-holiday-form";
 
 type CompanyHolidayType = "NATIONAL" | "COMPANY" | "SPECIAL";
 

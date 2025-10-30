@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, useState, useRef, useEffect } from "react";
-import { Button } from "../ui/button";
+import { Button } from "../../components/ui/button";
 import { parse } from "csv-parse/sync";
 import {
   generateSchedule,
@@ -13,7 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
+} from "../../components/ui/select";
 import { ProjectStatus } from "@/types/wbs";
 import { getProjectStatusName } from "@/utils/utils";
 import { formatDate } from "@/utils/date-util";

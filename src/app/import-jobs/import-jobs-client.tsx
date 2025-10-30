@@ -63,7 +63,7 @@ type GeppoImportValidation = {
   taskMapping: Record<string, unknown>;
   statistics: Record<string, unknown>;
 };
-// TODO: app/import-jobs/配下に移動する
+
 export default function ImportJobsClient() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);

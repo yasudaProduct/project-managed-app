@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
-import ImportJobsClient from "@/components/import-jobs/import-jobs-client";
+import ImportJobsClient from "@/app/import-jobs/import-jobs-client";
 
 export default function ImportJobsPage() {
   return (

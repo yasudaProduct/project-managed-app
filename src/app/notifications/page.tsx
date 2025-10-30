@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { NotificationPageClient } from './NotificationPageClient';
+import { NotificationPageClient } from './notification-page-client';
 
 export default function NotificationsPage() {
   return (
