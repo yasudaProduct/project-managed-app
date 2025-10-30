@@ -1,8 +1,8 @@
 import { getDashboardStats } from "./dashboard-actions";
-import DashboardOverview from "@/components/dashboard/dashboard-overview";
-import UpcomingDeadlines from "@/components/dashboard/upcoming-deadlines";
-import RecentActivity from "@/components/dashboard/recent-activity";
-import ActiveProjectsList from "@/components/dashboard/active-projects-list";
+import DashboardOverview from "@/app/dashboard/_components/dashboard-overview";
+import UpcomingDeadlines from "@/app/dashboard/_components/upcoming-deadlines";
+import RecentActivity from "@/app/dashboard/_components/recent-activity";
+import ActiveProjectsList from "@/app/dashboard/_components/active-projects-list";
 
 export default async function DashboardPage() {
   const dashboardData = await getDashboardStats();

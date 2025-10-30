@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getProjectById } from "../../project-actions";
 import { getLatestWbsByProjectId } from "../wbs/wbs-actions";
 import { Loader2 } from "lucide-react";
-import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
+import { DashboardOverview } from "@/app/dashboard/_components/dashboard-overview";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
