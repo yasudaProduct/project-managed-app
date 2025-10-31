@@ -8,38 +8,7 @@ import { SYMBOL } from '@/types/symbol'
 export class WorkRecordPrismaRepository implements IWorkRecordRepository {
   constructor(
     @inject(SYMBOL.PrismaClient) private prisma: PrismaClient
-  ) {}
-
-  async findByDateRange(userId: string, startDate: Date, endDate: Date): Promise<WorkRecord[]> {
-    try {
-      const records = await this.prisma.workRecord.findMany({
-        where: {
-          userId,
-          date: {
-            gte: startDate,
-            lte: endDate
-          }
-        },
-        orderBy: {
-          date: 'asc'
-        }
-      })
-
-      return records.map(record => 
-        WorkRecord.createFromDb({
-          id: record.id,
-          userId: record.userId,
-          taskId: record.taskId || undefined,
-          startDate: record.date,
-          endDate: record.date,
-          manHours: record.hours_worked.toNumber()
-        })
-      )
-    } catch (error) {
-      console.error('Failed to find work records by date range:', error)
-      throw new Error('作業実績の取得に失敗しました')
-    }
-  }
+  ) { }
 
   async bulkCreate(workRecords: WorkRecord[]): Promise<void> {
     try {
@@ -109,23 +78,6 @@ export class WorkRecordPrismaRepository implements IWorkRecordRepository {
     }
   }
 
-  async deleteByDateRange(userId: string, startDate: Date, endDate: Date): Promise<number> {
-    try {
-      const result = await this.prisma.workRecord.deleteMany({
-        where: {
-          userId,
-          date: {
-            gte: startDate,
-            lte: endDate
-          }
-        }
-      })
-      return result.count
-    } catch (error) {
-      console.error('Failed to delete work records by date range:', error)
-      throw new Error('作業実績の削除に失敗しました')
-    }
-  }
 
   async deleteByUserAndDateRange(userIds: string[], startDate: Date, endDate: Date): Promise<number> {
     try {

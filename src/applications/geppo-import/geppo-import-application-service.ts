@@ -20,7 +20,6 @@ import { Geppo, GeppoSearchFilters } from '@/domains/geppo/types'
 export interface IGeppoImportApplicationService {
   validateImportData(options: GeppoImportOptions): Promise<GeppoImportValidation>
   executeImport(options: GeppoImportOptions): Promise<GeppoImportResult>
-  getImportPreview(options: GeppoImportOptions): Promise<GeppoImportPreview>
 }
 
 @injectable()
@@ -210,41 +209,6 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
     } catch (error) {
       console.error('Failed to execute import:', error)
       throw new Error(error instanceof Error ? error.message : 'インポート実行中にエラーが発生しました')
-    }
-  }
-
-  async getImportPreview(options: GeppoImportOptions): Promise<GeppoImportPreview> {
-    try {
-      const validation = await this.validateImportData(options)
-
-      // サンプルレコードを生成（最初の10件）
-      let geppoRecords = await this.getGeppoRecords(options.targetMonth)
-      if (options.targetProjectNames && options.targetProjectNames.length > 0) {
-        geppoRecords = await this.projectMappingService.filterGeppoByTargetProjects(
-          geppoRecords,
-          options.targetProjectNames
-        )
-      }
-
-      const { workRecords } = await this.convertGeppoToWorkRecords(geppoRecords.slice(0, 10))
-      const sampleRecords = this.convertWorkRecordsToImportRecords(workRecords)
-
-      // サマリー統計を作成
-      const summary = {
-        totalWorkRecords: validation.statistics.expectedWorkRecords,
-        byProject: new Map<string, number>(),
-        byUser: new Map<string, number>(),
-        byDate: new Map<string, number>()
-      }
-
-      return {
-        validation,
-        sampleRecords,
-        summary
-      }
-    } catch (error) {
-      console.error('Failed to get import preview:', error)
-      throw new Error(error instanceof Error ? error.message : 'プレビュー取得中にエラーが発生しました')
     }
   }
 

@@ -43,21 +43,6 @@ export async function executeGeppoImport(options: GeppoImportOptions): Promise<G
 }
 
 /**
- * インポートプレビューを取得
- * @param options 
- * @returns 
- */
-export async function previewGeppoImport(options: GeppoImportOptions): Promise<GeppoImportPreview> {
-  try {
-    const service = container.get<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService)
-    return await service.getImportPreview(options)
-  } catch (error) {
-    console.error('Failed to get geppo import preview:', error)
-    throw new Error('プレビュー取得に失敗しました')
-  }
-}
-
-/**
  * インポート可能プロジェクト一覧を取得
  * @param targetMonth 
  * @returns 
