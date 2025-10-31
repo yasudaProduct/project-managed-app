@@ -1,4 +1,4 @@
-import { TaskSchedulingResult } from '@/domains/task-scheduling/task-scheduling.service';
+import { TaskSchedulingResult } from "./task-scheduling-application.service";
 
 export interface ITaskSchedulingApplicationService {
   calculateWbsTaskSchedules(wbsId: number): Promise<TaskSchedulingResult[]>;
