@@ -162,24 +162,24 @@ export default async function ProjectPage({
 
         {/* ヘッダメニュー */}
         <div className="mt-2 flex flex-row items-center">
-          <Link href={`/projects/${project.id}/phase/new`}>
+          <Link href={`/wbs/${latestWbs.id}/phase/new`}>
             <Button className="bg-white text-black">
               <CirclePlus className="h-4 w-4" />
               <Trello className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href={`/projects/${project.id}/phase`}>
+          <Link href={`/wbs/${latestWbs.id}/phase`}>
             <Button className="bg-white text-black ml-2">
               <Trello className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href={`/projects/${project.id}/assignee/new`}>
+          <Link href={`/wbs/${latestWbs.id}/assignee/new`}>
             <Button className="bg-white text-black ml-2">
               <CirclePlus className="h-4 w-4" />
               <Users className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href={`/projects/${project.id}/assignee`}>
+          <Link href={`/wbs/${latestWbs.id}/assignee`}>
             <Button className="bg-white text-black ml-2">
               <Users className="h-4 w-4" />
             </Button>
@@ -199,7 +199,7 @@ export default async function ProjectPage({
             }))}
           />
           <WbsImportJobButtons wbsId={latestWbs.id} wbsName={latestWbs.name} />
-          <Link href={`/projects/${project.id}/task-scheduling`}>
+          <Link href={`/wbs/${latestWbs.id}/task-scheduling`}>
             <Button className="bg-white text-black ml-2">
               <Calendar className="h-4 w-4" />
               スケジュール計算
