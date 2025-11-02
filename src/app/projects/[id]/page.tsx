@@ -246,7 +246,12 @@ export default async function ProjectPage({
             </TabsList>
             <TabsContent value="summary">
               <ProjectInfoCard
-                project={project}
+                project={{
+                  description: project.description ?? null,
+                  status: project.status,
+                  startDate: project.startDate,
+                  endDate: project.endDate,
+                }}
                 phases={phases}
                 assignees={assignees || []}
                 buffers={buffers}

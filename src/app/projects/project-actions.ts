@@ -14,7 +14,7 @@ const projectApplicationService = container.get<IProjectApplicationService>(SYMB
  * @param id プロジェクトID
  * @returns プロジェクト
  */
-export async function getProjectById(id: string) {
+export async function getProjectById(id: string): Promise<Project | null> {
     return await projectApplicationService.getProjectById(id);
 }
 

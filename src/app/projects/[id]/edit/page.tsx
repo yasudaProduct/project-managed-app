@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { ProjectForm } from "../../project-form";
-import { Projects } from "@prisma/client";
 import { getProjectById } from "../../project-actions";
 export default async function EditProjectPage({
   params,
@@ -9,7 +8,7 @@ export default async function EditProjectPage({
 }) {
   const { id: projectId } = await params;
 
-  const project: Projects | null = await getProjectById(projectId);
+  const project = await getProjectById(projectId);
 
   if (!project) {
     notFound();
