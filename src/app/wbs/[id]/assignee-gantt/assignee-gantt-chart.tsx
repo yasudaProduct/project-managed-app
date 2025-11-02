@@ -17,8 +17,8 @@ import {
   ChevronRight,
   AlertTriangle,
 } from "lucide-react";
-import { GanttHeader } from "@/components/assignee-gantt/gantt-header";
-import { GanttRow } from "@/components/assignee-gantt/gantt-row";
+import { GanttHeader } from "./_components/gantt-header";
+import { GanttRow } from "./_components/gantt-row";
 import { getAssigneeWorkloads } from "@/app/actions/assignee-gantt-actions";
 import {
   Sheet,
