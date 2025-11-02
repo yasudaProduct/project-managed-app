@@ -1,10 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { EvmChart } from '@/components/evm/evm-chart';
-import { EvmProjectList } from '@/components/evm/evm-project-list';
-import { EvmSummaryCards } from '@/components/evm/evm-summary-cards';
-import { getEvmDashboardData } from './evm-actions';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { EvmChart } from "@/app/evm/_components/evm-chart";
+import { EvmProjectList } from "@/app/evm/_components/evm-project-list";
+import { EvmSummaryCards } from "@/app/evm/_components/evm-summary-cards";
+import { getEvmDashboardData } from "./evm-actions";
 
 export default async function EvmPage() {
   let data;
@@ -13,9 +13,8 @@ export default async function EvmPage() {
   try {
     data = await getEvmDashboardData();
   } catch (err) {
-    error = err instanceof Error ? err.message : '不明なエラーが発生しました';
+    error = err instanceof Error ? err.message : "不明なエラーが発生しました";
   }
-
 
   if (error) {
     return (

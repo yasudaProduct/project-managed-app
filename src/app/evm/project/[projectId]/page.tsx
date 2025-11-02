@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, TrendingUp, TrendingDown } from "lucide-react";
-import { EvmChart } from "@/components/evm/evm-chart";
+import { EvmChart } from "@/app/evm/_components/evm-chart";
 import Link from "next/link";
 import { getProjectEvmData } from "../../evm-actions";
 
