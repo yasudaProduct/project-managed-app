@@ -158,6 +158,26 @@ const geppoData = [
         day21: 0, day22: 0, day23: 0, day24: 0, day25: 0,
         day26: 0, day27: 0, day28: 0, day29: 0, day30: 0,
         day31: 0
+    },
+    {
+        MEMBER_ID: "dummy01",
+        GEPPO_YYYYMM: formatGEPPO_YYYYMM(baseDate),
+        ROW_NO: geppoRowNo++,
+        COMPANY_NAME: dummyCOMPANY_NAME,
+        MEMBER_NAME: dummyMEMBER_NAME,
+        PROJECT_ID: "インポート検証",
+        PROJECT_SUB_ID: dummyPROJECT_SUB_ID,
+        WBS_NO: "D1-0001",
+        WBS_NAME: dummyWBS_NAME,
+        WORK_NAME: "見積もり作成",
+        WORK_STATUS: "進行中",
+        day01: 0, day02: 2, day03: 0, day04: 0, day05: 0,
+        day06: 0, day07: 0, day08: 0, day09: 2, day10: 0,
+        day11: 0, day12: 0, day13: 0, day14: 0, day15: 0,
+        day16: 0, day17: 0, day18: 0, day19: 0, day20: 0,
+        day21: 0, day22: 0, day23: 0, day24: 0, day25: 0,
+        day26: 0, day27: 0, day28: 0, day29: 0, day30: 0,
+        day31: 0
     }
 ]
 
