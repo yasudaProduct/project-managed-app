@@ -1,4 +1,5 @@
 import { AssigneeWorkload } from '@/domains/assignee-workload/assignee-workload';
+import { WorkloadWarning } from '@/domains/assignee-workload/workload-warning.service';
 
 export interface IAssigneeGanttService {
   /**
@@ -36,14 +37,5 @@ export interface IAssigneeGanttService {
     wbsId: number,
     startDate: Date,
     endDate: Date
-  ): Promise<{
-    taskId: number;
-    taskNo: string;
-    taskName: string;
-    assigneeId?: string;
-    assigneeName?: string;
-    periodStart?: Date;
-    periodEnd?: Date;
-    reason: 'NO_WORKING_DAYS';
-  }[]>;
+  ): Promise<WorkloadWarning[]>;
 }

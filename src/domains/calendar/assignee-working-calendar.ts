@@ -14,7 +14,7 @@ export interface UserSchedule {
 
 /**
  * 担当者の稼働カレンダー
- * @description 担当者の稼働カレンダーは、担当者固有の稼働時間・休暇と会社既定の休日を考慮した営業日に応じて工数を案分する期間です。
+ * @description 担当者の稼働カレンダーは、担当者固有の稼働時間・休暇と会社既定の休日を考慮した稼働可能時間を計算するクラスです。
  */
 export class AssigneeWorkingCalendar {
   constructor(
@@ -23,6 +23,11 @@ export class AssigneeWorkingCalendar {
     private readonly userSchedules: UserSchedule[]
   ) { }
 
+  /**
+   * 稼働可能な日かを判定
+   * @param date 日付（YYYY-MM-DD）
+   * @returns 稼働可能な日の場合はtrue、それ以外はfalse
+   */
   isWorkingDay(date: Date): boolean {
     // 1. 会社既定の休日チェック
     if (this.companyCalendar.isCompanyHoliday(date)) {
@@ -45,9 +50,8 @@ export class AssigneeWorkingCalendar {
 
   /**
    * 稼働可能時間を取得
-   * @param date 
-   * @returns 
-   * @description 稼働可能時間 = 基準時間 - 個人予定
+   * @param date 日付
+   * @returns 稼働可能時間
    */
   getAvailableHours(date: Date): number {
     if (!this.isWorkingDay(date)) {
@@ -61,10 +65,16 @@ export class AssigneeWorkingCalendar {
     const userSchedule = this.getUserScheduleForDate(date);
     const scheduledHours = userSchedule ? this.getScheduledHours(userSchedule) : 0;
 
+    // 稼働可能時間 = 基準時間 - 個人予定の時間
     const availableHours = Math.max(0, standardHours - scheduledHours);
     return availableHours;
   }
 
+  /**
+   * 日付に対応する個人予定を取得
+   * @param date 日付
+   * @returns 個人予定
+   */
   private getUserScheduleForDate(date: Date): UserSchedule | undefined {
     const dateString = this.formatDateString(date);
     return this.userSchedules.find(schedule => {
