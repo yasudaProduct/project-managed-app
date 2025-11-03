@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Target, Edit, Trash2 } from "lucide-react";
 import { Milestone } from "@/types/wbs";
 import { MilestoneModal } from "@/components/milestone/milestone-modal";
-import { deleteMilestone } from "@/app/wbs/[id]/milestone-actions";
+import { deleteMilestone } from "@/app/wbs/[id]/actions/milestone-actions";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog,

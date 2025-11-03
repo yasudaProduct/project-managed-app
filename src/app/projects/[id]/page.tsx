@@ -1,12 +1,12 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getProjectById } from "../project-actions";
+import { getProjectById } from "../actions";
 import { getLatestWbsByProjectId } from "./wbs/wbs-actions";
-import { getWbsBuffers } from "@/app/wbs/[id]/wbs-actions";
-import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
+import { getWbsBuffers } from "@/app/wbs/[id]/actions/wbs-actions";
+import { getWbsPhases } from "@/app/wbs/[id]/actions/wbs-phase-actions";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
-import { getTaskAll } from "@/app/wbs/[id]/wbs-task-actions";
-import { getMilestones } from "@/app/wbs/[id]/milestone-actions";
+import { getTaskAll } from "@/app/wbs/[id]/actions/wbs-task-actions";
+import { getMilestones } from "@/app/wbs/[id]/actions/milestone-actions";
 import {
   BarChart3,
   CalendarCheck,

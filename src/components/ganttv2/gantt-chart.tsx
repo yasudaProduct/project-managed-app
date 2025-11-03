@@ -8,7 +8,7 @@ import { Target, Edit } from "lucide-react";
 import { cn } from "@/utils/utils";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { MilestoneModal } from "@/components/milestone/milestone-modal";
-import { updateTask } from "@/app/wbs/[id]/wbs-task-actions";
+import { updateTask } from "@/app/wbs/[id]/actions/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
 import { formatDateToLocalString } from "./gantt-utils";
 import {

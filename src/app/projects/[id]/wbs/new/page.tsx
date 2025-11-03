@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { WbsForm } from "@/app/projects/[id]/wbs/wbs-form";
-import { getProjectById } from "@/app/projects/project-actions";
+import { getProjectById } from "@/app/projects/actions";
 
 export default async function NewWbsPage({
   params,

@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import { getAssignees, getWbsById } from "@/app/wbs/[id]/wbs-actions";
+import { getAssignees, getWbsById } from "@/app/wbs/[id]/actions/wbs-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   getTaskStatusCount,
   getTaskProgressByPhase,
   getKosuSummary,
-} from "../wbs-task-actions";
+} from "../actions/wbs-task-actions";
 import { Assignee } from "@/types/wbs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -30,7 +30,7 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TaskModal } from "@/components/wbs/task-modal";
-import { getMilestones } from "../milestone-actions";
+import { getMilestones } from "../actions/milestone-actions";
 import { formatDate } from "@/utils/date-util";
 
 export default async function DashboardPage({

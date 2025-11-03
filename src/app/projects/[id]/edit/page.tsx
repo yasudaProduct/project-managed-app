@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ProjectForm } from "../../project-form";
-import { getProjectById } from "../../project-actions";
+import { getProjectById } from "../../actions";
 export default async function EditProjectPage({
   params,
 }: {

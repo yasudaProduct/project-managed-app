@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { PhaseForm } from "../../phase/phase.form";
 import { toast } from "@/hooks/use-toast";
-import { deleteWbsPhase } from "../wbs-phase-actions";
+import { deleteWbsPhase } from "../actions/wbs-phase-actions";
 
 export type WbsPhase = {
   id: number;

@@ -1,7 +1,7 @@
 "use server"
 
 import prisma from '@/lib/prisma/prisma'
-import { WbsAssignee } from './assignee/columns'
+import { WbsAssignee } from '../assignee/columns'
 
 export async function getWbsAssignees(wbsId: number): Promise<WbsAssignee[]> {
     const assignees = await prisma.wbsAssignee.findMany({

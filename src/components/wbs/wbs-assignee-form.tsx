@@ -25,9 +25,9 @@ import {
 import {
   createWbsAssignee,
   updateWbsAssignee,
-} from "@/app/wbs/[id]/wbs-actions";
+} from "@/app/wbs/[id]/actions/wbs-actions";
 import { toast } from "@/hooks/use-toast";
-import { getUsers } from "@/app/users/user-actions";
+import { getUsers } from "@/app/users/actions";
 import { User } from "@/app/users/columns";
 import { Input } from "../ui/input";
 

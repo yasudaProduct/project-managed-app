@@ -20,7 +20,7 @@ import {
   updatePhase,
 } from "@/app/wbs/phase/phase-actions";
 import { toast } from "@/hooks/use-toast";
-import { updateWbsPhase } from "../[id]/wbs-phase-actions";
+import { updateWbsPhase } from "../[id]/actions/wbs-phase-actions";
 
 const formSchema = z.object({
   name: z.string().min(1, {

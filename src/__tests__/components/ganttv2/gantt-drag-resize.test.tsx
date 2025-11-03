@@ -110,7 +110,9 @@ describe("GanttV2Component - ドラッグ/リサイズ", () => {
       fireEvent.mouseUp(document, { clientX: 140, clientY: 100 });
     });
 
-    const { updateTask } = await import("@/app/wbs/[id]/wbs-task-actions");
+    const { updateTask } = await import(
+      "@/app/wbs/[id]/actions/wbs-task-actions"
+    );
     await waitFor(() => {
       expect(updateTask).toHaveBeenCalled();
     });
@@ -166,7 +168,9 @@ describe("GanttV2Component - ドラッグ/リサイズ", () => {
       fireEvent.mouseUp(document, { clientX: 180, clientY: 100 });
     });
 
-    const { updateTask } = await import("@/app/wbs/[id]/wbs-task-actions");
+    const { updateTask } = await import(
+      "@/app/wbs/[id]/actions/wbs-task-actions"
+    );
     await waitFor(() => {
       expect(updateTask).toHaveBeenCalled();
     });

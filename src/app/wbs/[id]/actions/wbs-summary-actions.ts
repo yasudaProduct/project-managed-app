@@ -8,8 +8,8 @@ import { AllocationCalculationMode } from "@/applications/wbs/query/allocation-c
 import { WbsSummaryResult } from "@/applications/wbs/query/wbs-summary-result";
 
 export async function getWbsSummary(
-  projectId: string, 
-  wbsId: number, 
+  projectId: string,
+  wbsId: number,
   calculationMode: AllocationCalculationMode = AllocationCalculationMode.BUSINESS_DAY_ALLOCATION
 ): Promise<WbsSummaryResult> {
   try {

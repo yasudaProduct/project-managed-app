@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getUserById } from "@/app/users/user-actions";
+import { getUserById } from "@/app/users/actions";
 
 export default async function UserPage({
   params,

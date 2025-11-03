@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
-import { deleteWbsAssignee } from "../wbs-assignee-actions";
+import { deleteWbsAssignee } from "../actions/wbs-assignee-actions";
 import Link from "next/link";
 
 export type WbsAssignee = {

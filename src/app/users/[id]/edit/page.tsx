@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { UserForm } from "@/app/users/user-form";
-import { getUserById } from "@/app/users/user-actions";
+import { getUserById } from "@/app/users/actions";
 
 export default async function EditUserPage({
   params,

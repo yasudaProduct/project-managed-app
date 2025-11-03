@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Milestone } from "@/types/wbs";
 import { MilestoneModal } from "./milestone-modal";
-import { deleteMilestone } from "@/app/wbs/[id]/milestone-actions";
+import { deleteMilestone } from "@/app/wbs/[id]/actions/milestone-actions";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Target, Calendar, Clock } from "lucide-react";
 import {

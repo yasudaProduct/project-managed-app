@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { createWbs, updateWbs } from "@/app/wbs/[id]/wbs-actions";
+import { createWbs, updateWbs } from "@/app/wbs/[id]/actions/wbs-actions";
 
 const formSchema = z.object({
   name: z.string().min(2, {

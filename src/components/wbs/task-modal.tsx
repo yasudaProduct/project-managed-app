@@ -33,11 +33,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getTaskStatusName } from "@/utils/utils";
 import { WbsTask } from "@/types/wbs";
-import { createTask, updateTask } from "@/app/wbs/[id]/wbs-task-actions";
+import {
+  createTask,
+  updateTask,
+} from "@/app/wbs/[id]/actions/wbs-task-actions";
 import { toast } from "@/hooks/use-toast";
 import { DatePicker } from "../date-picker";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
-import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
+import { getWbsPhases } from "@/app/wbs/[id]/actions/wbs-phase-actions";
 import {
   CalendarDays,
   User,

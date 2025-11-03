@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createWbsPhase } from "@/app/wbs/[id]/wbs-actions";
+import { createWbsPhase } from "@/app/wbs/[id]/actions/wbs-actions";
 import { toast } from "@/hooks/use-toast";
 import { PhaseTemplate } from "@/types/phase";
 import { getPhaseTemplates } from "@/app/wbs/phase/phase-actions";

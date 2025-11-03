@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { createUser, updateUser } from "@/app/users/user-actions";
+import { createUser, updateUser } from "@/app/users/actions";
 
 const formSchema = z.object({
   id: z.string().min(1, {

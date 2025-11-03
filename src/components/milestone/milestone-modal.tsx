@@ -25,7 +25,7 @@ import {
   createMilestone,
   updateMilestone,
   deleteMilestone,
-} from "@/app/wbs/[id]/milestone-actions";
+} from "@/app/wbs/[id]/actions/milestone-actions";
 import { toast } from "@/hooks/use-toast";
 import { Trash2, Calendar } from "lucide-react";
 

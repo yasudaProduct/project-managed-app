@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { getUsers } from "@/app/users/user-actions";
+import { getUsers } from "@/app/users/actions";
 import { DataTable } from "@/components/data-table";
 import { columns } from "@/app/users/columns";
 

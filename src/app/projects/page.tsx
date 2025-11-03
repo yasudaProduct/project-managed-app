@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { getProjectAll } from "./project-actions";
+import { getProjectAll } from "./actions";
 import { columns } from "./columns";
 import { getProjectStatusName } from "@/utils/utils";
 import { formatDate } from "@/utils/date-util";

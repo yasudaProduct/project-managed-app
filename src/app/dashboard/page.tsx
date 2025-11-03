@@ -1,4 +1,4 @@
-import { getDashboardStats } from "./dashboard-actions";
+import { getDashboardStats } from "./actions";
 import DashboardOverview from "@/app/dashboard/_components/dashboard-overview";
 import UpcomingDeadlines from "@/app/dashboard/_components/upcoming-deadlines";
 import RecentActivity from "@/app/dashboard/_components/recent-activity";

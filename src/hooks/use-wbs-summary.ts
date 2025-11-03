@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { WbsSummaryResult } from "@/applications/wbs/query/wbs-summary-result";
-import { getWbsSummary } from "@/app/wbs/[id]/wbs-summary-actions";
+import { getWbsSummary } from "@/app/wbs/[id]/actions/wbs-summary-actions";
 
 /**
  * WBSの集計を取得するフック

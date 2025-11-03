@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { getWbsAssignees } from "../wbs-assignee-actions";
+import { getWbsAssignees } from "../actions/wbs-assignee-actions";
 import { columns } from "./columns";
 
 export default async function WbsAssigneePage({

@@ -6,7 +6,7 @@ import {
   checkGeppoConnection,
   getGeppoFilterOptions,
   searchGeppoWorkEntries,
-} from "./geppo-actions";
+} from "./actions";
 import {
   Card,
   CardContent,
@@ -39,13 +39,11 @@ import {
   Users,
   AlertTriangle,
   Loader2,
-  Upload,
 } from "lucide-react";
 import { Project } from "@/types/project";
 import { User } from "@/types/user";
 import { Geppo } from "@/domains/geppo/types";
 import { MonthPicker } from "@/components/month-picker";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 interface SearchFilters {
@@ -228,8 +226,9 @@ function GeppoPageContent() {
                 className="flex items-center space-x-1"
               >
                 <div
-                  className={`w-2 h-2 rounded-full ${connectionStatus ? "bg-green-500" : "bg-red-500"
-                    }`}
+                  className={`w-2 h-2 rounded-full ${
+                    connectionStatus ? "bg-green-500" : "bg-red-500"
+                  }`}
                 />
                 <span>{connectionStatus ? "接続済み" : "接続エラー"}</span>
               </Badge>

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getWbsById } from "@/app/wbs/[id]/wbs-actions";
+import { getWbsById } from "@/app/wbs/[id]/actions/wbs-actions";
 import { NewWbsPhaseForm } from "./new-wbs-phase-form";
 
 export default async function NewWbsPhasePage({

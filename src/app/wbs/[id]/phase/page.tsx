@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { getWbsPhases } from "../wbs-phase-actions";
+import { getWbsPhases } from "../actions/wbs-phase-actions";
 import { columns } from "./columns";
 
 export default async function WbsPhasePage({

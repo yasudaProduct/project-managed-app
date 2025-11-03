@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
-import { 
-  createImportResponse, 
+import {
+  createImportResponse,
   createImportError,
   createApiResponse,
   validateRequiredFields
@@ -10,16 +10,16 @@ import {
   getWbsSyncPreview,
   getWbsLastSync,
 } from '@/app/wbs/[id]/import/excel-sync-action'
-import { getWbsById } from '@/app/wbs/[id]/wbs-actions'
+import { getWbsById } from '@/app/wbs/[id]/actions/wbs-actions'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    
+
     // 必須フィールドのバリデーション
     const requiredFields = ['wbsId']
     const validationErrors = validateRequiredFields(body, requiredFields)
-    
+
     if (validationErrors.length > 0) {
       return createImportError(
         'Validation failed: ' + validationErrors.join(', '),
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { 
+    const {
       wbsId,
       syncMode = 'replace',
       skipValidation = false
@@ -45,18 +45,18 @@ export async function POST(request: NextRequest) {
     if (!skipValidation) {
       try {
         const preview = await getWbsSyncPreview(wbsId)
-        
+
         if (!preview.success || !preview.data) {
           return createImportError('Failed to get sync preview for validation', 422)
         }
 
         // バリデーションエラーをチェック
         if (preview.data.validationErrors && preview.data.validationErrors.length > 0) {
-          const errorMessages = preview.data.validationErrors.map(error => 
+          const errorMessages = preview.data.validationErrors.map(error =>
             `[Excel行${error.rowNumber || '不明'}] タスク${error.taskNo}: ${error.message}` +
             (error.value !== undefined ? ` (値: ${String(error.value)})` : '')
           )
-          
+
           return createImportError(
             'Validation failed: ' + errorMessages.join('; '),
             422
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     // インポート実行
     try {
       const result = await executeWbsSync(wbsId, syncMode)
-      
+
       if (!result.success || !result.data) {
         return createImportError('Sync execution failed', 500)
       }
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
 
     try {
       const preview = await getWbsSyncPreview(wbsId)
-      
+
       if (!preview.success || !preview.data) {
         return createImportError('Failed to get sync preview', 500)
       }
@@ -149,8 +149,8 @@ export async function GET(request: NextRequest) {
           }
         },
         lastSync: lastSync.success && lastSync.data ? {
-          syncedAt: lastSync.data.syncedAt instanceof Date 
-            ? lastSync.data.syncedAt.toISOString() 
+          syncedAt: lastSync.data.syncedAt instanceof Date
+            ? lastSync.data.syncedAt.toISOString()
             : lastSync.data.syncedAt,
           recordCount: lastSync.data.recordCount,
           syncStatus: lastSync.data.syncStatus

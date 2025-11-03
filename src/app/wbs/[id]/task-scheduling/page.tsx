@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getWbsById } from "@/app/wbs/[id]/wbs-actions";
+import { getWbsById } from "@/app/wbs/[id]/actions/wbs-actions";
 import { Loader2, ArrowLeft, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";

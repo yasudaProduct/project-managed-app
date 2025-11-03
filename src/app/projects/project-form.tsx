@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createProject, deleteProject, updateProject } from "./project-actions";
+import { createProject, deleteProject, updateProject } from "./actions";
 import { ProjectStatus } from "@prisma/client";
 import { toast } from "@/hooks/use-toast";
 import { DatePicker } from "@/components/date-picker";

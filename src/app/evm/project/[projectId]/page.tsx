@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, TrendingUp, TrendingDown } from "lucide-react";
 import { EvmChart } from "@/app/evm/_components/evm-chart";
 import Link from "next/link";
-import { getProjectEvmData } from "../../evm-actions";
+import { getProjectEvmData } from "../../actions";
 
 interface PageProps {
   params: Promise<{

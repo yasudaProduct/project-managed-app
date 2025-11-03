@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getWbsPhases } from "@/app/wbs/[id]/wbs-phase-actions";
+import { getWbsPhases } from "@/app/wbs/[id]/actions/wbs-phase-actions";
 
 type Phase = {
     id: number;

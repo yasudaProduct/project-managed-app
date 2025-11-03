@@ -39,8 +39,12 @@ export function Header() {
 
       // プロジェクト情報と最新のWBS情報を取得
       Promise.all([
-        import("@/app/projects/project-actions").then(({ getProjectById }) => getProjectById(projectId)),
-        import("@/app/projects/[id]/wbs/wbs-actions").then(({ getLatestWbsByProjectId }) => getLatestWbsByProjectId(projectId)),
+        import("@/app/projects/actions").then(({ getProjectById }) =>
+          getProjectById(projectId)
+        ),
+        import("@/app/projects/[id]/wbs/wbs-actions").then(
+          ({ getLatestWbsByProjectId }) => getLatestWbsByProjectId(projectId)
+        ),
       ])
         .then(([projectData, wbsData]) => {
           if (projectData) {
@@ -53,7 +57,7 @@ export function Header() {
             // WBSが存在する場合はタスクサマリーも取得
             if (wbsData?.id) {
               import("@/app/actions/wbs").then(({ getWbsTasksSummary }) => {
-                getWbsTasksSummary(String(wbsData.id)).then(summaryData => {
+                getWbsTasksSummary(String(wbsData.id)).then((summaryData) => {
                   if (summaryData) {
                     setTasksSummary(summaryData);
                   }
@@ -107,7 +111,9 @@ export function Header() {
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">プロジェクト:</span>
                 <span className="text-sm font-medium text-gray-900">
-                  <Link href={`/projects/${projectInfo.id}`}>{projectInfo.name}</Link>
+                  <Link href={`/projects/${projectInfo.id}`}>
+                    {projectInfo.name}
+                  </Link>
                 </span>
               </div>
 

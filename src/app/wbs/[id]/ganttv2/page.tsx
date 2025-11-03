@@ -1,7 +1,7 @@
 import React from "react";
-import { getWbsById } from "../wbs-actions";
+import { getWbsById } from "../actions/wbs-actions";
 import { notFound } from "next/navigation";
-import { getTaskAll } from "../wbs-task-actions";
+import { getTaskAll } from "../actions/wbs-task-actions";
 import { Milestone, WbsTask } from "@/types/wbs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,8 @@ import {
 import { TaskModal } from "@/components/wbs/task-modal";
 import GanttV2Wrapper from "@/components/ganttv2/gantt-v2-wrapper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getProjectById } from "@/app/projects/project-actions";
-import { getMilestones } from "../milestone-actions";
+import { getProjectById } from "@/app/projects/actions";
+import { getMilestones } from "../actions/milestone-actions";
 
 export default async function GanttV2Page({
   params,

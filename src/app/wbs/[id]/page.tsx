@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getWbsBuffers, getWbsById } from "@/app/wbs/[id]/wbs-actions";
+import { getWbsBuffers, getWbsById } from "@/app/wbs/[id]/actions/wbs-actions";
 import {
   BarChart3,
   CalendarCheck,
@@ -14,9 +14,9 @@ import {
   Calendar,
 } from "lucide-react";
 import prisma from "@/lib/prisma/prisma";
-import { getWbsPhases } from "./wbs-phase-actions";
+import { getWbsPhases } from "./actions/wbs-phase-actions";
 import { getWbsAssignees } from "../assignee/assignee-actions";
-import { getTaskAll } from "./wbs-task-actions";
+import { getTaskAll } from "./actions/wbs-task-actions";
 import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -27,7 +27,7 @@ import { TaskDependencyModal } from "@/components/wbs/task-dependency-modal";
 import { ProjectInfoCard } from "@/components/wbs/project-info-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GanttV2Wrapper from "@/components/ganttv2/gantt-v2-wrapper";
-import { getMilestones } from "./milestone-actions";
+import { getMilestones } from "./actions/milestone-actions";
 import MilestoneManagement from "@/components/milestone/milestone-management";
 import { WbsSummaryTables } from "@/components/wbs/wbs-summary-tables";
 import { AssigneeGanttChart } from "./assignee-gantt/assignee-gantt-chart";

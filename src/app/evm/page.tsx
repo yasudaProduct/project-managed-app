@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EvmChart } from "@/app/evm/_components/evm-chart";
 import { EvmProjectList } from "@/app/evm/_components/evm-project-list";
 import { EvmSummaryCards } from "@/app/evm/_components/evm-summary-cards";
-import { getEvmDashboardData } from "./evm-actions";
+import { getEvmDashboardData } from "./actions";
 
 export default async function EvmPage() {
   let data;
