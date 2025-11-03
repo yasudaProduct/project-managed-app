@@ -1,6 +1,6 @@
 import { DataTable } from "@/components/data-table";
 import { columns } from "@/app/work-records/columns";
-import { getWorkRecords } from "./work-recods-acton";
+import { getWorkRecords } from "./actions";
 
 export default async function WorkRecordsPage() {
   const workRecords = await getWorkRecords();
