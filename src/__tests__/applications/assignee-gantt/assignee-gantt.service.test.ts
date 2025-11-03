@@ -7,12 +7,9 @@ import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
 import { CompanyHoliday } from '@/domains/calendar/company-calendar';
-import { TaskNo } from '@/domains/task/value-object/task-id';
-import { TaskStatus } from '@/domains/task/value-object/project-status';
-import { Period } from '@/domains/task/period';
-import { PeriodType } from '@/domains/task/value-object/period-type';
-import { ManHour } from '@/domains/task/man-hour';
-import { ManHourType } from '@/domains/task/value-object/man-hour-type';
+import { TaskNo } from '@/domains/task/task-no';
+import { TaskStatus } from '@/domains/task/task-status';
+import { Period } from '@/domains/period/period';
 
 describe('AssigneeGanttService', () => {
   let service: AssigneeGanttService;
@@ -66,34 +63,31 @@ describe('AssigneeGanttService', () => {
     );
   });
 
-  const createMockTask = (taskNo: string, assigneeId: string, startDate: Date, endDate: Date, hours: number) => {
-    const manHour = ManHour.create({
-      type: new ManHourType({ type: 'NORMAL' }),
-      kosu: hours
-    });
-    
-    const period = Period.create({
-      type: new PeriodType({ type: 'YOTEI' }),
-      startDate,
-      endDate,
-      manHours: [manHour]
-    });
-
-    return Task.createFromDb({
+  const createMockTask = (taskNo: string, assigneeId: number, startDate: Date, endDate: Date, hours: number) => {
+    return Task.reconstruct({
       id: parseInt(taskNo),
-      taskNo: new TaskNo(`PHASE-${taskNo.padStart(4, '0')}`),
+      taskNo: TaskNo.create(`TASK-${taskNo.padStart(3, '0')}`),
       wbsId: testWbsId,
       name: `タスク${taskNo}`,
-      status: new TaskStatus('NOT_STARTED'),
-      assigneeId: parseInt(assigneeId),
-      periods: [period]
+      status: TaskStatus.NotStarted,
+      assigneeId: assigneeId,
+      periods: [
+        Period.reconstruct({
+          id: parseInt(taskNo),
+          periodType: 'YOTEI',
+          startDate,
+          endDate,
+          kosuu: hours
+        })
+      ]
     });
   };
 
-  const createMockAssignee = (id: string, name: string, rate: number = 1.0) => {
-    return WbsAssignee.createFromDb({
-      id: parseInt(id),
-      userId: id,
+  const createMockAssignee = (id: number, userId: string, name: string, rate: number = 1.0) => {
+    return WbsAssignee.reconstruct({
+      id: id,
+      wbsId: testWbsId,
+      userId: userId,
       userName: name,
       rate
     });
@@ -104,13 +98,13 @@ describe('AssigneeGanttService', () => {
     it('担当者別の作業負荷を正常に取得できる', async () => {
       // Arrange
       const assignees = [
-        createMockAssignee('user-1', '山田太郎'),
-        createMockAssignee('user-2', '田中花子')
+        createMockAssignee(1, 'user-1', '山田太郎'),
+        createMockAssignee(2, 'user-2', '田中花子')
       ];
 
       const tasks = [
-        createMockTask('1', '1', new Date('2024-01-15'), new Date('2024-01-17'), 15), // 3日間で15時間
-        createMockTask('2', '2', new Date('2024-01-16'), new Date('2024-01-18'), 10), // 3日間で10時間
+        createMockTask('1', 1, new Date('2024-01-15'), new Date('2024-01-17'), 15), // 3日間で15時間
+        createMockTask('2', 2, new Date('2024-01-16'), new Date('2024-01-18'), 10), // 3日間で10時間
       ];
 
       const userSchedules: UserSchedule[] = [];
@@ -159,23 +153,20 @@ describe('AssigneeGanttService', () => {
     it('会社休日とユーザースケジュールを考慮した工数配分を行う', async () => {
       // Arrange
       const assignees = [
-        createMockAssignee('user-1', '山田太郎', 0.8) // 80%の参画率
+        createMockAssignee(1, 'user-1', '山田太郎', 0.8) // 80%の参画率
       ];
 
       const tasks = [
-        createMockTask('1', '1', new Date('2024-01-15'), new Date('2024-01-17'), 15)
+        createMockTask('1', 1, new Date('2024-01-15'), new Date('2024-01-17'), 15)
       ];
 
       const userSchedules: UserSchedule[] = [
         {
-          id: 1,
           userId: 'user-1',
           date: new Date('2024-01-16'),
           startTime: '09:00',
           endTime: '12:00', // 3時間の予定
-          title: '会議',
-          location: undefined,
-          description: undefined
+          title: '会議'
         }
       ];
 
@@ -208,13 +199,13 @@ describe('AssigneeGanttService', () => {
     it('特定担当者の作業負荷を取得できる', async () => {
       // Arrange
       const assignees = [
-        createMockAssignee('user-1', '山田太郎'),
-        createMockAssignee('user-2', '田中花子')
+        createMockAssignee(1, 'user-1', '山田太郎'),
+        createMockAssignee(2, 'user-2', '田中花子')
       ];
 
       const tasks = [
-        createMockTask('1', '1', new Date('2024-01-15'), new Date('2024-01-17'), 15),
-        createMockTask('2', '2', new Date('2024-01-16'), new Date('2024-01-18'), 10),
+        createMockTask('1', 1, new Date('2024-01-15'), new Date('2024-01-17'), 15),
+        createMockTask('2', 2, new Date('2024-01-16'), new Date('2024-01-18'), 10),
       ];
 
       mockTaskRepository.findByWbsId.mockResolvedValue(tasks);
