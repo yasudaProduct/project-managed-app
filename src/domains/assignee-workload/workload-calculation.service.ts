@@ -4,6 +4,7 @@ import { UserSchedule, AssigneeWorkingCalendar } from '@/domains/calendar/assign
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
 import { DailyWorkAllocation } from './daily-work-allocation';
 import { TaskAllocation } from './task-allocation';
+import { AssigneeGanttCalculationOptions } from '@/types/project-settings';
 
 /**
  * 作業負荷計算ドメインサービス
@@ -18,6 +19,7 @@ export class WorkloadCalculationService {
    * @param companyCalendar 会社カレンダー
    * @param startDate 開始日
    * @param endDate 終了日
+   * @param calculationOptions 計算オプション
    * @returns 日別作業配分の配列
    */
   calculateDailyAllocations(
@@ -26,14 +28,15 @@ export class WorkloadCalculationService {
     userSchedules: UserSchedule[],
     companyCalendar: CompanyCalendar,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
+    calculationOptions: AssigneeGanttCalculationOptions
   ): DailyWorkAllocation[] {
     const dailyAllocations: DailyWorkAllocation[] = [];
-    const workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, userSchedules);
+    const workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, userSchedules, calculationOptions);
 
     // 指定期間内の日別にループ
     for (let currentDate = new Date(startDate); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
-      // その日の稼働可能時間を計算（会社休日・個人予定・稼働率を考慮）
+      // その日の稼働可能時間を計算
       const availableHours = workingCalendar.getAvailableHours(currentDate);
 
       const isCompanyHoliday = companyCalendar.isCompanyHoliday(currentDate); // 会社休日の場合はtrue

@@ -7,11 +7,15 @@ import type { ITaskRepository } from '@/applications/task/itask-repository';
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
+import type { IWbsRepository } from '@/applications/wbs/iwbs-repository';
 import { SYMBOL } from '@/types/symbol';
 import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
+import { AssigneeGanttCalculationOptions } from '@/types/project-settings';
+import { getProjectSettings } from '@/app/actions/project-settings-actions';
+import { Decimal } from '@prisma/client/runtime/library';
 
 /**
  * 担当者ガントサービス
@@ -26,7 +30,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     @inject(SYMBOL.ITaskRepository) private readonly taskRepository: ITaskRepository,
     @inject(SYMBOL.IUserScheduleRepository) private readonly userScheduleRepository: IUserScheduleRepository,
     @inject(SYMBOL.ICompanyHolidayRepository) private readonly companyHolidayRepository: ICompanyHolidayRepository,
-    @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: IWbsAssigneeRepository
+    @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: IWbsAssigneeRepository,
+    @inject(SYMBOL.IWbsRepository) private readonly wbsRepository: IWbsRepository
   ) {
     this.workloadCalculationService = new WorkloadCalculationService();
     this.workloadWarningService = new WorkloadWarningService();
@@ -57,10 +62,12 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     startDate: Date,
     endDate: Date
   ): Promise<AssigneeWorkload[]> {
-    // 1. WBSに紐づくタスクと担当者情報を取得
-    const [tasks, assignees] = await Promise.all([
+    console.log("getAssigneeWorkloads", wbsId, startDate, endDate);
+    // 1. WBSに紐づくタスクと担当者情報、プロジェクト設定を取得
+    const [tasks, assignees, calculationOptions] = await Promise.all([
       this.taskRepository.findByWbsId(wbsId),
-      this.wbsAssigneeRepository.findByWbsId(wbsId)
+      this.wbsAssigneeRepository.findByWbsId(wbsId),
+      this.getCalculationOptions(wbsId)
     ]);
 
     if (!assignees || assignees.length === 0) {
@@ -77,6 +84,7 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     // 担当者別に作業負荷を計算
     const workloads: AssigneeWorkload[] = [];
     for (const assignee of assignees) {
+      console.log(" assignee", assignee.userId);
       // 担当者に割り当てられたタスクを取得
       const assigneeTasks = this.getTasksByAssignee(tasks, assignee.id!);
 
@@ -90,8 +98,10 @@ export class AssigneeGanttService implements IAssigneeGanttService {
         assigneeSchedules,
         companyCalendar,
         startDate,
-        endDate
+        endDate,
+        calculationOptions
       );
+      console.log(" dailyAllocations", dailyAllocations);
 
       // 担当者の作業負荷を作成
       const workload = AssigneeWorkload.create({
@@ -130,9 +140,10 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     startDate: Date,
     endDate: Date
   ): Promise<WorkloadWarning[]> {
-    const [tasks, assignees] = await Promise.all([
+    const [tasks, assignees, calculationOptions] = await Promise.all([
       this.taskRepository.findByWbsId(wbsId),
-      this.wbsAssigneeRepository.findByWbsId(wbsId)
+      this.wbsAssigneeRepository.findByWbsId(wbsId),
+      this.getCalculationOptions(wbsId)
     ]);
 
     // 会社休日を取得
@@ -163,7 +174,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       tasks,
       assigneeMap,
       companyCalendar,
-      userSchedulesMap
+      userSchedulesMap,
+      calculationOptions
     );
   }
 
@@ -209,5 +221,37 @@ export class AssigneeGanttService implements IAssigneeGanttService {
 
   private getUserSchedulesByAssignee(schedules: UserSchedule[], userId: string): UserSchedule[] {
     return schedules.filter(schedule => schedule.userId === userId);
+  }
+
+  /**
+   * プロジェクト設定から計算オプションを取得
+   * @param wbsId WBS ID
+   * @returns 計算オプション
+   */
+  private async getCalculationOptions(wbsId: number): Promise<AssigneeGanttCalculationOptions> {
+    // WBSからプロジェクトIDを取得
+    const wbs = await this.wbsRepository.findById(wbsId);
+    if (!wbs) {
+      throw new Error(`WBSが見つかりません: ${wbsId}`);
+    }
+
+    // プロジェクト設定を取得
+    const projectSettings = await getProjectSettings(wbs.projectId);
+
+    return {
+      standardWorkingHours: 'standardWorkingHours' in projectSettings
+        ? (projectSettings.standardWorkingHours instanceof Decimal
+          ? Number(projectSettings.standardWorkingHours)
+          : projectSettings.standardWorkingHours)
+        : 7.5,
+      considerPersonalSchedule: 'considerPersonalSchedule' in projectSettings
+        ? projectSettings.considerPersonalSchedule : true,
+      scheduleIncludePatterns: 'scheduleIncludePatterns' in projectSettings
+        ? projectSettings.scheduleIncludePatterns : ["休暇", "有給", "休み", "全休", "代休", "振休", "有給休暇"],
+      scheduleExcludePatterns: 'scheduleExcludePatterns' in projectSettings
+        ? projectSettings.scheduleExcludePatterns : [],
+      scheduleMatchType: 'scheduleMatchType' in projectSettings
+        ? projectSettings.scheduleMatchType : "CONTAINS"
+    };
   }
 }

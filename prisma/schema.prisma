@@ -364,6 +364,14 @@ enum NotificationChannel {
 model ProjectSettings {
   projectId      String   @id
   roundToQuarter Boolean  @default(false)
+
+  // assignee-gantt計算ロジックオプション
+  standardWorkingHours         Decimal  @default(7.5)     // 標準勤務時間
+  considerPersonalSchedule     Boolean  @default(true)    // 個人予定を考慮するか
+  scheduleIncludePatterns      String[] @default(["休暇", "有給", "休み", "全休", "代休", "振休", "有給休暇"]) // 考慮対象パターン
+  scheduleExcludePatterns      String[] @default([])      // 除外対象パターン
+  scheduleMatchType            ScheduleMatchType @default(CONTAINS) // パターンマッチング方式
+
   createdAt      DateTime @default(now()) @db.Timestamptz
   updatedAt      DateTime @updatedAt @db.Timestamptz
 
@@ -486,6 +494,12 @@ enum CompanyHolidayType {
   NATIONAL
   COMPANY
   SPECIAL
+}
+
+enum ScheduleMatchType {
+  EXACT     // 完全一致
+  CONTAINS  // 部分一致
+  REGEX     // 正規表現
 }
 
 // インポートジョブ管理

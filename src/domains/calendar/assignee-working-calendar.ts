@@ -1,5 +1,6 @@
 import { CompanyCalendar } from './company-calendar';
 import { WbsAssignee } from '../wbs/wbs-assignee';
+import { AssigneeGanttCalculationOptions } from '../../types/project-settings';
 
 export interface UserSchedule {
   id: number;
@@ -20,7 +21,8 @@ export class AssigneeWorkingCalendar {
   constructor(
     private readonly assignee: WbsAssignee,
     private readonly companyCalendar: CompanyCalendar,
-    private readonly userSchedules: UserSchedule[]
+    private readonly userSchedules: UserSchedule[],
+    private readonly calculationOptions: AssigneeGanttCalculationOptions
   ) { }
 
   /**
@@ -34,13 +36,7 @@ export class AssigneeWorkingCalendar {
       return false;
     }
 
-    // 2. 担当者個人の休暇・予定チェック
-    const userSchedule = this.getUserScheduleForDate(date);
-    if (userSchedule && this.isFullDayOff(userSchedule)) {
-      return false;
-    }
-
-    // 3. 担当者の稼働率チェック
+    // 2. 担当者の稼働率チェック（個人予定では非稼働にしない）
     if (this.assignee.getRate() === 0) {
       return false;
     }
@@ -54,16 +50,24 @@ export class AssigneeWorkingCalendar {
    * @returns 稼働可能時間
    */
   getAvailableHours(date: Date): number {
+    // 稼働可能な日でない場合は0を返す
     if (!this.isWorkingDay(date)) {
       return 0;
     }
 
-    // 基準時間
-    const standardHours = this.companyCalendar.getStandardWorkingHours();
+    // 基準時間（設定値を使用）
+    const standardHours = this.calculationOptions.standardWorkingHours;
 
-    // ユーザースケジュールによる減算
-    const userSchedule = this.getUserScheduleForDate(date);
-    const scheduledHours = userSchedule ? this.getScheduledHours(userSchedule) : 0;
+    // ユーザースケジュールによる減算（設定により有効/無効）
+    let scheduledHours = 0;
+    if (this.calculationOptions.considerPersonalSchedule) {
+      const userSchedule = this.getUserScheduleForDate(date);
+      // 除外パターンは差し引かない。考慮対象のみ差し引く。
+      scheduledHours =
+        userSchedule && this.isScheduleConsidered(userSchedule)
+          ? this.getScheduledHours(userSchedule)
+          : 0;
+    }
 
     // 稼働可能時間 = 基準時間 - 個人予定の時間
     const availableHours = Math.max(0, standardHours - scheduledHours);
@@ -83,11 +87,52 @@ export class AssigneeWorkingCalendar {
     });
   }
 
-  // 全日休暇の判定
+  /**
+   * スケジュールが考慮対象かを判定（新しいパターンマッチング機能）
+   * @param schedule 個人予定
+   * @returns 考慮対象の場合はtrue
+   */
+  private isScheduleConsidered(schedule: UserSchedule): boolean {
+    // 除外パターンにマッチする場合は考慮しない
+    if (this.matchesPatterns(schedule.title, this.calculationOptions.scheduleExcludePatterns)) {
+
+      return false;
+    }
+
+    // 含有パターンにマッチする場合は考慮する
+    return this.matchesPatterns(schedule.title, this.calculationOptions.scheduleIncludePatterns);
+  }
+
+  /**
+   * パターンマッチング
+   * @param text マッチ対象の文字列
+   * @param patterns パターン配列
+   * @returns マッチした場合はtrue
+   */
+  private matchesPatterns(text: string, patterns: string[]): boolean {
+    return patterns.some(pattern => {
+      switch (this.calculationOptions.scheduleMatchType) {
+        case 'EXACT':
+          return text === pattern;
+        case 'CONTAINS':
+          return text.includes(pattern);
+        case 'REGEX':
+          try {
+            const regex = new RegExp(pattern);
+            return regex.test(text);
+          } catch {
+            // 正規表現が無効な場合は部分一致で処理
+            return text.includes(pattern);
+          }
+        default:
+          return text.includes(pattern);
+      }
+    });
+  }
+
+  // 全日休暇の判定（後方互換性のため残す）
   private isFullDayOff(schedule: UserSchedule): boolean {
-    // タイトルに固定文字が含まれる場合を全日休みとする
-    const offKeywords = ['休暇', '有給', '休み', '全休', '代休', '振休', '有給休暇']; // TODO:設定から動的にする
-    return offKeywords.some(keyword => schedule.title === keyword);
+    return this.isScheduleConsidered(schedule);
   }
 
   /**
@@ -105,7 +150,7 @@ export class AssigneeWorkingCalendar {
 
     // 全日休暇の判定 休暇の場合は基準時間を返す
     if (this.isFullDayOff(schedule)) {
-      return this.companyCalendar.getStandardWorkingHours();
+      return this.calculationOptions.standardWorkingHours;
     }
 
     // 開始時間と終了時間から計算（フォーマット: "HH:mm"） // TODO: UserScheduleに持たせても良いのでは？

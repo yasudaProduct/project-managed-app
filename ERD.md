@@ -185,6 +185,11 @@ erDiagram
 "project_settings" {
   String projectId PK
   Boolean roundToQuarter
+  Decimal standardWorkingHours
+  Boolean considerPersonalSchedule
+  String scheduleIncludePatterns
+  String scheduleExcludePatterns
+  ScheduleMatchType scheduleMatchType
   DateTime createdAt
   DateTime updatedAt
 }
@@ -532,6 +537,11 @@ erDiagram
 **Properties**
   - `projectId`: 
   - `roundToQuarter`: 
+  - `standardWorkingHours`: 
+  - `considerPersonalSchedule`: 
+  - `scheduleIncludePatterns`: 
+  - `scheduleExcludePatterns`: 
+  - `scheduleMatchType`: 
   - `createdAt`: 
   - `updatedAt`: 
 
