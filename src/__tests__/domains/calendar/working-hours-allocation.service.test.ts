@@ -1,6 +1,7 @@
 import { WorkingHoursAllocationService } from "@/domains/calendar/working-hours-allocation.service";
 import { CompanyCalendar } from "@/domains/calendar/company-calendar";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
+import { AssigneeGanttCalculationOptions } from "@/types/project-settings";
 
 describe('WorkingHoursAllocationService', () => {
   let service: WorkingHoursAllocationService;
@@ -11,9 +12,17 @@ describe('WorkingHoursAllocationService', () => {
     service = new WorkingHoursAllocationService(companyCalendar);
   });
 
+  const defaultOptions: AssigneeGanttCalculationOptions = {
+    standardWorkingHours: 7.5,
+    considerPersonalSchedule: true,
+    scheduleIncludePatterns: ["休暇", "有給", "休み", "全休", "代休", "振休", "有給休暇"],
+    scheduleExcludePatterns: [],
+    scheduleMatchType: 'CONTAINS',
+  };
+
   describe('allocateTaskHoursByAssigneeWorkingDays', () => {
     it('単月タスクの場合、開始月に全工数が計上される', () => {
-      const assignee = WbsAssignee.create({ userId: 'user1', rate: 1.0 });
+      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
       const task = {
         yoteiStart: new Date('2024-01-15'),
         yoteiEnd: new Date('2024-01-25'),
@@ -23,7 +32,8 @@ describe('WorkingHoursAllocationService', () => {
       const result = service.allocateTaskHoursByAssigneeWorkingDays(
         task,
         assignee,
-        []
+        [],
+        defaultOptions
       );
 
       expect(result.get('2024/01')).toBe(100);
@@ -31,7 +41,7 @@ describe('WorkingHoursAllocationService', () => {
     });
 
     it('月跨ぎタスクの場合、営業日数で工数が案分される', () => {
-      const assignee = WbsAssignee.create({ userId: 'user1', rate: 1.0 });
+      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
       const task = {
         yoteiStart: new Date('2024-01-29'), // 月曜日
         yoteiEnd: new Date('2024-02-02'),   // 金曜日
@@ -41,21 +51,22 @@ describe('WorkingHoursAllocationService', () => {
       const result = service.allocateTaskHoursByAssigneeWorkingDays(
         task,
         assignee,
-        []
+        [],
+        defaultOptions
       );
 
       // 1月29-31日：3営業日、2月1-2日：2営業日の割合で案分
       expect(result.has('2024/01')).toBe(true);
       expect(result.has('2024/02')).toBe(true);
       expect(result.size).toBe(2);
-      
+
       // 合計は元の工数と一致
       const total = Array.from(result.values()).reduce((sum, hours) => sum + hours, 0);
       expect(total).toBeCloseTo(100);
     });
 
     it('担当者の稼働率0.5の場合、稼働可能時間が半分になる', () => {
-      const assignee = WbsAssignee.create({ userId: 'user1', rate: 0.5 });
+      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 0.5, seq: 0 });
       const task = {
         yoteiStart: new Date('2024-01-29'),
         yoteiEnd: new Date('2024-02-02'),
@@ -65,7 +76,8 @@ describe('WorkingHoursAllocationService', () => {
       const result = service.allocateTaskHoursByAssigneeWorkingDays(
         task,
         assignee,
-        []
+        [],
+        defaultOptions
       );
 
       // 稼働率が半分でも総工数は変わらず案分される
@@ -74,7 +86,7 @@ describe('WorkingHoursAllocationService', () => {
     });
 
     it('担当者の有給休暇を考慮した案分計算', () => {
-      const assignee = WbsAssignee.create({ userId: 'user1', rate: 1.0 });
+      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
       const task = {
         yoteiStart: new Date('2024-01-15'),
         yoteiEnd: new Date('2024-01-25'),
@@ -94,7 +106,8 @@ describe('WorkingHoursAllocationService', () => {
       const result = service.allocateTaskHoursByAssigneeWorkingDays(
         task,
         assignee,
-        userSchedules
+        userSchedules,
+        defaultOptions
       );
 
       expect(result.get('2024/01')).toBe(100);

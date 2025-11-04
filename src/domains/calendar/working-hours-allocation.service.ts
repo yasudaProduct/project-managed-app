@@ -2,6 +2,7 @@ import { CompanyCalendar } from './company-calendar';
 import { BusinessDayPeriod } from './business-day-period';
 import { UserSchedule } from './assignee-working-calendar';
 import { WbsAssignee } from '../wbs/wbs-assignee';
+import { AssigneeGanttCalculationOptions } from '@/types/project-settings';
 
 export interface TaskForAllocation {
   yoteiStart: Date;
@@ -12,22 +13,24 @@ export interface TaskForAllocation {
 export class WorkingHoursAllocationService {
   constructor(
     private readonly companyCalendar: CompanyCalendar
-  ) {}
+  ) { }
 
   allocateTaskHoursByAssigneeWorkingDays(
     task: TaskForAllocation,
     assignee: WbsAssignee,
-    userSchedules: UserSchedule[]
+    userSchedules: UserSchedule[],
+    calculationOptions: AssigneeGanttCalculationOptions
   ): Map<string, number> {
     // 終了日が未設定の場合は開始日と同じとする
     const endDate = task.yoteiEnd || task.yoteiStart;
-    
+
     const period = new BusinessDayPeriod(
       task.yoteiStart,
       endDate,
       assignee,
       this.companyCalendar,
-      userSchedules
+      userSchedules,
+      calculationOptions
     );
 
     return period.distributeHoursByBusinessDays(task.yoteiKosu);
@@ -36,7 +39,8 @@ export class WorkingHoursAllocationService {
   allocateMultipleTasksHours(
     tasks: TaskForAllocation[],
     assignee: WbsAssignee,
-    userSchedules: UserSchedule[]
+    userSchedules: UserSchedule[],
+    calculationOptions: AssigneeGanttCalculationOptions
   ): Map<string, Map<TaskForAllocation, number>> {
     const result = new Map<string, Map<TaskForAllocation, number>>();
 
@@ -44,7 +48,8 @@ export class WorkingHoursAllocationService {
       const allocatedHours = this.allocateTaskHoursByAssigneeWorkingDays(
         task,
         assignee,
-        userSchedules
+        userSchedules,
+        calculationOptions
       );
 
       allocatedHours.forEach((hours, yearMonth) => {
@@ -61,7 +66,8 @@ export class WorkingHoursAllocationService {
   getTotalAllocatedHoursByMonth(
     tasks: TaskForAllocation[],
     assignee: WbsAssignee,
-    userSchedules: UserSchedule[]
+    userSchedules: UserSchedule[],
+    calculationOptions: AssigneeGanttCalculationOptions
   ): Map<string, number> {
     const monthlyTotals = new Map<string, number>();
 
@@ -69,7 +75,8 @@ export class WorkingHoursAllocationService {
       const allocatedHours = this.allocateTaskHoursByAssigneeWorkingDays(
         task,
         assignee,
-        userSchedules
+        userSchedules,
+        calculationOptions
       );
 
       allocatedHours.forEach((hours, yearMonth) => {

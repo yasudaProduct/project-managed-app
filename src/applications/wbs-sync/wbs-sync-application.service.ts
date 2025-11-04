@@ -338,7 +338,9 @@ export class WbsSyncApplicationService implements IWbsSyncService {
       throw new Error('タスクNoは必須です');
     }
     if (!task.name || (task.name as string).trim() === '') {
-      throw new Error('タスク名は必須です');
+      // TODO: よくわからないデータがまぎれこんでいるので一時的に空のタスク名を許容する。 スキップするか必須とするか検討
+      task.name = '(無題のタスク)';
+      // throw new Error('タスク名は必須です');
     }
     if (!excelWbs.PHASE) {
       throw new Error('フェーズは必須です');

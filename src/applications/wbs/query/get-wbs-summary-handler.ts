@@ -14,6 +14,7 @@ import type { IUserScheduleRepository } from "@/applications/calendar/iuser-sche
 import type { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-repository";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
 import prisma from "@/lib/prisma/prisma";
+import { AssigneeGanttCalculationOptions } from "@/types/project-settings";
 
 @injectable()
 export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, WbsSummaryResult> {
@@ -48,8 +49,17 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     const settings = await prisma.projectSettings.findUnique({ where: { projectId: query.projectId } });
     const roundToQuarter = settings?.roundToQuarter === true;
 
+    // assignee-gantt計算ロジック用オプションを構築（設定が無い場合はデフォルトを使用）
+    const calculationOptions: AssigneeGanttCalculationOptions = {
+      standardWorkingHours: settings?.standardWorkingHours ? Number(settings.standardWorkingHours) : 7.5,
+      considerPersonalSchedule: settings?.considerPersonalSchedule ?? true,
+      scheduleIncludePatterns: settings?.scheduleIncludePatterns ?? ["休暇", "有給", "休み", "全休", "代休", "振休", "有給休暇"],
+      scheduleExcludePatterns: settings?.scheduleExcludePatterns ?? [],
+      scheduleMatchType: (settings?.scheduleMatchType as any) ?? 'CONTAINS',
+    };
+
     // 月別・担当者別集計
-    const monthlyAssigneeSummary = await this.calculateMonthlyAssigneeSummary(tasks, query.wbsId, query.calculationMode, roundToQuarter);
+    const monthlyAssigneeSummary = await this.calculateMonthlyAssigneeSummary(tasks, query.wbsId, query.calculationMode, roundToQuarter, calculationOptions);
 
     return {
       phaseSummaries,
@@ -140,10 +150,10 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
    * 月別・担当者別集計を行う
    * 月別・担当者別集計は、月ごとにタスク数、予定工数、実績工数、差分を計算する
    */
-  private async calculateMonthlyAssigneeSummary(tasks: WbsTaskData[], wbsId: number, calculationMode: AllocationCalculationMode, roundToQuarter: boolean) {
+  private async calculateMonthlyAssigneeSummary(tasks: WbsTaskData[], wbsId: number, calculationMode: AllocationCalculationMode, roundToQuarter: boolean, calculationOptions: AssigneeGanttCalculationOptions) {
     switch (calculationMode) {
       case AllocationCalculationMode.BUSINESS_DAY_ALLOCATION:
-        return this.calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks, wbsId, roundToQuarter);
+        return this.calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks, wbsId, roundToQuarter, calculationOptions);
       case AllocationCalculationMode.START_DATE_BASED:
         return this.calculateMonthlyAssigneeSummaryWithStartDateBased(tasks);
       default:
@@ -154,7 +164,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
   /**
    * 営業日案分による月別・担当者別集計
    */
-  private async calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks: WbsTaskData[], wbsId: number, roundToQuarter: boolean) {
+  private async calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks: WbsTaskData[], wbsId: number, roundToQuarter: boolean, calculationOptions: AssigneeGanttCalculationOptions) {
     const monthlyData: MonthlyAssigneeData[] = [];
     const assignees = new Set<string>();
     const months = new Set<string>();
@@ -246,7 +256,8 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           endDate,
           fallbackAssignee,
           companyCalendar,
-          []
+          [],
+          calculationOptions
         );
 
         const allocatedHoursRaw = workingHoursAllocationService.allocateTaskHoursByAssigneeWorkingDays(
@@ -256,7 +267,8 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
             yoteiKosu: Number(task.yoteiKosu || 0)
           },
           fallbackAssignee,
-          []
+          [],
+          calculationOptions
         );
 
         // 0.25単位量子化（予定工数のみ）
@@ -399,7 +411,8 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           endDate,
           wbsAssignee,
           companyCalendar,
-          userSchedules
+          userSchedules,
+          calculationOptions
         );
 
         // 営業日案分を実行
@@ -410,7 +423,8 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
             yoteiKosu: Number(task.yoteiKosu || 0)
           },
           wbsAssignee,
-          userSchedules
+          userSchedules,
+          calculationOptions
         );
 
         // 0.25単位量子化（予定工数のみ）

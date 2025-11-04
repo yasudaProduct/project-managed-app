@@ -2,6 +2,7 @@ import { AssigneeWorkingCalendar } from './assignee-working-calendar';
 import { CompanyCalendar } from './company-calendar';
 import { WbsAssignee } from '../wbs/wbs-assignee';
 import { UserSchedule } from './assignee-working-calendar';
+import { AssigneeGanttCalculationOptions } from '@/types/project-settings';
 
 /**
  * 営業日案分期間
@@ -16,9 +17,10 @@ export class BusinessDayPeriod {
     private readonly endDate: Date,
     private readonly assignee: WbsAssignee,
     companyCalendar: CompanyCalendar,
-    userSchedules: UserSchedule[]
+    userSchedules: UserSchedule[],
+    calculationOptions: AssigneeGanttCalculationOptions
   ) {
-    this.workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, userSchedules);
+    this.workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, userSchedules, calculationOptions);
   }
 
   /**
