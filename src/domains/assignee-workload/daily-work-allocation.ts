@@ -67,42 +67,12 @@ export class DailyWorkAllocation {
   }
 
   /**
-   * 配分工数が稼働可能時間を超えているかどうか
-   * @returns 配分工数が稼働可能時間を超えているかどうか
-   */
-  public isOverloaded(): boolean {
-    return this.allocatedHours > this.availableHours;
-  }
-
- /**
-  * 稼働率
-  * @returns 稼働率
-  * @discreption 配分工数 / 稼働可能時間
-  */ 
-  public getUtilizationRate(): number {
-    if (this.availableHours === 0) {
-      return 0;
-    }
-    return this.allocatedHours / this.availableHours;
-  }
-
-  /**
-   * 稼働可能時間を超えている時間
-   * @returns 稼働可能時間を超えている時間
-   * @discreption 配分工数 - 稼働可能時間
-   */
-  public getOverloadedHours(): number {
-    const overload = this.allocatedHours - this.availableHours;
-    return overload > 0 ? overload : 0;
-  }
-
-  /**
    * タスク配分を追加
    * @param taskAllocation タスク配分
    * @discreption タスク配分を追加
    */
   public addTaskAllocation(taskAllocation: TaskAllocation): void {
-    const existingIndex = this.taskAllocations.findIndex(task => 
+    const existingIndex = this.taskAllocations.findIndex(task =>
       task.equals(taskAllocation)
     );
 

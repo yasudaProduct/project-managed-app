@@ -27,10 +27,6 @@ export class AssigneeWorkload {
     return new AssigneeWorkload(args);
   }
 
-  public getOverloadedDays(): DailyWorkAllocation[] {
-    return this.dailyAllocations.filter(allocation => allocation.isOverloaded());
-  }
-
   public getTotalHours(startDate: Date, endDate: Date): number {
     return this.dailyAllocations
       .filter(allocation => {
@@ -41,7 +37,7 @@ export class AssigneeWorkload {
   }
 
   public getDailyAllocation(date: Date): DailyWorkAllocation | undefined {
-    return this.dailyAllocations.find(allocation => 
+    return this.dailyAllocations.find(allocation =>
       allocation.date.toDateString() === date.toDateString()
     );
   }

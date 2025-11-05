@@ -433,39 +433,76 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>期間: {formatPeriod()}</span>
-            <span>担当者: {workloads.length}名</span>
+          {/* カラー凡例（セルの色分けロジック） */}
+          <div className="mt-2 text-xs text-gray-700">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1">
+                <span className="inline-block w-3 h-3 rounded-sm bg-gray-100 border border-gray-300"></span>
+                <span>休日/週末</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="inline-block w-3 h-3 rounded-sm bg-white border border-gray-300"></span>
+                <span>配分なし</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="inline-block w-3 h-3 rounded-sm bg-red-100 border border-red-300"></span>
+                <span className="text-red-700 font-medium">過負荷</span>
+                <span className="text-gray-500">(配分 &gt; 稼働可能)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-sm bg-blue-50 border border-blue-300 text-[10px] font-bold text-blue-700">R</span>
+                <span>レート超過</span>
+                <span className="text-gray-500">(配分 &gt; 標準時間 × 参画率)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="inline-block w-3 h-3 rounded-sm bg-orange-100 border border-orange-300"></span>
+                <span>稼働率 80%以上</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="inline-block w-3 h-3 rounded-sm bg-yellow-100 border border-yellow-300"></span>
+                <span>稼働率 60%以上</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="inline-block w-3 h-3 rounded-sm bg-green-100 border border-green-300"></span>
+                <span>通常</span>
+              </div>
+            </div>
           </div>
+
           {warnings.length > 0 && (
             <div className="mt-2 p-3 rounded border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="h-4 w-4" />
-                <span>
-                  実現不可能なタスクが見つかりました（すべて非稼働日）
-                </span>
+                <span>実現不可能なタスクが見つかりました</span>
               </div>
-              <ul className="list-disc pl-6 space-y-1">
-                {warnings.slice(0, 5).map((w, i) => (
-                  <li key={i} className="truncate">
-                    {w.taskNo + " / "}
-                    {w.taskName}
-                    {w.assigneeName ? ` / ${w.assigneeName}` : ""}
-                    {w.periodStart && w.periodEnd
-                      ? `（${new Date(w.periodStart).toLocaleDateString(
-                        "ja-JP"
-                      )} - ${new Date(w.periodEnd).toLocaleDateString(
-                        "ja-JP"
-                      )}）`
-                      : ""}
-                  </li>
-                ))}
-              </ul>
-              {warnings.length > 5 && (
-                <div className="text-xs text-gray-600 mt-1">
-                  他 {warnings.length - 5} 件
-                </div>
-              )}
+              <div className="overflow-auto max-h-60">
+                <table className="min-w-full text-xs">
+                  <thead>
+                    <tr className="text-left border-b border-yellow-200">
+                      <th className="py-1 px-2 w-28">タスクNo</th>
+                      <th className="py-1 px-2">タスク名</th>
+                      <th className="py-1 px-2 w-36">担当者</th>
+                      <th className="py-1 px-2 w-56">期間</th>
+                      <th className="py-1 px-2 w-28">理由</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {warnings.map((w, i) => (
+                      <tr key={i} className="border-b border-yellow-100">
+                        <td className="py-1 px-2 whitespace-nowrap font-mono">{w.taskNo}</td>
+                        <td className="py-1 px-2 truncate max-w-[280px]" title={w.taskName}>{w.taskName}</td>
+                        <td className="py-1 px-2 whitespace-nowrap">{w.assigneeName || "-"}</td>
+                        <td className="py-1 px-2 whitespace-nowrap">
+                          {w.periodStart && w.periodEnd
+                            ? `${new Date(w.periodStart).toLocaleDateString("ja-JP")} - ${new Date(w.periodEnd).toLocaleDateString("ja-JP")}`
+                            : "-"}
+                        </td>
+                        <td className="py-1 px-2 whitespace-nowrap">{w.reason === "NO_WORKING_DAYS" ? "全日非稼働" : w.reason}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </CardHeader>
@@ -522,12 +559,12 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
                 <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded">
                   <div className="text-sm">
                     <div className="text-gray-500 flex items-center">
-                      予定工数
+                      配分工数
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>{<Info className="w-4" />}</TooltipTrigger>
                           <TooltipContent className="max-w-sm">
-                            <div>自動計算された予定工数</div>
+                            <div>自動研鑽され配分された工数</div>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -543,7 +580,11 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
                         <Tooltip>
                           <TooltipTrigger asChild>{<Info className="w-4" />}</TooltipTrigger>
                           <TooltipContent className="max-w-sm">
-                            <div>基準時間 - 個人予定時間</div>
+                            <div>
+                              以下の内より小さい方が稼働可能時間となります。<br />
+                              ・基準時間 - 個人予定時間<br />
+                              ・基準時間 * 参画率（レート）上限
+                            </div>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -559,7 +600,7 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
                         <Tooltip>
                           <TooltipTrigger asChild>{<Info className="w-4" />}</TooltipTrigger>
                           <TooltipContent className="max-w-sm">
-                            <div></div>
+                            <div>配分工数 / 稼働可能時間</div>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -575,7 +616,30 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
                     </div>
                   </div>
                   <div className="text-sm">
-                    <div className="text-gray-500">状態</div>
+                    <div className="text-gray-500 flex items-center">
+                      状態
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>{<Info className="w-4 ml-1" />}</TooltipTrigger>
+                          <TooltipContent className="max-w-sm">
+                            <div className="space-y-1">
+                              <div className="font-medium">表示ルール</div>
+                              <ul className="list-disc pl-5 space-y-1 text-xs">
+                                <li>
+                                  <span className="font-medium">過負荷</span>: 配分工数 &gt; 稼働可能時間 の場合に表示（+超過時間）。
+                                </li>
+                                <li>
+                                  <span className="font-medium">標準超過</span>: 過負荷ではない かつ 配分工数 &gt; 標準時間(7.5h) の場合に併記（+超過時間）。
+                                </li>
+                                <li>
+                                  <span className="font-medium">適正</span>: 上記いずれにも該当しない場合。
+                                </li>
+                              </ul>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <div
                       className={
                         selectedAllocation.isOverloaded ||
@@ -596,21 +660,6 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
                         )}h)`}
                     </div>
                   </div>
-                  <div className="text-sm col-span-2">
-                    <div className="text-gray-500">
-                      レート基準({selectedAssignee.assigneeRate * 100}%)
-                    </div>
-                    <div
-                      className={
-                        selectedAllocation.isOverRateCapacity
-                          ? "font-medium text-blue-600"
-                          : "font-medium text-gray-700"
-                      }
-                    >
-                      許容: {selectedAllocation.rateAllowedHours.toFixed(2)}h /
-                      超過: {selectedAllocation.overRateHours.toFixed(2)}h
-                    </div>
-                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -620,16 +669,23 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
                       {selectedAllocation.taskAllocations.map((t, i) => (
                         <div
                           key={i}
-                          className="flex items-center justify-between text-sm border rounded p-2"
+                          className="justify-between text-sm border rounded p-2"
                         >
                           <div className="font-medium truncate mr-2">
                             {t.taskName}
                           </div>
                           <div className="text-xs text-gray-600 flex items-center gap-2">
+                            {/* TODO: タスクNoを表示 */}
+                            {/* {t.taskNo}  */}
+                          </div>
+                          <div className="text-xs text-gray-600 flex items-center gap-2">
                             <span>
-                              {t.totalHours.toFixed(2)}h <br />
-                              (内訳:{t.allocatedHours.toFixed(2)}h)
+                              予定:{t.totalHours.toFixed(2)}h <br />
+                              配分:{t.allocatedHours.toFixed(2)}h
                             </span>
+                          </div>
+                          <div className="text-xs text-gray-600 flex items-center gap-2">
+                            予定期間:
                             {t.periodStart && t.periodEnd && (
                               <span className="text-xs text-gray-500">
                                 {new Date(t.periodStart).toLocaleDateString(
@@ -664,8 +720,9 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
                           >
                             <span className="mr-2">{s.title}</span>
                             <span>
-                              {s.startTime} - {s.endTime} (
-                              {s.durationHours.toFixed(2)}h)
+                              {s.durationHours.toFixed(2)}h
+                              ({s.startTime} - {s.endTime} )
+
                             </span>
                           </div>
                         ))}
