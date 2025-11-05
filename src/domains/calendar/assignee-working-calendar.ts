@@ -65,8 +65,15 @@ export class AssigneeWorkingCalendar {
     const userSchedules = this.getUserScheduleForDate(date);
     const scheduledHours = this.sumScheduledHours(userSchedules, standardHours);
 
-    // 稼働可能時間 = 基準時間 - 個人予定の時間
-    const availableHours = Math.max(0, standardHours - scheduledHours);
+    // 個人予定控除後の時間 = 基準時間 - 個人予定の時間
+    const rawAvailable = Math.max(0, standardHours - scheduledHours);
+
+    //　参画率に基づく上限
+    const rateCapHours = standardHours * this.assignee.getRate();
+
+    // 稼働可能時間 = min(個人予定控除後, 参画率上限)
+    const availableHours = Math.min(rawAvailable, rateCapHours);
+
     return availableHours;
   }
 
