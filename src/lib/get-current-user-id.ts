@@ -18,7 +18,7 @@ export async function getCurrentUserIdOrThrow(): Promise<string> {
         throw new Error('Unauthorized');
     }
 
-    return user.id;
+    return user.id!;
 }
 
 export async function getCurrentUserId(): Promise<string | null> {

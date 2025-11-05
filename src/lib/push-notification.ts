@@ -98,7 +98,7 @@ export class PushNotificationManager {
         // 新しい購読を作成
         subscription = await this.registration!.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: this.urlBase64ToUint8Array(vapidPublicKey)
+          applicationServerKey: this.urlBase64ToUint8Array(vapidPublicKey) as ArrayBufferView<ArrayBuffer>
         });
       }
 
