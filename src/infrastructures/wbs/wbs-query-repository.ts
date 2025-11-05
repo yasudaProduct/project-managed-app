@@ -17,8 +17,10 @@ export class WbsQueryRepository implements IWbsQueryRepository {
         tp_latest."endDate" AS "yoteiEnd",
         wr."jissekiStart" AS "jissekiStart",
         wr."jissekiEnd" AS "jissekiEnd",
+        t."progressRate" AS "progressRate",
+        t."status" AS "status",
         JSON_BUILD_OBJECT('id', p.id, 'name', p.name) AS phase,
-        CASE 
+        CASE
           WHEN u.id IS NOT NULL THEN JSON_BUILD_OBJECT('id', u.id, 'displayName', u."displayName")
           ELSE NULL
         END AS assignee
@@ -74,6 +76,7 @@ export class WbsQueryRepository implements IWbsQueryRepository {
       ...task,
       yoteiKosu: task.yoteiKosu ? Number(task.yoteiKosu) : null,
       jissekiKosu: task.jissekiKosu ? Number(task.jissekiKosu) : null,
+      progressRate: task.progressRate ? Number(task.progressRate) : null,
     }))
   }
 

@@ -358,7 +358,7 @@ export function MonthlyAssigneeSummary({
                       const actualHours = data?.actualHours || 0;
                       const difference = data?.difference || 0;
                       const baselineHours = data?.baselineHours || 0;
-                      const forecastHours = data?.forecastHours || (actualHours > 0 ? actualHours : plannedHours);
+                      const forecastHours = data?.forecastHours || 0;
 
                       return (
                         <React.Fragment key={month}>
@@ -429,7 +429,7 @@ export function MonthlyAssigneeSummary({
                     const total = monthlyData.monthlyTotals[month];
                     const difference = total.difference;
                     const baselineTotal = total.baselineHours || 0;
-                    const forecastTotal = total.forecastHours || (total.actualHours > 0 ? total.actualHours : total.plannedHours);
+                    const forecastTotal = total.forecastHours || 0;
                     return (
                       <React.Fragment key={month}>
                         <TableCell className="text-right text-sm">

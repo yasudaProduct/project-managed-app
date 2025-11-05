@@ -83,6 +83,7 @@ erDiagram
   String name
   Int assigneeId FK "nullable"
   TaskStatus status
+  Decimal progressRate "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -410,6 +411,7 @@ erDiagram
   - `name`: 
   - `assigneeId`: 
   - `status`: 
+  - `progressRate`: 
   - `createdAt`: 
   - `updatedAt`: 
 

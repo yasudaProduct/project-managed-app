@@ -256,6 +256,7 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       phaseId,
       assigneeId,
       periods,
+      progressRate: task.progressRate as number | undefined,
     });
   }
 

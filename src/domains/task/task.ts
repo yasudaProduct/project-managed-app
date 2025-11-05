@@ -22,6 +22,7 @@ export class Task {
     public assignee?: Assignee;
     public periods?: Period[];
     public workRecords?: WorkRecord[];
+    public progressRate?: number;
     public readonly createdAt?: Date;
     public readonly updatedAt?: Date;
 
@@ -37,6 +38,7 @@ export class Task {
         assignee?: Assignee;
         periods?: Period[];
         workRecords?: WorkRecord[];
+        progressRate?: number;
         createdAt?: Date;
         updatedAt?: Date;
     }) {
@@ -51,6 +53,7 @@ export class Task {
         this.assignee = args.assignee;
         this.periods = args.periods;
         this.workRecords = args.workRecords;
+        this.progressRate = args.progressRate;
         this.createdAt = args.createdAt;
         this.updatedAt = args.updatedAt;
     }
@@ -67,6 +70,7 @@ export class Task {
         assigneeId?: number;
         status: TaskStatus;
         periods?: Period[];
+        progressRate?: number;
     }): Task {
         return new Task(args);
     }
@@ -84,6 +88,7 @@ export class Task {
             phase?: Phase;
             periods?: Period[];
             workRecords?: WorkRecord[];
+            progressRate?: number;
             createdAt?: Date;
             updatedAt?: Date;
         }): Task {
@@ -232,16 +237,27 @@ export class Task {
     }
 
     /**
-     * タスクの進捗率を計算
+     * タスクの進捗率を取得（完了ステータス優先）
      */
     public getProgressRate(): number {
+        // 完了ステータスの場合は必ず100%を返す
+        if (this.status.getStatus() === 'COMPLETED') {
+            return 100;
+        }
+
+        // 完了以外の場合は、データベースの値またはステータスベースの値を使用
+        if (this.progressRate !== undefined && this.progressRate !== null) {
+            return this.progressRate;
+        }
+
+        // フォールバック: ステータスベースの進捗率
         switch (this.status.getStatus()) {
             case 'NOT_STARTED':
                 return 0;
             case 'IN_PROGRESS':
-                return 50; // TODO: 実際の進捗率を計算
-            case 'COMPLETED':
-                return 100;
+                return 50;
+            case 'ON_HOLD':
+                return 0;
             default:
                 return 0;
         }

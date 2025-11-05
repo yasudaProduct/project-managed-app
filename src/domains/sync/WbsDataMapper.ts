@@ -1,5 +1,4 @@
 import { ExcelWbs } from './ExcelWbs';
-import { Task } from '@/domains/task/task';
 import { Period } from '@/domains/task/period';
 import { ManHour } from '@/domains/task/man-hour';
 import { PeriodType } from '@/domains/task/value-object/period-type';
@@ -19,6 +18,7 @@ export class WbsDataMapper {
       taskNo: excelWbs.WBS_ID || undefined,
       name: (excelWbs.ACTIVITY + excelWbs.TASK) || undefined, // TODO: TASKとACTIVITYの運用を理解して、どちらを使うか決める
       status: this.mapStatus(excelWbs.STATUS),
+      progressRate: this.mapProgressRate(excelWbs.PROGRESS_RATE),
     };
 
     const periods = this.mapPeriods(excelWbs);
@@ -37,6 +37,17 @@ export class WbsDataMapper {
     };
 
     return statusMap[excelStatus] || 'NOT_STARTED';
+  }
+
+  // 進捗率マッピング
+  private static mapProgressRate(progressRate: number | null): number | undefined {
+    if (progressRate === null || progressRate === undefined) {
+      return undefined;
+    }
+
+    // 0-100の範囲に正規化
+    const normalizedRate = Math.max(0, Math.min(100, progressRate));
+    return normalizedRate;
   }
 
   // 期間マッピング

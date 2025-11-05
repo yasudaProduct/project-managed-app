@@ -12,6 +12,8 @@ export interface WbsTaskData {
   yoteiEnd: Date | null;
   jissekiStart: Date | null;
   jissekiEnd: Date | null;
+  progressRate: number | null;
+  status: string;
   phase: {
     id: number;
     name: string;

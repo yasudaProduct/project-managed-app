@@ -67,6 +67,7 @@ export class TaskRepository implements ITaskRepository {
                     type: new ManHourType({ type: kosu.type }),
                 })),
             })),
+            progressRate: taskDb.progressRate ? Number(taskDb.progressRate) : undefined,
         });
     }
 
@@ -145,6 +146,7 @@ export class TaskRepository implements ITaskRepository {
                         })
                     ),
             status: new TaskStatus({ status: taskDb.status }),
+            progressRate: taskDb.progressRate ? Number(taskDb.progressRate) : undefined,
             createdAt: taskDb.createdAt,
             updatedAt: taskDb.updatedAt,
         }));
@@ -220,6 +222,7 @@ export class TaskRepository implements ITaskRepository {
                         })
                     ),
             status: new TaskStatus({ status: taskDb.status }),
+            progressRate: taskDb.progressRate ? Number(taskDb.progressRate) : undefined,
             createdAt: taskDb.createdAt,
             updatedAt: taskDb.updatedAt,
         }));
@@ -235,6 +238,7 @@ export class TaskRepository implements ITaskRepository {
                 assigneeId: task.assigneeId ?? undefined,
                 phaseId: task.phaseId ?? undefined,
                 status: task.status.status,
+                progressRate: task.progressRate,
             },
         });
 
@@ -281,6 +285,7 @@ export class TaskRepository implements ITaskRepository {
                 assigneeId: task.assigneeId ?? undefined,
                 phaseId: task.phaseId ?? undefined,
                 status: task.status.status,
+                progressRate: task.progressRate,
             },
         });
 

@@ -136,12 +136,13 @@ model WbsBuffer {
 
 model WbsTask {
   id               Int              @id @default(autoincrement())
-  taskNo           String           
+  taskNo           String
   wbsId            Int
   phaseId          Int?
   name             String
   assigneeId       Int?
   status           TaskStatus       @default(NOT_STARTED)
+  progressRate     Decimal?         @default(0) // 進捗率（0-100）
   wbs              Wbs              @relation(fields: [wbsId], references: [id])
   phase            WbsPhase?        @relation(fields: [phaseId], references: [id])
   assignee         WbsAssignee?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
