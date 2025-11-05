@@ -72,7 +72,6 @@ import { TaskDependencyRepository } from "@/infrastructures/task-dependency-repo
 import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
 
 // WBS Sync関連
-import type { IWbsSyncService } from "@/domains/sync/IWbsSyncService";
 import { WbsSyncApplicationService } from "@/applications/wbs-sync/wbs-sync-application.service";
 import type { IExcelWbsRepository } from "@/applications/excel-sync/IExcelWbsRepository";
 import { ExcelWbsRepository } from "@/infrastructures/sync/ExcelWbsRepository";
@@ -114,8 +113,7 @@ import type { IImportJobRepository } from '@/applications/import-job/iimport-job
 import { ImportJobPrismaRepository } from '@/infrastructures/import-job/import-job-prisma.repository';
 import type { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service';
 import { ImportJobApplicationService } from '@/applications/import-job/import-job-application.service';
-import { IWbsSyncApplicationService } from '@/applications/excel-sync/IWbsSyncApplicationService';
-import { WbsSyncApplicationService as ExcelWbsSyncApplicationService } from '@/applications/excel-sync/WbsSyncApplicationService';
+import { IWbsSyncApplicationService } from '@/applications/wbs-sync/IWbsSyncApplicationService';
 
 
 const container: Container = new Container();
@@ -134,7 +132,7 @@ container.bind<IUserApplicationService>(SYMBOL.IUserApplicationService).to(UserA
 container.bind<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService).to(GeppoImportApplicationService).inSingletonScope();
 container.bind<IProgressHistoryApplicationService>(SYMBOL.IProgressHistoryApplicationService).to(ProgressHistoryApplicationService).inSingletonScope();
 container.bind<TaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDependencyService).inSingletonScope();
-container.bind<IWbsSyncService>(SYMBOL.IWbsSyncService).to(WbsSyncApplicationService).inSingletonScope();
+// container.bind<IWbsSyncService>(SYMBOL.IWbsSyncService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<IMilestoneApplicationService>(SYMBOL.IMilestoneApplicationService).to(MilestoneApplicationService).inSingletonScope();
 container.bind<EvmApplicationService>(SYMBOL.IEvmApplicationService).to(EvmApplicationService).inSingletonScope();
 container.bind<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService).to(ImportJobApplicationService).inSingletonScope();
@@ -142,8 +140,7 @@ container.bind<INotificationService>(SYMBOL.INotificationService).to(Notificatio
 container.bind<PushNotificationService>('PushNotificationService').to(PushNotificationService).inSingletonScope();
 container.bind<NotificationEventDetector>('NotificationEventDetector').to(NotificationEventDetector).inSingletonScope();
 container.bind<ITaskSchedulingApplicationService>(SYMBOL.ITaskSchedulingApplicationService).to(TaskSchedulingApplicationService).inSingletonScope();
-// Excel WBS Sync Application Service
-container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(ExcelWbsSyncApplicationService).inSingletonScope();
+container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(WbsSyncApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();

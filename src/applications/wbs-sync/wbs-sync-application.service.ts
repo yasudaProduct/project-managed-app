@@ -1,5 +1,4 @@
 import { injectable, inject } from 'inversify';
-import type { IWbsSyncService } from '@/domains/sync/IWbsSyncService';
 import { ExcelWbs, SyncResult, SyncError, SyncErrorType, ValidationError } from '@/domains/sync/ExcelWbs';
 import { Task } from '@/domains/task/task';
 import { WbsDataMapper } from '@/domains/sync/WbsDataMapper';
@@ -12,13 +11,16 @@ import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-re
 import type { ITaskRepository } from '@/applications/task/itask-repository';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/project-status';
+import type { IWbsRepository } from '../wbs/iwbs-repository';
+import { IWbsSyncApplicationService } from './IWbsSyncApplicationService';
 
 /**
  * WBS同期アプリケーションサービス
  */
 @injectable()
-export class WbsSyncApplicationService implements IWbsSyncService {
+export class WbsSyncApplicationService implements IWbsSyncApplicationService {
   constructor(
+    @inject(SYMBOL.IWbsRepository) private wbsRepository: IWbsRepository,
     @inject(SYMBOL.IExcelWbsRepository) private excelWbsRepository: IExcelWbsRepository,
     @inject(SYMBOL.ISyncLogRepository) private syncLogRepository: ISyncLogRepository,
     @inject(SYMBOL.IPhaseRepository) private phaseRepository: IPhaseRepository,
@@ -27,7 +29,7 @@ export class WbsSyncApplicationService implements IWbsSyncService {
   ) { }
 
   // 洗い替え処理（全削除→全インポート）
-  async replaceAll(wbsId: number, wbsName: string): Promise<SyncResult> {
+  async replaceAll(wbsId: number): Promise<SyncResult> {
     // 実行モードで処理を実行
     const validationErrors: ValidationError[] = [];
     const result: SyncResult = {
@@ -40,8 +42,18 @@ export class WbsSyncApplicationService implements IWbsSyncService {
     };
 
     try {
+      // wbs存在チェック
+      const wbs = await this.wbsRepository.findById(wbsId);
+      if (!wbs) {
+        throw new SyncError(
+          'WBSが見つかりません',
+          SyncErrorType.VALIDATION_ERROR,
+          { wbsId }
+        );
+      }
+
       // Excelデータを取得
-      const excelData = await this.fetchExcelData(wbsName);
+      const excelData = await this.fetchExcelData(wbs.name);
       const excelDataWithRowNumbers
         = excelData.map((data) => ({
           data,

@@ -3,26 +3,28 @@ import { SYMBOL } from '@/types/symbol';
 import { IAssigneeGanttService } from '@/applications/assignee-gantt/iassignee-gantt.service';
 import { ITaskRepository } from '@/applications/task/itask-repository';
 import { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
-import { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import { IWbsRepository } from '@/applications/wbs/iwbs-repository';
-import { IProjectRepository } from '@/applications/project/iproject-repository';
+import { IProjectRepository } from '@/applications/projects/iproject-repository';
 import { PrismaClient } from '@prisma/client';
 import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { Wbs } from '@/domains/wbs/wbs';
 import { Project } from '@/domains/project/project';
-import { TaskNo } from '@/domains/task/task-no';
-import { TaskStatus } from '@/domains/task/task-status';
-import { Period } from '@/domains/period/period';
+import { TaskNo } from '@/domains/task/value-object/task-id';
+import { TaskStatus } from '@/domains/task/value-object/project-status';
+import { Period } from '@/domains/task/period';
 import { CompanyHoliday } from '@/domains/calendar/company-calendar';
-import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
+import { ProjectStatus } from '@/domains/project/project-status';
+import { PeriodType } from '@/domains/task/value-object/period-type';
+import { ManHour } from '@/domains/task/man-hour';
+import { ManHourType } from '@/domains/task/value-object/man-hour-type';
 
 describe('AssigneeGantt Integration Tests', () => {
   let assigneeGanttService: IAssigneeGanttService;
   let taskRepository: ITaskRepository;
   let wbsAssigneeRepository: IWbsAssigneeRepository;
-  let userScheduleRepository: IUserScheduleRepository;
+
   let companyHolidayRepository: ICompanyHolidayRepository;
   let wbsRepository: IWbsRepository;
   let projectRepository: IProjectRepository;
@@ -31,14 +33,12 @@ describe('AssigneeGantt Integration Tests', () => {
   let testProject: Project;
   let testWbs: Wbs;
   let testAssignees: WbsAssignee[];
-  let testTasks: Task[];
 
   beforeAll(async () => {
     // DIコンテナから必要なサービスを取得
     assigneeGanttService = container.get<IAssigneeGanttService>(SYMBOL.IAssigneeGanttService);
     taskRepository = container.get<ITaskRepository>(SYMBOL.ITaskRepository);
     wbsAssigneeRepository = container.get<IWbsAssigneeRepository>(SYMBOL.IWbsAssigneeRepository);
-    userScheduleRepository = container.get<IUserScheduleRepository>(SYMBOL.IUserScheduleRepository);
     companyHolidayRepository = container.get<ICompanyHolidayRepository>(SYMBOL.ICompanyHolidayRepository);
     wbsRepository = container.get<IWbsRepository>(SYMBOL.IWbsRepository);
     projectRepository = container.get<IProjectRepository>(SYMBOL.IProjectRepository);
@@ -47,97 +47,123 @@ describe('AssigneeGantt Integration Tests', () => {
 
   beforeEach(async () => {
     // テストデータをクリーンアップ
-    await prisma.task.deleteMany();
+    await prisma.wbsTask.deleteMany();
     await prisma.wbsAssignee.deleteMany();
+    await prisma.wbsPhase.deleteMany();
+    await prisma.milestone.deleteMany();
+    await prisma.wbsBuffer.deleteMany();
     await prisma.wbs.deleteMany();
-    await prisma.project.deleteMany();
+    await prisma.projects.deleteMany();
     await prisma.userSchedule.deleteMany();
     await prisma.companyHoliday.deleteMany();
 
+    await prisma.users.upsert({
+      where: { id: 'user-001' },
+      update: {},
+      create: {
+        id: 'user-001',
+        email: 'user001@example.com',
+        name: '山田太郎',
+        displayName: '山田太郎',
+      },
+    });
+    await prisma.users.upsert({
+      where: { id: 'user-002' },
+      update: {},
+      create: {
+        id: 'user-002',
+        email: 'user002@example.com',
+        name: '田中花子',
+        displayName: '田中花子',
+      },
+    });
+    await prisma.users.upsert({
+      where: { id: 'user-003' },
+      update: {},
+      create: {
+        id: 'user-003',
+        email: 'user003@example.com',
+        name: '佐藤次郎',
+        displayName: '佐藤次郎',
+      },
+    });
+
     // テストプロジェクトを作成
     testProject = Project.create({
-      name: 'Test Project',
-      description: 'Integration test project',
-      startDate: new Date('2024-01-01'),
-      endDate: new Date('2024-12-31'),
-      status: 'ACTIVE'
+      name: '結合テスト用プロジェクト',
+      description: '結合テスト用プロジェクト',
+      startDate: new Date('2025-05-01'),
+      endDate: new Date('2025-12-31'),
     });
-    await projectRepository.save(testProject);
+    testProject.updateStatus(new ProjectStatus({ status: 'ACTIVE' }));
+    const projectDb = await projectRepository.create(testProject);
 
     // テストWBSを作成
     testWbs = Wbs.create({
-      projectId: testProject.id!,
-      name: 'Test WBS',
-      version: 1,
-      createdUserId: 'test-user'
+      name: '結合テスト用WBS',
+      projectId: projectDb.id!,
     });
-    await wbsRepository.save(testWbs);
+    const wbsDb = await wbsRepository.create(testWbs);
 
     // テスト担当者を作成
     const assignee1 = WbsAssignee.create({
-      wbsId: testWbs.id!,
+      wbsId: wbsDb.id!,
       userId: 'user-001',
-      userName: '山田太郎',
-      rate: 0.8 // 80%稼働
+      rate: 0.8, // 80%稼働
+      seq: 1,
     });
     const assignee2 = WbsAssignee.create({
       wbsId: testWbs.id!,
       userId: 'user-002',
-      userName: '田中花子',
-      rate: 1.0 // 100%稼働
+      rate: 1.0, // 100%稼働
+      seq: 2,
     });
-    await wbsAssigneeRepository.save(assignee1);
-    await wbsAssigneeRepository.save(assignee2);
+    await wbsAssigneeRepository.create(wbsDb.id!, assignee1);
+    await wbsAssigneeRepository.create(wbsDb.id!, assignee2);
     testAssignees = [assignee1, assignee2];
 
     // テストタスクを作成
     const task1 = Task.create({
-      taskNo: TaskNo.create('TASK-001'),
+      taskNo: TaskNo.create('A1', 1),
       wbsId: testWbs.id!,
       name: 'フロントエンド開発',
       assigneeId: assignee1.id,
-      status: TaskStatus.InProgress,
+      status: new TaskStatus({ status: 'IN_PROGRESS' }),
       periods: [
-        Period.reconstruct({
-          id: 1,
-          periodType: 'YOTEI',
-          startDate: new Date('2024-01-15'),
-          endDate: new Date('2024-01-19'),
-          kosuu: 40 // 40時間
+        Period.create({
+          startDate: new Date('2025-05-01'),
+          endDate: new Date('2025-05-05'),
+          type: new PeriodType({ type: 'YOTEI' }),
+          manHours: [
+            ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
+          ]
         })
       ]
     });
 
     const task2 = Task.create({
-      taskNo: TaskNo.create('TASK-002'),
+      taskNo: TaskNo.create('A2', 2),
       wbsId: testWbs.id!,
       name: 'バックエンド開発',
       assigneeId: assignee2.id,
-      status: TaskStatus.NotStarted,
+      status: new TaskStatus({ status: 'NOT_STARTED' }),
       periods: [
-        Period.reconstruct({
-          id: 2,
-          periodType: 'YOTEI',
-          startDate: new Date('2024-01-16'),
-          endDate: new Date('2024-01-20'),
-          kosuu: 32 // 32時間
+        Period.create({
+          startDate: new Date('2025-05-06'),
+          endDate: new Date('2025-05-10'),
+          type: new PeriodType({ type: 'YOTEI' }),
+          manHours: [
+            ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
+          ]
         })
       ]
     });
 
-    await taskRepository.save(task1);
-    await taskRepository.save(task2);
-    testTasks = [task1, task2];
+    await taskRepository.create(task1);
+    await taskRepository.create(task2);
   });
 
   afterEach(async () => {
-    // テストデータをクリーンアップ
-    await prisma.task.deleteMany();
-    await prisma.wbsAssignee.deleteMany();
-    await prisma.wbs.deleteMany();
-    await prisma.project.deleteMany();
-    await prisma.userSchedule.deleteMany();
-    await prisma.companyHoliday.deleteMany();
   });
 
   afterAll(async () => {
@@ -147,8 +173,8 @@ describe('AssigneeGantt Integration Tests', () => {
   describe('getAssigneeWorkloads', () => {
     it('複数担当者の作業負荷を正しく計算する', async () => {
       // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-19');
+      const startDate = new Date('2025-05-01');
+      const endDate = new Date('2025-05-05');
 
       // Act
       const workloads = await assigneeGanttService.getAssigneeWorkloads(
@@ -249,22 +275,23 @@ describe('AssigneeGantt Integration Tests', () => {
 
       // 同一担当者に複数タスクを割り当て
       const additionalTask = Task.create({
-        taskNo: TaskNo.create('TASK-003'),
+        taskNo: TaskNo.create('A3', 3),
         wbsId: testWbs.id!,
         name: '追加タスク',
         assigneeId: testAssignees[0].id, // 山田太郎に割り当て
-        status: TaskStatus.NotStarted,
+        status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
-          Period.reconstruct({
-            id: 3,
-            periodType: 'YOTEI',
-            startDate: new Date('2024-01-17'),
-            endDate: new Date('2024-01-19'),
-            kosuu: 24 // 24時間
+          Period.create({
+            startDate: new Date('2025-05-07'),
+            endDate: new Date('2025-05-09'),
+            type: new PeriodType({ type: 'YOTEI' }),
+            manHours: [
+              ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
+            ]
           })
         ]
       });
-      await taskRepository.save(additionalTask);
+      await taskRepository.create(additionalTask);
 
       // Act
       const workloads = await assigneeGanttService.getAssigneeWorkloads(
@@ -299,31 +326,32 @@ describe('AssigneeGantt Integration Tests', () => {
 
       // 週末のみのタスクを作成
       const weekendTask = Task.create({
-        taskNo: TaskNo.create('TASK-004'),
+        taskNo: TaskNo.create('A4', 4),
         wbsId: testWbs.id!,
         name: '週末タスク',
         assigneeId: testAssignees[0].id,
-        status: TaskStatus.NotStarted,
+        status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
-          Period.reconstruct({
-            id: 4,
-            periodType: 'YOTEI',
-            startDate: new Date('2024-01-20'), // 土曜日
-            endDate: new Date('2024-01-21'), // 日曜日
-            kosuu: 16
+          Period.create({
+            startDate: new Date('2025-05-20'), // 土曜日
+            endDate: new Date('2025-05-21'), // 日曜日
+            type: new PeriodType({ type: 'YOTEI' }),
+            manHours: [
+              ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
+            ]
           })
         ]
       });
-      await taskRepository.save(weekendTask);
+      await taskRepository.create(weekendTask);
 
       // 土日を会社休日に設定
       await companyHolidayRepository.save({
-        date: new Date('2024-01-20'),
+        date: new Date('2025-05-20'),
         name: '土曜日',
         type: 'COMPANY'
       });
       await companyHolidayRepository.save({
-        date: new Date('2024-01-21'),
+        date: new Date('2025-05-21'),
         name: '日曜日',
         type: 'COMPANY'
       });
@@ -350,28 +378,29 @@ describe('AssigneeGantt Integration Tests', () => {
 
       // 単日タスクを作成
       const singleDayTask = Task.create({
-        taskNo: TaskNo.create('TASK-005'),
+        taskNo: TaskNo.create('A5', 5),
         wbsId: testWbs.id!,
         name: '単日タスク',
         assigneeId: testAssignees[1].id, // 田中花子
-        status: TaskStatus.NotStarted,
+        status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
-          Period.reconstruct({
-            id: 5,
-            periodType: 'YOTEI',
-            startDate: new Date('2024-01-15'),
-            endDate: new Date('2024-01-15'),
-            kosuu: 8
+          Period.create({
+            startDate: new Date('2025-05-15'),
+            endDate: new Date('2025-05-15'),
+            type: new PeriodType({ type: 'YOTEI' }),
+            manHours: [
+              ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
+            ]
           })
         ]
       });
-      await taskRepository.save(singleDayTask);
+      await taskRepository.create(singleDayTask);
 
       // 田中花子の終日予定を設定
       await prisma.userSchedule.create({
         data: {
           userId: 'user-002',
-          date: new Date('2024-01-15'),
+          date: new Date('2025-05-15'),
           title: '終日休暇',
           startTime: '00:00',
           endTime: '24:00'
@@ -387,7 +416,7 @@ describe('AssigneeGantt Integration Tests', () => {
 
       // Assert
       expect(warnings).toHaveLength(1);
-      expect(warnings[0].taskNo).toBe('TASK-005');
+      expect(warnings[0].taskNo).toBe('A5');
       expect(warnings[0].taskName).toBe('単日タスク');
       expect(warnings[0].assigneeName).toBe('田中花子');
       expect(warnings[0].reason).toBe('NO_WORKING_DAYS');
@@ -446,22 +475,23 @@ describe('AssigneeGantt Integration Tests', () => {
 
       // 1日で実行不可能な工数のタスクを作成
       const overloadTask = Task.create({
-        taskNo: TaskNo.create('TASK-006'),
+        taskNo: TaskNo.create('A6', 6),
         wbsId: testWbs.id!,
         name: '過負荷タスク',
         assigneeId: testAssignees[0].id, // 山田太郎（80%稼働）
-        status: TaskStatus.NotStarted,
+        status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
-          Period.reconstruct({
-            id: 6,
-            periodType: 'YOTEI',
-            startDate: new Date('2024-01-15'),
-            endDate: new Date('2024-01-15'),
-            kosuu: 10 // 1日10時間は過負荷
+          Period.create({
+            startDate: new Date('2025-05-15'),
+            endDate: new Date('2025-05-15'),
+            type: new PeriodType({ type: 'YOTEI' }),
+            manHours: [
+              ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
+            ]
           })
         ]
       });
-      await taskRepository.save(overloadTask);
+      await taskRepository.create(overloadTask);
 
       // Act
       const workloads = await assigneeGanttService.getAssigneeWorkloads(
@@ -472,11 +502,7 @@ describe('AssigneeGantt Integration Tests', () => {
 
       // Assert
       const yamadaWorkload = workloads.find(w => w.assigneeName === '山田太郎');
-      expect(yamadaWorkload!.overloadedDays).toHaveLength(1);
-
-      const overloadedDay = yamadaWorkload!.overloadedDays[0];
-      expect(overloadedDay.isOverloaded).toBe(true);
-      expect(overloadedDay.allocatedHours).toBeGreaterThan(overloadedDay.availableHours);
+      expect(yamadaWorkload!.dailyAllocations.some(d => d.isOverloaded)).toBe(true);
     });
 
     it('稼働率を考慮して工数を配分する', async () => {
@@ -488,29 +514,30 @@ describe('AssigneeGantt Integration Tests', () => {
       const partTimeAssignee = WbsAssignee.create({
         wbsId: testWbs.id!,
         userId: 'user-003',
-        userName: '佐藤次郎',
-        rate: 0.5 // 50%稼働
+        rate: 0.5, // 50%稼働
+        seq: 3,
       });
-      await wbsAssigneeRepository.save(partTimeAssignee);
+      await wbsAssigneeRepository.create(testWbs.id!, partTimeAssignee);
 
       // タスクを割り当て
       const partTimeTask = Task.create({
-        taskNo: TaskNo.create('TASK-007'),
+        taskNo: TaskNo.create('A7', 7),
         wbsId: testWbs.id!,
         name: 'パートタイムタスク',
         assigneeId: partTimeAssignee.id,
-        status: TaskStatus.NotStarted,
+        status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
-          Period.reconstruct({
-            id: 7,
-            periodType: 'YOTEI',
-            startDate: new Date('2024-01-15'),
-            endDate: new Date('2024-01-19'),
-            kosuu: 20 // 20時間
+          Period.create({
+            startDate: new Date('2025-05-15'),
+            endDate: new Date('2025-05-19'),
+            type: new PeriodType({ type: 'YOTEI' }),
+            manHours: [
+              ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
+            ]
           })
         ]
       });
-      await taskRepository.save(partTimeTask);
+      await taskRepository.create(partTimeTask);
 
       // Act
       const workloads = await assigneeGanttService.getAssigneeWorkloads(

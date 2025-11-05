@@ -3,7 +3,7 @@ import { container } from '@/lib/inversify.config'
 import { SYMBOL } from '@/types/symbol'
 import { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service'
 import { IGeppoImportApplicationService } from '@/applications/geppo-import/geppo-import-application-service'
-import { IWbsSyncApplicationService } from '@/applications/excel-sync/IWbsSyncApplicationService'
+import { IWbsSyncApplicationService } from '@/applications/wbs-sync/IWbsSyncApplicationService'
 import { ImportJob } from '@/domains/import-job/import-job'
 import { INotificationService } from '@/applications/notification/INotificationService'
 import { NotificationType } from '@/types/notification'
@@ -172,7 +172,7 @@ async function executeWbsImport(jobId: string, job: ImportJob) {
     }
 
     // WBS同期実行
-    const result = await wbsSyncService.executeReplaceAll(job.wbsId)
+    const result = await wbsSyncService.replaceAll(job.wbsId)
 
     if (result.success) {
 

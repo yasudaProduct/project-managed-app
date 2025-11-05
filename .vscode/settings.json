@@ -36,18 +36,13 @@
       "iconColour": "red"
     }
   },
-  "jest.autoRun": {
-    "watch": false,
-    "onSave": "test-file"
-  },
-  "jest.testExplorer": {
-    "enabled": true,
-    "showInlineError": true
-  },
   "jest.coverageColors": {
     "uncovered": "rgba(255, 99, 71, 0.7)",
     "partially-covered": "rgba(255, 215, 0, 0.7)",
     "covered": "rgba(50, 205, 50, 0.7)"
   },
-  "jest.showCoverageOnLoad": false
+  "jest.jestCommandLine": "node ./node_modules/jest/bin/jest.js --config=jest.all.config.js",
+  "jest.runMode": {
+    "type": "on-demand"
+  }
 }

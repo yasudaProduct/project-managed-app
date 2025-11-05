@@ -78,7 +78,6 @@ export class WorkRecordPrismaRepository implements IWorkRecordRepository {
     }
   }
 
-
   async deleteByUserAndDateRange(userIds: string[], startDate: Date, endDate: Date): Promise<number> {
     try {
       const result = await this.prisma.workRecord.deleteMany({
