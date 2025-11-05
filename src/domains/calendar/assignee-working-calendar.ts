@@ -35,8 +35,8 @@ export class AssigneeWorkingCalendar {
     }
 
     // 2. 担当者個人の休暇・予定チェック
-    const userSchedule = this.getUserScheduleForDate(date);
-    if (userSchedule && this.isFullDayOff(userSchedule)) {
+    const userSchedules = this.getUserScheduleForDate(date);
+    if (userSchedules.some(s => this.isFullDayOff(s))) {
       return false;
     }
 
@@ -62,8 +62,8 @@ export class AssigneeWorkingCalendar {
     const standardHours = this.companyCalendar.getStandardWorkingHours();
 
     // ユーザースケジュールによる減算
-    const userSchedule = this.getUserScheduleForDate(date);
-    const scheduledHours = userSchedule ? this.getScheduledHours(userSchedule) : 0;
+    const userSchedules = this.getUserScheduleForDate(date);
+    const scheduledHours = this.sumScheduledHours(userSchedules, standardHours);
 
     // 稼働可能時間 = 基準時間 - 個人予定の時間
     const availableHours = Math.max(0, standardHours - scheduledHours);
@@ -75,9 +75,9 @@ export class AssigneeWorkingCalendar {
    * @param date 日付
    * @returns 個人予定
    */
-  private getUserScheduleForDate(date: Date): UserSchedule | undefined {
+  private getUserScheduleForDate(date: Date): UserSchedule[] {
     const dateString = this.formatDateString(date);
-    return this.userSchedules.find(schedule => {
+    return this.userSchedules.filter(schedule => {
       const scheduleDate = this.formatDateString(schedule.date);
       return scheduleDate === dateString && schedule.userId === this.assignee.userId;
     });
@@ -120,6 +120,19 @@ export class AssigneeWorkingCalendar {
     } catch {
       return 0;
     }
+  }
+
+  // 同日の予定合計時間（全休があれば基準時間、過剰加算は基準時間で打ち止め）
+  private sumScheduledHours(schedules: UserSchedule[], capHours: number): number {
+    if (schedules.length === 0) return 0;
+    if (schedules.some(s => this.isFullDayOff(s))) return capHours;
+
+    const total = schedules
+      .map(s => this.getScheduledHours(s))
+      .filter(h => Number.isFinite(h) && h > 0)
+      .reduce((a, b) => a + b, 0);
+
+    return Math.min(capHours, total);
   }
 
   private formatDateString(date: Date): string {

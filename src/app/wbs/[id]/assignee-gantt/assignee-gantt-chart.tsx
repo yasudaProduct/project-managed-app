@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 import { GanttHeader } from "./_components/gantt-header";
 import { GanttRow } from "./_components/gantt-row";
@@ -27,6 +28,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AssigneeGanttChartProps {
   wbsId: number;
@@ -451,10 +453,10 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
                     {w.assigneeName ? ` / ${w.assigneeName}` : ""}
                     {w.periodStart && w.periodEnd
                       ? `（${new Date(w.periodStart).toLocaleDateString(
-                          "ja-JP"
-                        )} - ${new Date(w.periodEnd).toLocaleDateString(
-                          "ja-JP"
-                        )}）`
+                        "ja-JP"
+                      )} - ${new Date(w.periodEnd).toLocaleDateString(
+                        "ja-JP"
+                      )}）`
                       : ""}
                   </li>
                 ))}
@@ -519,19 +521,49 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
               <div className="mt-6 space-y-1">
                 <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded">
                   <div className="text-sm">
-                    <div className="text-gray-500">予定工数</div>
+                    <div className="text-gray-500 flex items-center">
+                      予定工数
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>{<Info className="w-4" />}</TooltipTrigger>
+                          <TooltipContent className="max-w-sm">
+                            <div>自動計算された予定工数</div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <div className="font-medium">
                       {selectedAllocation.allocatedHours.toFixed(2)}h
                     </div>
                   </div>
                   <div className="text-sm">
-                    <div className="text-gray-500">稼働可能時間</div>
+                    <div className="text-gray-500 flex items-center">
+                      稼働可能時間
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>{<Info className="w-4" />}</TooltipTrigger>
+                          <TooltipContent className="max-w-sm">
+                            <div>基準時間 - 個人予定時間</div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <div className="font-medium">
                       {selectedAllocation.availableHours.toFixed(2)}h
                     </div>
                   </div>
                   <div className="text-sm">
-                    <div className="text-gray-500">稼働率</div>
+                    <div className="text-gray-500 flex items-center">
+                      稼働率
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>{<Info className="w-4" />}</TooltipTrigger>
+                          <TooltipContent className="max-w-sm">
+                            <div></div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <div
                       className={
                         selectedAllocation.isOverloaded
@@ -547,15 +579,15 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
                     <div
                       className={
                         selectedAllocation.isOverloaded ||
-                        selectedAllocation.isOverloadedByStandard
+                          selectedAllocation.isOverloadedByStandard
                           ? "font-medium text-red-600"
                           : "font-medium text-gray-700"
                       }
                     >
                       {selectedAllocation.isOverloaded
                         ? `過負荷 (+${selectedAllocation.overloadedHours.toFixed(
-                            2
-                          )}h)`
+                          2
+                        )}h)`
                         : "適正"}
                       {selectedAllocation.isOverloadedByStandard &&
                         !selectedAllocation.isOverloaded &&

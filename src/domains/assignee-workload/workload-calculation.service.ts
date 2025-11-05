@@ -33,6 +33,7 @@ export class WorkloadCalculationService {
 
     // 指定期間内の日別にループ
     for (let currentDate = new Date(startDate); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
+
       // その日の稼働可能時間を計算（会社休日・個人予定・稼働率を考慮）
       const availableHours = workingCalendar.getAvailableHours(currentDate);
 
