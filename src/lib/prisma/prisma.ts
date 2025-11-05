@@ -50,6 +50,10 @@ const prismaWithQueryLogging = Prisma.defineExtension({
     },
 })
 
+const isDateObject = (v: unknown): v is Date =>
+    Object.prototype.toString.call(v) === '[object Date]';
+const isAtField = (key: string) => /At$/.test(key);
+
 /**
  * クエリ実行時にPostgresのDateカラムに対して日本標準時に変換
  * @description
@@ -68,19 +72,21 @@ const prismaQueryWithTimeMod = Prisma.defineExtension({
                 if ((operation === 'create' || operation === 'update')) {
                     // argsが存在し、dataプロパティを持っている場合
                     if (args && typeof args === 'object' && 'data' in args) {
-                        const data = args.data;
+                        const data = args.data as Record<string, unknown>;
 
                         // 日付型のフィールドが存在する場合、prismaTimeModで処理
                         const dateFields = Object.keys(data).filter((key) => {
-                            const value = (data as Record<string, unknown>)[key];
-                            return Object.prototype.toString.call(value) === '[object Date]';
+                            const value = data[key];
+                            return isDateObject(value) && !isAtField(key);
                         });
                         dateFields.forEach((field) => {
                             const value = (data as Record<string, unknown>)[field];
                             const normalized = new Date(format(value as Date, 'yyyy-MM-dd'));
                             (data as Record<string, unknown>)[field] = normalized;
                         });
-                        console.log(`[Prisma] prismaQueryWithTimeMod: ${dateFields}`);
+                        if (dateFields.length > 0) {
+                            console.log(`[Prisma] prismaQueryWithTimeMod: ${dateFields}`);
+                        }
                     }
                 }
                 const result = await query(args);
