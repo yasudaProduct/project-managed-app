@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
     }
 
+    // インポートジョブを作成
     const job = await importJobService.createJob({
       type: type as ImportJobType,
       createdBy: undefined,
@@ -129,7 +130,8 @@ export async function POST(request: NextRequest) {
  */
 async function startBackgroundImport(jobId: string) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/import-jobs/${jobId}/execute`, {
+    // TODO: 自APIの呼び出しを止める
+    const response = await fetch(`/api/import-jobs/${jobId}/execute`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

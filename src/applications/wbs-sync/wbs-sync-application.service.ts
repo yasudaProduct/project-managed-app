@@ -1,5 +1,5 @@
 import { injectable, inject } from 'inversify';
-import type { IWbsSyncService, PreviewResult } from '@/domains/sync/IWbsSyncService';
+import type { IWbsSyncService } from '@/domains/sync/IWbsSyncService';
 import { ExcelWbs, SyncChanges, SyncResult, SyncError, SyncErrorType, ValidationError } from '@/domains/sync/ExcelWbs';
 import { Task } from '@/domains/task/task';
 import { SyncStatus, type DatabaseTransaction } from '@/domains/sync/sync-enums';
@@ -21,6 +21,9 @@ import { TaskStatus } from '@/domains/task/value-object/project-status';
 
 // Removed PrismaTransaction type - using DatabaseTransaction from domain
 
+/**
+ * WBS同期アプリケーションサービス
+ */
 @injectable()
 export class WbsSyncApplicationService implements IWbsSyncService {
   constructor(
@@ -391,24 +394,15 @@ export class WbsSyncApplicationService implements IWbsSyncService {
   // 旧Prisma直叩きの作成・更新は削除し、TaskRepository 経由で実装
 
   // プレビュー機能（ドメイン制約チェック付き）
-  async previewChanges(wbsId: number, wbsName: string): Promise<PreviewResult> {
-    // プレビューモードで処理を実行
-    const result = await this.processSync(wbsId, wbsName, true);
-    return result.preview!;
-  }
-
   // 洗い替え処理（全削除→全インポート）
   async replaceAll(wbsId: number, wbsName: string): Promise<SyncResult> {
     // 実行モードで処理を実行
-    const result = await this.processSync(wbsId, wbsName, false);
-    return result.sync!;
+    const result = await this.processSync(wbsId, wbsName);
+    return result;
   }
 
   // 共通同期処理（プレビューモードと実行モードの両方に対応）
-  private async processSync(wbsId: number, wbsName: string, isPreview: boolean): Promise<{
-    sync?: SyncResult;
-    preview?: PreviewResult;
-  }> {
+  private async processSync(wbsId: number, wbsName: string): Promise<SyncResult> {
     const validationErrors: ValidationError[] = [];
     const result: SyncResult = {
       success: false,
@@ -440,18 +434,16 @@ export class WbsSyncApplicationService implements IWbsSyncService {
       // 削除数を設定
       result.deletedCount = existingTasks.length;
 
-      // 既存タスクを全削除（プレビュー時はスキップ）
-      if (!isPreview) {
-        for (const task of existingTasks) {
-          if (task.id) {
-            await this.taskRepository.delete(task.id);
-          }
+      // 既存タスクを全削除
+      for (const task of existingTasks) {
+        if (task.id) {
+          await this.taskRepository.delete(task.id);
         }
       }
 
       // フェーズ情報を取得（IDマッピング用）
       const phaseList = await this.phaseRepository.findByWbsId(wbsId);
-      const phaseNameToId = new Map<string, number>();
+      const phaseNameToId = new Map<string, number>(); // <フェーズ名, フェーズID>
       phaseList.forEach(p => {
         const id = (p as unknown as { id?: number }).id;
         if (p.name && id !== undefined) {
@@ -461,7 +453,6 @@ export class WbsSyncApplicationService implements IWbsSyncService {
 
       // 担当者情報を取得
       const assignees = await this.wbsAssigneeRepository.findByWbsId(wbsId);
-      // const allAssignees = [...assignees, ...newAssignees];
 
       // 全タスクを処理（バリデーション・作成）
       const summary = {
@@ -477,11 +468,11 @@ export class WbsSyncApplicationService implements IWbsSyncService {
         summary.totalTasks++;
 
         try {
+          // タスクドメインを構築
           const task = this.buildTaskDomainFromExcel({ excelWbs, wbsId, phaseNameToId, assignees: assignees });
 
-          if (!isPreview) {
-            await this.taskRepository.create(task);
-          }
+          // タスクを作成
+          await this.taskRepository.create(task);
 
           result.addedCount++;
           summary.validTasks++;
@@ -516,21 +507,6 @@ export class WbsSyncApplicationService implements IWbsSyncService {
         result.errorDetails = { validationErrors };
       }
 
-      // プレビュー時は変更検出も行って結果を返す
-      if (isPreview) {
-        const changes = await this.detectChanges(excelData, existingTasks);
-        return {
-          preview: {
-            changes,
-            validationErrors,
-            newPhases: [],
-            newUsers: [],
-            newAssignees: [],
-            summary
-          }
-        };
-      }
-
       // 同期ログを記録（実行時のみ）
       await this.syncLogRepository.recordSync({
         projectId: result.projectId,
@@ -543,28 +519,26 @@ export class WbsSyncApplicationService implements IWbsSyncService {
         errorDetails: result.errorDetails,
       });
 
-      return { sync: result };
+      return result;
     } catch (error) {
-      if (!isPreview) {
-        // エラーログを記録
-        await this.syncLogRepository.recordSync({
-          projectId: result.projectId || 'unknown',
-          syncStatus: 'FAILED',
-          syncedAt: new Date(),
-          recordCount: 0,
-          addedCount: 0,
-          updatedCount: 0,
-          deletedCount: 0,
-          errorDetails: error instanceof Error ? { message: error.message } : { message: String(error) },
-        });
-      }
+      // エラーログを記録
+      await this.syncLogRepository.recordSync({
+        projectId: result.projectId || 'unknown',
+        syncStatus: 'FAILED',
+        syncedAt: new Date(),
+        recordCount: 0,
+        addedCount: 0,
+        updatedCount: 0,
+        deletedCount: 0,
+        errorDetails: error instanceof Error ? { message: error.message } : { message: String(error) },
+      });
 
       if (error instanceof SyncError) {
         throw error;
       }
 
       throw new SyncError(
-        isPreview ? 'プレビュー処理中にエラーが発生しました' : '洗い替え処理中にエラーが発生しました',
+        '洗い替え処理中にエラーが発生しました',
         SyncErrorType.TRANSACTION_ERROR,
         { message: String(error) }
       );

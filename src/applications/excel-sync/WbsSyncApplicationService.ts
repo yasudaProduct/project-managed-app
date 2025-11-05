@@ -17,6 +17,11 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
   ) { }
 
 
+  /**
+   * 洗い替え同期を実行する
+   * @param wbsId 
+   * @returns 
+   */
   async executeReplaceAll(wbsId: number): Promise<SyncResult> {
     try {
       // WBSを取得
