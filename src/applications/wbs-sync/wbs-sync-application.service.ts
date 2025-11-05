@@ -7,7 +7,6 @@ import type { IExcelWbsRepository } from '@/applications/excel-sync/IExcelWbsRep
 import type { ISyncLogRepository } from '@/applications/excel-sync/ISyncLogRepository';
 import { SYMBOL } from '@/types/symbol';
 import type { IPhaseRepository } from '@/applications/task/iphase-repository';
-import type { IUserRepository } from '@/applications/user/iuser-repositroy';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import type { ITaskRepository } from '@/applications/task/itask-repository';
@@ -23,7 +22,6 @@ export class WbsSyncApplicationService implements IWbsSyncService {
     @inject(SYMBOL.IExcelWbsRepository) private excelWbsRepository: IExcelWbsRepository,
     @inject(SYMBOL.ISyncLogRepository) private syncLogRepository: ISyncLogRepository,
     @inject(SYMBOL.IPhaseRepository) private phaseRepository: IPhaseRepository,
-    @inject(SYMBOL.IUserRepository) private userRepository: IUserRepository,
     @inject(SYMBOL.IWbsAssigneeRepository) private wbsAssigneeRepository: IWbsAssigneeRepository,
     @inject(SYMBOL.ITaskRepository) private taskRepository: ITaskRepository,
   ) { }
@@ -31,102 +29,6 @@ export class WbsSyncApplicationService implements IWbsSyncService {
   // 洗い替え処理（全削除→全インポート）
   async replaceAll(wbsId: number, wbsName: string): Promise<SyncResult> {
     // 実行モードで処理を実行
-    const result = await this.processSync(wbsId, wbsName);
-    return result;
-  }
-
-  // エクセル側のでwbsデータを取得
-  // エクセルデータはWBS名で取得する
-  private async fetchExcelData(wbsName: string): Promise<ExcelWbs[]> {
-    try {
-      const excelWbs = await this.excelWbsRepository.findByWbsName(wbsName);
-      if (!excelWbs) {
-        throw new SyncError(
-          'Excel側のデータが見つかりません',
-          SyncErrorType.VALIDATION_ERROR,
-          { wbsName }
-        );
-      }
-      return excelWbs;
-    } catch (error) {
-      throw new SyncError(
-        'Excel側のデータ取得に失敗しました',
-        SyncErrorType.CONNECTION_ERROR,
-        { error: error instanceof Error ? error.message : String(error) }
-      );
-    }
-  }
-
-  private buildTaskDomainFromExcel(args: {
-    excelWbs: ExcelWbs,
-    wbsId: number,
-    phaseNameToId: Map<string, number>,
-    assignees: WbsAssignee[],
-    base?: Task,
-  }): Task {
-    const { excelWbs, wbsId, phaseNameToId, assignees, base } = args;
-    const { task, periods } = WbsDataMapper.toAppWbs(excelWbs);
-    console.log('excelWbs.ROW_NO', excelWbs.ROW_NO);
-
-    // 必須フィールドチェック
-    if (!task.taskNo) {
-      throw new Error('タスクNoは必須です');
-    }
-    if (!task.name || (task.name as string).trim() === '') {
-      // TODO: よくわからないデータがまぎれこんでいるので一時的に空のタスク名を許容する。 スキップするか必須とするか検討
-      task.name = '(無題のタスク)';
-      // throw new Error('タスク名は必須です');
-    }
-    if (!excelWbs.PHASE) {
-      throw new Error('フェーズは必須です');
-    }
-
-    // フェーズの存在チェック
-    const phaseId = phaseNameToId.get(excelWbs.PHASE);
-    if (!phaseId) {
-      throw new Error(`フェーズ「${excelWbs.PHASE}」が見つかりません`);
-    }
-
-    // 担当者の存在チェック（担当者が指定されている場合のみ）
-    let assigneeId: number | undefined = undefined;
-    if (excelWbs.TANTO) {
-      const foundAssigneeId = this.findAssigneeIdFromDomain(excelWbs.TANTO, assignees);
-      if (!foundAssigneeId) {
-        throw new Error(`担当者「${excelWbs.TANTO}」が見つかりません`);
-      }
-      assigneeId = foundAssigneeId;
-    }
-
-    // ドメイン制約に合わせて変換
-    const taskNo = TaskNo.reconstruct(task.taskNo as string);
-    const name = task.name as string;
-    const status = new TaskStatus({ status: task.status as ReturnType<TaskStatus['getStatus']> });
-
-    if (base) {
-      // 既存タスクをドメイン更新で反映（制約違反は例外）
-      base.update({ name, assigneeId, status, phaseId, periods });
-      return base;
-    }
-
-    return Task.create({
-      taskNo,
-      wbsId,
-      name,
-      status,
-      phaseId,
-      assigneeId,
-      periods,
-    });
-  }
-
-  private findAssigneeIdFromDomain(tantoName: string | null, assignees: WbsAssignee[]): number | null {
-    if (!tantoName) return null;
-    const found = assignees.find(a => a.userName === tantoName);
-    return found && found.id !== undefined ? found.id : null;
-  }
-
-  // 共通同期処理（プレビューモードと実行モードの両方に対応）
-  private async processSync(wbsId: number, wbsName: string): Promise<SyncResult> {
     const validationErrors: ValidationError[] = [];
     const result: SyncResult = {
       success: false,
@@ -138,18 +40,15 @@ export class WbsSyncApplicationService implements IWbsSyncService {
     };
 
     try {
-      // Excelデータを取得（行番号付き）
-      const excelDataWithRowNumbers = await this.fetchExcelDataWithRowNumbers(wbsName);
-      const excelData = excelDataWithRowNumbers.map(item => item.data);
+      // Excelデータを取得
+      const excelData = await this.fetchExcelData(wbsName);
+      const excelDataWithRowNumbers
+        = excelData.map((data) => ({
+          data,
+          rowNumber: data.ROW_NO
+        }));
 
-      if (excelData.length === 0) {
-        throw new SyncError(
-          'インポートするデータがありません',
-          SyncErrorType.VALIDATION_ERROR,
-          { wbsName }
-        );
-      }
-
+      // プロジェクトIDを設定
       result.projectId = excelData[0].PROJECT_ID;
 
       // 既存タスクを取得
@@ -158,6 +57,7 @@ export class WbsSyncApplicationService implements IWbsSyncService {
       // 削除数を設定
       result.deletedCount = existingTasks.length;
 
+      // TODO: ここからトランザクション貼る
       // 既存タスクを全削除
       for (const task of existingTasks) {
         if (task.id) {
@@ -231,7 +131,7 @@ export class WbsSyncApplicationService implements IWbsSyncService {
         result.errorDetails = { validationErrors };
       }
 
-      // 同期ログを記録（実行時のみ）
+      // 同期ログを記録
       await this.syncLogRepository.recordSync({
         projectId: result.projectId,
         syncStatus: result.success ? 'SUCCESS' : 'FAILED',
@@ -262,21 +162,96 @@ export class WbsSyncApplicationService implements IWbsSyncService {
       }
 
       throw new SyncError(
-        '洗い替え処理中にエラーが発生しました',
+        'WBS同期処理中にエラーが発生しました',
         SyncErrorType.TRANSACTION_ERROR,
         { message: String(error) }
       );
     }
   }
 
-  // Excelデータを行番号付きで取得
-  private async fetchExcelDataWithRowNumbers(wbsName: string): Promise<Array<{ data: ExcelWbs; rowNumber: number }>> {
-    const excelData = await this.fetchExcelData(wbsName);
-    // 実際のExcelファイルの行番号を想定（ヘッダー行1行 + データ行のインデックス）
-    return excelData.map((data) => ({
-      data,
-      rowNumber: data.ROW_NO // Excelの行番号は1から始まり、ヘッダー行を考慮
-    }));
+  // エクセル側のでwbsデータを取得
+  // エクセルデータはWBS名で取得する
+  private async fetchExcelData(wbsName: string): Promise<ExcelWbs[]> {
+    try {
+      const excelWbs = await this.excelWbsRepository.findByWbsName(wbsName);
+      if (!excelWbs || excelWbs.length === 0) {
+        throw new SyncError(
+          'Excel側のデータが見つかりません',
+          SyncErrorType.VALIDATION_ERROR,
+          { wbsName }
+        );
+      }
+
+      return excelWbs;
+    } catch (error) {
+      throw new SyncError(
+        'Excel側のデータ取得に失敗しました',
+        SyncErrorType.CONNECTION_ERROR,
+        { error: error instanceof Error ? error.message : String(error) }
+      );
+    }
+  }
+
+  // ExcelWbsからTaskドメインを構築
+  private buildTaskDomainFromExcel(args: {
+    excelWbs: ExcelWbs,
+    wbsId: number,
+    phaseNameToId: Map<string, number>,
+    assignees: WbsAssignee[],
+  }): Task {
+    const { excelWbs, wbsId, phaseNameToId, assignees } = args;
+    const { task, periods } = WbsDataMapper.toAppWbs(excelWbs);
+
+    // 必須フィールドチェック
+    if (!task.taskNo) {
+      throw new Error('タスクNoは必須です');
+    }
+    if (!task.name || (task.name as string).trim() === '') {
+      // TODO: よくわからないデータがまぎれこんでいるので一時的に空のタスク名を許容する。 スキップするか必須とするか検討
+      task.name = '(無題のタスク)';
+      // throw new Error('タスク名は必須です');
+    }
+    if (!excelWbs.PHASE) {
+      throw new Error('フェーズは必須です');
+    }
+
+    // フェーズの存在チェック
+    const phaseId = phaseNameToId.get(excelWbs.PHASE);
+    if (!phaseId) {
+      throw new Error(`フェーズ「${excelWbs.PHASE}」が見つかりません`);
+    }
+
+    // 担当者の存在チェック（担当者が指定されている場合のみ）
+    let assigneeId: number | undefined = undefined;
+    if (excelWbs.TANTO) {
+      const foundAssigneeId = this.findAssigneeIdFromDomain(excelWbs.TANTO, assignees);
+      if (!foundAssigneeId) {
+        throw new Error(`担当者「${excelWbs.TANTO}」が見つかりません`);
+      }
+      assigneeId = foundAssigneeId;
+    }
+
+    // ドメイン制約に合わせて変換
+    const taskNo = TaskNo.reconstruct(task.taskNo as string);
+    const name = task.name as string;
+    const status = new TaskStatus({ status: task.status as ReturnType<TaskStatus['getStatus']> });
+
+    return Task.create({
+      taskNo,
+      wbsId,
+      name,
+      status,
+      phaseId,
+      assigneeId,
+      periods,
+    });
+  }
+
+  // 担当者名から担当者IDを取得
+  private findAssigneeIdFromDomain(tantoName: string | null, assignees: WbsAssignee[]): number | null {
+    if (!tantoName) return null;
+    const found = assignees.find(a => a.userName === tantoName);
+    return found && found.id !== undefined ? found.id : null;
   }
 
   // エラーからフィールド名を推測

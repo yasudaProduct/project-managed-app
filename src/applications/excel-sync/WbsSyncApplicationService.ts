@@ -17,6 +17,7 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
   ) { }
 
 
+  // TODO: 直接IWbsSyncServiceを呼び出せばいいのでは
   /**
    * 洗い替え同期を実行する
    * @param wbsId 

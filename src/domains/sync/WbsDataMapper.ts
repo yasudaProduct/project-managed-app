@@ -13,18 +13,17 @@ export class WbsDataMapper {
   static toAppWbs(excelWbs: ExcelWbs): {
     task: Record<string, unknown>;
     periods: Period[];
-    manHours: ManHour[];
   } {
+    // TODO: taskをドメインモデルに変換するのはbuildTaskDomainFromExcelで行っているが、ここでやればいいのでは？
     const task: Record<string, unknown> = {
       taskNo: excelWbs.WBS_ID || undefined,
-      name: excelWbs.TASK || excelWbs.ACTIVITY || undefined, // TODO: TASKとACTIVITYの運用を理解して、どちらを使うか決める
+      name: (excelWbs.ACTIVITY + excelWbs.TASK) || undefined, // TODO: TASKとACTIVITYの運用を理解して、どちらを使うか決める
       status: this.mapStatus(excelWbs.STATUS),
     };
 
     const periods = this.mapPeriods(excelWbs);
-    const manHours = this.mapManHours();
 
-    return { task, periods, manHours };
+    return { task, periods };
   }
 
   // ステータスマッピング
@@ -85,16 +84,6 @@ export class WbsDataMapper {
       }));
     }
 
-    // 実績日程
-    if (excelWbs.JISSEKI_START_DATE && excelWbs.JISSEKI_END_DATE) {
-      periods.push(Period.create({
-        startDate: excelWbs.JISSEKI_START_DATE,
-        endDate: excelWbs.JISSEKI_END_DATE,
-        type: new PeriodType({ type: 'JISSEKI' }),
-        manHours: [], // 実績日程には工数は含めない
-      }));
-    }
-
     return periods;
   }
 
@@ -104,29 +93,4 @@ export class WbsDataMapper {
     return [];
   }
 
-  // 削除判定
-  static getDeletedWbsIds(
-    excelData: ExcelWbs[],
-    appTasks: Task[]
-  ): string[] {
-    const excelWbsIds = new Set(excelData.map(e => e.WBS_ID));
-    return appTasks
-      .filter(task => task.taskNo && !excelWbsIds.has(task.taskNo.getValue()))
-      .map(task => task.taskNo.getValue());
-  }
-
-  // 更新判定
-  static needsUpdate(excelWbs: ExcelWbs, appTask: Task): boolean {
-    // タスク名の変更チェック
-    const excelTaskName = excelWbs.TASK || excelWbs.ACTIVITY || '';
-    if (appTask.name !== excelTaskName) return true;
-
-    // ステータスの変更チェック
-    const mappedStatus = this.mapStatus(excelWbs.STATUS);
-    if (appTask.getStatus() !== mappedStatus) return true;
-
-    // TODO: 期間や工数の変更もチェックする必要がある場合は追加
-
-    return false;
-  }
 }
