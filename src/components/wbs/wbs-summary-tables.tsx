@@ -53,6 +53,11 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
   const { data: summary, isLoading, error } = useWbsSummary(projectId, wbsId);
   const [hoursUnit, setHoursUnit] = useState<HoursUnit>("hours");
 
+  // 月別集計表の表示切り替え状態
+  const [showMonthlyDifference, setShowMonthlyDifference] = useState(true);
+  const [showMonthlyBaseline, setShowMonthlyBaseline] = useState(false);
+  const [showMonthlyForecast, setShowMonthlyForecast] = useState(false);
+
   const formatNumber = (num: number) => {
     const converted = convertHours(num, hoursUnit);
     return converted.toLocaleString("ja-JP", {
@@ -432,12 +437,24 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
       <MonthlyAssigneeSummary
         monthlyData={summary.monthlyAssigneeSummary}
         hoursUnit={hoursUnit}
+        showDifference={showMonthlyDifference}
+        showBaseline={showMonthlyBaseline}
+        showForecast={showMonthlyForecast}
+        onShowDifferenceChange={setShowMonthlyDifference}
+        onShowBaselineChange={setShowMonthlyBaseline}
+        onShowForecastChange={setShowMonthlyForecast}
       />
 
       {/* 月別・工程別集計表 */}
       <MonthlyPhaseSummary
         monthlyData={summary.monthlyAssigneeSummary}
         hoursUnit={hoursUnit}
+        showDifference={showMonthlyDifference}
+        showBaseline={showMonthlyBaseline}
+        showForecast={showMonthlyForecast}
+        onShowDifferenceChange={setShowMonthlyDifference}
+        onShowBaselineChange={setShowMonthlyBaseline}
+        onShowForecastChange={setShowMonthlyForecast}
       />
     </div>
   );

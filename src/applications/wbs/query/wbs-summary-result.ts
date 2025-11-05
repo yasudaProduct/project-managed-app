@@ -40,6 +40,8 @@ export interface MonthlyAssigneeData {
   plannedHours: number;
   actualHours: number;
   difference: number;
+  baselineHours?: number;  // 基準工数（task_period.type='KIJUN'）
+  forecastHours?: number;  // 見通し工数（実績 + 残りの予定）
   taskDetails?: TaskAllocationDetail[];
 }
 
@@ -52,18 +54,24 @@ export interface MonthlyAssigneeSummary {
     plannedHours: number;
     actualHours: number;
     difference: number;
+    baselineHours?: number;
+    forecastHours?: number;
   }>;
   assigneeTotals: Record<string, {
     taskCount: number;
     plannedHours: number;
     actualHours: number;
     difference: number;
+    baselineHours?: number;
+    forecastHours?: number;
   }>;
   grandTotal: {
     taskCount: number;
     plannedHours: number;
     actualHours: number;
     difference: number;
+    baselineHours?: number;
+    forecastHours?: number;
   };
 }
 

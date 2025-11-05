@@ -30,10 +30,19 @@ import {
   copyMonthlyPhaseSummaryToClipboard,
   exportMonthlyPhaseSummary,
 } from "@/utils/export-table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Settings } from "lucide-react";
+import { useState } from "react";
 
 interface MonthlyPhaseSummaryProps {
   monthlyData: MonthlyAssigneeSummaryData;
   hoursUnit: HoursUnit;
+  showDifference?: boolean;
+  showBaseline?: boolean;
+  showForecast?: boolean;
+  onShowDifferenceChange?: (value: boolean) => void;
+  onShowBaselineChange?: (value: boolean) => void;
+  onShowForecastChange?: (value: boolean) => void;
 }
 
 type Cell = {
@@ -46,7 +55,14 @@ type Cell = {
 export function MonthlyPhaseSummary({
   monthlyData,
   hoursUnit,
+  showDifference = true,
+  showBaseline = false,
+  showForecast = false,
+  onShowDifferenceChange,
+  onShowBaselineChange,
+  onShowForecastChange,
 }: MonthlyPhaseSummaryProps) {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const formatNumber = (num: number) => {
     const converted = convertHours(num, hoursUnit);
     return converted.toLocaleString("ja-JP", {
@@ -155,7 +171,7 @@ export function MonthlyPhaseSummary({
       }
 
       return { phases, cells: cellMap, monthlyTotals, phaseTotals, grandTotal };
-    }, [monthlyData, hoursUnit]);
+    }, [monthlyData]);
 
   if (monthlyData.months.length === 0) {
     return (
@@ -184,6 +200,63 @@ export function MonthlyPhaseSummary({
             月別・工程別集計表
           </CardTitle>
           <div className="flex gap-2">
+            <DropdownMenu open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  表示設定
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="p-2 space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="phase-show-difference"
+                      checked={showDifference}
+                      onCheckedChange={(checked) =>
+                        onShowDifferenceChange?.(!!checked)
+                      }
+                    />
+                    <label
+                      htmlFor="phase-show-difference"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      月毎の差分を表示
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="phase-show-baseline"
+                      checked={showBaseline}
+                      onCheckedChange={(checked) =>
+                        onShowBaselineChange?.(!!checked)
+                      }
+                    />
+                    <label
+                      htmlFor="phase-show-baseline"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      月毎の基準を表示
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="phase-show-forecast"
+                      checked={showForecast}
+                      onCheckedChange={(checked) =>
+                        onShowForecastChange?.(!!checked)
+                      }
+                    />
+                    <label
+                      htmlFor="phase-show-forecast"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      月毎の見通しを表示
+                    </label>
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="outline"
               size="sm"
@@ -274,15 +347,21 @@ export function MonthlyPhaseSummary({
                 <TableHead className="font-semibold sticky left-0 bg-gray-50 z-10">
                   工程
                 </TableHead>
-                {monthlyData.months.map((month) => (
-                  <TableHead
-                    key={month}
-                    className="text-center font-semibold min-w-[120px]"
-                    colSpan={3}
-                  >
-                    {month}
-                  </TableHead>
-                ))}
+                {monthlyData.months.map((month) => {
+                  const colCount = 2 +
+                    (showDifference ? 1 : 0) +
+                    (showBaseline ? 1 : 0) +
+                    (showForecast ? 1 : 0);
+                  return (
+                    <TableHead
+                      key={month}
+                      className="text-center font-semibold min-w-[120px]"
+                      colSpan={colCount}
+                    >
+                      {month}
+                    </TableHead>
+                  );
+                })}
                 <TableHead
                   className="text-center font-semibold min-w-[120px]"
                   colSpan={3}
@@ -292,7 +371,7 @@ export function MonthlyPhaseSummary({
               </TableRow>
               <TableRow className="bg-gray-50">
                 <TableHead className="sticky left-0 bg-gray-50 z-10"></TableHead>
-                {[...monthlyData.months, "合計"].map((period) => (
+                {monthlyData.months.map((period) => (
                   <React.Fragment key={period}>
                     <TableHead className="text-right text-xs">
                       予定({getUnitSuffix(hoursUnit)})
@@ -300,9 +379,31 @@ export function MonthlyPhaseSummary({
                     <TableHead className="text-right text-xs">
                       実績({getUnitSuffix(hoursUnit)})
                     </TableHead>
-                    <TableHead className="text-right text-xs">差分</TableHead>
+                    {showDifference && (
+                      <TableHead className="text-right text-xs">差分</TableHead>
+                    )}
+                    {showBaseline && (
+                      <TableHead className="text-right text-xs">
+                        基準({getUnitSuffix(hoursUnit)})
+                      </TableHead>
+                    )}
+                    {showForecast && (
+                      <TableHead className="text-right text-xs">
+                        見通し({getUnitSuffix(hoursUnit)})
+                      </TableHead>
+                    )}
                   </React.Fragment>
                 ))}
+                {/* 合計列のヘッダー */}
+                <React.Fragment key="合計">
+                  <TableHead className="text-right text-xs">
+                    予定({getUnitSuffix(hoursUnit)})
+                  </TableHead>
+                  <TableHead className="text-right text-xs">
+                    実績({getUnitSuffix(hoursUnit)})
+                  </TableHead>
+                  <TableHead className="text-right text-xs">差分</TableHead>
+                </React.Fragment>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -318,6 +419,10 @@ export function MonthlyPhaseSummary({
                       actualHours: 0,
                       difference: 0,
                     };
+                    // TODO: 基準と見通しのデータを月別工程集計でも対応する必要があります
+                    const baselineHours = 0; // 月別工程集計では未実装
+                    const forecastHours = cell.actualHours > 0 ? cell.actualHours : cell.plannedHours;
+
                     return (
                       <React.Fragment key={month}>
                         <TableCell className="text-right text-sm">
@@ -330,15 +435,31 @@ export function MonthlyPhaseSummary({
                             ? formatNumber(cell.actualHours)
                             : "-"}
                         </TableCell>
-                        <TableCell
-                          className={`text-right text-sm ${getDifferenceColor(
-                            cell.difference
-                          )}`}
-                        >
-                          {cell.plannedHours > 0 || cell.actualHours > 0
-                            ? formatNumber(cell.difference)
-                            : "-"}
-                        </TableCell>
+                        {showDifference && (
+                          <TableCell
+                            className={`text-right text-sm ${getDifferenceColor(
+                              cell.difference
+                            )}`}
+                          >
+                            {cell.plannedHours > 0 || cell.actualHours > 0
+                              ? formatNumber(cell.difference)
+                              : "-"}
+                          </TableCell>
+                        )}
+                        {showBaseline && (
+                          <TableCell className="text-right text-sm">
+                            {baselineHours > 0
+                              ? formatNumber(baselineHours)
+                              : "-"}
+                          </TableCell>
+                        )}
+                        {showForecast && (
+                          <TableCell className="text-right text-sm">
+                            {forecastHours > 0
+                              ? formatNumber(forecastHours)
+                              : "-"}
+                          </TableCell>
+                        )}
                       </React.Fragment>
                     );
                   })}
@@ -373,13 +494,25 @@ export function MonthlyPhaseSummary({
                       <TableCell className="text-right text-sm">
                         {formatNumber(total?.actualHours || 0)}
                       </TableCell>
-                      <TableCell
-                        className={`text-right text-sm ${getDifferenceColor(
-                          total?.difference || 0
-                        )}`}
-                      >
-                        {formatNumber(total?.difference || 0)}
-                      </TableCell>
+                      {showDifference && (
+                        <TableCell
+                          className={`text-right text-sm ${getDifferenceColor(
+                            total?.difference || 0
+                          )}`}
+                        >
+                          {formatNumber(total?.difference || 0)}
+                        </TableCell>
+                      )}
+                      {showBaseline && (
+                        <TableCell className="text-right text-sm">
+                          -
+                        </TableCell>
+                      )}
+                      {showForecast && (
+                        <TableCell className="text-right text-sm">
+                          {formatNumber((total?.actualHours || 0) > 0 ? (total?.actualHours || 0) : (total?.plannedHours || 0))}
+                        </TableCell>
+                      )}
                     </React.Fragment>
                   );
                 })}
