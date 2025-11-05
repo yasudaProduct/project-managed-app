@@ -55,7 +55,11 @@ services:
     environment:
       - NODE_ENV=development
       - CRON_SECRET=${CRON_SECRET:-dev-cron-secret-key}
-      - NOTIFICATION_API_URL=http://app:3000/api/cron/notifications
+      - NOTIFICATION_API_URL=http://localhost:3000/api/cron/notifications
+      - API_BASE_URL=http://localhost:3000
+      - SYSTEM_USER_ID=system
+      - SLEEP_BETWEEN_TRIGGERS=2
+      - MAX_TO_TRIGGER=50
       - TZ=Asia/Tokyo
     volumes:
       - ./logs/cron:/var/log/cron
@@ -63,8 +67,8 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    depends_on:
-      - app
+    # depends_on:
+    #   - app
     healthcheck:
       test: ["CMD", "/usr/local/bin/health-check.sh"]
       interval: 30s

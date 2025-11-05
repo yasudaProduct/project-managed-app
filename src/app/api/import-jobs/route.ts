@@ -14,13 +14,22 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const rawUserId = searchParams.get('userId')
+    const statusFilter = searchParams.get('status')
     const userId = rawUserId && rawUserId.trim() !== '' && rawUserId !== 'null' && rawUserId !== 'undefined'
       ? rawUserId
       : null
     const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
-    const jobs = userId
-      ? await importJobService.getUserJobs(userId)
-      : await importJobService.getAllJobs()
+    let jobs = [] as Awaited<ReturnType<IImportJobApplicationService['getAllJobs']>>
+
+    if (statusFilter === 'PENDING') {
+      jobs = await importJobService.getPendingJobs()
+    } else if (statusFilter === 'RUNNING') {
+      jobs = await importJobService.getRunningJobs()
+    } else {
+      jobs = userId
+        ? await importJobService.getUserJobs(userId)
+        : await importJobService.getAllJobs()
+    }
 
     // WBS名を取得
     const wbsService = container.get<IWbsApplicationService>(SYMBOL.IWbsApplicationService)
@@ -106,9 +115,6 @@ export async function POST(request: NextRequest) {
       ...options
     })
 
-    // バックグラウンドでインポート処理を開始
-    startBackgroundImport(job.id)
-
     return NextResponse.json({
       id: job.id,
       type: job.type,
@@ -121,27 +127,5 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to create import job' },
       { status: 500 }
     )
-  }
-}
-
-/**
- * バックグラウンドでインポート処理を実行
- * @param jobId 
- */
-async function startBackgroundImport(jobId: string) {
-  try {
-    // TODO: 自APIの呼び出しを止める
-    const response = await fetch(`/api/import-jobs/${jobId}/execute`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      console.error('Failed to start background import:', await response.text())
-    }
-  } catch (error) {
-    console.error('Failed to start background import:', error)
   }
 }

@@ -23,12 +23,12 @@ log() {
 
 log "Starting Geppo import job for $TARGET_MONTH"
 
-# Geppoインポートジョブの作成
+# Geppoインポートジョブの作成（作成のみ）
 create_response=$(curl -s -w "\n%{http_code}" \
     -X POST \
     -H "Content-Type: application/json" \
     -d "{
-        \"type\": \"GEPPO_IMPORT\",
+        \"type\": \"GEPPO\",
         \"createdBy\": \"$SYSTEM_USER_ID\",
         \"targetMonth\": \"$TARGET_MONTH\"
     }" \
@@ -59,6 +59,17 @@ if [ -z "$job_id" ]; then
 fi
 
 log "Geppo import job created successfully (ID: $job_id)"
+
+# 直後に実行トリガーを呼び出し
+execute_http=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X POST "$API_BASE_URL/api/import-jobs/$job_id/execute" || echo "ERROR")
+
+if [ "$execute_http" = "ERROR" ] || [ "$execute_http" -lt 200 ] || [ "$execute_http" -ge 300 ]; then
+    log "ERROR: Failed to trigger execution for job $job_id (HTTP $execute_http)"
+    exit 1
+fi
+
+log "Triggered execution for job $job_id"
 
 # ジョブの完了を待機（最大30分）
 max_wait=1800  # 30 minutes

@@ -1,18 +1,21 @@
-# docker/cron/crontab
+# docker/cron/crontab (system crontab format)
 # 6時間ごとに通知チェックを実行
-0 */6 * * * /usr/local/bin/run-notification-check.sh
+0 */6 * * * root /usr/local/bin/run-notification-check.sh
 
 # 毎日午前2時にクリーンアップ
-0 2 * * * /usr/local/bin/run-cleanup.sh
+0 2 * * * root /usr/local/bin/run-cleanup.sh
 
 # 毎時0分にヘルスチェック
-0 * * * * /usr/local/bin/health-check.sh
+0 * * * * root /usr/local/bin/health-check.sh
 
 # 毎日午前0時にログローテーション
-0 0 * * * find /var/log/cron -name '*.log' -mtime +7 -delete
+0 0 * * * root find /var/log/cron -name '*.log' -mtime +7 -delete
+
+# 毎分、保留中（PENDING）のインポートジョブがあれば実行トリガー
+* * * * * root /usr/local/bin/run-pending-import-jobs.sh
 
 # 毎日午前3時にWBSインポートを実行
-0 3 * * * /usr/local/bin/run-wbs-import.sh
+0 3 * * * root /usr/local/bin/run-wbs-import.sh
 
 # 毎月1日午前4時にGeppoインポートを実行（前月分）
-0 4 1 * * /usr/local/bin/run-geppo-import.sh
+0 4 1 * * root /usr/local/bin/run-geppo-import.sh

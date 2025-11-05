@@ -124,6 +124,38 @@ npx prisma migrate reset
 ...未検討
 ```
 
+---
+
+## Cron コンテナの使い方
+
+アプリとは別に、定期実行（通知チェック/クリーンアップ/インポート実行 など）を行う cron 専用コンテナを用意しています。
+
+### ビルド
+
+```bash
+docker build -f docker/cron/dockerfile-cron -t project-managed-cron:latest .
+```
+
+### docker compose での起動（cron）
+
+```bash
+# cron コンテナのみビルド/起動
+docker compose build notification-cron
+docker compose up -d notification-cron
+
+# ログ確認
+docker compose logs -f notification-cron
+```
+
+compose による `notification-cron` では、以下の環境変数が設定されています（compose.yml参照）。必要に応じて `.env` で上書きしてください。
+
+- `API_BASE_URL=http://app:3000`（アプリの API を同一ネットワーク内の `app` サービスへ）
+- `SYSTEM_USER_ID=system`
+- `SLEEP_BETWEEN_TRIGGERS=2`
+- `MAX_TO_TRIGGER=50`
+- `CRON_SECRET`（`.env` から取り込み）
+
+
 ### テストの種類と実行方法
 
 #### 1. ユニットテスト
