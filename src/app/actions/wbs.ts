@@ -36,13 +36,16 @@ export async function getWbsById(id: string) {
 
 export async function getWbsTasksSummary(wbsId: string) {
 
-  const taskKosu = await prisma.taskKosu.findMany({
+  const yoteiKosu = await prisma.taskKosu.findMany({
     where: {
-      wbsId: Number(wbsId)
+      wbsId: Number(wbsId),
+      period: {
+        type: 'YOTEI',
+      }
     },
     select: {
       kosu: true,
-    },
+    }
   });
 
   const taskJisseki = await prisma.workRecord.findMany({
@@ -56,5 +59,8 @@ export async function getWbsTasksSummary(wbsId: string) {
     },
   });
 
-  return { taskKosu: taskKosu.reduce((acc, curr) => acc + curr.kosu.toNumber(), 0), taskJisseki: taskJisseki.reduce((acc, curr) => acc + curr.hours_worked.toNumber(), 0) };
+  return {
+    taskKosu: yoteiKosu.reduce((acc, curr) => acc + curr.kosu.toNumber(), 0),
+    taskJisseki: taskJisseki.reduce((acc, curr) => acc + curr.hours_worked.toNumber(), 0)
+  };
 }
