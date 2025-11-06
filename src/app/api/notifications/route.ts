@@ -50,8 +50,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Failed to get notifications:', error);
-
     return NextResponse.json(
       {
         error: 'Failed to get notifications',

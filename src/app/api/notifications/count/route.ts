@@ -24,8 +24,6 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Failed to get unread count:', error);
-
     return NextResponse.json(
       {
         error: 'Failed to get unread count',
