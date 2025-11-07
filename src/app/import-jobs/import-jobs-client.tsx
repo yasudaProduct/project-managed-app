@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -342,8 +342,8 @@ export default function ImportJobsClient() {
                   const isExpanded = expandedRows.has(job.id);
 
                   return (
-                    <>
-                      <TableRow key={job.id}>
+                    <Fragment key={job.id}>
+                      <TableRow>
                         <TableCell className="font-mono text-xs">
                           {job.wbsName || job.wbsId
                             ? `${job.wbsName ?? job.wbsId}`
@@ -411,7 +411,7 @@ export default function ImportJobsClient() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })
               )}
