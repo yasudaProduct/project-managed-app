@@ -58,7 +58,7 @@ export function Header() {
 
             // WBSが存在する場合はタスクサマリーも取得
             if (wbsData?.id) {
-              import("@/app/actions/wbs").then(({ getWbsTasksSummary }) => {
+              import("@/app/actions/get-wbs-summary").then(({ getWbsTasksSummary }) => {
                 getWbsTasksSummary(String(wbsData.id)).then((summaryData) => {
                   if (summaryData) {
                     setTasksSummary(summaryData);

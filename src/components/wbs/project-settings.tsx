@@ -7,7 +7,7 @@ import { useEffect, useState, useTransition } from "react";
 import {
   getProjectSettings,
   updateProjectSettings,
-} from "@/app/actions/project-settings-actions";
+} from "@/app/wbs/[id]/project-settings-actions";
 
 interface ProjectSettingsProps {
   projectId: string;
@@ -22,7 +22,7 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
       try {
         const data = await getProjectSettings(projectId);
         setRoundToQuarter(Boolean(data?.roundToQuarter));
-      } catch {}
+      } catch { }
     })();
   }, [projectId]);
 

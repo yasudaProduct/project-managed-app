@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 
-import { getAssigneeWorkloads } from '@/app/actions/assignee-gantt-actions';
+import { getAssigneeWorkloads } from '@/app/wbs/[id]/assignee-gantt/assignee-gantt-actions';
 import { container } from '@/lib/inversify.config';
 
 // DIコンテナのモック
@@ -43,7 +43,7 @@ describe('assignee-gantt-actions', () => {
           isOverloaded: () => false,
           getUtilizationRate: () => 0.53,
           getOverloadedHours: () => 0,
-          addTaskAllocation: () => {}
+          addTaskAllocation: () => { }
         }],
         getOverloadedDays: () => [],
         getTotalHours: () => 4.0,
