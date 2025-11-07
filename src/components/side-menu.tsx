@@ -8,7 +8,6 @@ import {
   Menu,
   Trello,
   Users,
-  History,
   CalendarCheck,
   TrendingUp,
   RefreshCcw,
@@ -38,9 +37,8 @@ export function SideMenu() {
 
       {/* サイドメニュー */}
       <div
-        className={`fixed top-0 left-0 h-full w-[240px] sm:w-[300px] bg-background border-r shadow-lg transform transition-transform duration-200 ease-in-out z-50 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed top-0 left-0 h-full w-[240px] sm:w-[300px] bg-background border-r shadow-lg transform transition-transform duration-200 ease-in-out z-50 ${isOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
         onMouseLeave={() => setIsOpen(false)}
       >
         <div className="p-6 h-full overflow-y-auto">
@@ -154,13 +152,6 @@ export function SideMenu() {
                 >
                   <Trello className="h-4 w-4" />
                   ガントチャートv3
-                </Link>
-                <Link
-                  href={`/projects/${projectId}/history`}
-                  className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
-                >
-                  <History className="h-4 w-4" />
-                  履歴
                 </Link>
               </>
             )}

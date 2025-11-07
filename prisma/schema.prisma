@@ -72,7 +72,6 @@ model Wbs {
   kosus     TaskKosu[]
   buffers   WbsBuffer[]
   milestones Milestone[]
-  progressHistories WbsProgressHistory[]
   taskDependencies TaskDependency[]
   importJobs ImportJob[]
   createdAt DateTime   @default(now()) @db.Timestamptz
@@ -370,63 +369,6 @@ model ProjectSettings {
   project        Projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("project_settings")
-}
-
-model WbsProgressHistory {
-  id               Int      @id @default(autoincrement())
-  wbsId            Int
-  recordedAt       DateTime @default(now())
-  recordType       RecordType
-  snapshotName     String?
-  totalTaskCount   Int
-  completedCount   Int
-  inProgressCount  Int
-  notStartedCount  Int
-  completionRate   Decimal
-  plannedManHours  Decimal
-  actualManHours   Decimal
-  varianceManHours Decimal
-  metadata         Json?
-  createdAt        DateTime @default(now()) @db.Timestamptz
-  updatedAt        DateTime @updatedAt @db.Timestamptz
-  
-  wbs              Wbs      @relation(fields: [wbsId], references: [id])
-  taskHistories    TaskProgressHistory[]
-  
-  @@index([wbsId, recordedAt])
-  @@map("wbs_progress_history")
-}
-
-model TaskProgressHistory {
-  id                    Int      @id @default(autoincrement())
-  wbsProgressHistoryId  Int
-  taskId                Int
-  taskNo                String
-  taskName              String
-  status                String
-  assigneeId            Int?
-  assigneeName          String?
-  phaseId               Int?
-  phaseName             String?
-  plannedStartDate      DateTime? @db.Timestamptz // TODO: @db.Dateでも良い？
-  plannedEndDate        DateTime? @db.Timestamptz
-  actualStartDate       DateTime? @db.Timestamptz
-  actualEndDate         DateTime? @db.Timestamptz
-  plannedManHours       Decimal
-  actualManHours        Decimal
-  progressRate          Decimal
-  createdAt             DateTime @default(now()) @db.Timestamptz
-  
-  wbsProgressHistory    WbsProgressHistory @relation(fields: [wbsProgressHistoryId], references: [id])
-  
-  @@index([wbsProgressHistoryId])
-  @@index([taskId])
-  @@map("task_progress_history")
-}
-
-enum RecordType {
-  AUTO
-  MANUAL_SNAPSHOT
 }
 
 model TaskDependency {

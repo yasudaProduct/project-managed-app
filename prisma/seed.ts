@@ -300,8 +300,6 @@ async function main() {
         "milestone",
         "work_records",
         "user_schedule",
-        "wbs_progress_history",
-        "task_progress_history",
         "company_holidays",
     ] as const;
 
