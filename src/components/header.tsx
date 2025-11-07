@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AuthHeader } from "./auth/auth-header";
 import { NotificationCenter } from "./notification/NotificationCenter";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ProjectInfo {
   id: string;
@@ -24,6 +25,7 @@ export function Header() {
     null
   );
   const [loading, setLoading] = useState(false);
+  const { user, loading: authLoading, clearAuth } = useAuth();
 
   const getProjectIdFromPath = (path: string): string | null => {
     // /projects/[id] のパターンにマッチ
@@ -99,7 +101,7 @@ export function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-30 bg-white border-b border-gray-200">
       <div className="flex items-center justify-between h-8 px-4 pl-20">
-        {/* Left side - Page title and WBS info */}
+        {/* 左側 - ページタイトルとWBS情報 */}
         <div className="flex items-center space-x-4">
           <h1 className="font-semibold text-gray-900 text-sm">
             {getPageTitle()}
@@ -138,10 +140,10 @@ export function Header() {
                       <span className="text-sm font-medium text-gray-900">
                         {tasksSummary.taskKosu > 0
                           ? `${(
-                              (tasksSummary.taskJisseki /
-                                tasksSummary.taskKosu) *
-                              100
-                            ).toFixed(1)}%`
+                            (tasksSummary.taskJisseki /
+                              tasksSummary.taskKosu) *
+                            100
+                          ).toFixed(1)}%`
                           : "0.0%"}
                       </span>
                     </div>
@@ -159,9 +161,13 @@ export function Header() {
           )}
         </div>
 
-        {/* Right side - Notifications and Auth status */}
+        {/* 右側 - 通知と認証ステータス */}
         <div className="flex items-center space-x-2">
-          <NotificationCenter />
+          {!authLoading && user && (
+            <>
+              <NotificationCenter />
+            </>
+          )}
           <AuthHeader />
         </div>
       </div>

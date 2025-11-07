@@ -27,6 +27,7 @@ export function NotificationCenter({
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "unread">("unread");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const {
     notifications,
@@ -44,12 +45,20 @@ export function NotificationCenter({
   // 外部クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(target)
       ) {
-        setIsOpen(false);
+        return
       }
+      if (
+        contentRef.current &&
+        contentRef.current.contains(target)
+      ) {
+        return;
+      }
+      setIsOpen(false);
     };
 
     if (isOpen) {
@@ -69,20 +78,6 @@ export function NotificationCenter({
     refresh();
   };
 
-  // const getStatusIndicator = () => {
-  //   if (!isConnected) {
-  //     return (
-  //       <div className="w-2 h-2 bg-yellow-400 rounded-full" title="接続中..." />
-  //     );
-  //   }
-  //   return (
-  //     <div
-  //       className="w-2 h-2 bg-green-400 rounded-full"
-  //       title="リアルタイム接続中"
-  //     />
-  //   );
-  // };
-
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -91,9 +86,8 @@ export function NotificationCenter({
             variant="ghost"
             size="sm"
             className="relative p-2 h-auto"
-            aria-label={`通知 ${
-              unreadCount > 0 ? `(${unreadCount}件未読)` : ""
-            }`}
+            aria-label={`通知 ${unreadCount > 0 ? `(${unreadCount}件未読)` : ""
+              }`}
           >
             <Bell size={20} className="text-gray-600 hover:text-gray-900" />
             {unreadCount > 0 && (
@@ -112,7 +106,7 @@ export function NotificationCenter({
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-lg">通知</h3>
-              {/* {getStatusIndicator()} */}
+
             </div>
 
             <div className="flex items-center gap-1">
