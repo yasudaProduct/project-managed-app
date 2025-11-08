@@ -154,7 +154,10 @@ export function MonthlyAssigneeSummary({
               </TooltipProvider>
             </CardTitle>
             <div className="flex gap-2">
-              <DropdownMenu open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+              <DropdownMenu
+                open={isSettingsOpen}
+                onOpenChange={setIsSettingsOpen}
+              >
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
                     <Settings className="h-4 w-4" />
@@ -281,14 +284,15 @@ export function MonthlyAssigneeSummary({
                     担当者
                   </TableHead>
                   {monthlyData.months.map((month) => {
-                    const colCount = 2 +
+                    const colCount =
+                      2 +
                       (showDifference ? 1 : 0) +
                       (showBaseline ? 1 : 0) +
                       (showForecast ? 1 : 0);
                     return (
                       <TableHead
                         key={month}
-                        className="text-center font-semibold min-w-[120px]"
+                        className="text-center font-semibold min-w-[120px] border-r"
                         colSpan={colCount}
                       >
                         {month}
@@ -306,22 +310,32 @@ export function MonthlyAssigneeSummary({
                   <TableHead className="sticky left-0 bg-gray-50 z-10"></TableHead>
                   {monthlyData.months.map((period) => (
                     <React.Fragment key={period}>
-                      <TableHead className="text-right text-xs">
-                        予定({getUnitSuffix(hoursUnit)})
-                      </TableHead>
-                      <TableHead className="text-right text-xs">
-                        実績({getUnitSuffix(hoursUnit)})
-                      </TableHead>
-                      {showDifference && (
-                        <TableHead className="text-right text-xs">差分</TableHead>
-                      )}
                       {showBaseline && (
                         <TableHead className="text-right text-xs">
                           基準({getUnitSuffix(hoursUnit)})
                         </TableHead>
                       )}
+                      <TableHead className="text-right text-xs">
+                        予定({getUnitSuffix(hoursUnit)})
+                      </TableHead>
+                      <TableHead
+                        className={`text-right text-xs ${
+                          !showDifference && !showForecast ? "border-r" : ""
+                        }`}
+                      >
+                        実績({getUnitSuffix(hoursUnit)})
+                      </TableHead>
+                      {showDifference && (
+                        <TableHead
+                          className={`text-right text-xs ${
+                            !showForecast ? "border-r" : ""
+                          }`}
+                        >
+                          差分
+                        </TableHead>
+                      )}
                       {showForecast && (
-                        <TableHead className="text-right text-xs">
+                        <TableHead className="text-right text-xs border-r">
                           見通し({getUnitSuffix(hoursUnit)})
                         </TableHead>
                       )}
@@ -362,25 +376,7 @@ export function MonthlyAssigneeSummary({
 
                       return (
                         <React.Fragment key={month}>
-                          <TableCell className="text-right text-sm">
-                            {plannedHours > 0
-                              ? formatNumber(plannedHours)
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-right text-sm">
-                            {actualHours > 0 ? formatNumber(actualHours) : "-"}
-                          </TableCell>
-                          {showDifference && (
-                            <TableCell
-                              className={`text-right text-sm ${getDifferenceColor(
-                                difference
-                              )}`}
-                            >
-                              {plannedHours > 0 || actualHours > 0
-                                ? formatNumber(difference)
-                                : "-"}
-                            </TableCell>
-                          )}
+                          {/* 基準工数 */}
                           {showBaseline && (
                             <TableCell className="text-right text-sm">
                               {baselineHours > 0
@@ -388,8 +384,35 @@ export function MonthlyAssigneeSummary({
                                 : "-"}
                             </TableCell>
                           )}
+                          {/* 予定工数 */}
+                          <TableCell className="text-right text-sm">
+                            {plannedHours > 0
+                              ? formatNumber(plannedHours)
+                              : "-"}
+                          </TableCell>
+                          {/* 実績工数 */}
+                          <TableCell
+                            className={`text-right text-sm ${
+                              !showDifference && !showForecast ? "border-r" : ""
+                            }`}
+                          >
+                            {actualHours > 0 ? formatNumber(actualHours) : "-"}
+                          </TableCell>
+                          {/* 差分 */}
+                          {showDifference && (
+                            <TableCell
+                              className={`text-right text-sm ${getDifferenceColor(
+                                difference
+                              )} ${!showForecast ? "border-r" : ""}`}
+                            >
+                              {plannedHours > 0 || actualHours > 0
+                                ? formatNumber(difference)
+                                : "-"}
+                            </TableCell>
+                          )}
+                          {/* 見通し */}
                           {showForecast && (
-                            <TableCell className="text-right text-sm">
+                            <TableCell className="text-right text-sm border-r">
                               {forecastHours > 0
                                 ? formatNumber(forecastHours)
                                 : "-"}
@@ -435,25 +458,39 @@ export function MonthlyAssigneeSummary({
                         <TableCell className="text-right text-sm">
                           {formatNumber(total.plannedHours)}
                         </TableCell>
-                        <TableCell className="text-right text-sm">
+                        <TableCell
+                          className={`text-right text-sm ${
+                            !showDifference && !showBaseline && !showForecast
+                              ? "border-r"
+                              : ""
+                          }`}
+                        >
                           {formatNumber(total.actualHours)}
                         </TableCell>
                         {showDifference && (
                           <TableCell
                             className={`text-right text-sm ${getDifferenceColor(
                               difference
-                            )}`}
+                            )} ${
+                              !showBaseline && !showForecast ? "border-r" : ""
+                            }`}
                           >
                             {formatNumber(difference)}
                           </TableCell>
                         )}
                         {showBaseline && (
-                          <TableCell className="text-right text-sm">
-                            {baselineTotal > 0 ? formatNumber(baselineTotal) : "-"}
+                          <TableCell
+                            className={`text-right text-sm ${
+                              !showForecast ? "border-r" : ""
+                            }`}
+                          >
+                            {baselineTotal > 0
+                              ? formatNumber(baselineTotal)
+                              : "-"}
                           </TableCell>
                         )}
                         {showForecast && (
-                          <TableCell className="text-right text-sm">
+                          <TableCell className="text-right text-sm border-r">
                             {formatNumber(forecastTotal)}
                           </TableCell>
                         )}
