@@ -86,8 +86,8 @@ export class BusinessDayPeriod {
    * @returns 月ごとの工数
    */
   distributeHoursByBusinessDays(totalHours: number): Map<string, number> {
-    const monthlyAvailableHours = this.getAvailableHoursByMonth();
-    const totalAvailableHours = Array.from(monthlyAvailableHours.values()).reduce((sum, hours) => sum + hours, 0);
+    const monthlyAvailableHours = this.getAvailableHoursByMonth(); // 月ごとの稼働可能時間を取得
+    const totalAvailableHours = Array.from(monthlyAvailableHours.values()).reduce((sum, hours) => sum + hours, 0); // 総稼働可能時間を集計
 
     if (totalAvailableHours === 0) {
       // 稼働可能時間がない場合は、開始月に全工数を計上
