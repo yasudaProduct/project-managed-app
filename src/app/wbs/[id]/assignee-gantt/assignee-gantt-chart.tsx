@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { GanttHeader } from "./_components/gantt-header";
 import { GanttRow } from "./_components/gantt-row";
-import { getAssigneeWorkloads } from "@/app/actions/assignee-gantt-actions";
+import { getAssigneeWorkloads } from "@/app/wbs/[id]/assignee-gantt/assignee-gantt-actions";
 import {
   Sheet,
   SheetContent,

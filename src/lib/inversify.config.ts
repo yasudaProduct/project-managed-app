@@ -60,12 +60,6 @@ import { ProjectMappingService } from "@/infrastructures/geppo-import/project-ma
 import { UserMappingService } from "@/infrastructures/geppo-import/user-mapping.service";
 import { TaskMappingService } from "@/infrastructures/geppo-import/task-mapping.service";
 
-// Progress History関連
-import type { IProgressHistoryRepository } from "@/applications/wbs-progress-history/iprogress-history-repository";
-import { ProgressHistoryRepository } from "@/infrastructures/wbs-progress-history/progress-history-repository";
-import { ProgressHistoryApplicationService } from "@/applications/wbs-progress-history/progress-history-application-service";
-import type { IProgressHistoryApplicationService } from "@/applications/wbs-progress-history/progress-history-application-service";
-
 // Task Dependency関連
 import type { ITaskDependencyRepository } from "@/applications/task-dependency/itask-dependency-repository";
 import { TaskDependencyRepository } from "@/infrastructures/task-dependency-repository";
@@ -130,7 +124,6 @@ container.bind<IGeppoApplicationService>(SYMBOL.IGeppoApplicationService).to(Gep
 container.bind<IWorkRecordApplicationService>(SYMBOL.IWorkRecordApplicationService).to(WorkRecordApplicationService).inSingletonScope();
 container.bind<IUserApplicationService>(SYMBOL.IUserApplicationService).to(UserApplicationService).inSingletonScope();
 container.bind<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService).to(GeppoImportApplicationService).inSingletonScope();
-container.bind<IProgressHistoryApplicationService>(SYMBOL.IProgressHistoryApplicationService).to(ProgressHistoryApplicationService).inSingletonScope();
 container.bind<TaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDependencyService).inSingletonScope();
 // container.bind<IWbsSyncService>(SYMBOL.IWbsSyncService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<IMilestoneApplicationService>(SYMBOL.IMilestoneApplicationService).to(MilestoneApplicationService).inSingletonScope();
@@ -158,7 +151,6 @@ container.bind<IWbsQueryRepository>(SYMBOL.IWbsQueryRepository).to(WbsQueryRepos
 container.bind<IGeppoRepository>(SYMBOL.IGeppoRepository).to(GeppoPrismaRepository).inSingletonScope();
 container.bind<IUserRepository>(SYMBOL.IUserRepository).to(UserRepository).inSingletonScope();
 container.bind<IWorkRecordRepository>(SYMBOL.IWorkRecordRepository).to(WorkRecordPrismaRepository).inSingletonScope();
-container.bind<IProgressHistoryRepository>(SYMBOL.IProgressHistoryRepository).to(ProgressHistoryRepository).inSingletonScope();
 container.bind<ITaskDependencyRepository>(SYMBOL.ITaskDependencyRepository).to(TaskDependencyRepository).inSingletonScope();
 container.bind<IExcelWbsRepository>(SYMBOL.IExcelWbsRepository).to(ExcelWbsRepository).inSingletonScope();
 container.bind<ISyncLogRepository>(SYMBOL.ISyncLogRepository).to(SyncLogRepository).inSingletonScope();

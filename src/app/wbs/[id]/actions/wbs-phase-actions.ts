@@ -6,15 +6,20 @@ import prisma from '@/lib/prisma/prisma'
 export async function getWbsPhases(wbsId: number) {
     const phases = await prisma.wbsPhase.findMany({
         where: {
-            wbsId: wbsId,
+            wbsId: Number(wbsId),
         },
-        include: {
-            tasks: true,
+        select: {
+            id: true,
+            name: true,
+            code: true,
+            seq: true,
+            wbsId: true,
         },
         orderBy: {
-            seq: 'asc',
+            seq: "asc",
         },
     })
+
     return phases
 }
 

@@ -46,10 +46,6 @@ export const SYMBOL = {
     ITaskDependencyRepository: Symbol.for('ITaskDependencyRepository'),
     ITaskDependencyService: Symbol.for('ITaskDependencyService'),
 
-    // Progress History
-    IProgressHistoryRepository: Symbol.for('IProgressHistoryRepository'),
-    IProgressHistoryApplicationService: Symbol.for('IProgressHistoryApplicationService'),
-
     // Geppo Import
     IGeppoImportApplicationService: Symbol.for('IGeppoImportApplicationService'),
     ProjectMappingService: Symbol.for('ProjectMappingService'),

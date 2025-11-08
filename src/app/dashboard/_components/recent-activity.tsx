@@ -75,7 +75,7 @@ export default function RecentActivity() {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Activity className="h-5 w-5" />
-                    最近の活動
+                    最近の活動(仮)
                 </CardTitle>
             </CardHeader>
             <CardContent>
