@@ -8,7 +8,7 @@ import { TaskProgressCalculator, TaskStatus } from "@/domains/task/task-progress
 import { ProgressMeasurementMethod } from "@/types/progress-measurement";
 
 export interface ForecastCalculationOptions {
-  method: 'conservative' | 'realistic' | 'optimistic';
+  method: 'conservative' | 'realistic' | 'optimistic' | 'plannedOrActual';
   progressMeasurementMethod?: ProgressMeasurementMethod; // 進捗測定方式（プロジェクト設定から取得）
 }
 
@@ -41,6 +41,10 @@ export class ForecastCalculationService {
     }
   ): ForecastCalculationResult {
     // 予定工数と実績工数を取得
+    console.log('-------- calculateTaskForecast ----------',);
+    console.log('task', task.name);
+    console.log('task status', task.status);
+    console.log('task progressRate', task.progressRate);
     const plannedHours = task.yoteiKosu || 0;
     const actualHours = task.jissekiKosu || 0;
 
@@ -50,6 +54,7 @@ export class ForecastCalculationService {
       task.progressRate,
       options.progressMeasurementMethod || 'SELF_REPORTED'
     );
+    console.log('effectiveProgressRate', effectiveProgressRate);
 
     // 見通し工数計算
     const forecastHours = this.calculateForecastHours(
@@ -59,6 +64,17 @@ export class ForecastCalculationService {
       options.method
     );
 
+    console.log('-------- forecastHours ----------', forecastHours);
+    console.log('-------- return ----------', {
+      taskId: task.id,
+      taskName: task.name,
+      plannedHours,
+      actualHours,
+      progressRate: task.progressRate || 0,
+      effectiveProgressRate,
+      forecastHours,
+      completionStatus: task.status,
+    });
     return {
       taskId: task.id,
       taskName: task.name,
@@ -93,7 +109,7 @@ export class ForecastCalculationService {
    * @returns 見通し工数
    * @description
    * 計算方法に応じて見通し工数を計算
-   * 計算方法は保守的、現実的、楽観的の3つの方法がある
+   * 計算方法は保守的、現実的、楽観的、予定/実績優先の4つの方法がある
    * 保守的：実績ベースの推定（実績工数 / 進捗率 * 100）
    * 現実的：実績 + 残り予定の加重平均
    * 楽観的：実績 + 残り予定
@@ -102,21 +118,40 @@ export class ForecastCalculationService {
     plannedHours: number,
     actualHours: number,
     progressRate: number,
-    method: 'conservative' | 'realistic' | 'optimistic'
+    method: 'conservative' | 'realistic' | 'optimistic' | 'plannedOrActual'
   ): number {
     // 完了済みの場合は実績工数をそのまま返す
     if (progressRate >= 100) {
+      console.log('actualHours because progressRate is 100', actualHours);
       return actualHours;
+    }
+
+    if (method === 'plannedOrActual') {
+      if (actualHours <= 0) {
+        console.log('plannedHours because task not started or no actuals', plannedHours);
+        return plannedHours;
+      }
+
+      if (plannedHours <= 0) {
+        console.log('actualHours because no planned hours maintained', actualHours);
+        return actualHours;
+      }
+
+      const forecast = actualHours >= plannedHours ? actualHours : plannedHours;
+      console.log('plannedOrActual forecast', { plannedHours, actualHours, forecast });
+      return forecast;
     }
 
     // 進捗率が0の場合は予定工数をそのまま返す TODO: 実績が入っていても申告進捗が0%だったらprogressRateは0%になる
     if (progressRate <= 0) {
+      console.log('plannedHours because progressRate is 0', plannedHours);
       return plannedHours;
     }
 
     // 残り工数を計算
     const remainingWork = (100 - progressRate) / 100;
 
+    console.log('methos is ', method);
     switch (method) {
       case 'conservative':
         // 保守的：実績ベースの推定（実績工数 / 進捗率 * 100）

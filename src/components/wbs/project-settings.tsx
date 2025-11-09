@@ -20,6 +20,11 @@ import {
   PROGRESS_MEASUREMENT_METHOD_LABELS,
   PROGRESS_MEASUREMENT_METHOD_DESCRIPTIONS,
 } from "@/types/progress-measurement";
+import type { ForecastCalculationMethod } from "@/types/forecast-calculation-method";
+import {
+  FORECAST_CALCULATION_METHOD_LABELS,
+  FORECAST_CALCULATION_METHOD_DESCRIPTIONS,
+} from "@/types/forecast-calculation-method";
 
 interface ProjectSettingsProps {
   projectId: string;
@@ -29,6 +34,8 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
   const [roundToQuarter, setRoundToQuarter] = useState<boolean>(false);
   const [progressMeasurementMethod, setProgressMeasurementMethod] =
     useState<ProgressMeasurementMethod>("SELF_REPORTED");
+  const [forecastCalculationMethod, setForecastCalculationMethod] =
+    useState<ForecastCalculationMethod>("REALISTIC");
   const [saving, startTransition] = useTransition();
 
   useEffect(() => {
@@ -39,6 +46,9 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         setProgressMeasurementMethod(
           data?.progressMeasurementMethod || "SELF_REPORTED"
         );
+        setForecastCalculationMethod(
+          data?.forecastCalculationMethod || "REALISTIC"
+        );
       } catch { }
     })();
   }, [projectId]);
@@ -46,14 +56,21 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
   const onToggle = (value: boolean) => {
     setRoundToQuarter(value);
     startTransition(async () => {
-      await updateProjectSettings(projectId, value, progressMeasurementMethod);
+      await updateProjectSettings(projectId, value, progressMeasurementMethod, forecastCalculationMethod);
     });
   };
 
   const onProgressMethodChange = (value: ProgressMeasurementMethod) => {
     setProgressMeasurementMethod(value);
     startTransition(async () => {
-      await updateProjectSettings(projectId, roundToQuarter, value);
+      await updateProjectSettings(projectId, roundToQuarter, value, forecastCalculationMethod);
+    });
+  };
+
+  const onForecastMethodChange = (value: ForecastCalculationMethod) => {
+    setForecastCalculationMethod(value);
+    startTransition(async () => {
+      await updateProjectSettings(projectId, roundToQuarter, progressMeasurementMethod, value);
     });
   };
 
@@ -109,6 +126,69 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
                   </span>
                   <span className="text-xs text-gray-500">
                     {PROGRESS_MEASUREMENT_METHOD_DESCRIPTIONS.SELF_REPORTED}
+                  </span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* 見通し工数算出方式 */}
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="forecastCalculationMethod" className="text-base font-medium">
+              見通し工数算出方式
+            </Label>
+            <div className="text-sm text-gray-500 mt-1">
+              タスクの見通し工数をどのように計算するかを選択します。WBSサマリーの見通し工数に使用されます。
+            </div>
+          </div>
+          <Select
+            value={forecastCalculationMethod}
+            onValueChange={onForecastMethodChange}
+            disabled={saving}
+          >
+            <SelectTrigger id="forecastCalculationMethod" className="w-full">
+              <SelectValue placeholder="見通し工数算出方式を選択" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="CONSERVATIVE">
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">
+                    {FORECAST_CALCULATION_METHOD_LABELS.CONSERVATIVE}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {FORECAST_CALCULATION_METHOD_DESCRIPTIONS.CONSERVATIVE}
+                  </span>
+                </div>
+              </SelectItem>
+              <SelectItem value="REALISTIC">
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">
+                    {FORECAST_CALCULATION_METHOD_LABELS.REALISTIC}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {FORECAST_CALCULATION_METHOD_DESCRIPTIONS.REALISTIC}
+                  </span>
+                </div>
+              </SelectItem>
+              <SelectItem value="OPTIMISTIC">
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">
+                    {FORECAST_CALCULATION_METHOD_LABELS.OPTIMISTIC}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {FORECAST_CALCULATION_METHOD_DESCRIPTIONS.OPTIMISTIC}
+                  </span>
+                </div>
+              </SelectItem>
+              <SelectItem value="PLANNED_OR_ACTUAL">
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">
+                    {FORECAST_CALCULATION_METHOD_LABELS.PLANNED_OR_ACTUAL}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {FORECAST_CALCULATION_METHOD_DESCRIPTIONS.PLANNED_OR_ACTUAL}
                   </span>
                 </div>
               </SelectItem>

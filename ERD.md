@@ -187,6 +187,7 @@ erDiagram
   String projectId PK
   Boolean roundToQuarter
   ProgressMeasurementMethod progressMeasurementMethod
+  ForecastCalculationMethod forecastCalculationMethod
   DateTime createdAt
   DateTime updatedAt
 }
@@ -496,6 +497,7 @@ erDiagram
   - `projectId`: 
   - `roundToQuarter`: 
   - `progressMeasurementMethod`: 
+  - `forecastCalculationMethod`: 
   - `createdAt`: 
   - `updatedAt`: 
 

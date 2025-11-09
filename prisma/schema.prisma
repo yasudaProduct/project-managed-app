@@ -367,10 +367,18 @@ enum ProgressMeasurementMethod {
   SELF_REPORTED  // 自己申告進捗率: wbs_task.progress_rateを使用
 }
 
+enum ForecastCalculationMethod {
+  CONSERVATIVE      // 保守的：実績ベースの推定（実績工数 / 進捗率 * 100）
+  REALISTIC         // 現実的：実績 + 残り予定の加重平均
+  OPTIMISTIC        // 楽観的：実績 + 残り予定
+  PLANNED_OR_ACTUAL // 予定/実績優先：予定 > 実績なら予定、予定 < 実績なら実績
+}
+
 model ProjectSettings {
   projectId                 String                     @id
   roundToQuarter            Boolean                    @default(false)
   progressMeasurementMethod ProgressMeasurementMethod  @default(SELF_REPORTED)
+  forecastCalculationMethod ForecastCalculationMethod @default(REALISTIC)
   createdAt                 DateTime                   @default(now()) @db.Timestamptz
   updatedAt                 DateTime                   @updatedAt @db.Timestamptz
 

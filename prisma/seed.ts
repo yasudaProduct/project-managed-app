@@ -125,6 +125,7 @@ async function main() {
                     phaseId: task.phaseId!,
                     name: task.name,
                     status: task.status as TaskStatus,
+                    progressRate: task.progressRate ?? 0,
                 },
                 create: {
                     taskNo: task.taskNo,
@@ -133,6 +134,7 @@ async function main() {
                     name: task.name,
                     assigneeId: task.assigneeId,
                     status: task.status as TaskStatus,
+                    progressRate: task.progressRate ?? 0,
                 },
             })
 
@@ -172,6 +174,26 @@ async function main() {
                         type: 'NORMAL',
                     },
                 })
+            }
+
+            if (task.jisseki) {
+                for (const jisseki of task.jisseki) {
+                    await prisma.workRecord.upsert({
+                        where: { id: taskData.id },
+                        update: {
+                            userId: jisseki.userId,
+                            taskId: taskData.id,
+                            date: jisseki.date,
+                            hours_worked: jisseki.jissekiKosu,
+                        },
+                        create: {
+                            userId: jisseki.userId,
+                            taskId: taskData.id,
+                            date: jisseki.date,
+                            hours_worked: jisseki.jissekiKosu,
+                        },
+                    })
+                }
             }
         }
 
