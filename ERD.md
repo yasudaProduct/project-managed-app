@@ -186,6 +186,7 @@ erDiagram
 "project_settings" {
   String projectId PK
   Boolean roundToQuarter
+  ProgressMeasurementMethod progressMeasurementMethod
   DateTime createdAt
   DateTime updatedAt
 }
@@ -494,6 +495,7 @@ erDiagram
 **Properties**
   - `projectId`: 
   - `roundToQuarter`: 
+  - `progressMeasurementMethod`: 
   - `createdAt`: 
   - `updatedAt`: 
 

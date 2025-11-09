@@ -1,12 +1,15 @@
 /**
  * 見通し工数計算サービス
- * 設計書：/docs/forecast-calculation-design.md
+ * 設計書：/docs/feature/forecast-hours-specification.md
  */
 
 import { WbsTaskData } from "@/applications/wbs/query/wbs-query-repository";
+import { TaskProgressCalculator, TaskStatus } from "@/domains/task/task-progress-calculator";
+import { ProgressMeasurementMethod } from "@/types/progress-measurement";
 
 export interface ForecastCalculationOptions {
   method: 'conservative' | 'realistic' | 'optimistic';
+  progressMeasurementMethod?: ProgressMeasurementMethod; // 進捗測定方式（プロジェクト設定から取得）
 }
 
 export interface ForecastCalculationResult {
@@ -15,7 +18,7 @@ export interface ForecastCalculationResult {
   plannedHours: number;
   actualHours: number;
   progressRate: number;
-  effectiveProgressRate: number; // 完了ステータス優先後の進捗率
+  effectiveProgressRate: number; // 進捗測定方式適用後の進捗率
   forecastHours: number;
   completionStatus: string;
 }
@@ -24,23 +27,28 @@ export class ForecastCalculationService {
   /**
    * タスクの見通し工数を計算
    * @param task タスクデータ
-   * @param options 計算オプション
+   * @param options 計算オプション（見通し算出方式、進捗測定方式）
    * @returns 見通し工数計算結果
    * @description
-   * 完了ステータスは100%として扱い、データベースの進捗率より優先
+   * TaskProgressCalculatorを使用して進捗率を計算し、見通し工数を算出する。
+   * 進捗測定方式は3つ：0/100法、50/50法、自己申告進捗率
    */
   static calculateTaskForecast(
     task: WbsTaskData,
-    options: ForecastCalculationOptions = { method: 'realistic' }
+    options: ForecastCalculationOptions = {
+      method: 'realistic',
+      progressMeasurementMethod: 'SELF_REPORTED'
+    }
   ): ForecastCalculationResult {
     // 予定工数と実績工数を取得
     const plannedHours = task.yoteiKosu || 0;
     const actualHours = task.jissekiKosu || 0;
 
-    // 完了ステータス優先で実効進捗率を決定
-    const effectiveProgressRate = this.getEffectiveProgressRate(
-      task.status,
-      task.progressRate
+    // TaskProgressCalculatorを使用して実効進捗率を計算
+    const effectiveProgressRate = TaskProgressCalculator.calculateEffectiveProgress(
+      task.status as TaskStatus,
+      task.progressRate,
+      options.progressMeasurementMethod || 'SELF_REPORTED'
     );
 
     // 見通し工数計算
@@ -68,44 +76,12 @@ export class ForecastCalculationService {
    */
   static calculateMultipleTasksForecast(
     tasks: WbsTaskData[],
-    options: ForecastCalculationOptions = { method: 'realistic' }
+    options: ForecastCalculationOptions = {
+      method: 'realistic',
+      progressMeasurementMethod: 'SELF_REPORTED'
+    }
   ): ForecastCalculationResult[] {
     return tasks.map(task => this.calculateTaskForecast(task, options));
-  }
-
-  /**
-   * 完了ステータス優先で実効進捗率を決定
-   * @param status タスクステータス
-   * @param progressRate 進捗率
-   * @returns 実効進捗率
-   * @description
-   * 完了ステータスは100%として扱い、データベースの進捗率より優先
-   */
-  private static getEffectiveProgressRate(
-    status: string,
-    progressRate: number | null
-  ): number {
-    // 完了ステータスの場合は必ず100%
-    if (status === 'COMPLETED') {
-      return 100;
-    }
-
-    // 完了以外の場合はデータベースの値またはステータスベースの値
-    if (progressRate !== null && progressRate !== undefined) {
-      return Math.max(0, Math.min(100, progressRate));
-    }
-
-    // フォールバック: ステータスベースの進捗率
-    switch (status) {
-      case 'NOT_STARTED':
-        return 0;
-      case 'IN_PROGRESS':
-        return 50;
-      case 'ON_HOLD':
-        return 0;
-      default:
-        return 0;
-    }
   }
 
   /**

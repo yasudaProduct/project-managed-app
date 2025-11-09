@@ -361,13 +361,20 @@ enum NotificationChannel {
   EMAIL     // メール通知
 }
 
-model ProjectSettings {
-  projectId      String   @id
-  roundToQuarter Boolean  @default(false)
-  createdAt      DateTime @default(now()) @db.Timestamptz
-  updatedAt      DateTime @updatedAt @db.Timestamptz
+enum ProgressMeasurementMethod {
+  ZERO_HUNDRED   // 0/100法: 完了=100%、未完了=0%
+  FIFTY_FIFTY    // 50/50法: 着手=50%、完了=100%
+  SELF_REPORTED  // 自己申告進捗率: wbs_task.progress_rateを使用
+}
 
-  project        Projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
+model ProjectSettings {
+  projectId                 String                     @id
+  roundToQuarter            Boolean                    @default(false)
+  progressMeasurementMethod ProgressMeasurementMethod  @default(SELF_REPORTED)
+  createdAt                 DateTime                   @default(now()) @db.Timestamptz
+  updatedAt                 DateTime                   @updatedAt @db.Timestamptz
+
+  project                   Projects                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("project_settings")
 }
