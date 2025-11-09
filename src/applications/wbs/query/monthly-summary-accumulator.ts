@@ -20,13 +20,15 @@ export class MonthlySummaryAccumulator {
    * @param plannedHours 予定工数
    * @param actualHours 実績工数
    * @param taskDetail タスク詳細
+   * @param forecastHours 見通し工数（オプション）
    */
   addTaskAllocation(
     assigneeName: string,
     yearMonth: string,
     plannedHours: number,
     actualHours: number,
-    taskDetail: TaskAllocationDetail
+    taskDetail: TaskAllocationDetail,
+    forecastHours?: number
   ): void {
     this.assignees.add(assigneeName);
     this.months.add(yearMonth);
@@ -39,6 +41,7 @@ export class MonthlySummaryAccumulator {
       plannedHours: 0,
       actualHours: 0,
       difference: 0,
+      forecastHours: 0,
       taskDetails: [],
     };
 
@@ -46,6 +49,11 @@ export class MonthlySummaryAccumulator {
     existing.plannedHours += plannedHours;
     existing.actualHours += actualHours;
     existing.difference = existing.actualHours - existing.plannedHours;
+
+    // 見通し工数を加算（指定された場合のみ）
+    if (forecastHours !== undefined) {
+      existing.forecastHours = (existing.forecastHours || 0) + forecastHours;
+    }
 
     this.dataMap.set(key, existing);
 
@@ -95,12 +103,14 @@ export class MonthlySummaryAccumulator {
     plannedHours: number;
     actualHours: number;
     difference: number;
+    forecastHours?: number;
   }> {
     const monthlyTotals: Record<string, {
       taskCount: number;
       plannedHours: number;
       actualHours: number;
       difference: number;
+      forecastHours?: number;
     }> = {};
 
     months.forEach(month => {
@@ -109,6 +119,7 @@ export class MonthlySummaryAccumulator {
         plannedHours: 0,
         actualHours: 0,
         difference: 0,
+        forecastHours: 0,
       };
 
       data
@@ -118,6 +129,9 @@ export class MonthlySummaryAccumulator {
           monthlyTotals[month].plannedHours += d.plannedHours;
           monthlyTotals[month].actualHours += d.actualHours;
           monthlyTotals[month].difference += d.difference;
+          if (d.forecastHours) {
+            monthlyTotals[month].forecastHours = (monthlyTotals[month].forecastHours || 0) + d.forecastHours;
+          }
         });
     });
 
@@ -135,12 +149,14 @@ export class MonthlySummaryAccumulator {
     plannedHours: number;
     actualHours: number;
     difference: number;
+    forecastHours?: number;
   }> {
     const assigneeTotals: Record<string, {
       taskCount: number;
       plannedHours: number;
       actualHours: number;
       difference: number;
+      forecastHours?: number;
     }> = {};
 
     assignees.forEach(assignee => {
@@ -149,6 +165,7 @@ export class MonthlySummaryAccumulator {
         plannedHours: 0,
         actualHours: 0,
         difference: 0,
+        forecastHours: 0,
       };
 
       data
@@ -158,6 +175,9 @@ export class MonthlySummaryAccumulator {
           assigneeTotals[assignee].plannedHours += d.plannedHours;
           assigneeTotals[assignee].actualHours += d.actualHours;
           assigneeTotals[assignee].difference += d.difference;
+          if (d.forecastHours) {
+            assigneeTotals[assignee].forecastHours = (assigneeTotals[assignee].forecastHours || 0) + d.forecastHours;
+          }
         });
     });
 
@@ -174,12 +194,14 @@ export class MonthlySummaryAccumulator {
     plannedHours: number;
     actualHours: number;
     difference: number;
+    forecastHours?: number;
   } {
     const grandTotal = {
       taskCount: 0,
       plannedHours: 0,
       actualHours: 0,
       difference: 0,
+      forecastHours: 0,
     };
 
     data.forEach(d => {
@@ -187,6 +209,9 @@ export class MonthlySummaryAccumulator {
       grandTotal.plannedHours += d.plannedHours;
       grandTotal.actualHours += d.actualHours;
       grandTotal.difference += d.difference;
+      if (d.forecastHours) {
+        grandTotal.forecastHours = (grandTotal.forecastHours || 0) + d.forecastHours;
+      }
     });
 
     return grandTotal;

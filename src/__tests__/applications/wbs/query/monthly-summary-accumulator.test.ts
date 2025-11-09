@@ -285,4 +285,115 @@ describe('MonthlySummaryAccumulator', () => {
       expect(result.grandTotal.difference).toBe(-12.0);
     });
   });
+
+  describe('見通し工数の集計', () => {
+    it('見通し工数を追加できる', () => {
+      const accumulator = new MonthlySummaryAccumulator();
+
+      const taskDetail: TaskAllocationDetail = {
+        taskId: 'task-1',
+        taskName: 'タスク1',
+        assignee: '田中',
+        startDate: '2025-01-10',
+        endDate: '2025-01-20',
+        totalPlannedHours: 10.0,
+        totalActualHours: 8.0,
+        monthlyAllocations: []
+      };
+
+      // 見通し工数を含めて追加
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, taskDetail, 9.5);
+
+      const result = accumulator.getTotals();
+
+      expect(result.data.length).toBe(1);
+      expect(result.data[0].forecastHours).toBe(9.5);
+    });
+
+    it('見通し工数が月別・担当者別に正しく集計される', () => {
+      const accumulator = new MonthlySummaryAccumulator();
+
+      const createTaskDetail = (taskId: string): TaskAllocationDetail => ({
+        taskId,
+        taskName: `タスク${taskId}`,
+        assignee: '田中',
+        startDate: '2025-01-10',
+        endDate: '2025-01-20',
+        totalPlannedHours: 10.0,
+        totalActualHours: 8.0,
+        monthlyAllocations: []
+      });
+
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, createTaskDetail('1'), 9.5);
+      accumulator.addTaskAllocation('田中', '2025/01', 5.0, 4.0, createTaskDetail('2'), 4.8);
+
+      const result = accumulator.getTotals();
+
+      expect(result.data[0].forecastHours).toBe(14.3); // 9.5 + 4.8
+      expect(result.monthlyTotals['2025/01'].forecastHours).toBe(14.3);
+      expect(result.assigneeTotals['田中'].forecastHours).toBe(14.3);
+      expect(result.grandTotal.forecastHours).toBe(14.3);
+    });
+
+    it('複数担当者・複数月の見通し工数を正しく集計できる', () => {
+      const accumulator = new MonthlySummaryAccumulator();
+
+      const createTaskDetail = (taskId: string, assignee: string): TaskAllocationDetail => ({
+        taskId,
+        taskName: `タスク${taskId}`,
+        assignee,
+        startDate: '2025-01-10',
+        endDate: '2025-01-20',
+        totalPlannedHours: 10.0,
+        totalActualHours: 8.0,
+        monthlyAllocations: []
+      });
+
+      // 田中: 2025/01 に 2タスク、2025/02 に 1タスク
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, createTaskDetail('1', '田中'), 9.5);
+      accumulator.addTaskAllocation('田中', '2025/01', 5.0, 4.0, createTaskDetail('2', '田中'), 4.8);
+      accumulator.addTaskAllocation('田中', '2025/02', 15.0, 12.0, createTaskDetail('3', '田中'), 14.0);
+
+      // 佐藤: 2025/01 に 1タスク
+      accumulator.addTaskAllocation('佐藤', '2025/01', 20.0, 16.0, createTaskDetail('4', '佐藤'), 18.5);
+
+      const result = accumulator.getTotals();
+
+      // 月別合計
+      expect(result.monthlyTotals['2025/01'].forecastHours).toBe(32.8); // 9.5 + 4.8 + 18.5
+      expect(result.monthlyTotals['2025/02'].forecastHours).toBe(14.0);
+
+      // 担当者別合計
+      expect(result.assigneeTotals['田中'].forecastHours).toBe(28.3); // 9.5 + 4.8 + 14.0
+      expect(result.assigneeTotals['佐藤'].forecastHours).toBe(18.5);
+
+      // 全体合計
+      expect(result.grandTotal.forecastHours).toBe(46.8); // 28.3 + 18.5
+    });
+
+    it('見通し工数が指定されていない場合は0として扱われる', () => {
+      const accumulator = new MonthlySummaryAccumulator();
+
+      const taskDetail: TaskAllocationDetail = {
+        taskId: 'task-1',
+        taskName: 'タスク1',
+        assignee: '田中',
+        startDate: '2025-01-10',
+        endDate: '2025-01-20',
+        totalPlannedHours: 10.0,
+        totalActualHours: 8.0,
+        monthlyAllocations: []
+      };
+
+      // 見通し工数を指定せずに追加
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, taskDetail);
+
+      const result = accumulator.getTotals();
+
+      expect(result.data[0].forecastHours).toBe(0);
+      expect(result.monthlyTotals['2025/01'].forecastHours).toBe(0);
+      expect(result.assigneeTotals['田中'].forecastHours).toBe(0);
+      expect(result.grandTotal.forecastHours).toBe(0);
+    });
+  });
 });

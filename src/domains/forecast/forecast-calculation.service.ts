@@ -23,12 +23,17 @@ export interface ForecastCalculationResult {
 export class ForecastCalculationService {
   /**
    * タスクの見通し工数を計算
+   * @param task タスクデータ
+   * @param options 計算オプション
+   * @returns 見通し工数計算結果
+   * @description
    * 完了ステータスは100%として扱い、データベースの進捗率より優先
    */
   static calculateTaskForecast(
     task: WbsTaskData,
     options: ForecastCalculationOptions = { method: 'realistic' }
   ): ForecastCalculationResult {
+    // 予定工数と実績工数を取得
     const plannedHours = task.yoteiKosu || 0;
     const actualHours = task.jissekiKosu || 0;
 
@@ -70,6 +75,11 @@ export class ForecastCalculationService {
 
   /**
    * 完了ステータス優先で実効進捗率を決定
+   * @param status タスクステータス
+   * @param progressRate 進捗率
+   * @returns 実効進捗率
+   * @description
+   * 完了ステータスは100%として扱い、データベースの進捗率より優先
    */
   private static getEffectiveProgressRate(
     status: string,
@@ -100,6 +110,17 @@ export class ForecastCalculationService {
 
   /**
    * 見通し工数を計算（実績 + 残りの予定）
+   * @param plannedHours 予定工数
+   * @param actualHours 実績工数
+   * @param progressRate 進捗率
+   * @param method 計算方法
+   * @returns 見通し工数
+   * @description
+   * 計算方法に応じて見通し工数を計算
+   * 計算方法は保守的、現実的、楽観的の3つの方法がある
+   * 保守的：実績ベースの推定（実績工数 / 進捗率 * 100）
+   * 現実的：実績 + 残り予定の加重平均
+   * 楽観的：実績 + 残り予定
    */
   private static calculateForecastHours(
     plannedHours: number,
@@ -112,7 +133,7 @@ export class ForecastCalculationService {
       return actualHours;
     }
 
-    // 進捗率が0の場合は予定工数をそのまま返す
+    // 進捗率が0の場合は予定工数をそのまま返す TODO: 実績が入っていても申告進捗が0%だったらprogressRateは0%になる
     if (progressRate <= 0) {
       return plannedHours;
     }

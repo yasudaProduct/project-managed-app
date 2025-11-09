@@ -13,6 +13,7 @@ import type { IUserScheduleRepository } from "@/applications/calendar/iuser-sche
 import type { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-repository";
 import { AllocationQuantizer } from "@/domains/wbs/allocation-quantizer";
 import { MonthlySummaryAccumulator } from "./monthly-summary-accumulator";
+import { ForecastCalculationService } from "@/domains/forecast/forecast-calculation.service";
 import prisma from "@/lib/prisma/prisma";
 
 @injectable()
@@ -146,30 +147,10 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
   }
 
   /**
-   * 月別・担当者別集計
-   * @param tasks 
-   * @param wbsId 
-   * @param calculationMode 
-   * @description
-   * 月別・担当者別集計を行う
-   * 月別・担当者別集計は、月ごとにタスク数、予定工数、実績工数、差分を計算する
-   */
-  private async calculateMonthlyAssigneeSummary(tasks: WbsTaskData[], wbsId: number, calculationMode: AllocationCalculationMode, roundToQuarter: boolean) {
-    switch (calculationMode) {
-      case AllocationCalculationMode.BUSINESS_DAY_ALLOCATION:
-        return this.calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks, wbsId, roundToQuarter);
-      case AllocationCalculationMode.START_DATE_BASED:
-        return this.calculateMonthlyAssigneeSummaryWithStartDateBased(tasks);
-      default:
-        throw new Error(`Unknown calculation mode: ${calculationMode}`);
-    }
-  }
-
-  /**
    * 営業日案分による月別・担当者別集計
    * @description
-   * ドメインサービス（WorkingHoursAllocationService, AllocationQuantizer）を使用して
-   * 営業日案分を実行し、MonthlySummaryAccumulatorで集計する
+   * ドメインサービス（WorkingHoursAllocationService, AllocationQuantizer, ForecastCalculationService）を使用して
+   * 営業日案分を実行し、見通し工数を計算し、MonthlySummaryAccumulatorで集計する
    */
   private async calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks: WbsTaskData[], wbsId: number, roundToQuarter: boolean) {
     // 会社休日とWorking Hours Allocation Serviceの準備
@@ -224,6 +205,10 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         quantizer
       );
 
+      // タスク全体の見通し工数を計算（ForecastCalculationService使用）
+      const forecastResult = ForecastCalculationService.calculateTaskForecast(task, { method: 'realistic' });
+      const totalForecastHours = forecastResult.forecastHours;
+
       // 各月の按分結果をアキュムレータに追加
       for (const yearMonth of allocation.getMonths()) {
         const detail = allocation.getAllocation(yearMonth);
@@ -252,13 +237,20 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           })
         };
 
+        // 月別見通し工数を計算（予定工数の比率で按分）
+        const totalPlannedHours = allocation.getTotalPlannedHours();
+        const monthForecastHours = totalPlannedHours > 0
+          ? (detail.plannedHours / totalPlannedHours) * totalForecastHours
+          : 0;
+
         // アキュムレータに追加
         accumulator.addTaskAllocation(
           assigneeName,
           yearMonth,
           detail.plannedHours,
           detail.actualHours,
-          taskDetail
+          taskDetail,
+          monthForecastHours  // 見通し工数を追加
         );
       }
     }
@@ -295,7 +287,8 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
    * 開始日基準による月別・担当者別集計
    * タスクの全工数を予定開始日の月に計上する
    * @description
-   * MonthlySummaryAccumulatorを使用してシンプルな集計を行う
+   * MonthlySummaryAccumulatorを使用してシンプルな集計を行い、
+   * ForecastCalculationServiceで見通し工数を計算する
    */
   private calculateMonthlyAssigneeSummaryWithStartDateBased(tasks: WbsTaskData[]) {
     const accumulator = new MonthlySummaryAccumulator();
@@ -333,13 +326,18 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         }]
       };
 
-      // アキュムレータに追加
+      // タスク全体の見通し工数を計算（ForecastCalculationService使用）
+      const forecastResult = ForecastCalculationService.calculateTaskForecast(task, { method: 'realistic' });
+      const forecastHours = forecastResult.forecastHours;
+
+      // アキュムレータに追加（開始日基準なので見通し工数も全て開始月に計上）
       accumulator.addTaskAllocation(
         assigneeName,
         yearMonth,
         Number(task.yoteiKosu || 0),
         Number(task.jissekiKosu || 0),
-        taskDetail
+        taskDetail,
+        forecastHours  // 見通し工数を追加
       );
     }
 

@@ -1373,12 +1373,371 @@ export function getMockData(): MockData[] {
         }
     }
 
+    // 集計表検証
+    const mockDataWbsSummary = (projectId: string, wbsId: number, multiId: number) => {
+        const wbsAssigneeId = wbsId * multiId;
+        let wbsPhaseId = wbsId * multiId;
+        const wbsTaskId = wbsId * multiId;
+        // const companyHolidaysId = wbsId * multiId;
+        // const userSchedulesId = wbsId * multiId;
+
+        return {
+            project: {
+                id: projectId,
+                name: "集計表検証",
+                status: "ACTIVE",
+                description: "集計表検証",
+                startDate: baseDate,
+                endDate: addDays(90),
+            },
+            wbs: [
+                {
+                    id: wbsId,
+                    projectId: projectId,
+                    name: "集計表検証WBS",
+                    status: "ACTIVE",
+                },
+            ],
+            wbsAssignee: [
+                {
+                    id: wbsAssigneeId,
+                    wbsId: wbsId,
+                    assigneeId: "dummy01",
+                    rate: 1.0,
+                },
+                {
+                    id: wbsAssigneeId + 1,
+                    wbsId: wbsId,
+                    assigneeId: "dummy02",
+                    rate: 0.8,
+                },
+            ],
+            wbsPhase: [
+                {
+                    id: wbsPhaseId,
+                    wbsId: wbsId,
+                    name: "基本設計",
+                    code: "D1",
+                    seq: 1,
+                },
+                {
+                    id: wbsPhaseId += 1,
+                    wbsId: wbsId,
+                    name: "詳細設計",
+                    code: "D2",
+                    seq: 2,
+                },
+                {
+                    id: wbsPhaseId += 1,
+                    wbsId: wbsId,
+                    name: "開発",
+                    code: "D3",
+                    seq: 3,
+                },
+            ],
+            wbsTask: [
+                // === 基本設計フェーズ (D1) ===
+                // 単月・完了タスク（実績あり）
+                {
+                    id: wbsTaskId,
+                    taskNo: "D1-0001",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId - 2, // 基本設計
+                    name: "[検証]単月・完了・実績あり",
+                    assigneeId: wbsAssigneeId, // dummy01
+                    status: "COMPLETED",
+                    startDate: addDays(0),
+                    endDate: addDays(4),
+                    kosu: 20,
+                },
+                // 単月・進行中タスク（実績あり・進捗率50%）
+                {
+                    id: wbsTaskId + 1,
+                    taskNo: "D1-0002",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId - 2,
+                    name: "[検証]単月・進行中・進捗50%",
+                    assigneeId: wbsAssigneeId + 1, // dummy02
+                    status: "IN_PROGRESS",
+                    startDate: addDays(5),
+                    endDate: addDays(9),
+                    kosu: 30,
+                },
+                // 単月・未開始タスク
+                {
+                    id: wbsTaskId + 2,
+                    taskNo: "D1-0003",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId - 2,
+                    name: "[検証]単月・未開始",
+                    assigneeId: wbsAssigneeId, // dummy01
+                    status: "NOT_STARTED",
+                    startDate: addDays(10),
+                    endDate: addDays(14),
+                    kosu: 25,
+                },
+
+                // === 詳細設計フェーズ (D2) ===
+                // 月跨ぎタスク（2ヶ月・完了）
+                {
+                    id: wbsTaskId + 3,
+                    taskNo: "D2-0001",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId - 1, // 詳細設計
+                    name: "[検証]月跨ぎ2ヶ月・完了",
+                    assigneeId: wbsAssigneeId + 1, // dummy02
+                    status: "COMPLETED",
+                    startDate: addDays(25),
+                    endDate: addDays(35),
+                    kosu: 40,
+                },
+                // 月跨ぎタスク（2ヶ月・進行中・進捗75%）
+                {
+                    id: wbsTaskId + 4,
+                    taskNo: "D2-0002",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId - 1,
+                    name: "[検証]月跨ぎ2ヶ月・進行中・進捗75%",
+                    assigneeId: wbsAssigneeId, // dummy01
+                    status: "IN_PROGRESS",
+                    startDate: addDays(28),
+                    endDate: addDays(42),
+                    kosu: 50,
+                },
+                // 月跨ぎタスク（3ヶ月・未開始）
+                {
+                    id: wbsTaskId + 5,
+                    taskNo: "D2-0003",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId - 1,
+                    name: "[検証]月跨ぎ3ヶ月・未開始",
+                    assigneeId: wbsAssigneeId + 1, // dummy02
+                    status: "NOT_STARTED",
+                    startDate: addDays(55),
+                    endDate: addDays(85),
+                    kosu: 60,
+                },
+
+                // === 開発フェーズ (D3) ===
+                // 同一月に複数タスク（担当者01）
+                {
+                    id: wbsTaskId + 6,
+                    taskNo: "D3-0001",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId, // 開発
+                    name: "[検証]同一月複数タスク1/3",
+                    assigneeId: wbsAssigneeId, // dummy01
+                    status: "COMPLETED",
+                    startDate: addDays(15),
+                    endDate: addDays(17),
+                    kosu: 15,
+                },
+                {
+                    id: wbsTaskId + 7,
+                    taskNo: "D3-0002",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]同一月複数タスク2/3",
+                    assigneeId: wbsAssigneeId, // dummy01
+                    status: "IN_PROGRESS",
+                    startDate: addDays(18),
+                    endDate: addDays(20),
+                    kosu: 18,
+                },
+                {
+                    id: wbsTaskId + 8,
+                    taskNo: "D3-0003",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]同一月複数タスク3/3",
+                    assigneeId: wbsAssigneeId, // dummy01
+                    status: "NOT_STARTED",
+                    startDate: addDays(21),
+                    endDate: addDays(24),
+                    kosu: 22,
+                },
+
+                // 未割当タスク（単月）
+                {
+                    id: wbsTaskId + 9,
+                    taskNo: "D3-0004",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]未割当・単月",
+                    assigneeId: undefined,
+                    status: "NOT_STARTED",
+                    startDate: addDays(30),
+                    endDate: addDays(34),
+                    kosu: 20,
+                },
+
+                // 未割当タスク（月跨ぎ）
+                {
+                    id: wbsTaskId + 10,
+                    taskNo: "D3-0005",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]未割当・月跨ぎ",
+                    assigneeId: undefined,
+                    status: "NOT_STARTED",
+                    startDate: addDays(58),
+                    endDate: addDays(72),
+                    kosu: 35,
+                },
+
+                // 実績工数が予定工数を超過しているタスク
+                {
+                    id: wbsTaskId + 11,
+                    taskNo: "D3-0006",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]実績超過・完了",
+                    assigneeId: wbsAssigneeId + 1, // dummy02
+                    status: "COMPLETED",
+                    startDate: addDays(40),
+                    endDate: addDays(44),
+                    kosu: 25,
+                },
+
+                // 実績工数が0のタスク（進行中）
+                {
+                    id: wbsTaskId + 12,
+                    taskNo: "D3-0007",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]実績0・進行中・進捗10%",
+                    assigneeId: wbsAssigneeId, // dummy01
+                    status: "IN_PROGRESS",
+                    startDate: addDays(45),
+                    endDate: addDays(49),
+                    kosu: 30,
+                },
+
+                // 0.25単位量子化の検証用（月跨ぎ・端数あり）
+                {
+                    id: wbsTaskId + 13,
+                    taskNo: "D3-0008",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]量子化・月跨ぎ・端数33.3h",
+                    assigneeId: wbsAssigneeId + 1, // dummy02
+                    status: "NOT_STARTED",
+                    startDate: addDays(50),
+                    endDate: addDays(65),
+                    kosu: 33.3,
+                },
+
+                // 同一担当者・同一月・複数タスク（担当者02）
+                {
+                    id: wbsTaskId + 14,
+                    taskNo: "D3-0009",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]担当者02・同一月1/2",
+                    assigneeId: wbsAssigneeId + 1, // dummy02
+                    status: "IN_PROGRESS",
+                    startDate: addDays(5),
+                    endDate: addDays(7),
+                    kosu: 12,
+                },
+                {
+                    id: wbsTaskId + 15,
+                    taskNo: "D3-0010",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]担当者02・同一月2/2",
+                    assigneeId: wbsAssigneeId + 1, // dummy02
+                    status: "COMPLETED",
+                    startDate: addDays(8),
+                    endDate: addDays(9),
+                    kosu: 8,
+                },
+
+                // 長期タスク（4ヶ月跨ぎ）
+                {
+                    id: wbsTaskId + 16,
+                    taskNo: "D3-0011",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]長期4ヶ月跨ぎ・進行中・進捗30%",
+                    assigneeId: wbsAssigneeId, // dummy01
+                    status: "IN_PROGRESS",
+                    startDate: addDays(60),
+                    endDate: addDays(120),
+                    kosu: 80,
+                },
+
+                // 短期タスク（1日）
+                {
+                    id: wbsTaskId + 17,
+                    taskNo: "D3-0012",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]短期1日・完了",
+                    assigneeId: wbsAssigneeId + 1, // dummy02
+                    status: "COMPLETED",
+                    startDate: addDays(12),
+                    endDate: addDays(12),
+                    kosu: 7.5,
+                },
+
+                // 進捗率100%だが実績工数が少ないタスク
+                {
+                    id: wbsTaskId + 18,
+                    taskNo: "D3-0013",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]完了・実績少なめ",
+                    assigneeId: wbsAssigneeId, // dummy01
+                    status: "COMPLETED",
+                    startDate: addDays(35),
+                    endDate: addDays(37),
+                    kosu: 20,
+                },
+
+                // 同日開始終了の複数タスク
+                {
+                    id: wbsTaskId + 19,
+                    taskNo: "D3-0014",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]同日A",
+                    assigneeId: wbsAssigneeId, // dummy01
+                    status: "NOT_STARTED",
+                    startDate: addDays(80),
+                    endDate: addDays(80),
+                    kosu: 4,
+                },
+                {
+                    id: wbsTaskId + 20,
+                    taskNo: "D3-0015",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "[検証]同日B",
+                    assigneeId: wbsAssigneeId, // dummy01
+                    status: "NOT_STARTED",
+                    startDate: addDays(80),
+                    endDate: addDays(80),
+                    kosu: 3.5,
+                },
+            ],
+            wbsBuffer: [],
+            workRecords: [],
+            milestone: [],
+            companyHolidays: [
+            ],
+            userSchedules: [
+            ],
+        }
+    }
+
     return [
         mockData("test-project-1", 1, 10),
         // mockDataLarge("test-project-2", 2, 1000),
         mockDataAssigneeGanttMonthlyTest("test-project-3", 3, 100),
         mockDataImportValidationError("test-project-4", 4, 100),
         mockDataImportValidation("test-project-5", 5, 100),
+        mockDataWbsSummary("test-project-6", 6, 100),
     ]
 }
 // export const mockDataLarge = {
