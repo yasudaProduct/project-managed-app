@@ -1,7 +1,7 @@
 import { injectable, inject } from "inversify";
 import type { IQueryHandler } from "@/applications/shared/cqrs/base-classes";
 import { GetWbsSummaryQuery } from "./get-wbs-summary-query";
-import { WbsSummaryResult, PhaseSummary, AssigneeSummary, TaskAllocationDetail } from "./wbs-summary-result";
+import { WbsSummaryResult, PhaseSummary, AssigneeSummary, TaskAllocationDetail, MonthlyAssigneeSummary } from "./wbs-summary-result";
 import { AllocationCalculationMode } from "./allocation-calculation-mode";
 import { SYMBOL } from "@/types/symbol";
 import { WbsTaskData, PhaseData } from "@/applications/wbs/query/wbs-query-repository";
@@ -28,16 +28,20 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     private readonly wbsAssigneeRepository: IWbsAssigneeRepository
   ) { }
 
+  /**
+   * 集計ハンドラー実行
+   * @param query 集計クエリ
+   * @returns 集計結果
+   */
   async execute(query: GetWbsSummaryQuery): Promise<WbsSummaryResult> {
     // WBSタスクを取得
-    const tasks = await this.wbsQueryRepository.getWbsTasks(query.projectId, query.wbsId);
+    const tasks = await this.wbsQueryRepository.getWbsTasks(query.wbsId);
 
     // 工程リストを取得
     const phases = await this.wbsQueryRepository.getPhases(query.wbsId);
 
     // 工程別集計
     const phaseSummaries = this.calculatePhaseSummary(tasks, phases);
-
     const phaseTotal = this.calculateTotal(phaseSummaries);
 
     // 担当者別集計
@@ -49,7 +53,17 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     const roundToQuarter = settings?.roundToQuarter === true;
 
     // 月別・担当者別集計
-    const monthlyAssigneeSummary = await this.calculateMonthlyAssigneeSummary(tasks, query.wbsId, query.calculationMode, roundToQuarter);
+    let monthlyAssigneeSummary: MonthlyAssigneeSummary;
+    switch (query.calculationMode) {
+      case AllocationCalculationMode.BUSINESS_DAY_ALLOCATION: // 営業日案分による月別・担当者別集計
+        monthlyAssigneeSummary = await this.calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(tasks, query.wbsId, roundToQuarter);
+        break;
+      case AllocationCalculationMode.START_DATE_BASED: // 開始日基準による月別・担当者別集計
+        monthlyAssigneeSummary = this.calculateMonthlyAssigneeSummaryWithStartDateBased(tasks);
+        break;
+      default:
+        throw new Error(`不明な計算モード: ${query.calculationMode}`);
+    }
 
     return {
       phaseSummaries,
@@ -189,17 +203,17 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         ? await this.userScheduleRepository.findByUserIdAndDateRange(
           wbsAssignee.userId,
           new Date(task.yoteiStart),
-          task.yoteiEnd ? new Date(task.yoteiEnd) : new Date(task.yoteiStart)
+          task.yoteiEnd ? new Date(task.yoteiEnd) : new Date(task.yoteiStart) // 予定終了日がない場合は予定開始日を使用
         )
         : [];
 
-      // 月別タスク按分を実行（ドメインサービスに委譲）
+      // 月別タスク按分を実行
       const allocation = workingHoursAllocationService.allocateTaskWithDetails(
         {
           wbsId,
           taskId: task.id,
           taskName: task.name,
-          phase: task.phase?.name || (typeof task.phase === "string" ? task.phase : undefined),
+          phase: task.phase?.name ?? undefined,
           yoteiStart: new Date(task.yoteiStart),
           yoteiEnd: task.yoteiEnd ? new Date(task.yoteiEnd) : undefined,
           yoteiKosu: Number(task.yoteiKosu || 0),
@@ -219,21 +233,21 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         const taskDetail: TaskAllocationDetail = {
           taskId: task.id,
           taskName: task.name,
-          phase: task.phase?.name || (typeof task.phase === "string" ? task.phase : undefined),
+          phase: task.phase?.name ?? undefined,
           assignee: assigneeName,
           startDate: new Date(task.yoteiStart).toISOString().split('T')[0],
           endDate: task.yoteiEnd ? new Date(task.yoteiEnd).toISOString().split('T')[0] : new Date(task.yoteiStart).toISOString().split('T')[0],
-          totalPlannedHours: allocation.getTotalPlannedHours(),
-          totalActualHours: allocation.getTotalActualHours(),
+          totalPlannedHours: allocation.getTotalPlannedHours(), // 予定工数の合計
+          totalActualHours: allocation.getTotalActualHours(), // 実績工数の合計
           monthlyAllocations: allocation.getMonths().map(m => {
-            const d = allocation.getAllocation(m)!;
+            const d = allocation.getAllocation(m)!; // 月別按分詳細
             return {
-              month: m,
-              workingDays: d.workingDays,
-              availableHours: d.availableHours,
-              allocatedPlannedHours: d.plannedHours,
-              allocatedActualHours: d.actualHours,
-              allocationRatio: d.allocationRatio
+              month: m, // 月
+              workingDays: d.workingDays, // 営業日数
+              availableHours: d.availableHours, // 利用可能時間
+              allocatedPlannedHours: d.plannedHours, // 配分予定工数
+              allocatedActualHours: d.actualHours, // 配分実績工数
+              allocationRatio: d.allocationRatio // 配分比率
             };
           })
         };
@@ -276,7 +290,6 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       { taskCount: 0, plannedHours: 0, actualHours: 0, difference: 0 }
     );
   }
-
 
   /**
    * 開始日基準による月別・担当者別集計

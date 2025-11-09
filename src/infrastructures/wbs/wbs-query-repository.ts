@@ -4,7 +4,7 @@ import { IWbsQueryRepository, WbsTaskData, PhaseData } from "@/applications/wbs/
 
 @injectable()
 export class WbsQueryRepository implements IWbsQueryRepository {
-  async getWbsTasks(projectId: string, wbsId: number): Promise<WbsTaskData[]> {
+  async getWbsTasks(wbsId: number): Promise<WbsTaskData[]> {
     // WorkRecordを集計して実績工数、実績開始日、実績終了日を算出するサブクエリ
     // WbsTaskと結合し、最終的なWbsTaskDataの形式でデータを取得する
     const tasks = await prisma.$queryRaw<WbsTaskData[]>`
@@ -19,7 +19,10 @@ export class WbsQueryRepository implements IWbsQueryRepository {
         wr."jissekiEnd" AS "jissekiEnd",
         t."progressRate" AS "progressRate",
         t."status" AS "status",
-        JSON_BUILD_OBJECT('id', p.id, 'name', p.name) AS phase,
+        CASE
+          WHEN p.id IS NOT NULL THEN JSON_BUILD_OBJECT('id', p.id, 'name', p.name)
+          ELSE NULL
+        END AS phase,
         CASE
           WHEN u.id IS NOT NULL THEN JSON_BUILD_OBJECT('id', u.id, 'displayName', u."displayName")
           ELSE NULL
@@ -83,7 +86,7 @@ export class WbsQueryRepository implements IWbsQueryRepository {
   async getPhases(wbsId: number): Promise<PhaseData[]> {
     const phases = await prisma.wbsPhase.findMany({
       where: {
-        wbsId: Number(wbsId),
+        wbsId: wbsId,
       },
       orderBy: {
         seq: "asc",

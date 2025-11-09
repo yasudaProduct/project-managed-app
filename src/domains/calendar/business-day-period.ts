@@ -99,9 +99,9 @@ export class BusinessDayPeriod {
 
     // 各月の稼働可能時間の比率で工数を案分
     monthlyAvailableHours.forEach((availableHours, yearMonth) => {
-      const ratio = availableHours / totalAvailableHours;
-      const allocatedHours = totalHours * ratio;
-      distributedHours.set(yearMonth, Math.round(allocatedHours * 100) / 100); // 小数第2位まで
+      const ratio = availableHours / totalAvailableHours; // 稼働可能時間の比率
+      const allocatedHours = totalHours * ratio; // 按分工数
+      distributedHours.set(yearMonth, Math.round(allocatedHours * 100) / 100); // 小数第2位まで丸め
     });
 
     // 丸め誤差の調整（最後の月で調整）

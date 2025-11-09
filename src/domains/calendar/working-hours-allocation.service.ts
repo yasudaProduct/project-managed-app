@@ -55,6 +55,7 @@ export class WorkingHoursAllocationService {
       userSchedules
     );
 
+    // 営業日案分を実行
     return period.distributeHoursByBusinessDays(task.yoteiKosu);
   }
 
@@ -141,7 +142,11 @@ export class WorkingHoursAllocationService {
 
     // 既存の按分メソッドを呼び出し
     const allocatedHoursRaw = this.allocateTaskHoursByAssigneeWorkingDays(
-      task,
+      {
+        yoteiStart: task.yoteiStart,
+        yoteiEnd: task.yoteiEnd!,
+        yoteiKosu: task.yoteiKosu
+      },
       targetAssignee,
       userSchedules
     );

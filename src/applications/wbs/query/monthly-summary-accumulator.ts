@@ -2,6 +2,10 @@ import { MonthlyAssigneeData, MonthlyAssigneeSummary, TaskAllocationDetail } fro
 
 /**
  * 月別・担当者別集計データの蓄積と集約を行うクラス
+ * @description
+ * 「月別・担当者別」の集計結果を段階的に貯めていく役割
+ * 最後に累積された総計`MonthlyAssigneeSummary`を返す
+ * アキュムレータ：繰り返し処理の中で結果を「累積」していく変数/オブジェクト。
  */
 export class MonthlySummaryAccumulator {
   private dataMap = new Map<string, MonthlyAssigneeData>();

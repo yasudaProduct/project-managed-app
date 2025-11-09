@@ -136,7 +136,7 @@ export interface MonthlyAssigneeSummary {
 export interface WbsSummaryResult {
   /** 工程別集計表の行データ */
   phaseSummaries: PhaseSummary[];
-  /** 工程別集計表の合計データ */
+  /** 工程別集計表の合計列データ */
   phaseTotal: {
     taskCount: number;
     plannedHours: number;
@@ -145,7 +145,7 @@ export interface WbsSummaryResult {
   };
   /** 担当者別集計表の行データ */
   assigneeSummaries: AssigneeSummary[];
-  /** 担当者別集計表の合計データ */
+  /** 担当者別集計表の合計列データ */
   assigneeTotal: {
     taskCount: number;
     plannedHours: number;
