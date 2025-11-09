@@ -34,4 +34,17 @@ export class WbsAssignee {
     public updateRate(rate: number) {
         this.rate = rate;
     }
+
+    /**
+     * 未割当担当者を作成（ビジネスルール）
+     * 担当者が割り当てられていないタスクの按分時に使用
+     */
+    public static createUnassigned(wbsId: number): WbsAssignee {
+        return new WbsAssignee({
+            wbsId,
+            userId: 'unassigned',
+            rate: 1,
+            seq: 0
+        });
+    }
 }
