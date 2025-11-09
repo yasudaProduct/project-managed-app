@@ -55,8 +55,8 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
 
   // 月別集計表の表示切り替え状態
   const [showMonthlyDifference, setShowMonthlyDifference] = useState(true);
-  const [showMonthlyBaseline, setShowMonthlyBaseline] = useState(false);
-  const [showMonthlyForecast, setShowMonthlyForecast] = useState(false);
+  const [showMonthlyBaseline, setShowMonthlyBaseline] = useState(true);
+  const [showMonthlyForecast, setShowMonthlyForecast] = useState(true);
 
   const formatNumber = (num: number) => {
     const converted = convertHours(num, hoursUnit);

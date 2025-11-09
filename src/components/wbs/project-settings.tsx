@@ -49,28 +49,43 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         setForecastCalculationMethod(
           data?.forecastCalculationMethod || "REALISTIC"
         );
-      } catch { }
+      } catch {}
     })();
   }, [projectId]);
 
   const onToggle = (value: boolean) => {
     setRoundToQuarter(value);
     startTransition(async () => {
-      await updateProjectSettings(projectId, value, progressMeasurementMethod, forecastCalculationMethod);
+      await updateProjectSettings(
+        projectId,
+        value,
+        progressMeasurementMethod,
+        forecastCalculationMethod
+      );
     });
   };
 
   const onProgressMethodChange = (value: ProgressMeasurementMethod) => {
     setProgressMeasurementMethod(value);
     startTransition(async () => {
-      await updateProjectSettings(projectId, roundToQuarter, value, forecastCalculationMethod);
+      await updateProjectSettings(
+        projectId,
+        roundToQuarter,
+        value,
+        forecastCalculationMethod
+      );
     });
   };
 
   const onForecastMethodChange = (value: ForecastCalculationMethod) => {
     setForecastCalculationMethod(value);
     startTransition(async () => {
-      await updateProjectSettings(projectId, roundToQuarter, progressMeasurementMethod, value);
+      await updateProjectSettings(
+        projectId,
+        roundToQuarter,
+        progressMeasurementMethod,
+        value
+      );
     });
   };
 
@@ -83,7 +98,10 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         {/* 進捗測定方式 */}
         <div className="space-y-3">
           <div>
-            <Label htmlFor="progressMeasurementMethod" className="text-base font-medium">
+            <Label
+              htmlFor="progressMeasurementMethod"
+              className="text-base font-medium"
+            >
               進捗測定方式
             </Label>
             <div className="text-sm text-gray-500 mt-1">
@@ -136,7 +154,10 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         {/* 見通し工数算出方式 */}
         <div className="space-y-3">
           <div>
-            <Label htmlFor="forecastCalculationMethod" className="text-base font-medium">
+            <Label
+              htmlFor="forecastCalculationMethod"
+              className="text-base font-medium"
+            >
               見通し工数算出方式
             </Label>
             <div className="text-sm text-gray-500 mt-1">
