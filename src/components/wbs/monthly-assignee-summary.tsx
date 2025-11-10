@@ -1,14 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table } from "@/components/ui/table"; // 残存インポート（Tooltip位置調整用に親で保持する場合はそのまま）
 import { Calendar, Users, Download, Info } from "lucide-react";
 import React from "react";
 import {
@@ -47,6 +40,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import MonthlySummaryTable, { SummaryCell } from "@/components/wbs/monthly-summary-table";
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Settings } from "lucide-react";
@@ -277,243 +271,63 @@ export function MonthlyAssigneeSummary({
         </CardHeader>
         <CardContent className="p-1">
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50">
-                  <TableHead className="font-semibold sticky left-0 bg-gray-50 z-10">
-                    担当者
-                  </TableHead>
-                  {monthlyData.months.map((month) => {
-                    const colCount =
-                      2 +
-                      (showDifference ? 1 : 0) +
-                      (showBaseline ? 1 : 0) +
-                      (showForecast ? 1 : 0);
-                    return (
-                      <TableHead
-                        key={month}
-                        className="text-center font-semibold min-w-[120px] border-r"
-                        colSpan={colCount}
-                      >
-                        {month}
-                      </TableHead>
-                    );
-                  })}
-                  <TableHead
-                    className="text-center font-semibold min-w-[120px]"
-                    colSpan={3}
-                  >
-                    合計
-                  </TableHead>
-                </TableRow>
-                <TableRow className="bg-gray-50">
-                  <TableHead className="sticky left-0 bg-gray-50 z-10"></TableHead>
-                  {monthlyData.months.map((period) => (
-                    <React.Fragment key={period}>
-                      {showBaseline && (
-                        <TableHead className="text-right text-xs">
-                          基準({getUnitSuffix(hoursUnit)})
-                        </TableHead>
-                      )}
-                      <TableHead className="text-right text-xs">
-                        予定({getUnitSuffix(hoursUnit)})
-                      </TableHead>
-                      <TableHead
-                        className={`text-right text-xs ${
-                          !showDifference && !showForecast ? "border-r" : ""
-                        }`}
-                      >
-                        実績({getUnitSuffix(hoursUnit)})
-                      </TableHead>
-                      {showDifference && (
-                        <TableHead
-                          className={`text-right text-xs ${
-                            !showForecast ? "border-r" : ""
-                          }`}
-                        >
-                          差分
-                        </TableHead>
-                      )}
-                      {showForecast && (
-                        <TableHead className="text-right text-xs border-r">
-                          見通し({getUnitSuffix(hoursUnit)})
-                        </TableHead>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  {/* 合計列のヘッダー */}
-                  <React.Fragment key="合計">
-                    <TableHead className="text-right text-xs">
-                      予定({getUnitSuffix(hoursUnit)})
-                    </TableHead>
-                    <TableHead className="text-right text-xs">
-                      実績({getUnitSuffix(hoursUnit)})
-                    </TableHead>
-                    <TableHead className="text-right text-xs">差分</TableHead>
-                  </React.Fragment>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {monthlyData.assignees.map((assignee) => (
-                  <TableRow key={assignee}>
-                    <TableCell className="font-medium sticky left-0 bg-white z-10">
-                      <button
-                        className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded transition-colors cursor-pointer"
-                        onClick={() => handleRowClick(assignee)}
-                      >
-                        {assignee}
-                      </button>
-                    </TableCell>
-                    {monthlyData.months.map((month) => {
-                      const data = monthlyData.data.find(
-                        (d) => d.month === month && d.assignee === assignee
-                      );
-                      const plannedHours = data?.plannedHours || 0;
-                      const actualHours = data?.actualHours || 0;
-                      const difference = data?.difference || 0;
-                      const baselineHours = data?.baselineHours || 0;
-                      const forecastHours = data?.forecastHours || 0;
-
-                      return (
-                        <React.Fragment key={month}>
-                          {/* 基準工数 */}
-                          {showBaseline && (
-                            <TableCell className="text-right text-sm">
-                              {baselineHours > 0
-                                ? formatNumber(baselineHours)
-                                : "-"}
-                            </TableCell>
-                          )}
-                          {/* 予定工数 */}
-                          <TableCell className="text-right text-sm">
-                            {plannedHours > 0
-                              ? formatNumber(plannedHours)
-                              : "-"}
-                          </TableCell>
-                          {/* 実績工数 */}
-                          <TableCell
-                            className={`text-right text-sm ${
-                              !showDifference && !showForecast ? "border-r" : ""
-                            }`}
-                          >
-                            {actualHours > 0 ? formatNumber(actualHours) : "-"}
-                          </TableCell>
-                          {/* 差分 */}
-                          {showDifference && (
-                            <TableCell
-                              className={`text-right text-sm ${getDifferenceColor(
-                                difference
-                              )} ${!showForecast ? "border-r" : ""}`}
-                            >
-                              {plannedHours > 0 || actualHours > 0
-                                ? formatNumber(difference)
-                                : "-"}
-                            </TableCell>
-                          )}
-                          {/* 見通し */}
-                          {showForecast && (
-                            <TableCell className="text-right text-sm border-r">
-                              {forecastHours > 0
-                                ? formatNumber(forecastHours)
-                                : "-"}
-                            </TableCell>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                    {/* 担当者合計 */}
-                    <TableCell className="text-right text-sm font-semibold bg-gray-50">
-                      {formatNumber(
-                        monthlyData.assigneeTotals[assignee].plannedHours
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right text-sm font-semibold bg-gray-50">
-                      {formatNumber(
-                        monthlyData.assigneeTotals[assignee].actualHours
-                      )}
-                    </TableCell>
-                    <TableCell
-                      className={`text-right text-sm font-semibold bg-gray-50 ${getDifferenceColor(
-                        monthlyData.assigneeTotals[assignee].difference
-                      )}`}
-                    >
-                      {formatNumber(
-                        monthlyData.assigneeTotals[assignee].difference
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {/* 月別合計行 */}
-                <TableRow className="bg-gray-100 font-semibold">
-                  <TableCell className="sticky left-0 bg-gray-100 z-10">
-                    合計
-                  </TableCell>
-                  {monthlyData.months.map((month) => {
-                    const total = monthlyData.monthlyTotals[month];
-                    const difference = total.difference;
-                    const baselineTotal = total.baselineHours || 0;
-                    const forecastTotal = total.forecastHours || 0;
-                    return (
-                      <React.Fragment key={month}>
-                        <TableCell className="text-right text-sm">
-                          {formatNumber(total.plannedHours)}
-                        </TableCell>
-                        <TableCell
-                          className={`text-right text-sm ${
-                            !showDifference && !showBaseline && !showForecast
-                              ? "border-r"
-                              : ""
-                          }`}
-                        >
-                          {formatNumber(total.actualHours)}
-                        </TableCell>
-                        {showDifference && (
-                          <TableCell
-                            className={`text-right text-sm ${getDifferenceColor(
-                              difference
-                            )} ${
-                              !showBaseline && !showForecast ? "border-r" : ""
-                            }`}
-                          >
-                            {formatNumber(difference)}
-                          </TableCell>
-                        )}
-                        {showBaseline && (
-                          <TableCell
-                            className={`text-right text-sm ${
-                              !showForecast ? "border-r" : ""
-                            }`}
-                          >
-                            {baselineTotal > 0
-                              ? formatNumber(baselineTotal)
-                              : "-"}
-                          </TableCell>
-                        )}
-                        {showForecast && (
-                          <TableCell className="text-right text-sm border-r">
-                            {formatNumber(forecastTotal)}
-                          </TableCell>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                  {/* 全体合計 */}
-                  <TableCell className="text-right text-sm bg-gray-200">
-                    {formatNumber(monthlyData.grandTotal.plannedHours)}
-                  </TableCell>
-                  <TableCell className="text-right text-sm bg-gray-200">
-                    {formatNumber(monthlyData.grandTotal.actualHours)}
-                  </TableCell>
-                  <TableCell
-                    className={`text-right text-sm bg-gray-200 ${getDifferenceColor(
-                      monthlyData.grandTotal.difference
-                    )}`}
-                  >
-                    {formatNumber(monthlyData.grandTotal.difference)}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <MonthlySummaryTable
+              months={monthlyData.months}
+              rows={monthlyData.assignees}
+              firstColumnHeader="担当者"
+              hoursUnit={hoursUnit}
+              showDifference={showDifference}
+              showBaseline={showBaseline}
+              showForecast={showForecast}
+              getCell={(assignee, month) => {
+                const data = monthlyData.data.find(
+                  (d) => d.month === month && d.assignee === assignee
+                );
+                if (!data)
+                  return {
+                    plannedHours: 0,
+                    actualHours: 0,
+                    difference: 0,
+                  };
+                return {
+                  plannedHours: data.plannedHours || 0,
+                  actualHours: data.actualHours || 0,
+                  difference: data.difference || 0,
+                  baselineHours: data.baselineHours || 0,
+                  forecastHours: data.forecastHours || 0,
+                } as SummaryCell;
+              }}
+              rowTotals={Object.fromEntries(
+                monthlyData.assignees.map((a) => [
+                  a,
+                  {
+                    plannedHours: monthlyData.assigneeTotals[a].plannedHours,
+                    actualHours: monthlyData.assigneeTotals[a].actualHours,
+                    difference: monthlyData.assigneeTotals[a].difference,
+                  },
+                ])
+              )}
+              monthlyTotals={Object.fromEntries(
+                monthlyData.months.map((m) => [
+                  m,
+                  {
+                    plannedHours: monthlyData.monthlyTotals[m].plannedHours,
+                    actualHours: monthlyData.monthlyTotals[m].actualHours,
+                    difference: monthlyData.monthlyTotals[m].difference,
+                    baselineHours: monthlyData.monthlyTotals[m].baselineHours || 0,
+                    forecastHours: monthlyData.monthlyTotals[m].forecastHours || 0,
+                  },
+                ])
+              )}
+              grandTotal={{
+                plannedHours: monthlyData.grandTotal.plannedHours,
+                actualHours: monthlyData.grandTotal.actualHours,
+                difference: monthlyData.grandTotal.difference,
+                baselineHours: monthlyData.grandTotal.baselineHours || 0,
+                forecastHours: monthlyData.grandTotal.forecastHours || 0,
+              }}
+              onRowClick={handleRowClick}
+            />
           </div>
         </CardContent>
       </Card>
@@ -621,13 +435,12 @@ export function MonthlyAssigneeSummary({
                                   <div>
                                     <span className="text-gray-500">差分:</span>
                                     <p
-                                      className={`font-medium ${
-                                        monthData
+                                      className={`font-medium ${monthData
                                           ? getDifferenceColor(
-                                              monthData.difference
-                                            )
+                                            monthData.difference
+                                          )
                                           : ""
-                                      }`}
+                                        }`}
                                     >
                                       {monthData
                                         ? formatNumber(monthData.difference)
@@ -639,7 +452,7 @@ export function MonthlyAssigneeSummary({
                               </div>
 
                               {monthData?.taskDetails &&
-                              monthData.taskDetails.length > 0 ? (
+                                monthData.taskDetails.length > 0 ? (
                                 <div className="space-y-3">
                                   <h4 className="font-semibold">タスク詳細</h4>
                                   {monthData.taskDetails.map((task, idx) => {
@@ -653,7 +466,7 @@ export function MonthlyAssigneeSummary({
                                       (monthAllocation.allocatedPlannedHours ===
                                         0 &&
                                         monthAllocation.allocatedActualHours ===
-                                          0)
+                                        0)
                                     ) {
                                       return null;
                                     }

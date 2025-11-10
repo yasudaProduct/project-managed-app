@@ -41,6 +41,10 @@ export class TaskProgressCalculator {
     selfReportedProgress: number | null,
     method: ProgressMeasurementMethod
   ): number {
+    console.log('--- calculateEffectiveProgress ---');
+    console.log('status', status);
+    console.log('selfReportedProgress', selfReportedProgress);
+    console.log('method', method);
     switch (method) {
       case 'ZERO_HUNDRED':
         return this.calculateZeroHundred(status);

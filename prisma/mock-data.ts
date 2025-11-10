@@ -1493,18 +1493,31 @@ export function getMockData(): MockData[] {
 
                 // === 詳細設計フェーズ (D2) ===
                 // 月跨ぎタスク（2ヶ月・完了）
-                // {
-                //     id: wbsTaskId + 3,
-                //     taskNo: "D2-0001",
-                //     wbsId: wbsId,
-                //     phaseId: wbsPhaseId - 1, // 詳細設計
-                //     name: "[検証]月跨ぎ2ヶ月・完了",
-                //     assigneeId: wbsAssigneeId + 1, // dummy02
-                //     status: "COMPLETED",
-                //     startDate: addDays(25),
-                //     endDate: addDays(35),
-                //     kosu: 40,
-                // },
+                {
+                    id: wbsTaskId + 3,
+                    taskNo: "D2-0001",
+                    wbsId: wbsId,
+                    phaseId: wbsPhaseId + 1, // 詳細設計
+                    name: "[検証]月跨ぎ2ヶ月・完了",
+                    assigneeId: wbsAssigneeId + 1, // dummy02
+                    status: "IN_PROGRESS",
+                    startDate: addDays(0),
+                    endDate: addDays(35),
+                    kosu: 40,
+                    progressRate: 50,
+                    jisseki: [
+                        {
+                            userId: "dummy02",
+                            jissekiKosu: 10,
+                            date: addDays(25),
+                        },
+                        // {
+                        //     userId: "dummy02",
+                        //     jissekiKosu: 10,
+                        //     date: addDays(35),
+                        // }
+                    ],
+                },
                 // // 月跨ぎタスク（2ヶ月・進行中・進捗75%）
                 // {
                 //     id: wbsTaskId + 4,
@@ -1754,11 +1767,11 @@ export function getMockData(): MockData[] {
     }
 
     return [
-        mockData("test-project-1", 1, 10),
+        // mockData("test-project-1", 1, 10),
         // mockDataLarge("test-project-2", 2, 1000),
-        mockDataAssigneeGanttMonthlyTest("test-project-3", 3, 100),
-        mockDataImportValidationError("test-project-4", 4, 100),
-        mockDataImportValidation("test-project-5", 5, 100),
+        // mockDataAssigneeGanttMonthlyTest("test-project-3", 3, 100),
+        // mockDataImportValidationError("test-project-4", 4, 100),
+        // mockDataImportValidation("test-project-5", 5, 100),
         mockDataWbsSummary("test-project-6", 6, 100),
     ]
 }

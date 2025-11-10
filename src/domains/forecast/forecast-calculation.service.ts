@@ -159,14 +159,17 @@ export class ForecastCalculationService {
 
       case 'realistic':
         // 現実的：実績 + 残り予定の加重平均
-        const estimatedFromActual = progressRate > 0 ? (actualHours / progressRate) * 100 : plannedHours;
-        const remainingPlanned = plannedHours * remainingWork;
+        const estimatedFromActual = progressRate > 0 ? (actualHours / progressRate) * 100 : plannedHours; // 実績ベースの見通し
+        const remainingPlanned = plannedHours * remainingWork; // 進捗率に基づく残り予定工数
 
         // 進捗率に応じて実績ベースと予定ベースを加重平均
         // 進捗率が高いほど実績ベースの重みを大きくする
-        const actualWeight = progressRate / 100;
-        const plannedWeight = 1 - actualWeight;
+        const actualWeight = progressRate / 100; // 進捗率を実績の重みとする
+        const plannedWeight = 1 - actualWeight; // 残りを予定の重みとする
 
+        // 加重平均を計算して返す
+        // 実績ベースの見通し * 実績の重み + (実績工数 + 残り予定工数) * 予定の重み
+        console.log(`${estimatedFromActual} * ${actualWeight} + (${actualHours} + ${remainingPlanned}) * ${plannedWeight}`);
         return estimatedFromActual * actualWeight + (actualHours + remainingPlanned) * plannedWeight;
 
       case 'optimistic':
