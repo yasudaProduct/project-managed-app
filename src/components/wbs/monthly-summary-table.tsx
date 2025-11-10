@@ -13,24 +13,23 @@ import { HoursUnit, convertHours, getUnitSuffix } from "@/utils/hours-converter"
 export interface SummaryCell {
     plannedHours: number;
     actualHours: number;
-    difference: number; // actual - planned （既存ロジック準拠）
+    difference: number; // actual - planned
     baselineHours?: number; // 任意: 基準工数
     forecastHours?: number; // 任意: 見通し工数
 }
 
+// 行アイテム: key（表示/参照用）と並び順 seq。後方互換で string も許可。
+export type SummaryRowItem = { key: string; seq: number } | string;
+
 interface MonthlySummaryTableProps {
     months: string[];
-    rows: string[]; // 行キー（担当者名 or 工程名など）
-    firstColumnHeader: string; // 先頭列ヘッダー表示文言（"担当者" / "工程"）
-    /**
-     * 先頭列の固定幅。例: 200, "200px", "14rem" など。
-     * 指定すると先頭列のヘッダー/ボディ/合計の各セルに width/minWidth/maxWidth を適用し、内容で横幅が変動しないよう固定します。
-     */
-    firstColumnWidth?: number | string;
-    hoursUnit: HoursUnit;
-    showDifference: boolean;
-    showBaseline: boolean;
-    showForecast: boolean;
+    rows: SummaryRowItem[]; // 行キー + 並び順 (string の場合は元の順序 index を seq として扱う)
+    firstColumnHeader: string; // 先頭列ヘッダー表示文言
+    firstColumnWidth?: number | string; // 先頭列の固定幅
+    hoursUnit: HoursUnit; // 工数単位
+    showDifference: boolean; // 差分表示
+    showBaseline: boolean; // 基準工数表示
+    showForecast: boolean; // 見通し工数表示
     // 指定 row, month のセルを取得。該当なしなら undefined
     getCell: (rowKey: string, month: string) => SummaryCell | undefined;
     // 行合計 (row 横断)
@@ -41,7 +40,7 @@ interface MonthlySummaryTableProps {
     grandTotal: SummaryCell;
     // 行ラベルカスタマイズ（省略時は rowKey をそのまま表示）
     getRowLabel?: (rowKey: string) => React.ReactNode;
-    // 行クリック対応（担当者詳細表示など）。指定時のみボタン化
+    // 行クリック対応 指定時のみボタン化
     onRowClick?: (rowKey: string) => void;
     // sticky 第一列を制御（デフォルト true）
     stickyFirstColumn?: boolean;
@@ -86,6 +85,14 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
         const w = typeof firstColumnWidth === "number" ? `${firstColumnWidth}px` : firstColumnWidth;
         return { width: w, minWidth: w, maxWidth: w } as React.CSSProperties;
     })();
+
+    // rows を正規化して seq 昇順に並べ替え（string の場合は index を seq に採用）
+    const normalizedRows = React.useMemo(() => {
+        const list = rows.map((r, idx) =>
+            typeof r === "string" ? { key: r, seq: idx } : r
+        );
+        return list.sort((a, b) => a.seq - b.seq);
+    }, [rows]);
 
     return (
         <Table>
@@ -142,7 +149,7 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {rows.map((rowKey) => {
+                {normalizedRows.map(({ key: rowKey }) => {
                     const total = rowTotals[rowKey];
                     return (
                         <TableRow key={rowKey}>

@@ -273,7 +273,9 @@ export function MonthlyAssigneeSummary({
           <div className="overflow-x-auto">
             <MonthlySummaryTable
               months={monthlyData.months}
-              rows={monthlyData.assignees}
+              rows={monthlyData.assignees.map((assignee) => (
+                { key: assignee, seq: 0 })
+              )} // TODO: ここにseqも持ってくる
               firstColumnHeader="担当者"
               hoursUnit={hoursUnit}
               showDifference={showDifference}
@@ -436,10 +438,10 @@ export function MonthlyAssigneeSummary({
                                     <span className="text-gray-500">差分:</span>
                                     <p
                                       className={`font-medium ${monthData
-                                          ? getDifferenceColor(
-                                            monthData.difference
-                                          )
-                                          : ""
+                                        ? getDifferenceColor(
+                                          monthData.difference
+                                        )
+                                        : ""
                                         }`}
                                     >
                                       {monthData

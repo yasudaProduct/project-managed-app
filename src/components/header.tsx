@@ -16,6 +16,7 @@ interface ProjectInfo {
 interface WbsTasksSummary {
   taskKosu: number;
   taskJisseki: number;
+  kijunKosu: number;
 }
 
 export function Header() {
@@ -124,6 +125,12 @@ export function Header() {
                   <span className="text-gray-400">|</span>
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-1">
+                      <span className="text-sm text-gray-600">基準:</span>
+                      <span className="text-sm font-medium text-green-600">
+                        {tasksSummary.kijunKosu.toFixed(1)}h
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
                       <span className="text-sm text-gray-600">予定:</span>
                       <span className="text-sm font-medium text-blue-600">
                         {tasksSummary.taskKosu.toFixed(1)}h
@@ -131,7 +138,7 @@ export function Header() {
                     </div>
                     <div className="flex items-center space-x-1">
                       <span className="text-sm text-gray-600">実績:</span>
-                      <span className="text-sm font-medium text-green-600">
+                      <span className="text-sm font-medium text-red-600">
                         {tasksSummary.taskJisseki.toFixed(1)}h
                       </span>
                     </div>
