@@ -176,6 +176,16 @@ async function main() {
                 })
             }
 
+            // if (task.kijun) {
+            //     const kijunPeriod = await prisma.taskPeriod.create({
+            //         data: { taskId: taskData.id, startDate: task.kijun.startDate, endDate: task.kijun.endDate, type: 'KIJUN' },
+            //     })
+
+            //     await prisma.taskKosu.create({
+            //         data: { wbsId: task.wbsId, periodId: kijunPeriod.id, kosu: task.kijun.kosu, type: 'NORMAL' },
+            //     })
+            // }
+
             if (task.jisseki) {
                 for (const jisseki of task.jisseki) {
                     await prisma.workRecord.upsert({

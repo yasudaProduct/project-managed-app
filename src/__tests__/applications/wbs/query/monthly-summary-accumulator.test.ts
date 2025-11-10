@@ -25,7 +25,7 @@ describe('MonthlySummaryAccumulator', () => {
         }]
       };
 
-      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, taskDetail);
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, taskDetail);
 
       const result = accumulator.getTotals();
 
@@ -63,8 +63,8 @@ describe('MonthlySummaryAccumulator', () => {
         monthlyAllocations: []
       };
 
-      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, taskDetail1);
-      accumulator.addTaskAllocation('田中', '2025/01', 5.0, 4.0, taskDetail2);
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, taskDetail1);
+      accumulator.addTaskAllocation('田中', '2025/01', 5.0, 4.0, 0, taskDetail2);
 
       const result = accumulator.getTotals();
 
@@ -101,8 +101,8 @@ describe('MonthlySummaryAccumulator', () => {
         monthlyAllocations: []
       };
 
-      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, taskDetail1);
-      accumulator.addTaskAllocation('佐藤', '2025/01', 5.0, 4.0, taskDetail2);
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, taskDetail1);
+      accumulator.addTaskAllocation('佐藤', '2025/01', 5.0, 4.0, 0, taskDetail2);
 
       const result = accumulator.getTotals();
 
@@ -135,8 +135,8 @@ describe('MonthlySummaryAccumulator', () => {
         monthlyAllocations: []
       };
 
-      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, taskDetail1);
-      accumulator.addTaskAllocation('田中', '2025/02', 5.0, 4.0, taskDetail2);
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, taskDetail1);
+      accumulator.addTaskAllocation('田中', '2025/02', 5.0, 4.0, 0, taskDetail2);
 
       const result = accumulator.getTotals();
 
@@ -160,8 +160,8 @@ describe('MonthlySummaryAccumulator', () => {
         monthlyAllocations: []
       });
 
-      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, createTaskDetail('1', '田中'));
-      accumulator.addTaskAllocation('佐藤', '2025/01', 15.0, 12.0, createTaskDetail('2', '佐藤'));
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, createTaskDetail('1', '田中'));
+      accumulator.addTaskAllocation('佐藤', '2025/01', 15.0, 12.0, 0, createTaskDetail('2', '佐藤'));
 
       const result = accumulator.getTotals();
 
@@ -185,8 +185,8 @@ describe('MonthlySummaryAccumulator', () => {
         monthlyAllocations: []
       });
 
-      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, createTaskDetail('1', '田中'));
-      accumulator.addTaskAllocation('田中', '2025/02', 15.0, 12.0, createTaskDetail('2', '田中'));
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, createTaskDetail('1', '田中'));
+      accumulator.addTaskAllocation('田中', '2025/02', 15.0, 12.0, 0, createTaskDetail('2', '田中'));
 
       const result = accumulator.getTotals();
 
@@ -210,9 +210,9 @@ describe('MonthlySummaryAccumulator', () => {
         monthlyAllocations: []
       });
 
-      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, createTaskDetail('1', '田中'));
-      accumulator.addTaskAllocation('佐藤', '2025/01', 15.0, 12.0, createTaskDetail('2', '佐藤'));
-      accumulator.addTaskAllocation('田中', '2025/02', 5.0, 4.0, createTaskDetail('3', '田中'));
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, createTaskDetail('1', '田中'));
+      accumulator.addTaskAllocation('佐藤', '2025/01', 15.0, 12.0, 0, createTaskDetail('2', '佐藤'));
+      accumulator.addTaskAllocation('田中', '2025/02', 5.0, 4.0, 0, createTaskDetail('3', '田中'));
 
       const result = accumulator.getTotals();
 
@@ -251,13 +251,13 @@ describe('MonthlySummaryAccumulator', () => {
       });
 
       // 田中: 2025/01 に 2タスク、2025/02 に 1タスク
-      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, createTaskDetail('1', '田中'));
-      accumulator.addTaskAllocation('田中', '2025/01', 5.0, 4.0, createTaskDetail('2', '田中'));
-      accumulator.addTaskAllocation('田中', '2025/02', 15.0, 12.0, createTaskDetail('3', '田中'));
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, createTaskDetail('1', '田中'));
+      accumulator.addTaskAllocation('田中', '2025/01', 5.0, 4.0, 0, createTaskDetail('2', '田中'));
+      accumulator.addTaskAllocation('田中', '2025/02', 15.0, 12.0, 0, createTaskDetail('3', '田中'));
 
       // 佐藤: 2025/01 に 1タスク、2025/02 に 1タスク
-      accumulator.addTaskAllocation('佐藤', '2025/01', 20.0, 16.0, createTaskDetail('4', '佐藤'));
-      accumulator.addTaskAllocation('佐藤', '2025/02', 10.0, 8.0, createTaskDetail('5', '佐藤'));
+      accumulator.addTaskAllocation('佐藤', '2025/01', 20.0, 16.0, 0, createTaskDetail('4', '佐藤'));
+      accumulator.addTaskAllocation('佐藤', '2025/02', 10.0, 8.0, 0, createTaskDetail('5', '佐藤'));
 
       const result = accumulator.getTotals();
 
@@ -302,7 +302,7 @@ describe('MonthlySummaryAccumulator', () => {
       };
 
       // 見通し工数を含めて追加
-      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, taskDetail, 9.5);
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, taskDetail, 9.5);
 
       const result = accumulator.getTotals();
 
@@ -324,8 +324,8 @@ describe('MonthlySummaryAccumulator', () => {
         monthlyAllocations: []
       });
 
-      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, createTaskDetail('1'), 9.5);
-      accumulator.addTaskAllocation('田中', '2025/01', 5.0, 4.0, createTaskDetail('2'), 4.8);
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, createTaskDetail('1'), 9.5);
+      accumulator.addTaskAllocation('田中', '2025/01', 5.0, 4.0, 0, createTaskDetail('2'), 4.8);
 
       const result = accumulator.getTotals();
 
@@ -350,12 +350,12 @@ describe('MonthlySummaryAccumulator', () => {
       });
 
       // 田中: 2025/01 に 2タスク、2025/02 に 1タスク
-      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, createTaskDetail('1', '田中'), 9.5);
-      accumulator.addTaskAllocation('田中', '2025/01', 5.0, 4.0, createTaskDetail('2', '田中'), 4.8);
-      accumulator.addTaskAllocation('田中', '2025/02', 15.0, 12.0, createTaskDetail('3', '田中'), 14.0);
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, createTaskDetail('1', '田中'), 9.5);
+      accumulator.addTaskAllocation('田中', '2025/01', 5.0, 4.0, 0, createTaskDetail('2', '田中'), 4.8);
+      accumulator.addTaskAllocation('田中', '2025/02', 15.0, 12.0, 0, createTaskDetail('3', '田中'), 14.0);
 
       // 佐藤: 2025/01 に 1タスク
-      accumulator.addTaskAllocation('佐藤', '2025/01', 20.0, 16.0, createTaskDetail('4', '佐藤'), 18.5);
+      accumulator.addTaskAllocation('佐藤', '2025/01', 20.0, 16.0, 0, createTaskDetail('4', '佐藤'), 18.5);
 
       const result = accumulator.getTotals();
 
@@ -386,7 +386,7 @@ describe('MonthlySummaryAccumulator', () => {
       };
 
       // 見通し工数を指定せずに追加
-      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, taskDetail);
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, taskDetail);
 
       const result = accumulator.getTotals();
 

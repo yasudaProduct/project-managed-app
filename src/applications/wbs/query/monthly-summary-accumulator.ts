@@ -19,6 +19,7 @@ export class MonthlySummaryAccumulator {
    * @param yearMonth 年月 (YYYY/MM)
    * @param plannedHours 予定工数
    * @param actualHours 実績工数
+   * @param baselineHours 基準工数
    * @param taskDetail タスク詳細
    * @param forecastHours 見通し工数（オプション）
    */
@@ -27,6 +28,7 @@ export class MonthlySummaryAccumulator {
     yearMonth: string,
     plannedHours: number,
     actualHours: number,
+    baselineHours: number,
     taskDetail: TaskAllocationDetail,
     forecastHours?: number
   ): void {
@@ -38,6 +40,7 @@ export class MonthlySummaryAccumulator {
       assignee: assigneeName,
       month: yearMonth,
       taskCount: 0,
+      baselineHours: 0,
       plannedHours: 0,
       actualHours: 0,
       difference: 0,
@@ -46,6 +49,7 @@ export class MonthlySummaryAccumulator {
     };
 
     existing.taskCount += 1;
+    existing.baselineHours += baselineHours;
     existing.plannedHours += plannedHours;
     existing.actualHours += actualHours;
     existing.difference = existing.actualHours - existing.plannedHours;
@@ -103,6 +107,7 @@ export class MonthlySummaryAccumulator {
     plannedHours: number;
     actualHours: number;
     difference: number;
+    baselineHours?: number;
     forecastHours?: number;
   }> {
     const monthlyTotals: Record<string, {
@@ -110,6 +115,7 @@ export class MonthlySummaryAccumulator {
       plannedHours: number;
       actualHours: number;
       difference: number;
+      baselineHours?: number;
       forecastHours?: number;
     }> = {};
 
@@ -119,6 +125,7 @@ export class MonthlySummaryAccumulator {
         plannedHours: 0,
         actualHours: 0,
         difference: 0,
+        baselineHours: 0,
         forecastHours: 0,
       };
 
@@ -129,6 +136,9 @@ export class MonthlySummaryAccumulator {
           monthlyTotals[month].plannedHours += d.plannedHours;
           monthlyTotals[month].actualHours += d.actualHours;
           monthlyTotals[month].difference += d.difference;
+          if (d.baselineHours) {
+            monthlyTotals[month].baselineHours = (monthlyTotals[month].baselineHours || 0) + d.baselineHours;
+          }
           if (d.forecastHours) {
             monthlyTotals[month].forecastHours = (monthlyTotals[month].forecastHours || 0) + d.forecastHours;
           }
@@ -149,6 +159,7 @@ export class MonthlySummaryAccumulator {
     plannedHours: number;
     actualHours: number;
     difference: number;
+    baselineHours?: number;
     forecastHours?: number;
   }> {
     const assigneeTotals: Record<string, {
@@ -156,6 +167,7 @@ export class MonthlySummaryAccumulator {
       plannedHours: number;
       actualHours: number;
       difference: number;
+      baselineHours?: number;
       forecastHours?: number;
     }> = {};
 
@@ -165,6 +177,7 @@ export class MonthlySummaryAccumulator {
         plannedHours: 0,
         actualHours: 0,
         difference: 0,
+        baselineHours: 0,
         forecastHours: 0,
       };
 
@@ -175,6 +188,9 @@ export class MonthlySummaryAccumulator {
           assigneeTotals[assignee].plannedHours += d.plannedHours;
           assigneeTotals[assignee].actualHours += d.actualHours;
           assigneeTotals[assignee].difference += d.difference;
+          if (d.baselineHours) {
+            assigneeTotals[assignee].baselineHours = (assigneeTotals[assignee].baselineHours || 0) + d.baselineHours;
+          }
           if (d.forecastHours) {
             assigneeTotals[assignee].forecastHours = (assigneeTotals[assignee].forecastHours || 0) + d.forecastHours;
           }
@@ -194,6 +210,7 @@ export class MonthlySummaryAccumulator {
     plannedHours: number;
     actualHours: number;
     difference: number;
+    baselineHours?: number;
     forecastHours?: number;
   } {
     const grandTotal = {
@@ -201,6 +218,7 @@ export class MonthlySummaryAccumulator {
       plannedHours: 0,
       actualHours: 0,
       difference: 0,
+      baselineHours: 0,
       forecastHours: 0,
     };
 
@@ -209,6 +227,9 @@ export class MonthlySummaryAccumulator {
       grandTotal.plannedHours += d.plannedHours;
       grandTotal.actualHours += d.actualHours;
       grandTotal.difference += d.difference;
+      if (d.baselineHours) {
+        grandTotal.baselineHours = (grandTotal.baselineHours || 0) + d.baselineHours;
+      }
       if (d.forecastHours) {
         grandTotal.forecastHours = (grandTotal.forecastHours || 0) + d.forecastHours;
       }

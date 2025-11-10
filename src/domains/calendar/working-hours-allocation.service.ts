@@ -121,7 +121,7 @@ export class WorkingHoursAllocationService {
     userSchedules: UserSchedule[],
     quantizer?: AllocationQuantizer
   ): MonthlyTaskAllocation {
-    // 単月/複数月の判定
+    // 単月/複数月の判定（予定期間基準）
     const isSingleMonth = this.isSingleMonth(task);
 
     if (isSingleMonth) {
@@ -131,8 +131,8 @@ export class WorkingHoursAllocationService {
     // 担当者未割当の場合はダミーを作成
     const targetAssignee = assignee || WbsAssignee.createUnassigned(task.wbsId);
 
-    // BusinessDayPeriodを作成
-    const period = new BusinessDayPeriod(
+    // 予定期間のBusinessDayPeriodを作成
+    const yoteiPeriod = new BusinessDayPeriod(
       task.yoteiStart,
       task.yoteiEnd!,
       targetAssignee,
@@ -140,8 +140,8 @@ export class WorkingHoursAllocationService {
       userSchedules
     );
 
-    // 既存の按分メソッドを呼び出し
-    const allocatedHoursRaw = this.allocateTaskHoursByAssigneeWorkingDays(
+    // 予定工数の按分
+    const allocatedPlannedHoursRaw = this.allocateTaskHoursByAssigneeWorkingDays(
       {
         yoteiStart: task.yoteiStart,
         yoteiEnd: task.yoteiEnd!,
@@ -152,15 +152,55 @@ export class WorkingHoursAllocationService {
     );
 
     // 量子化（必要な場合）
-    const allocatedHours = quantizer
-      ? quantizer.quantize(allocatedHoursRaw)
-      : allocatedHoursRaw;
+    const allocatedPlannedHours = quantizer
+      ? quantizer.quantize(allocatedPlannedHoursRaw)
+      : allocatedPlannedHoursRaw;
+
+    // 基準工数の按分（基準期間が存在する場合）
+    let allocatedBaselineHours: Map<string, number> | undefined;
+    let kijunPeriod: BusinessDayPeriod | undefined;
+
+    if (task.kijunStart && task.kijunEnd && task.kijunKosu) {
+      // 基準期間が単月かチェック
+      const isKijunSingleMonth = this.isSingleMonthPeriod(task.kijunStart, task.kijunEnd);
+
+      if (isKijunSingleMonth) {
+        // 基準期間が単月の場合は、その月に全額計上
+        const kijunMonth = this.formatYearMonth(task.kijunStart);
+        allocatedBaselineHours = new Map([[kijunMonth, task.kijunKosu]]);
+      } else {
+        // 基準期間が複数月の場合は按分
+        kijunPeriod = new BusinessDayPeriod(
+          task.kijunStart,
+          task.kijunEnd,
+          targetAssignee,
+          this.companyCalendar,
+          userSchedules
+        );
+
+        const allocatedBaselineHoursRaw = this.allocateTaskHoursByAssigneeWorkingDays(
+          {
+            yoteiStart: task.kijunStart,
+            yoteiEnd: task.kijunEnd,
+            yoteiKosu: task.kijunKosu
+          },
+          targetAssignee,
+          userSchedules
+        );
+
+        allocatedBaselineHours = quantizer
+          ? quantizer.quantize(allocatedBaselineHoursRaw)
+          : allocatedBaselineHoursRaw;
+      }
+    }
 
     // MonthlyTaskAllocation を作成
     return MonthlyTaskAllocation.createMultiMonth(
       task,
-      allocatedHours,
-      period
+      allocatedPlannedHours,
+      yoteiPeriod,
+      allocatedBaselineHours,
+      kijunPeriod
     );
   }
 
@@ -169,10 +209,17 @@ export class WorkingHoursAllocationService {
    */
   private isSingleMonth(task: ExtendedTaskForAllocation): boolean {
     if (!task.yoteiEnd) return true;
-    const start = new Date(task.yoteiStart);
-    const end = new Date(task.yoteiEnd);
-    return start.getFullYear() === end.getFullYear()
-      && start.getMonth() === end.getMonth();
+    return this.isSingleMonthPeriod(task.yoteiStart, task.yoteiEnd);
+  }
+
+  /**
+   * 指定された期間が単月かどうかを判定
+   */
+  private isSingleMonthPeriod(start: Date, end: Date): boolean {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    return startDate.getFullYear() === endDate.getFullYear()
+      && startDate.getMonth() === endDate.getMonth();
   }
 
   /**

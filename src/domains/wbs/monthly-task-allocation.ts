@@ -8,6 +8,9 @@ export interface TaskForAllocation {
   taskId: string;
   taskName: string;
   phase?: string;
+  kijunStart?: Date;
+  kijunEnd?: Date;
+  kijunKosu?: number;
   yoteiStart: Date;
   yoteiEnd?: Date;
   yoteiKosu: number;
@@ -18,6 +21,7 @@ export interface TaskForAllocation {
  * 月別按分詳細
  */
 export interface MonthlyAllocationDetail {
+  baselineHours: number;
   plannedHours: number;
   actualHours: number;
   workingDays: number;
@@ -44,6 +48,7 @@ export class MonthlyTaskAllocation {
   ): MonthlyTaskAllocation {
     const allocations = new Map<string, MonthlyAllocationDetail>();
     allocations.set(yearMonth, {
+      baselineHours: task.kijunKosu || 0,
       plannedHours: task.yoteiKosu,
       actualHours: task.jissekiKosu || 0,
       workingDays: 1,
@@ -55,25 +60,36 @@ export class MonthlyTaskAllocation {
 
   /**
    * 複数月タスクの按分結果を生成
+   * @param task タスク情報
+   * @param allocatedPlannedHours 予定工数の按分結果（月別）
+   * @param yoteiPeriod 予定期間のBusinessDayPeriod
+   * @param allocatedBaselineHours 基準工数の按分結果（月別、オプション）
+   * @param kijunPeriod 基準期間のBusinessDayPeriod（オプション）
    */
   static createMultiMonth(
     task: TaskForAllocation,
-    allocatedHours: Map<string, number>,
-    period: BusinessDayPeriod
+    allocatedPlannedHours: Map<string, number>,
+    yoteiPeriod: BusinessDayPeriod,
+    allocatedBaselineHours?: Map<string, number>,
+    kijunPeriod?: BusinessDayPeriod
   ): MonthlyTaskAllocation {
     const allocations = new Map<string, MonthlyAllocationDetail>();
     const startYearMonth = formatYearMonth(task.yoteiStart);
-    const businessDaysByMonth = period.getBusinessDaysByMonth();
-    const availableHoursByMonth = period.getAvailableHoursByMonth();
+    const businessDaysByMonth = yoteiPeriod.getBusinessDaysByMonth();
+    const availableHoursByMonth = yoteiPeriod.getAvailableHoursByMonth();
     const totalAvailableHours = Array.from(availableHoursByMonth.values())
       .reduce((sum, h) => sum + h, 0);
 
-    allocatedHours.forEach((plannedHours, yearMonth) => {
+    // 予定期間の全ての月をイテレート
+    allocatedPlannedHours.forEach((plannedHours, yearMonth) => {
       const workingDays = businessDaysByMonth.get(yearMonth) || 0;
       const availableHours = availableHoursByMonth.get(yearMonth) || 0;
       const allocationRatio = totalAvailableHours > 0
         ? availableHours / totalAvailableHours
         : 0;
+
+      // 基準工数は独立した按分結果から取得（なければ0）
+      const baselineHours = allocatedBaselineHours?.get(yearMonth) || 0;
 
       // ビジネスルール: 実績工数は開始月のみ計上
       const actualHours = yearMonth === startYearMonth
@@ -81,6 +97,7 @@ export class MonthlyTaskAllocation {
         : 0;
 
       allocations.set(yearMonth, {
+        baselineHours,
         plannedHours,
         actualHours,
         workingDays,
@@ -88,6 +105,26 @@ export class MonthlyTaskAllocation {
         allocationRatio
       });
     });
+
+    // 基準工数の按分結果に予定期間にない月があれば追加
+    if (allocatedBaselineHours) {
+      allocatedBaselineHours.forEach((baselineHours, yearMonth) => {
+        if (!allocations.has(yearMonth)) {
+          // 予定期間にない月だが基準期間には含まれる場合
+          const kijunBusinessDays = kijunPeriod?.getBusinessDaysByMonth().get(yearMonth) || 0;
+          const kijunAvailableHours = kijunPeriod?.getAvailableHoursByMonth().get(yearMonth) || 0;
+
+          allocations.set(yearMonth, {
+            baselineHours,
+            plannedHours: 0,
+            actualHours: 0,
+            workingDays: kijunBusinessDays,
+            availableHours: kijunAvailableHours,
+            allocationRatio: 0
+          });
+        }
+      });
+    }
 
     return new MonthlyTaskAllocation(task, allocations);
   }

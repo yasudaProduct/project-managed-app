@@ -50,6 +50,11 @@ interface MockData {
             jissekiKosu: number;
             date: Date;
         }[];
+        kijun?: {
+            startDate: Date;
+            endDate: Date;
+            kosu: number;
+        }
 
     }[];
     wbsBuffer: {
@@ -1463,6 +1468,11 @@ export function getMockData(): MockData[] {
                         jissekiKosu: 8,
                         date: addDays(0),
                     }],
+                    kijun: {
+                        startDate: addDays(0),
+                        endDate: addDays(4),
+                        kosu: 20,
+                    }
                 },
                 // 単月・進行中タスク（実績あり・進捗率50%）
                 // {
@@ -1517,6 +1527,11 @@ export function getMockData(): MockData[] {
                         //     date: addDays(35),
                         // }
                     ],
+                    kijun: {
+                        startDate: addDays(0),
+                        endDate: addDays(20),
+                        kosu: 20,
+                    }
                 },
                 // // 月跨ぎタスク（2ヶ月・進行中・進捗75%）
                 // {

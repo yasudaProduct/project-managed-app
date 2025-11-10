@@ -1,7 +1,6 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table } from "@/components/ui/table"; // 残存インポート（Tooltip位置調整用に親で保持する場合はそのまま）
 import { Calendar, Users, Download, Info } from "lucide-react";
 import React from "react";
 import {
@@ -40,7 +39,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import MonthlySummaryTable, { SummaryCell } from "@/components/wbs/monthly-summary-table";
+import MonthlySummaryTable, {
+  SummaryCell,
+} from "@/components/wbs/monthly-summary-table";
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Settings } from "lucide-react";
@@ -273,9 +274,10 @@ export function MonthlyAssigneeSummary({
           <div className="overflow-x-auto">
             <MonthlySummaryTable
               months={monthlyData.months}
-              rows={monthlyData.assignees.map((assignee) => (
-                { key: assignee, seq: 0 })
-              )} // TODO: ここにseqも持ってくる
+              rows={monthlyData.assignees.map((assignee) => ({
+                key: assignee,
+                seq: 0,
+              }))} // TODO: ここにseqも持ってくる
               firstColumnHeader="担当者"
               hoursUnit={hoursUnit}
               showDifference={showDifference}
@@ -290,6 +292,8 @@ export function MonthlyAssigneeSummary({
                     plannedHours: 0,
                     actualHours: 0,
                     difference: 0,
+                    baselineHours: 0,
+                    forecastHours: 0,
                   };
                 return {
                   plannedHours: data.plannedHours || 0,
@@ -306,6 +310,8 @@ export function MonthlyAssigneeSummary({
                     plannedHours: monthlyData.assigneeTotals[a].plannedHours,
                     actualHours: monthlyData.assigneeTotals[a].actualHours,
                     difference: monthlyData.assigneeTotals[a].difference,
+                    baselineHours:
+                      monthlyData.assigneeTotals[a].baselineHours || 0,
                   },
                 ])
               )}
@@ -316,8 +322,10 @@ export function MonthlyAssigneeSummary({
                     plannedHours: monthlyData.monthlyTotals[m].plannedHours,
                     actualHours: monthlyData.monthlyTotals[m].actualHours,
                     difference: monthlyData.monthlyTotals[m].difference,
-                    baselineHours: monthlyData.monthlyTotals[m].baselineHours || 0,
-                    forecastHours: monthlyData.monthlyTotals[m].forecastHours || 0,
+                    baselineHours:
+                      monthlyData.monthlyTotals[m].baselineHours || 0,
+                    forecastHours:
+                      monthlyData.monthlyTotals[m].forecastHours || 0,
                   },
                 ])
               )}
@@ -437,12 +445,13 @@ export function MonthlyAssigneeSummary({
                                   <div>
                                     <span className="text-gray-500">差分:</span>
                                     <p
-                                      className={`font-medium ${monthData
-                                        ? getDifferenceColor(
-                                          monthData.difference
-                                        )
-                                        : ""
-                                        }`}
+                                      className={`font-medium ${
+                                        monthData
+                                          ? getDifferenceColor(
+                                              monthData.difference
+                                            )
+                                          : ""
+                                      }`}
                                     >
                                       {monthData
                                         ? formatNumber(monthData.difference)
@@ -454,7 +463,7 @@ export function MonthlyAssigneeSummary({
                               </div>
 
                               {monthData?.taskDetails &&
-                                monthData.taskDetails.length > 0 ? (
+                              monthData.taskDetails.length > 0 ? (
                                 <div className="space-y-3">
                                   <h4 className="font-semibold">タスク詳細</h4>
                                   {monthData.taskDetails.map((task, idx) => {
@@ -468,7 +477,7 @@ export function MonthlyAssigneeSummary({
                                       (monthAllocation.allocatedPlannedHours ===
                                         0 &&
                                         monthAllocation.allocatedActualHours ===
-                                        0)
+                                          0)
                                     ) {
                                       return null;
                                     }

@@ -55,7 +55,6 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     const settings = await prisma.projectSettings.findUnique({ where: { projectId: query.projectId } }); // TODO: Repositroyから取得する
     const roundToQuarter = settings?.roundToQuarter === true;
     const progressMeasurementMethod = settings?.progressMeasurementMethod || 'SELF_REPORTED';
-    // @ts-expect-error - Prismaクライアントの型が更新されるまでの暫定対応
     const forecastCalculationMethod = settings?.forecastCalculationMethod || 'REALISTIC';
     const forecastMethodOption = toForecastMethodOption(forecastCalculationMethod);
 
@@ -218,6 +217,9 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           taskId: task.id,
           taskName: task.name,
           phase: task.phase?.name ?? undefined,
+          kijunStart: task.kijunStart ? new Date(task.kijunStart) : undefined,
+          kijunEnd: task.kijunEnd ? new Date(task.kijunEnd) : undefined,
+          kijunKosu: Number(task.kijunKosu || 0),
           yoteiStart: new Date(task.yoteiStart),
           yoteiEnd: task.yoteiEnd ? new Date(task.yoteiEnd) : undefined,
           yoteiKosu: Number(task.yoteiKosu || 0),
@@ -275,6 +277,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           yearMonth,
           detail.plannedHours,
           detail.actualHours,
+          detail.baselineHours,
           taskDetail,
           monthForecastHours  // 見通し工数を追加
         );
@@ -370,6 +373,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         yearMonth,
         Number(task.yoteiKosu || 0),
         Number(task.jissekiKosu || 0),
+        Number(task.kijunKosu || 0),
         taskDetail,
         forecastHours  // 見通し工数を追加
       );

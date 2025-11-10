@@ -6,8 +6,11 @@ export interface IWbsQueryRepository {
 export interface WbsTaskData {
   id: string;
   name: string;
+  kijunKosu: number | null;
   yoteiKosu: number | null;
   jissekiKosu: number | null;
+  kijunStart: Date | null;
+  kijunEnd: Date | null;
   yoteiStart: Date | null;
   yoteiEnd: Date | null;
   jissekiStart: Date | null;

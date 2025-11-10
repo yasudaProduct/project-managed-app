@@ -11,10 +11,13 @@ export class WbsQueryRepository implements IWbsQueryRepository {
       SELECT
         t.id,
         t.name,
-        COALESCE(tk_agg."yoteiKosu", 0) AS "yoteiKosu",
+        COALESCE(tk_kijun."kijunKosu", 0) AS "kijunKosu",
+        COALESCE(tk_yotei."yoteiKosu", 0) AS "yoteiKosu",
         wr."jissekiKosu" AS "jissekiKosu",
-        tp_latest."startDate" AS "yoteiStart",
-        tp_latest."endDate" AS "yoteiEnd",
+        tp_kijun."startDate" AS "kijunStart",
+        tp_kijun."endDate" AS "kijunEnd",
+        tp_yotei."startDate" AS "yoteiStart",
+        tp_yotei."endDate" AS "yoteiEnd",
         wr."jissekiStart" AS "jissekiStart",
         wr."jissekiEnd" AS "jissekiEnd",
         t."progressRate" AS "progressRate",
@@ -47,6 +50,24 @@ export class WbsQueryRepository implements IWbsQueryRepository {
         "wbs_assignee" AS wa ON t."assigneeId" = wa.id
       LEFT JOIN
         "users" AS u ON wa."assigneeId" = u.id
+      LEFT JOIN LATERAL -- タスクごとの最新KIJUN期間だけを1行に絞る
+        (
+          SELECT tp.id, tp."startDate", tp."endDate"
+          FROM "task_period" tp
+          WHERE tp."taskId" = t.id AND tp.type = 'KIJUN'
+          ORDER BY tp."updatedAt" DESC, tp.id DESC
+          LIMIT 1
+        ) AS tp_kijun ON TRUE
+      LEFT JOIN LATERAL -- KIJUN期間に紐づくNORMAL工数の最新1行のみを取得
+        (
+          SELECT tk.kosu AS "kijunKosu"
+          FROM "task_kosu" tk
+          WHERE tk."periodId" = tp_kijun.id
+            AND tk.type = 'NORMAL'
+            AND tk."wbsId" = t."wbsId"
+          ORDER BY tk."updatedAt" DESC, tk.id DESC
+          LIMIT 1
+        ) AS tk_kijun ON TRUE
       LEFT JOIN LATERAL -- タスクごとの最新YOTEI期間だけを1行に絞る
         (
           SELECT tp.id, tp."startDate", tp."endDate"
@@ -54,17 +75,17 @@ export class WbsQueryRepository implements IWbsQueryRepository {
           WHERE tp."taskId" = t.id AND tp.type = 'YOTEI'
           ORDER BY tp."updatedAt" DESC, tp.id DESC
           LIMIT 1
-        ) AS tp_latest ON TRUE
-      LEFT JOIN LATERAL -- 期間に紐づくNORMAL工数の最新1行のみを取得
+        ) AS tp_yotei ON TRUE
+      LEFT JOIN LATERAL -- YOTEI期間に紐づくNORMAL工数の最新1行のみを取得
         (
           SELECT tk.kosu AS "yoteiKosu"
           FROM "task_kosu" tk
-          WHERE tk."periodId" = tp_latest.id
+          WHERE tk."periodId" = tp_yotei.id
             AND tk.type = 'NORMAL'
             AND tk."wbsId" = t."wbsId"
           ORDER BY tk."updatedAt" DESC, tk.id DESC
           LIMIT 1
-        ) AS tk_agg ON TRUE
+        ) AS tk_yotei ON TRUE
       WHERE
         t."wbsId" = ${Number(wbsId)}
       ORDER BY
@@ -77,6 +98,7 @@ export class WbsQueryRepository implements IWbsQueryRepository {
 
     return tasks.map(task => ({
       ...task,
+      kijunKosu: task.kijunKosu ? Number(task.kijunKosu) : null,
       yoteiKosu: task.yoteiKosu ? Number(task.yoteiKosu) : null,
       jissekiKosu: task.jissekiKosu ? Number(task.jissekiKosu) : null,
       progressRate: task.progressRate ? Number(task.progressRate) : null,
