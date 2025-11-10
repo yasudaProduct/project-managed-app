@@ -3,13 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useEffect, useState, useTransition } from "react";
 import {
   getProjectSettings,
@@ -98,123 +92,156 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         {/* 進捗測定方式 */}
         <div className="space-y-3">
           <div>
-            <Label
-              htmlFor="progressMeasurementMethod"
-              className="text-base font-medium"
-            >
-              進捗測定方式
-            </Label>
+            <Label className="text-base font-medium">進捗測定方式</Label>
             <div className="text-sm text-gray-500 mt-1">
               タスクの進捗率をどのように測定するかを選択します。見通し工数算出やEVMで使用されます。
             </div>
           </div>
-          <Select
+          <RadioGroup
             value={progressMeasurementMethod}
-            onValueChange={onProgressMethodChange}
-            disabled={saving}
+            onValueChange={(value) =>
+              onProgressMethodChange(value as ProgressMeasurementMethod)
+            }
+            name="progressMeasurementMethod"
           >
-            <SelectTrigger id="progressMeasurementMethod" className="w-full">
-              <SelectValue placeholder="進捗測定方式を選択" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ZERO_HUNDRED">
-                <div className="flex flex-col items-start">
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem
+                value="ZERO_HUNDRED"
+                id="progress-zero-hundred"
+                disabled={saving}
+              />
+              <Label htmlFor="progress-zero-hundred" className="cursor-pointer">
+                <div className="flex flex-col">
                   <span className="font-medium">
                     {PROGRESS_MEASUREMENT_METHOD_LABELS.ZERO_HUNDRED}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 font-normal">
                     {PROGRESS_MEASUREMENT_METHOD_DESCRIPTIONS.ZERO_HUNDRED}
                   </span>
                 </div>
-              </SelectItem>
-              <SelectItem value="FIFTY_FIFTY">
-                <div className="flex flex-col items-start">
+              </Label>
+            </div>
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem
+                value="FIFTY_FIFTY"
+                id="progress-fifty-fifty"
+                disabled={saving}
+              />
+              <Label htmlFor="progress-fifty-fifty" className="cursor-pointer">
+                <div className="flex flex-col">
                   <span className="font-medium">
                     {PROGRESS_MEASUREMENT_METHOD_LABELS.FIFTY_FIFTY}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 font-normal">
                     {PROGRESS_MEASUREMENT_METHOD_DESCRIPTIONS.FIFTY_FIFTY}
                   </span>
                 </div>
-              </SelectItem>
-              <SelectItem value="SELF_REPORTED">
-                <div className="flex flex-col items-start">
+              </Label>
+            </div>
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem
+                value="SELF_REPORTED"
+                id="progress-self-reported"
+                disabled={saving}
+              />
+              <Label htmlFor="progress-self-reported" className="cursor-pointer">
+                <div className="flex flex-col">
                   <span className="font-medium">
                     {PROGRESS_MEASUREMENT_METHOD_LABELS.SELF_REPORTED}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 font-normal">
                     {PROGRESS_MEASUREMENT_METHOD_DESCRIPTIONS.SELF_REPORTED}
                   </span>
                 </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+              </Label>
+            </div>
+          </RadioGroup>
         </div>
 
         {/* 見通し工数算出方式 */}
         <div className="space-y-3">
           <div>
-            <Label
-              htmlFor="forecastCalculationMethod"
-              className="text-base font-medium"
-            >
-              見通し工数算出方式
-            </Label>
+            <Label className="text-base font-medium">見通し工数算出方式</Label>
             <div className="text-sm text-gray-500 mt-1">
               タスクの見通し工数をどのように計算するかを選択します。WBSサマリーの見通し工数に使用されます。
             </div>
           </div>
-          <Select
+          <RadioGroup
             value={forecastCalculationMethod}
-            onValueChange={onForecastMethodChange}
-            disabled={saving}
+            onValueChange={(value) =>
+              onForecastMethodChange(value as ForecastCalculationMethod)
+            }
+            name="forecastCalculationMethod"
           >
-            <SelectTrigger id="forecastCalculationMethod" className="w-full">
-              <SelectValue placeholder="見通し工数算出方式を選択" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="CONSERVATIVE">
-                <div className="flex flex-col items-start">
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem
+                value="CONSERVATIVE"
+                id="forecast-conservative"
+                disabled={saving}
+              />
+              <Label htmlFor="forecast-conservative" className="cursor-pointer">
+                <div className="flex flex-col">
                   <span className="font-medium">
                     {FORECAST_CALCULATION_METHOD_LABELS.CONSERVATIVE}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 font-normal">
                     {FORECAST_CALCULATION_METHOD_DESCRIPTIONS.CONSERVATIVE}
                   </span>
                 </div>
-              </SelectItem>
-              <SelectItem value="REALISTIC">
-                <div className="flex flex-col items-start">
+              </Label>
+            </div>
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem
+                value="REALISTIC"
+                id="forecast-realistic"
+                disabled={saving}
+              />
+              <Label htmlFor="forecast-realistic" className="cursor-pointer">
+                <div className="flex flex-col">
                   <span className="font-medium">
                     {FORECAST_CALCULATION_METHOD_LABELS.REALISTIC}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 font-normal">
                     {FORECAST_CALCULATION_METHOD_DESCRIPTIONS.REALISTIC}
                   </span>
                 </div>
-              </SelectItem>
-              <SelectItem value="OPTIMISTIC">
-                <div className="flex flex-col items-start">
+              </Label>
+            </div>
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem
+                value="OPTIMISTIC"
+                id="forecast-optimistic"
+                disabled={saving}
+              />
+              <Label htmlFor="forecast-optimistic" className="cursor-pointer">
+                <div className="flex flex-col">
                   <span className="font-medium">
                     {FORECAST_CALCULATION_METHOD_LABELS.OPTIMISTIC}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 font-normal">
                     {FORECAST_CALCULATION_METHOD_DESCRIPTIONS.OPTIMISTIC}
                   </span>
                 </div>
-              </SelectItem>
-              <SelectItem value="PLANNED_OR_ACTUAL">
-                <div className="flex flex-col items-start">
+              </Label>
+            </div>
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem
+                value="PLANNED_OR_ACTUAL"
+                id="forecast-planned-or-actual"
+                disabled={saving}
+              />
+              <Label htmlFor="forecast-planned-or-actual" className="cursor-pointer">
+                <div className="flex flex-col">
                   <span className="font-medium">
                     {FORECAST_CALCULATION_METHOD_LABELS.PLANNED_OR_ACTUAL}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 font-normal">
                     {FORECAST_CALCULATION_METHOD_DESCRIPTIONS.PLANNED_OR_ACTUAL}
                   </span>
                 </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+              </Label>
+            </div>
+          </RadioGroup>
         </div>
 
         {/* 月跨ぎ按分の最小単位 */}

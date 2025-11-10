@@ -12,9 +12,9 @@ export type ProgressMeasurementMethod = PrismaProgressMeasurementMethod;
  * 進捗測定方式のラベル
  */
 export const PROGRESS_MEASUREMENT_METHOD_LABELS: Record<ProgressMeasurementMethod, string> = {
-  ZERO_HUNDRED: '0/100法（保守的）',
-  FIFTY_FIFTY: '50/50法（着手時評価）',
-  SELF_REPORTED: '自己申告進捗率（詳細管理）',
+  ZERO_HUNDRED: '0/100法',
+  FIFTY_FIFTY: '50/50法',
+  SELF_REPORTED: '自己申告進捗率',
 };
 
 /**

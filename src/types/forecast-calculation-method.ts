@@ -12,19 +12,19 @@ export type ForecastCalculationMethod = PrismaForecastCalculationMethod;
  * 見通し工数算出方式のラベル
  */
 export const FORECAST_CALCULATION_METHOD_LABELS: Record<ForecastCalculationMethod, string> = {
-  CONSERVATIVE: '保守的',
-  REALISTIC: '現実的',
-  OPTIMISTIC: '楽観的',
-  PLANNED_OR_ACTUAL: '予定/実績優先',
+  CONSERVATIVE: '【実績工数 / 進捗率】',
+  REALISTIC: '【実績 * 進捗率 + (実績 + 進捗率に基づく残予定) * (1-進捗率)】',
+  OPTIMISTIC: '【実績 + 予定 * (1-進捗率)】',
+  PLANNED_OR_ACTUAL: '【予定 / 実績優先】',
 };
 
 /**
  * 見通し工数算出方式の説明
  */
 export const FORECAST_CALCULATION_METHOD_DESCRIPTIONS: Record<ForecastCalculationMethod, string> = {
-  CONSERVATIVE: '【実績工数 / 進捗率】投入工数に比例して進んでいるとした場合の見通し(進捗率=実績工数/総工数⇒総工数=実績工数/進捗率)',
-  REALISTIC: '【実績 * 進捗率 + (実績 + 進捗率に基づく残予定) * (1-進捗率)】実績ベースの見通しと予定ベースの見通しを進捗率に応じて加重平均した見通し',
-  OPTIMISTIC: '【実績 + 予定 * (1-進捗率)】実績 + 残り予定。予定通りに進むことを前提とした見通し',
+  CONSERVATIVE: '投入工数に比例して進んでいるとした場合の見通し(進捗率=実績工数/総工数⇒総工数=実績工数/進捗率)',
+  REALISTIC: '実績ベースの見通しと予定ベースの見通しを進捗率に応じて加重平均した見通し',
+  OPTIMISTIC: '実績 + 残り予定。予定通りに進むことを前提とした見通し',
   PLANNED_OR_ACTUAL: '予定 > 実績なら予定、予定 < 実績なら実績。進捗率に依存せず、予定と実績の大きい方を採用します。',
 };
 
