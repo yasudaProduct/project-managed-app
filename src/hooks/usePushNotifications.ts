@@ -31,16 +31,19 @@ export function usePushNotifications() {
   const checkSupport = useCallback(() => {
     const isSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
     setStatus(prev => ({ ...prev, isSupported }));
+    console.log('Push notification support:', isSupported);
     return isSupported;
   }, []);
 
   // 現在の状態を更新
   const updateStatus = useCallback(async () => {
+    console.log('Updating push notification status...');
     if (!checkSupport()) return;
 
     try {
       const permission = pushNotificationManager.getNotificationPermission();
       const subscriptionStatus = await pushNotificationManager.getSubscriptionStatus();
+      console.log('Push notification subscriptionStatus:', subscriptionStatus);
 
       setStatus({
         isSupported: true,
@@ -93,6 +96,7 @@ export function usePushNotifications() {
    * プッシュ通知に購読
    */
   const subscribe = useCallback(async () => {
+    console.log('Subscribing to push notifications...');
     if (!status.isSupported) {
       throw new Error('プッシュ通知はサポートされていません');
     }
@@ -187,6 +191,11 @@ export function usePushNotifications() {
   // Service Workerの状態変化を監視
   useEffect(() => {
     if (!status.isSupported) return;
+    if (!status.isServiceWorkerReady) {
+      registerServiceWorker().catch((e) => {
+        console.error('Auto register service worker failed:', e);
+      });
+    }
 
     const handleServiceWorkerUpdate = () => {
       console.log('Service Worker updated');

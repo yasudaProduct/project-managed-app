@@ -25,6 +25,7 @@ export class PushNotificationManager {
    * Service Workerを登録する
    */
   async registerServiceWorker(): Promise<ServiceWorkerRegistration> {
+    console.log('Registering service worker...');
     if (!('serviceWorker' in navigator)) {
       throw new Error('Service Workerはこのブラウザではサポートされていません');
     }
@@ -184,15 +185,18 @@ export class PushNotificationManager {
     // ページ初期表示時はクラスのregistrationが未設定なことがあるため、
     // 既存のService Worker登録を取得してから購読状態を確認する
     if (!this.registration && 'serviceWorker' in navigator) {
+      console.log('Fetching existing service worker registration...');
       try {
         const existing = await navigator.serviceWorker.getRegistration('/') || await navigator.serviceWorker.ready;
         this.registration = existing ?? null;
       } catch {
         // 無視して下で未登録として扱う
+        console.log('Failed to fetch existing service worker registration');
       }
     }
 
     if (!this.registration) {
+      console.log('No service worker registration found');
       return {
         isSubscribed: false,
         subscription: null,
@@ -201,6 +205,7 @@ export class PushNotificationManager {
     }
 
     try {
+      console.log('Getting push subscription...');
       const subscription = await this.registration.pushManager.getSubscription();
 
       if (subscription) {

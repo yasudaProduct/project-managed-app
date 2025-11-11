@@ -138,7 +138,7 @@ export function NotificationSettings() {
     if (!isSupported) {
       return <Badge variant="secondary">非対応</Badge>;
     }
-
+    console.log("permission:", permission, "isSubscribed:", isSubscribed);
     switch (permission) {
       case "granted":
         return isSubscribed ? (
