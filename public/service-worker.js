@@ -151,6 +151,7 @@ self.addEventListener("notificationclose", function (event) {
   event.waitUntil(
     fetch("/api/notifications/analytics", {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
       },
@@ -254,6 +255,7 @@ async function markNotificationAsRead(notificationId) {
   try {
     const response = await fetch("/api/notifications/mark-read", {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
       },
@@ -281,6 +283,7 @@ async function doBackgroundSync() {
     // オフライン時に蓄積されたデータを処理
     const response = await fetch("/api/notifications/sync", {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
       },
