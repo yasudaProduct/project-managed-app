@@ -2,6 +2,7 @@ import { MonthlyTaskAllocation, TaskForAllocation, formatYearMonth } from '@/dom
 import { BusinessDayPeriod } from '@/domains/calendar/business-day-period';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
+import { getDefaultStandardWorkingHours } from '@/__tests__/helpers/system-settings-helper';
 
 describe('MonthlyTaskAllocation', () => {
   describe('createSingleMonth', () => {
@@ -70,7 +71,7 @@ describe('MonthlyTaskAllocation', () => {
 
       // モックの BusinessDayPeriod を作成
       const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
-      const companyCalendar = new CompanyCalendar([]);
+      const companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
       const period = new BusinessDayPeriod(
         task.yoteiStart,
         task.yoteiEnd!,
@@ -117,7 +118,7 @@ describe('MonthlyTaskAllocation', () => {
       ]);
 
       const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
-      const companyCalendar = new CompanyCalendar([]);
+      const companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
       const period = new BusinessDayPeriod(
         task.yoteiStart,
         task.yoteiEnd!,
@@ -152,7 +153,7 @@ describe('MonthlyTaskAllocation', () => {
       ]);
 
       const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
-      const companyCalendar = new CompanyCalendar([]);
+      const companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
       const period = new BusinessDayPeriod(
         task.yoteiStart,
         new Date('2025-03-31'),
@@ -219,7 +220,7 @@ describe('MonthlyTaskAllocation', () => {
       ]);
 
       const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
-      const companyCalendar = new CompanyCalendar([]);
+      const companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
       const period = new BusinessDayPeriod(
         task.yoteiStart,
         task.yoteiEnd!,
@@ -253,7 +254,7 @@ describe('MonthlyTaskAllocation', () => {
       ]);
 
       const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
-      const companyCalendar = new CompanyCalendar([]);
+      const companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
       const period = new BusinessDayPeriod(
         task.yoteiStart,
         task.yoteiEnd!,

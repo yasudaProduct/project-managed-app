@@ -9,6 +9,7 @@ import { CompanyCalendar } from '@/domains/calendar/company-calendar';
 import { AssigneeWorkingCalendar } from '@/domains/calendar/assignee-working-calendar';
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
+import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
 
 export interface TaskSchedulingResult {
   taskId: number;
@@ -31,6 +32,7 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     @inject(SYMBOL.IProjectRepository) private projectRepository: IProjectRepository,
     @inject(SYMBOL.IUserScheduleRepository) private userScheduleRepository: IUserScheduleRepository,
     @inject(SYMBOL.IWbsAssigneeRepository) private wbsAssigneeRepository: IWbsAssigneeRepository,
+    @inject(SYMBOL.ISystemSettingsRepository) private systemSettingsRepository: ISystemSettingsRepository,
   ) { }
 
   /**
@@ -88,7 +90,8 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     projectStartDate: Date
   ): Promise<TaskSchedulingResult[]> {
     const results: TaskSchedulingResult[] = [];
-    const companyCalendar = new CompanyCalendar();
+    const systemSettings = await this.systemSettingsRepository.get();
+    const companyCalendar = new CompanyCalendar(systemSettings.standardWorkingHours);
 
     // 担当者ごとの最後の終了日を管理
     const assigneeLastEndDates = new Map<number, Date>();

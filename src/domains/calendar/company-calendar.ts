@@ -10,10 +10,15 @@ export interface CompanyHoliday {
  * 会社カレンダー
  */
 export class CompanyCalendar {
-  private readonly standardWorkingHours = 7.5; // TODO:設定から動的にする
   private companyHolidays: CompanyHoliday[] = [];
 
-  constructor(companyHolidays: CompanyHoliday[] = []) {
+  constructor(
+    private readonly standardWorkingHours: number,
+    companyHolidays: CompanyHoliday[] = []
+  ) {
+    if (standardWorkingHours <= 0) {
+      throw new Error('standardWorkingHours must be positive');
+    }
     this.companyHolidays = companyHolidays;
   }
 

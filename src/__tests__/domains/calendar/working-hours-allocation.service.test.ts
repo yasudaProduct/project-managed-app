@@ -1,13 +1,14 @@
 import { WorkingHoursAllocationService } from "@/domains/calendar/working-hours-allocation.service";
 import { CompanyCalendar } from "@/domains/calendar/company-calendar";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
+import { getDefaultStandardWorkingHours } from "@/__tests__/helpers/system-settings-helper";
 
 describe('WorkingHoursAllocationService', () => {
   let service: WorkingHoursAllocationService;
   let companyCalendar: CompanyCalendar;
 
   beforeEach(() => {
-    companyCalendar = new CompanyCalendar([]);
+    companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
     service = new WorkingHoursAllocationService(companyCalendar);
   });
 

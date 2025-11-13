@@ -2,6 +2,7 @@ import { MonthlyTaskAllocation, TaskForAllocation } from '@/domains/wbs/monthly-
 import { BusinessDayPeriod } from '@/domains/calendar/business-day-period';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
+import { getDefaultStandardWorkingHours } from "@/__tests__/helpers/system-settings-helper";
 
 describe('MonthlyTaskAllocation - 基準期間と予定期間が異なる場合', () => {
   it('基準が単月、予定が複数月の場合、基準工数は基準期間にのみ計上される', () => {
@@ -21,7 +22,7 @@ describe('MonthlyTaskAllocation - 基準期間と予定期間が異なる場合'
     };
 
     // 予定期間で按分計算（現在の実装）
-    const companyCalendar = new CompanyCalendar([]);
+    const companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
     const assignee = WbsAssignee.createUnassigned(1);
     const period = new BusinessDayPeriod(
       task.yoteiStart,
@@ -108,7 +109,7 @@ describe('MonthlyTaskAllocation - 基準期間と予定期間が異なる場合'
       jissekiKosu: 0
     };
 
-    const companyCalendar = new CompanyCalendar([]);
+    const companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
     const assignee = WbsAssignee.createUnassigned(1);
     const yoteiPeriod = new BusinessDayPeriod(
       task.yoteiStart,

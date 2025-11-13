@@ -1,12 +1,12 @@
 import { WorkloadWarningService } from '@/domains/assignee-workload/workload-warning.service';
 import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
-import { CompanyCalendar } from '@/domains/calendar/company-calendar';
+import { CompanyCalendar, CompanyHoliday } from '@/domains/calendar/company-calendar';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/project-status';
-import { Period } from '@/domains/period/period';
-import { CompanyHoliday } from '@/domains/calendar/company-calendar';
+import { Period } from '@/domains/task/period';
+import { getDefaultStandardWorkingHours } from "@/__tests__/helpers/system-settings-helper";
 
 describe('WorkloadWarningService', () => {
   let service: WorkloadWarningService;
@@ -46,7 +46,7 @@ describe('WorkloadWarningService', () => {
     });
 
     // モック会社カレンダーの作成（平日のみ）
-    mockCompanyCalendar = new CompanyCalendar([]);
+    mockCompanyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
   });
 
   describe('validateTaskFeasibility', () => {
@@ -70,7 +70,7 @@ describe('WorkloadWarningService', () => {
         { date: new Date('2024-01-04'), name: '休日', type: 'COMPANY' },
         { date: new Date('2024-01-05'), name: '休日', type: 'COMPANY' }
       ];
-      const holidayCalendar = new CompanyCalendar(holidays);
+      const holidayCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), holidays);
 
       const result = service.validateTaskFeasibility(
         mockTask,
@@ -163,7 +163,7 @@ describe('WorkloadWarningService', () => {
         { date: new Date('2024-01-06'), name: '土曜日', type: 'COMPANY' },
         { date: new Date('2024-01-07'), name: '日曜日', type: 'COMPANY' }
       ];
-      const holidayCalendar = new CompanyCalendar(holidays);
+      const holidayCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), holidays);
 
       const result = service.validateTaskFeasibility(
         weekendTask,
@@ -327,7 +327,7 @@ describe('WorkloadWarningService', () => {
         CompanyHoliday.create(new Date('2024-01-06'), '土曜日'),
         CompanyHoliday.create(new Date('2024-01-07'), '日曜日')
       ];
-      const holidayCalendar = new CompanyCalendar(holidays);
+      const holidayCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), holidays);
 
       const result = service.validateTasksFeasibility(
         tasks,

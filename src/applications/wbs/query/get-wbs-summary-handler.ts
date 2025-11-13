@@ -11,6 +11,7 @@ import { CompanyCalendar } from "@/domains/calendar/company-calendar";
 import type { ICompanyHolidayRepository } from "@/applications/calendar/icompany-holiday-repository";
 import type { IUserScheduleRepository } from "@/applications/calendar/iuser-schedule-repository";
 import type { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-repository";
+import type { ISystemSettingsRepository } from "@/applications/system-settings/isystem-settings-repository";
 import { AllocationQuantizer } from "@/domains/wbs/allocation-quantizer";
 import { MonthlySummaryAccumulator } from "./monthly-summary-accumulator";
 import { ForecastCalculationService } from "@/domains/forecast/forecast-calculation.service";
@@ -28,7 +29,9 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     @inject(SYMBOL.IUserScheduleRepository)
     private readonly userScheduleRepository: IUserScheduleRepository,
     @inject(SYMBOL.IWbsAssigneeRepository)
-    private readonly wbsAssigneeRepository: IWbsAssigneeRepository
+    private readonly wbsAssigneeRepository: IWbsAssigneeRepository,
+    @inject(SYMBOL.ISystemSettingsRepository)
+    private readonly systemSettingsRepository: ISystemSettingsRepository
   ) { }
 
   /**
@@ -176,8 +179,12 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     forecastMethodOption: 'conservative' | 'realistic' | 'optimistic' | 'plannedOrActual' = 'realistic'
   ) {
     // 会社休日とWorking Hours Allocation Serviceの準備
+    const systemSettings = await this.systemSettingsRepository.get();
     const companyHolidays = await this.companyHolidayRepository.findAll();
-    const companyCalendar = new CompanyCalendar(companyHolidays);
+    const companyCalendar = new CompanyCalendar(
+      systemSettings.standardWorkingHours,
+      companyHolidays
+    );
     const workingHoursAllocationService = new WorkingHoursAllocationService(companyCalendar);
 
     // WBS担当者情報(WbsAssigneeモデル)を取得

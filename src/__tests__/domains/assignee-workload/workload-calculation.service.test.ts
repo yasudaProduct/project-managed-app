@@ -7,7 +7,8 @@ import { DailyWorkAllocation } from '@/domains/assignee-workload/daily-work-allo
 import { TaskAllocation } from '@/domains/assignee-workload/task-allocation';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/project-status';
-import { Period } from '@/domains/period/period';
+import { Period } from '@/domains/task/period';
+import { getDefaultStandardWorkingHours } from "@/__tests__/helpers/system-settings-helper";
 
 describe('WorkloadCalculationService', () => {
   let service: WorkloadCalculationService;
@@ -47,7 +48,7 @@ describe('WorkloadCalculationService', () => {
     });
 
     // モック会社カレンダーの作成
-    mockCompanyCalendar = new CompanyCalendar([]);
+    mockCompanyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
   });
 
   describe('calculateDailyAllocations', () => {

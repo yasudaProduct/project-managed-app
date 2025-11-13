@@ -7,6 +7,7 @@ import type { ITaskRepository } from '@/applications/task/itask-repository';
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
+import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
 import { SYMBOL } from '@/types/symbol';
 import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
@@ -26,7 +27,8 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     @inject(SYMBOL.ITaskRepository) private readonly taskRepository: ITaskRepository,
     @inject(SYMBOL.IUserScheduleRepository) private readonly userScheduleRepository: IUserScheduleRepository,
     @inject(SYMBOL.ICompanyHolidayRepository) private readonly companyHolidayRepository: ICompanyHolidayRepository,
-    @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: IWbsAssigneeRepository
+    @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: IWbsAssigneeRepository,
+    @inject(SYMBOL.ISystemSettingsRepository) private readonly systemSettingsRepository: ISystemSettingsRepository
   ) {
     this.workloadCalculationService = new WorkloadCalculationService();
     this.workloadWarningService = new WorkloadWarningService();
@@ -68,11 +70,15 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     }
 
     // 2. 会社休日と担当者の個人予定を取得
-    const [userSchedules, companyHolidays] = await Promise.all([
+    const [systemSettings, userSchedules, companyHolidays] = await Promise.all([
+      this.systemSettingsRepository.get(),
       this.getUserSchedulesForAssignees(assignees, startDate, endDate),
       this.companyHolidayRepository.findByDateRange(startDate, endDate)
     ]);
-    const companyCalendar = new CompanyCalendar(companyHolidays);
+    const companyCalendar = new CompanyCalendar(
+      systemSettings.standardWorkingHours,
+      companyHolidays
+    );
 
     // 担当者別に作業負荷を計算
     const workloads: AssigneeWorkload[] = [];
@@ -135,9 +141,15 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       this.wbsAssigneeRepository.findByWbsId(wbsId)
     ]);
 
-    // 会社休日を取得
-    const companyHolidays = await this.companyHolidayRepository.findByDateRange(startDate, endDate);
-    const companyCalendar = new CompanyCalendar(companyHolidays);
+    // 会社休日とシステム設定を取得
+    const [systemSettings, companyHolidays] = await Promise.all([
+      this.systemSettingsRepository.get(),
+      this.companyHolidayRepository.findByDateRange(startDate, endDate)
+    ]);
+    const companyCalendar = new CompanyCalendar(
+      systemSettings.standardWorkingHours,
+      companyHolidays
+    );
 
     // 担当者マップを作成
     const assigneeMap = new Map<number, WbsAssignee>();
