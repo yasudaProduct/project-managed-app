@@ -500,9 +500,20 @@ model ImportJobProgress {
   detail      Json?       // 詳細情報
   level       String      @default("info")
   recordedAt  DateTime    @default(now()) @db.Timestamptz
-  
+
   job         ImportJob   @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  
+
   @@index([jobId, recordedAt])
   @@map("import_job_progress")
+}
+
+// システム全体設定（シングルトン）
+model SystemSettings {
+  id                      Int      @id @default(1)
+  standardWorkingHours    Float    @default(7.5)   // 1日の基本稼働時間
+  defaultUserCostPerHour  Float?                   // デフォルト人員原価（時間単位）
+  createdAt               DateTime @default(now()) @db.Timestamptz
+  updatedAt               DateTime @updatedAt @db.Timestamptz
+
+  @@map("system_settings")
 }

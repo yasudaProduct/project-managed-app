@@ -109,6 +109,12 @@ import type { IImportJobApplicationService } from '@/applications/import-job/imp
 import { ImportJobApplicationService } from '@/applications/import-job/import-job-application.service';
 import { IWbsSyncApplicationService } from '@/applications/wbs-sync/IWbsSyncApplicationService';
 
+// System Settings関連
+import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
+import { SystemSettingsRepository } from '@/infrastructures/system-settings/system-settings-repository';
+import type { ISystemSettingsApplicationService } from '@/applications/system-settings/system-settings-application-service';
+import { SystemSettingsApplicationService } from '@/applications/system-settings/system-settings-application-service';
+
 
 const container: Container = new Container();
 // アプリケーションサービス
@@ -134,6 +140,7 @@ container.bind<PushNotificationService>('PushNotificationService').to(PushNotifi
 container.bind<NotificationEventDetector>('NotificationEventDetector').to(NotificationEventDetector).inSingletonScope();
 container.bind<ITaskSchedulingApplicationService>(SYMBOL.ITaskSchedulingApplicationService).to(TaskSchedulingApplicationService).inSingletonScope();
 container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(WbsSyncApplicationService).inSingletonScope();
+container.bind<ISystemSettingsApplicationService>(SYMBOL.ISystemSettingsApplicationService).to(SystemSettingsApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
@@ -160,6 +167,7 @@ container.bind<IUserScheduleRepository>(SYMBOL.IUserScheduleRepository).to(UserS
 container.bind<IEvmRepository>(SYMBOL.IEvmRepository).to(EvmRepository).inSingletonScope();
 container.bind<IImportJobRepository>(SYMBOL.IImportJobRepository).to(ImportJobPrismaRepository).inSingletonScope();
 container.bind<INotificationRepository>('NotificationRepository').to(NotificationRepository).inSingletonScope();
+container.bind<ISystemSettingsRepository>(SYMBOL.ISystemSettingsRepository).to(SystemSettingsRepository).inSingletonScope();
 
 // Geppo Import関連サービス
 container.bind<ProjectMappingService>(SYMBOL.ProjectMappingService).to(ProjectMappingService).inSingletonScope();

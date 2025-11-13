@@ -80,6 +80,10 @@ export const SYMBOL = {
     ITaskSchedulingApplicationService: Symbol.for('ITaskSchedulingApplicationService'),
     TaskSchedulingService: Symbol.for('TaskSchedulingService'),
 
+    // System Settings
+    ISystemSettingsRepository: Symbol.for('ISystemSettingsRepository'),
+    ISystemSettingsApplicationService: Symbol.for('ISystemSettingsApplicationService'),
+
     // Infrastructure
     PrismaClient: Symbol.for('PrismaClient'),
 }

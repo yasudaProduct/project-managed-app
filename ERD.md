@@ -248,6 +248,13 @@ erDiagram
   String level
   DateTime recordedAt
 }
+"system_settings" {
+  Int id PK
+  Float standardWorkingHours
+  Float defaultUserCostPerHour "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "user_sessions" }o--|| "users" : user
 "wbs" }o--|| "projects" : project
 "wbs_assignee" }o--|| "wbs" : wbs
@@ -567,3 +574,12 @@ erDiagram
   - `detail`: 
   - `level`: 
   - `recordedAt`: 
+
+### `system_settings`
+
+**Properties**
+  - `id`: 
+  - `standardWorkingHours`: 
+  - `defaultUserCostPerHour`: 
+  - `createdAt`: 
+  - `updatedAt`: 
