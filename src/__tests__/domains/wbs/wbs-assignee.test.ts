@@ -7,14 +7,28 @@ describe('WbsAssignee', () => {
         wbsId: 1,
         userId: 'user-1',
         rate: 0.8,
+        costPerHour: 5000,
         seq: 1
       });
 
       expect(assignee.wbsId).toBe(1);
       expect(assignee.userId).toBe('user-1');
       expect(assignee.getRate()).toBe(0.8);
+      expect(assignee.getCostPerHour()).toBe(5000);
       expect(assignee.seq).toBe(1);
       expect(assignee.id).toBeUndefined();
+    });
+
+    it('costPerHourを指定してWbsAssigneeを作成できる', () => {
+      const assignee = WbsAssignee.create({
+        wbsId: 1,
+        userId: 'user-1',
+        rate: 0.8,
+        costPerHour: 8000,
+        seq: 1
+      });
+
+      expect(assignee.getCostPerHour()).toBe(8000);
     });
   });
 
@@ -26,6 +40,7 @@ describe('WbsAssignee', () => {
         userId: 'user-1',
         userName: '田中太郎',
         rate: 0.8,
+        costPerHour: 6000,
         seq: 1
       });
 
@@ -34,6 +49,7 @@ describe('WbsAssignee', () => {
       expect(assignee.userId).toBe('user-1');
       expect(assignee.userName).toBe('田中太郎');
       expect(assignee.getRate()).toBe(0.8);
+      expect(assignee.getCostPerHour()).toBe(6000);
       expect(assignee.seq).toBe(1);
     });
   });
@@ -75,6 +91,7 @@ describe('WbsAssignee', () => {
         wbsId: 1,
         userId: 'user-1',
         rate: 0.8,
+        costPerHour: 5000,
         seq: 1
       });
 
@@ -83,6 +100,7 @@ describe('WbsAssignee', () => {
         wbsId: 1,
         userId: 'user-1',
         rate: 0.8,
+        costPerHour: 5000,
         seq: 1
       });
 
@@ -95,6 +113,7 @@ describe('WbsAssignee', () => {
         wbsId: 1,
         userId: 'user-1',
         rate: 0.8,
+        costPerHour: 5000,
         seq: 1
       });
 
@@ -103,6 +122,7 @@ describe('WbsAssignee', () => {
         wbsId: 1,
         userId: 'user-1',
         rate: 0.8,
+        costPerHour: 5000,
         seq: 1
       });
 
@@ -116,6 +136,7 @@ describe('WbsAssignee', () => {
         wbsId: 1,
         userId: 'user-1',
         rate: 0.8,
+        costPerHour: 5000,
         seq: 1
       });
 
@@ -123,6 +144,23 @@ describe('WbsAssignee', () => {
 
       assignee.updateRate(0.6);
       expect(assignee.getRate()).toBe(0.6);
+    });
+  });
+
+  describe('updateCostPerHour', () => {
+    it('時間単価を更新できる', () => {
+      const assignee = WbsAssignee.create({
+        wbsId: 1,
+        userId: 'user-1',
+        rate: 0.8,
+        costPerHour: 5000,
+        seq: 1
+      });
+
+      expect(assignee.getCostPerHour()).toBe(5000);
+
+      assignee.updateCostPerHour(6000);
+      expect(assignee.getCostPerHour()).toBe(6000);
     });
   });
 });

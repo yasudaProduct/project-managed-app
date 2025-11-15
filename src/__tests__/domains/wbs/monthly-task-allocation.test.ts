@@ -70,7 +70,7 @@ describe('MonthlyTaskAllocation', () => {
       ]);
 
       // モックの BusinessDayPeriod を作成
-      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
+      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, costPerHour: 5000, seq: 0 });
       const companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
       const period = new BusinessDayPeriod(
         task.yoteiStart,
@@ -117,7 +117,7 @@ describe('MonthlyTaskAllocation', () => {
         ['2025/04', 5.0]
       ]);
 
-      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
+      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, costPerHour: 5000, seq: 0 });
       const companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
       const period = new BusinessDayPeriod(
         task.yoteiStart,
@@ -152,7 +152,7 @@ describe('MonthlyTaskAllocation', () => {
         ['2025/02', 15.0]
       ]);
 
-      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
+      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, costPerHour: 5000, seq: 0 });
       const companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
       const period = new BusinessDayPeriod(
         task.yoteiStart,
@@ -219,7 +219,7 @@ describe('MonthlyTaskAllocation', () => {
         ['2025/03', 5.0]
       ]);
 
-      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
+      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, costPerHour: 5000, seq: 0 });
       const companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
       const period = new BusinessDayPeriod(
         task.yoteiStart,
@@ -253,7 +253,7 @@ describe('MonthlyTaskAllocation', () => {
         ['2025/03', 5.0]
       ]);
 
-      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, seq: 0 });
+      const assignee = WbsAssignee.create({ wbsId: 1, userId: 'user1', rate: 1.0, costPerHour: 5000, seq: 0 });
       const companyCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), []);
       const period = new BusinessDayPeriod(
         task.yoteiStart,

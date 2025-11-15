@@ -46,6 +46,7 @@ erDiagram
   Int wbsId FK
   String assigneeId FK
   Float rate
+  Float costPerHour
   Int seq
   DateTime createdAt
   DateTime updatedAt
@@ -336,6 +337,7 @@ erDiagram
   - `wbsId`: 
   - `assigneeId`: 
   - `rate`: 
+  - `costPerHour`: 
   - `seq`: 
   - `createdAt`: 
   - `updatedAt`: 

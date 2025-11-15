@@ -34,6 +34,7 @@ import { Input } from "../ui/input";
 const formSchema = z.object({
   assigneeId: z.string().nonempty("担当者を選択してください。"),
   rate: z.number().min(0).max(100).default(100),
+  costPerHour: z.number().min(0).default(5000),
   seq: z.number().min(0).default(0),
 });
 
@@ -44,6 +45,7 @@ type WbsAssigneeFormProps = {
     assigneeId: string;
     name: string;
     rate: number;
+    costPerHour: number;
     seq: number;
   };
 };
@@ -59,11 +61,13 @@ export function WbsAssigneeForm({ wbsId, assignee }: WbsAssigneeFormProps) {
       ? {
           assigneeId: assignee.assigneeId,
           rate: assignee.rate * 100,
+          costPerHour: assignee.costPerHour,
           seq: assignee.seq,
         }
       : {
           assigneeId: "",
           rate: 100,
+          costPerHour: 5000,
           seq: 0,
         },
   });
@@ -84,12 +88,14 @@ export function WbsAssigneeForm({ wbsId, assignee }: WbsAssigneeFormProps) {
             Number(assignee.id),
             values.assigneeId,
             values.rate,
+            values.costPerHour,
             values.seq
           )
         : await createWbsAssignee(
             wbsId,
             values.assigneeId,
             values.rate,
+            values.costPerHour,
             values.seq
           );
       if (result.success) {
@@ -143,7 +149,18 @@ export function WbsAssigneeForm({ wbsId, assignee }: WbsAssigneeFormProps) {
               <FormItem>
                 <FormLabel>担当者を選択</FormLabel>
                 <FormControl>
-                  <Select {...field} onValueChange={field.onChange}>
+                  <Select
+                    {...field}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      const selectedUser = users.find(
+                        (user) => user.id === value
+                      );
+                      if (selectedUser && selectedUser.costPerHour) {
+                        form.setValue("costPerHour", selectedUser.costPerHour);
+                      }
+                    }}
+                  >
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="担当者を選択" />
                     </SelectTrigger>
@@ -188,6 +205,27 @@ export function WbsAssigneeForm({ wbsId, assignee }: WbsAssigneeFormProps) {
               </FormControl>
               <FormDescription>
                 担当者の割合を入力してください。
+              </FormDescription>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="costPerHour"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>時間単価（円/時間）</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  value={field.value}
+                  min={0}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormDescription>
+                担当者の時間単価を入力してください。
               </FormDescription>
             </FormItem>
           )}

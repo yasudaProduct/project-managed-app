@@ -24,6 +24,7 @@ export default async function EditWbsAssigneePage({
           assigneeId: assignee.assignee.userId,
           name: assignee.assignee.name,
           rate: assignee.assignee.rate,
+          costPerHour: assignee.assignee.costPerHour,
           seq: assignee.assignee.seq,
         }}
       />

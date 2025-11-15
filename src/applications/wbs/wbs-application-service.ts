@@ -99,6 +99,7 @@ export class WbsApplicationService implements IWbsApplicationService {
                     name: assignee.userName!,
                     displayName: assignee.userName!,
                     rate: assignee.getRate() ?? 0,
+                    costPerHour: assignee.getCostPerHour() ?? 5000,
                     seq: assignee.seq,
                 },
             }
@@ -116,6 +117,7 @@ export class WbsApplicationService implements IWbsApplicationService {
                 name: assignee.userName!,
                 displayName: assignee.userName!,
                 rate: assignee.getRate() ?? 0,
+                costPerHour: assignee.getCostPerHour() ?? 5000,
                 seq: assignee.seq,
             },
         }

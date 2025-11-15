@@ -14,6 +14,7 @@ export async function getUsers() {
             id: true,
             name: true,
             displayName: true,
+            costPerHour: true,
         },
     });
 }

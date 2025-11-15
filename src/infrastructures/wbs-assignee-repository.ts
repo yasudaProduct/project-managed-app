@@ -23,6 +23,7 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
             wbsId: wbsAssignee.wbsId,
             userId: wbsAssignee.assignee.id,
             rate: wbsAssignee.rate,
+            costPerHour: wbsAssignee.costPerHour,
             userName: wbsAssignee.assignee.name,
             seq: wbsAssignee.seq,
         });
@@ -43,6 +44,7 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
             wbsId: wbsAssignee.wbsId,
             userId: wbsAssignee.assignee.id,
             rate: wbsAssignee.rate,
+            costPerHour: wbsAssignee.costPerHour,
             userName: wbsAssignee.assignee.displayName,
             seq: wbsAssignee.seq,
         }));
@@ -62,6 +64,7 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
             wbsId: wbsAssignee.wbsId,
             userId: wbsAssignee.assignee.id,
             rate: wbsAssignee.rate,
+            costPerHour: wbsAssignee.costPerHour,
             userName: wbsAssignee.assignee.name,
             seq: wbsAssignee.seq,
         }));
@@ -73,6 +76,7 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
                 wbsId: wbsId,
                 assigneeId: wbsAssignee.userId,
                 rate: wbsAssignee.getRate(),
+                costPerHour: wbsAssignee.getCostPerHour(),
             },
         });
 
@@ -87,6 +91,7 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
             wbsId: wbsId,
             userId: createdWbsAssignee.assigneeId,
             rate: createdWbsAssignee.rate,
+            costPerHour: createdWbsAssignee.costPerHour,
             userName: user.name,
             seq: createdWbsAssignee.seq,
         });
@@ -97,6 +102,7 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
             where: { id: wbsAssignee.id },
             data: {
                 rate: wbsAssignee.getRate(),
+                costPerHour: wbsAssignee.getCostPerHour(),
             },
         });
 
@@ -111,6 +117,7 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
             wbsId: wbsAssignee.wbsId,
             userId: updatedWbsAssignee.assigneeId,
             rate: updatedWbsAssignee.rate,
+            costPerHour: updatedWbsAssignee.costPerHour,
             userName: user.name,
             seq: updatedWbsAssignee.seq,
         });

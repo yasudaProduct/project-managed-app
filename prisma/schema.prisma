@@ -82,16 +82,17 @@ model Wbs {
 }
 
 model WbsAssignee {
-  id        Int        @id @default(autoincrement())
-  wbsId     Int
-  assigneeId String
-  rate      Float      @default(1.0) // 参画率（0.01〜1.0）
-  seq       Int        @default(0)
-  wbs       Wbs        @relation(fields: [wbsId], references: [id])
-  assignee  Users      @relation("WbsAssignee", fields: [assigneeId], references: [id])
-  tasks     WbsTask[]  @relation("TaskAssignee")
-  createdAt DateTime   @default(now()) @db.Timestamptz
-  updatedAt DateTime   @updatedAt @db.Timestamptz
+  id          Int        @id @default(autoincrement())
+  wbsId       Int
+  assigneeId  String
+  rate        Float      @default(1.0) // 参画率（0.01〜1.0）
+  costPerHour Float      @default(5000) // 時間単位の人員原価（円/時間）
+  seq         Int        @default(0)
+  wbs         Wbs        @relation(fields: [wbsId], references: [id])
+  assignee    Users      @relation("WbsAssignee", fields: [assigneeId], references: [id])
+  tasks       WbsTask[]  @relation("TaskAssignee")
+  createdAt   DateTime   @default(now()) @db.Timestamptz
+  updatedAt   DateTime   @updatedAt @db.Timestamptz
 
   @@map("wbs_assignee")
 }
