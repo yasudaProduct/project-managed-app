@@ -22,7 +22,8 @@
       "Bash(mkdir:*)",
       "Bash(npx tsc:*)",
       "Bash(tree:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(npx prisma migrate:*)"
     ],
     "deny": [],
     "additionalDirectories": [

@@ -22,6 +22,7 @@ erDiagram
   String name
   String displayName
   String password "nullable"
+  Float costPerHour
   DateTime createdAt
   DateTime updatedAt
 }
@@ -305,6 +306,7 @@ erDiagram
   - `name`: 
   - `displayName`: 
   - `password`: 
+  - `costPerHour`: 
   - `createdAt`: 
   - `updatedAt`: 
 

@@ -15,7 +15,7 @@ export async function getUserById(id: string) {
     return await userApplicationService.getUserById(id);
 }
 
-export async function createUser(userData: { id: string, name: string; email: string, displayName: string }) {
+export async function createUser(userData: { id: string, name: string; email: string, displayName: string; costPerHour: number }) {
     console.log(userData);
     const result = await userApplicationService.createUser(userData);
 
@@ -26,7 +26,7 @@ export async function createUser(userData: { id: string, name: string; email: st
     return result;
 }
 
-export async function updateUser(id: string, userData: { name: string; email: string, displayName: string }) {
+export async function updateUser(id: string, userData: { name: string; email: string, displayName: string; costPerHour: number }) {
     const result = await userApplicationService.updateUser(id, userData);
 
     if (result.success) {

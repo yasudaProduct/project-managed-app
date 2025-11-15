@@ -6,8 +6,8 @@ import { SYMBOL } from "@/types/symbol";
 export interface IUserApplicationService {
     getAllUsers(): Promise<User[]>;
     getUserById(id: string): Promise<User | null>;
-    createUser(userData: { id: string, name: string; email: string, displayName: string }): Promise<{ success: boolean; user?: User; error?: string }>;
-    updateUser(id: string, userData: { name: string; email: string, displayName: string }): Promise<{ success: boolean; user?: User; error?: string }>;
+    createUser(userData: { id: string, name: string; email: string, displayName: string; costPerHour: number }): Promise<{ success: boolean; user?: User; error?: string }>;
+    updateUser(id: string, userData: { name: string; email: string, displayName: string; costPerHour: number }): Promise<{ success: boolean; user?: User; error?: string }>;
 }
 
 @injectable()
@@ -24,6 +24,7 @@ export class UserApplicationService implements IUserApplicationService {
             name: user.name,
             email: user.email,
             displayName: user.displayName,
+            costPerHour: user.costPerHour,
         }));
     }
 
@@ -36,16 +37,18 @@ export class UserApplicationService implements IUserApplicationService {
             name: domainUser.name,
             email: domainUser.email,
             displayName: domainUser.displayName,
+            costPerHour: domainUser.costPerHour,
         };
     }
 
-    public async createUser(userData: { id: string, name: string; email: string, displayName: string }): Promise<{ success: boolean; user?: User; error?: string }> {
+    public async createUser(userData: { id: string, name: string; email: string, displayName: string; costPerHour: number }): Promise<{ success: boolean; user?: User; error?: string }> {
         try {
             const domainUser = await this.userRepository.create({
                 id: userData.id,
                 name: userData.name,
                 email: userData.email,
                 displayName: userData.displayName,
+                costPerHour: userData.costPerHour,
             });
 
             const user: User = {
@@ -53,6 +56,7 @@ export class UserApplicationService implements IUserApplicationService {
                 name: domainUser.name,
                 email: domainUser.email,
                 displayName: domainUser.displayName,
+                costPerHour: domainUser.costPerHour,
             };
 
             return { success: true, user };
@@ -61,7 +65,7 @@ export class UserApplicationService implements IUserApplicationService {
         }
     }
 
-    public async updateUser(id: string, userData: { name: string; email: string, displayName: string }): Promise<{ success: boolean; user?: User; error?: string }> {
+    public async updateUser(id: string, userData: { name: string; email: string, displayName: string; costPerHour: number }): Promise<{ success: boolean; user?: User; error?: string }> {
         try {
             const existingUser = await this.userRepository.findById(id);
             if (!existingUser) {
@@ -72,6 +76,7 @@ export class UserApplicationService implements IUserApplicationService {
                 name: userData.name,
                 email: userData.email,
                 displayName: userData.displayName,
+                costPerHour: userData.costPerHour,
             });
 
             const user: User = {
@@ -79,6 +84,7 @@ export class UserApplicationService implements IUserApplicationService {
                 name: updatedDomainUser.name,
                 email: updatedDomainUser.email,
                 displayName: updatedDomainUser.displayName,
+                costPerHour: updatedDomainUser.costPerHour,
             };
 
             return { success: true, user };

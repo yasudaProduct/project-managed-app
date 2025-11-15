@@ -34,7 +34,8 @@ model Users {
   email      String          @unique
   name       String
   displayName String
-  password   String?         
+  password   String?
+  costPerHour Float          @default(5000) // 時間単位の人員原価（円/時間）
   createdAt  DateTime        @default(now()) @db.Timestamptz
   updatedAt  DateTime        @updatedAt @db.Timestamptz
   statusLogs TaskStatusLog[] @relation("StatusChanger")

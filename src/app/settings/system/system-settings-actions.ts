@@ -4,7 +4,10 @@ import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
 import type { ISystemSettingsApplicationService } from "@/applications/system-settings/system-settings-application-service";
 
-export async function getSystemSettings() {
+export async function getSystemSettings(): Promise<{
+  standardWorkingHours: number;
+  defaultUserCostPerHour: number;
+}> {
   const service = container.get<ISystemSettingsApplicationService>(
     SYMBOL.ISystemSettingsApplicationService
   );
@@ -12,7 +15,7 @@ export async function getSystemSettings() {
 
   return {
     standardWorkingHours: settings.standardWorkingHours,
-    defaultUserCostPerHour: settings.defaultUserCostPerHour,
+    defaultUserCostPerHour: settings.defaultUserCostPerHour || 0,
   };
 }
 

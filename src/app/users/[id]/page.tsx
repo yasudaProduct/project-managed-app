@@ -28,13 +28,27 @@ export default async function UserPage({
         <CardHeader>
           <CardTitle>{user.name}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p>
-            <strong>ID:</strong> {user.id}
-          </p>
-          <p>
-            <strong>メールアドレス:</strong> {user.email}
-          </p>
+        <CardContent className="grid grid-cols-1 gap-4">
+          <div>
+            <p>
+              <strong>ID:</strong> {user.id}
+            </p>
+          </div>
+          <div>
+            <p>
+              <strong>表示名:</strong> {user.displayName}
+            </p>
+          </div>
+          <div>
+            <p>
+              <strong>メールアドレス:</strong> {user.email}
+            </p>
+          </div>
+          <div>
+            <p>
+              <strong>人員原価:</strong> {user.costPerHour}
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

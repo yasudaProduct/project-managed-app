@@ -13,6 +13,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { createUser, updateUser } from "@/app/users/actions";
@@ -30,6 +31,9 @@ const formSchema = z.object({
   displayName: z.string().min(1, {
     message: "表示名は必須です。",
   }),
+  costPerHour: z.number().min(0, {
+    message: "人員原価は0以上の数値を入力してください。",
+  }),
 });
 
 type UserFormProps = {
@@ -38,12 +42,17 @@ type UserFormProps = {
     name: string;
     email: string;
     displayName: string;
+    costPerHour: number;
+  };
+  systemSettings?: {
+    defaultCostPerHour: number;
   };
 };
 
-export function UserForm({ user }: UserFormProps) {
+export function UserForm({ user, systemSettings }: UserFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const defaultCostPerHour = systemSettings?.defaultCostPerHour || 0;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,6 +61,7 @@ export function UserForm({ user }: UserFormProps) {
       name: "",
       email: "",
       displayName: "",
+      costPerHour: defaultCostPerHour,
     },
   });
 
@@ -130,6 +140,29 @@ export function UserForm({ user }: UserFormProps) {
               <FormControl>
                 <Input {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="costPerHour"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>人員原価（円/時間）</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="100"
+                  min="0"
+                  {...field}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                />
+              </FormControl>
+              <FormDescription>
+                {!user &&
+                  `デフォルト値: ${defaultCostPerHour}円（システム設定より）`}
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

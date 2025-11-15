@@ -15,12 +15,14 @@ async function main() {
                 name: user.name,
                 email: user.email,
                 displayName: user.displayName,
+                costPerHour: 5000, // デフォルト値
             },
             create: {
                 id: user.id,
                 name: user.name,
                 email: user.email,
                 displayName: user.displayName,
+                costPerHour: 5000, // デフォルト値
             },
         })
     }

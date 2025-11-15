@@ -30,25 +30,27 @@ export class UserRepository implements IUserRepository {
         return userDb ? this.createUser(userDb) : null;
     }
 
-    async create(user: { id: string; name: string; email: string; displayName: string }): Promise<User> {
+    async create(user: { id: string; name: string; email: string; displayName: string; costPerHour: number }): Promise<User> {
         const userDb = await prisma.users.create({
             data: {
                 id: user.id,
                 name: user.name,
                 displayName: user.displayName,
                 email: user.email,
+                costPerHour: user.costPerHour,
             },
         });
         return this.createUser(userDb);
     }
 
-    async update(id: string, user: { name: string; email: string; displayName: string }): Promise<User> {
+    async update(id: string, user: { name: string; email: string; displayName: string; costPerHour: number }): Promise<User> {
         const userDb = await prisma.users.update({
             where: { id },
             data: {
                 name: user.name,
                 displayName: user.displayName,
                 email: user.email,
+                costPerHour: user.costPerHour,
             },
         });
         return this.createUser(userDb);
@@ -60,6 +62,7 @@ export class UserRepository implements IUserRepository {
             name: userDb.name,
             displayName: userDb.displayName,
             email: userDb.email,
+            costPerHour: userDb.costPerHour,
         });
     }
 }
