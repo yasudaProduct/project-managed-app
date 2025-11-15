@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { createUser, updateUser } from "@/app/users/actions";
+import { toast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   id: z.string().min(1, {
@@ -70,6 +71,9 @@ export function UserForm({ user, systemSettings }: UserFormProps) {
     try {
       if (user) {
         await updateUser(user.id, values);
+        toast({
+          title: user ? "ユーザーを更新しました。" : "ユーザーを作成しました。",
+        });
         router.push(`/users/${user.id}`);
       } else {
         await createUser(values);
@@ -77,7 +81,11 @@ export function UserForm({ user, systemSettings }: UserFormProps) {
       }
       router.refresh();
     } catch (error) {
-      console.error("Failed to save user:", error);
+      toast({
+        title: "ユーザーの作成に失敗しました。",
+        description: error instanceof Error ? error.message : "不明なエラー",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
