@@ -1782,7 +1782,7 @@ export function getMockData(): MockData[] {
     }
 
     return [
-        // mockData("test-project-1", 1, 10),
+        mockData("test-project-1", 1, 10),
         // mockDataLarge("test-project-2", 2, 1000),
         // mockDataAssigneeGanttMonthlyTest("test-project-3", 3, 100),
         // mockDataImportValidationError("test-project-4", 4, 100),

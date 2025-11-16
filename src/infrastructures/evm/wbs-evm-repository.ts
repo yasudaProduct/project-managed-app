@@ -19,7 +19,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
     private wbsQueryRepository: IWbsQueryRepository
   ) { }
 
-  async getWbsEvmData(wbsId: number, evaluationDate: Date): Promise<WbsEvmData> {
+  async getWbsEvmData(wbsId: number): Promise<WbsEvmData> {
     // WbsQueryRepositoryを活用してタスクデータを取得
     const wbsTasksData = await this.wbsQueryRepository.getWbsTasks(wbsId);
 

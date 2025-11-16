@@ -37,7 +37,6 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
   );
   const [timeSeriesData, setTimeSeriesData] = useState<EvmMetricsData[]>([]);
   const [taskDetails, setTaskDetails] = useState<TaskEvmDataSerialized[]>([]);
-  const [dateRange, setDateRange] = useState<EvmDateRangeData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,11 +48,11 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
   // 進捗率測定方法
   const [progressMethod, setProgressMethod] = useState<
     "ZERO_HUNDRED" | "FIFTY_FIFTY" | "SELF_REPORTED"
-  >("SELF_REPORTED");
+  >("ZERO_HUNDRED");
 
   // 時系列間隔
   const [interval, setInterval] = useState<"daily" | "weekly" | "monthly">(
-    "weekly"
+    "daily"
   );
 
   // 期間選択モード
@@ -118,9 +117,6 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
 
       // 日付範囲情報を取得
       const rangeResult = await getEvmDateRange({ wbsId });
-      if (rangeResult.success && rangeResult.data) {
-        setDateRange(rangeResult.data);
-      }
 
       // 現在のメトリクスを取得
       const metricsResult = await getCurrentEvmMetrics({
