@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { EvmMetricsData } from '@/app/actions/evm/evm-actions';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { EvmMetricsData } from "@/app/actions/evm/evm-actions";
 import {
   LineChart,
   Line,
@@ -11,27 +11,36 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts';
+} from "recharts";
 
 type EvmChartProps = {
   data: EvmMetricsData[];
-  calculationMode: 'hours' | 'cost';
+  calculationMode: "hours" | "cost";
 };
 
+/**
+ * EVMトレンドチャート
+ * @param data データ
+ * @param calculationMode 計算モード
+ */
 export function EvmChart({ data, calculationMode }: EvmChartProps) {
   // データをチャート用に変換
   const chartData = data.map((metrics) => ({
-    date: new Date(metrics.date).toLocaleDateString('ja-JP', {
-      month: 'short',
-      day: 'numeric',
+    date: new Date(metrics.date).toLocaleDateString("ja-JP", {
+      month: "short",
+      day: "numeric",
     }),
     PV: metrics.pv,
     EV: metrics.ev,
     AC: metrics.ac,
   }));
 
-  const formatValue = (value: number) => {
-    if (calculationMode === 'cost') {
+  /**
+   * 値を計算モードに応じてフォーマット
+   * @param value 値
+   */
+  const formatValue = (value: number): string => {
+    if (calculationMode === "cost") {
       return `¥${value.toLocaleString()}`;
     }
     return `${value.toFixed(1)}h`;
@@ -50,7 +59,7 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
             <YAxis tickFormatter={(value) => formatValue(value)} />
             <Tooltip
               formatter={(value: number) => formatValue(value)}
-              labelStyle={{ color: '#000' }}
+              labelStyle={{ color: "#000" }}
             />
             <Legend />
             <Line

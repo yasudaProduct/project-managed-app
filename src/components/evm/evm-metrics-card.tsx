@@ -83,7 +83,6 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 mb-4"></div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">完了率</p>

@@ -68,6 +68,16 @@ export class EvmService {
     });
   }
 
+  /**
+   * EVM時系列データを取得
+   * @param wbsId WBS ID
+   * @param startDate 開始日
+   * @param endDate 終了日
+   * @param interval 間隔
+   * @param calculationMode 計算モード
+   * @param progressMethod 進捗率測定方法
+   * @returns EVM時系列データ
+   */
   async getEvmTimeSeries(
     wbsId: number,
     startDate: Date,
@@ -76,8 +86,10 @@ export class EvmService {
     calculationMode: EvmCalculationMode = 'hours',
     progressMethod?: ProgressMeasurementMethod
   ): Promise<EvmMetrics[]> {
-    // 第1フェーズ：推測ベースの履歴計算
-    // 各日付でcalculateCurrentEvmMetricsを呼び出す
+    console.log('getEvmTimeSeries start --------------------------------');
+    console.log('startDate:', startDate);
+    console.log('endDate:', endDate);
+
     const dates = this.generateDateRange(startDate, endDate, interval);
     const metrics: EvmMetrics[] = [];
 
@@ -103,6 +115,13 @@ export class EvmService {
     return metrics.healthStatus;
   }
 
+  /**
+   * 日付範囲を生成
+   * @param startDate 開始日
+   * @param endDate 終了日
+   * @param interval 間隔
+   * @returns 日付範囲
+   */
   private generateDateRange(
     startDate: Date,
     endDate: Date,
