@@ -51,14 +51,14 @@ export type EvmMetricsData = {
   eac: number;
   etc: number;
   vac: number;
-  completionRate: number;
+  completionRate: number; // 完了率（0〜100%）
   healthStatus: 'healthy' | 'warning' | 'critical';
-  calculationMode: EvmCalculationMode;
-  progressMethod: ProgressMeasurementMethod;
-  formattedPv: string;
-  formattedEv: string;
-  formattedAc: string;
-  formattedBac: string;
+  calculationMode: EvmCalculationMode; // 計算モード（hours or cost）
+  progressMethod: ProgressMeasurementMethod; // 進捗率測定方法（ZERO_HUNDRED or FIFTY_FIFTY or SELF_REPORTED）
+  formattedPv: string; // 計画価値のフォーマット（hours or cost）
+  formattedEv: string; // 出来高のフォーマット（hours or cost）
+  formattedAc: string; // 実コストのフォーマット（hours or cost）
+  formattedBac: string; // 完了時予算のフォーマット（hours or cost）
 };
 
 export type TaskEvmDataSerialized = {
@@ -148,6 +148,10 @@ export async function getCurrentEvmMetrics(
       validated.calculationMode as EvmCalculationMode,
       validated.progressMethod as ProgressMeasurementMethod | undefined
     );
+
+    console.log('--------------------------------');
+    console.log(metrics);
+    console.log('--------------------------------');
 
     return {
       success: true,

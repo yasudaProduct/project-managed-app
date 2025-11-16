@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import type { EvmMetricsData } from '@/app/actions/evm/evm-actions';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import type { EvmMetricsData } from "@/app/actions/evm/evm-actions";
 import {
   TrendingUp,
   TrendingDown,
   AlertCircle,
   CheckCircle,
   AlertTriangle,
-} from 'lucide-react';
+} from "lucide-react";
 
 type EvmMetricsCardProps = {
   metrics: EvmMetricsData;
@@ -18,21 +18,21 @@ type EvmMetricsCardProps = {
 export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
   const getHealthBadge = () => {
     switch (metrics.healthStatus) {
-      case 'healthy':
+      case "healthy":
         return (
           <Badge className="bg-green-500 hover:bg-green-600">
             <CheckCircle className="h-3 w-3 mr-1" />
             健全
           </Badge>
         );
-      case 'warning':
+      case "warning":
         return (
           <Badge className="bg-yellow-500 hover:bg-yellow-600">
             <AlertTriangle className="h-3 w-3 mr-1" />
             注意
           </Badge>
         );
-      case 'critical':
+      case "critical":
         return (
           <Badge variant="destructive">
             <AlertCircle className="h-3 w-3 mr-1" />
@@ -42,7 +42,12 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
     }
   };
 
-  const getVarianceIcon = (value: number) => {
+  /**
+   * 差異アイコンを取得
+   * @param value 差異
+   * @returns 差異アイコン（正の場合は上向きの矢印、負の場合は下向きの矢印、0の場合はnull）
+   */
+  const getVarianceIcon = (value: number): React.ReactNode | null => {
     if (value > 0) {
       return <TrendingUp className="h-4 w-4 text-green-500" />;
     } else if (value < 0) {
@@ -51,7 +56,12 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
     return null;
   };
 
-  const formatPercentage = (value: number) => {
+  /**
+   * パーセンテージをフォーマット
+   * @param value パーセンテージ
+   * @returns パーセンテージをフォーマットした文字列
+   */
+  const formatPercentage = (value: number): string => {
     return `${(value * 100).toFixed(1)}%`;
   };
 
@@ -61,11 +71,19 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>プロジェクトヘルスステータス</CardTitle>
-            {getHealthBadge()}
+            <CardTitle className="">
+              <div className="flex items-center">
+                ヘルスステータス
+                <span className="ml-2">{getHealthBadge()}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                評価日: {new Date(metrics.date).toLocaleDateString("ja-JP")}
+              </p>
+            </CardTitle>
           </div>
         </CardHeader>
         <CardContent>
+          <div className="space-y-2 mb-4"></div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">完了率</p>
@@ -74,19 +92,21 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">スケジュール効率 (SPI)</p>
+              <p className="text-sm text-muted-foreground">
+                スケジュール効率 (SPI)
+              </p>
               <p className="text-2xl font-bold">{metrics.spi.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">コスト効率 (CPI)</p>
               <p className="text-2xl font-bold">{metrics.cpi.toFixed(2)}</p>
             </div>
-            <div>
+            {/* <div>
               <p className="text-sm text-muted-foreground">評価日</p>
               <p className="text-sm font-medium">
-                {new Date(metrics.date).toLocaleDateString('ja-JP')}
+                {new Date(metrics.date).toLocaleDateString("ja-JP")}
               </p>
-            </div>
+            </div> */}
           </div>
         </CardContent>
       </Card>
@@ -133,12 +153,14 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
                 {getVarianceIcon(metrics.sv)}
               </div>
               <p className="text-xl font-semibold">
-                {metrics.calculationMode === 'hours'
+                {metrics.calculationMode === "hours"
                   ? `${metrics.sv.toFixed(1)}h`
                   : `¥${metrics.sv.toLocaleString()}`}
               </p>
               <p className="text-xs text-muted-foreground">
-                {metrics.sv > 0 ? '進捗が計画より進んでいます' : '進捗が計画より遅れています'}
+                {metrics.sv > 0
+                  ? "進捗が計画より進んでいます"
+                  : "進捗が計画より遅れています"}
               </p>
             </div>
             <div className="space-y-2">
@@ -147,12 +169,14 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
                 {getVarianceIcon(metrics.cv)}
               </div>
               <p className="text-xl font-semibold">
-                {metrics.calculationMode === 'hours'
+                {metrics.calculationMode === "hours"
                   ? `${metrics.cv.toFixed(1)}h`
                   : `¥${metrics.cv.toLocaleString()}`}
               </p>
               <p className="text-xs text-muted-foreground">
-                {metrics.cv > 0 ? 'コストが予算内です' : 'コストが予算を超過しています'}
+                {metrics.cv > 0
+                  ? "コストが予算内です"
+                  : "コストが予算を超過しています"}
               </p>
             </div>
           </div>
@@ -167,9 +191,11 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">完了時総コスト (EAC)</p>
+              <p className="text-sm text-muted-foreground">
+                完了時総コスト (EAC)
+              </p>
               <p className="text-xl font-semibold">
-                {metrics.calculationMode === 'hours'
+                {metrics.calculationMode === "hours"
                   ? `${metrics.eac.toFixed(1)}h`
                   : `¥${metrics.eac.toLocaleString()}`}
               </p>
@@ -177,7 +203,7 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">残コスト (ETC)</p>
               <p className="text-xl font-semibold">
-                {metrics.calculationMode === 'hours'
+                {metrics.calculationMode === "hours"
                   ? `${metrics.etc.toFixed(1)}h`
                   : `¥${metrics.etc.toLocaleString()}`}
               </p>
@@ -186,7 +212,7 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
               <p className="text-sm text-muted-foreground">完了時差異 (VAC)</p>
               <div className="flex items-center gap-2">
                 <p className="text-xl font-semibold">
-                  {metrics.calculationMode === 'hours'
+                  {metrics.calculationMode === "hours"
                     ? `${metrics.vac.toFixed(1)}h`
                     : `¥${metrics.vac.toLocaleString()}`}
                 </p>
@@ -216,10 +242,10 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
                 <div
                   className={`h-2 rounded-full ${
                     metrics.spi >= 1
-                      ? 'bg-green-500'
+                      ? "bg-green-500"
                       : metrics.spi >= 0.9
-                      ? 'bg-yellow-500'
-                      : 'bg-red-500'
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
                   }`}
                   style={{ width: `${Math.min(metrics.spi * 100, 100)}%` }}
                 />
@@ -237,10 +263,10 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
                 <div
                   className={`h-2 rounded-full ${
                     metrics.cpi >= 1
-                      ? 'bg-green-500'
+                      ? "bg-green-500"
                       : metrics.cpi >= 0.9
-                      ? 'bg-yellow-500'
-                      : 'bg-red-500'
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
                   }`}
                   style={{ width: `${Math.min(metrics.cpi * 100, 100)}%` }}
                 />

@@ -1,52 +1,67 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { EvmChart } from './evm-chart';
-import { EvmMetricsCard } from './evm-metrics-card';
-import { TaskEvmTable } from './task-evm-table';
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EvmChart } from "./evm-chart";
+import { EvmMetricsCard } from "./evm-metrics-card";
+import { TaskEvmTable } from "./task-evm-table";
 import {
   getCurrentEvmMetrics,
   getEvmTimeSeries,
   getTaskEvmDetails,
   type EvmMetricsData,
   type TaskEvmDataSerialized,
-} from '@/app/actions/evm/evm-actions';
-import { Loader2, TrendingUp, DollarSign } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+} from "@/app/actions/evm/evm-actions";
+import { Loader2, TrendingUp, DollarSign } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 type EvmDashboardProps = {
   wbsId: number;
 };
 
 export function EvmDashboard({ wbsId }: EvmDashboardProps) {
-  const [currentMetrics, setCurrentMetrics] = useState<EvmMetricsData | null>(null);
+  const [currentMetrics, setCurrentMetrics] = useState<EvmMetricsData | null>(
+    null
+  );
   const [timeSeriesData, setTimeSeriesData] = useState<EvmMetricsData[]>([]);
   const [taskDetails, setTaskDetails] = useState<TaskEvmDataSerialized[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [calculationMode, setCalculationMode] = useState<'hours' | 'cost'>('hours');
+
+  // EVM設定
+  const [calculationMode, setCalculationMode] = useState<"hours" | "cost">(
+    "hours"
+  );
+
+  // 進捗率測定方法
   const [progressMethod, setProgressMethod] = useState<
-    'ZERO_HUNDRED' | 'FIFTY_FIFTY' | 'SELF_REPORTED'
-  >('SELF_REPORTED');
-  const [interval, setInterval] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
+    "ZERO_HUNDRED" | "FIFTY_FIFTY" | "SELF_REPORTED"
+  >("SELF_REPORTED");
+
+  // 時系列間隔
+  const [interval, setInterval] = useState<"daily" | "weekly" | "monthly">(
+    "weekly"
+  );
 
   useEffect(() => {
     loadEvmData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wbsId, calculationMode, progressMethod, interval]);
 
-  const loadEvmData = async () => {
+  /**
+   * EVMデータを読み込む
+   */
+  const loadEvmData = async (): Promise<void> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -59,7 +74,9 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
       });
 
       if (!metricsResult.success || !metricsResult.data) {
-        throw new Error(metricsResult.error ?? 'Failed to load metrics');
+        throw new Error(
+          metricsResult.error ?? "メトリクスのロードに失敗しました"
+        );
       }
 
       setCurrentMetrics(metricsResult.data);
@@ -67,7 +84,7 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
       // 時系列データを取得（過去3ヶ月）
       const endDate = new Date();
       const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 3);
+      startDate.setMonth(startDate.getMonth() - 3); // 過去3ヶ月
 
       const timeSeriesResult = await getEvmTimeSeries({
         wbsId,
@@ -79,7 +96,9 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
       });
 
       if (!timeSeriesResult.success || !timeSeriesResult.data) {
-        throw new Error(timeSeriesResult.error ?? 'Failed to load time series');
+        throw new Error(
+          timeSeriesResult.error ?? "時系列データをロードできませんでした"
+        );
       }
 
       setTimeSeriesData(timeSeriesResult.data);
@@ -88,13 +107,14 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
       const taskResult = await getTaskEvmDetails({ wbsId });
 
       if (!taskResult.success || !taskResult.data) {
-        throw new Error(taskResult.error ?? 'Failed to load task details');
+        throw new Error(
+          taskResult.error ?? "タスクの詳細をロードできませんでした"
+        );
       }
-
       setTaskDetails(taskResult.data);
     } catch (err) {
-      console.error('Failed to load EVM data:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      console.error("Failed to load EVM data:", err);
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +163,7 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
               <Select
                 value={calculationMode}
                 onValueChange={(value) =>
-                  setCalculationMode(value as 'hours' | 'cost')
+                  setCalculationMode(value as "hours" | "cost")
                 }
               >
                 <SelectTrigger id="calculation-mode">
@@ -172,7 +192,7 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
                 value={progressMethod}
                 onValueChange={(value) =>
                   setProgressMethod(
-                    value as 'ZERO_HUNDRED' | 'FIFTY_FIFTY' | 'SELF_REPORTED'
+                    value as "ZERO_HUNDRED" | "FIFTY_FIFTY" | "SELF_REPORTED"
                   )
                 }
               >
@@ -192,7 +212,7 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
               <Select
                 value={interval}
                 onValueChange={(value) =>
-                  setInterval(value as 'daily' | 'weekly' | 'monthly')
+                  setInterval(value as "daily" | "weekly" | "monthly")
                 }
               >
                 <SelectTrigger id="interval">
