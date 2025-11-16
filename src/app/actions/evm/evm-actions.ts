@@ -31,6 +31,10 @@ const GetTaskEvmDetailsSchema = z.object({
   wbsId: z.number(),
 });
 
+const GetEvmDateRangeSchema = z.object({
+  wbsId: z.number(),
+});
+
 // 型定義
 export type EvmActionResult<T = unknown> = {
   success: boolean;
@@ -77,6 +81,15 @@ export type TaskEvmDataSerialized = {
   selfReportedProgress: number | null;
   earnedValue: number;
   earnedValueCost: number;
+};
+
+export type EvmDateRangeData = {
+  projectStartDate: string | null;
+  projectEndDate: string | null;
+  taskMinStartDate: string | null;
+  taskMaxEndDate: string | null;
+  recommendedStartDate: string;
+  recommendedEndDate: string;
 };
 
 /**
@@ -150,7 +163,7 @@ export async function getCurrentEvmMetrics(
     );
 
     console.log('--------------------------------');
-    console.log(metrics);
+    console.log('Current EVM metrics:', metrics);
     console.log('--------------------------------');
 
     return {
@@ -186,6 +199,10 @@ export async function getEvmTimeSeries(
       validated.progressMethod as ProgressMeasurementMethod | undefined
     );
 
+    // console.log('--------------------------------');
+    // console.log('EVM time series data:', metricsList);
+    // console.log('--------------------------------');
+
     return {
       success: true,
       data: metricsList.map(serializeEvmMetrics),
@@ -216,6 +233,77 @@ export async function getTaskEvmDetails(
     };
   } catch (error) {
     console.error('Failed to get task EVM details:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * EVM表示に適した日付範囲を取得
+ */
+export async function getEvmDateRange(
+  params: z.infer<typeof GetEvmDateRangeSchema>
+): Promise<EvmActionResult<EvmDateRangeData>> {
+  try {
+    const validated = GetEvmDateRangeSchema.parse(params);
+
+    // タスクデータを取得
+    const tasks = await evmService.getTaskEvmDetails(validated.wbsId);
+
+    if (tasks.length === 0) {
+      // タスクがない場合は現在日を基準にする
+      const now = new Date();
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+      return {
+        success: true,
+        data: {
+          projectStartDate: null,
+          projectEndDate: null,
+          taskMinStartDate: null,
+          taskMaxEndDate: null,
+          recommendedStartDate: threeMonthsAgo.toISOString(),
+          recommendedEndDate: now.toISOString(),
+        },
+      };
+    }
+
+    // タスクの最小開始日と最大終了日を取得
+    const taskStartDates = tasks
+      .map((t) => new Date(t.plannedStartDate))
+      .filter((d) => !isNaN(d.getTime()));
+    const taskEndDates = tasks
+      .map((t) => new Date(t.plannedEndDate))
+      .filter((d) => !isNaN(d.getTime()));
+
+    const minStartDate = taskStartDates.length > 0
+      ? new Date(Math.min(...taskStartDates.map((d) => d.getTime())))
+      : null;
+    const maxEndDate = taskEndDates.length > 0
+      ? new Date(Math.max(...taskEndDates.map((d) => d.getTime())))
+      : null;
+
+    // 推奨期間を決定
+    // プロジェクト全体の期間を基準とする（タスクの最小開始日〜最大終了日）
+    const recommendedStartDate = minStartDate || new Date();
+    const recommendedEndDate = maxEndDate || new Date();
+
+    return {
+      success: true,
+      data: {
+        projectStartDate: null, // プロジェクト情報は別途取得が必要
+        projectEndDate: null,
+        taskMinStartDate: minStartDate?.toISOString() ?? null,
+        taskMaxEndDate: maxEndDate?.toISOString() ?? null,
+        recommendedStartDate: recommendedStartDate.toISOString(),
+        recommendedEndDate: recommendedEndDate.toISOString(),
+      },
+    };
+  } catch (error) {
+    console.error('Failed to get EVM date range:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

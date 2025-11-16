@@ -10,8 +10,10 @@ import {
   getCurrentEvmMetrics,
   getEvmTimeSeries,
   getTaskEvmDetails,
+  getEvmDateRange,
   type EvmMetricsData,
   type TaskEvmDataSerialized,
+  type EvmDateRangeData,
 } from "@/app/actions/evm/evm-actions";
 import { Loader2, TrendingUp, DollarSign } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -35,6 +37,7 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
   );
   const [timeSeriesData, setTimeSeriesData] = useState<EvmMetricsData[]>([]);
   const [taskDetails, setTaskDetails] = useState<TaskEvmDataSerialized[]>([]);
+  const [dateRange, setDateRange] = useState<EvmDateRangeData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,10 +56,57 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
     "weekly"
   );
 
+  // 期間選択モード
+  const [periodMode, setPeriodMode] = useState<
+    "project" | "recent3months" | "recent1month" | "custom"
+  >("project");
+
   useEffect(() => {
     loadEvmData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wbsId, calculationMode, progressMethod, interval]);
+  }, [wbsId, calculationMode, progressMethod, interval, periodMode]);
+
+  /**
+   * 期間モードに基づいて開始日と終了日を計算
+   */
+  const calculateDateRange = (
+    mode: typeof periodMode,
+    range: EvmDateRangeData | null
+  ): { startDate: Date; endDate: Date } => {
+    const now = new Date();
+
+    switch (mode) {
+      case "project":
+        // プロジェクト全体期間（タスクの最小開始日〜最大終了日）
+        if (range?.recommendedStartDate && range?.recommendedEndDate) {
+          return {
+            startDate: new Date(range.recommendedStartDate),
+            endDate: new Date(range.recommendedEndDate),
+          };
+        }
+        // フォールバック: 過去3ヶ月〜現在
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+        return { startDate: threeMonthsAgo, endDate: now };
+
+      case "recent3months":
+        const recent3Months = new Date();
+        recent3Months.setMonth(recent3Months.getMonth() - 3);
+        return { startDate: recent3Months, endDate: now };
+
+      case "recent1month":
+        const recent1Month = new Date();
+        recent1Month.setMonth(recent1Month.getMonth() - 1);
+        return { startDate: recent1Month, endDate: now };
+
+      case "custom":
+        // カスタム期間（今後実装）
+        return { startDate: now, endDate: now };
+
+      default:
+        return { startDate: now, endDate: now };
+    }
+  };
 
   /**
    * EVMデータを読み込む
@@ -65,6 +115,12 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
     try {
       setIsLoading(true);
       setError(null);
+
+      // 日付範囲情報を取得
+      const rangeResult = await getEvmDateRange({ wbsId });
+      if (rangeResult.success && rangeResult.data) {
+        setDateRange(rangeResult.data);
+      }
 
       // 現在のメトリクスを取得
       const metricsResult = await getCurrentEvmMetrics({
@@ -81,11 +137,13 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
 
       setCurrentMetrics(metricsResult.data);
 
-      // 時系列データを取得（過去3ヶ月）
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 3); // 過去3ヶ月
+      // 期間を計算
+      const { startDate, endDate } = calculateDateRange(
+        periodMode,
+        rangeResult.data ?? null
+      );
 
+      // 時系列データを取得
       const timeSeriesResult = await getEvmTimeSeries({
         wbsId,
         startDate: startDate.toISOString(),
@@ -157,7 +215,52 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
           <CardTitle>EVM設定</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="period-mode">表示期間</Label>
+              <Select
+                value={periodMode}
+                onValueChange={(value) =>
+                  setPeriodMode(
+                    value as
+                      | "project"
+                      | "recent3months"
+                      | "recent1month"
+                      | "custom"
+                  )
+                }
+              >
+                <SelectTrigger id="period-mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="project">プロジェクト全期間</SelectItem>
+                  <SelectItem value="recent3months">過去3ヶ月</SelectItem>
+                  <SelectItem value="recent1month">過去1ヶ月</SelectItem>
+                  {/* <SelectItem value="custom">カスタム期間</SelectItem> */}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="interval">時系列間隔</Label>
+              <Select
+                value={interval}
+                onValueChange={(value) =>
+                  setInterval(value as "daily" | "weekly" | "monthly")
+                }
+              >
+                <SelectTrigger id="interval">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">日次</SelectItem>
+                  <SelectItem value="weekly">週次</SelectItem>
+                  <SelectItem value="monthly">月次</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="calculation-mode">算出方式</Label>
               <Select
@@ -206,31 +309,9 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="interval">時系列間隔</Label>
-              <Select
-                value={interval}
-                onValueChange={(value) =>
-                  setInterval(value as "daily" | "weekly" | "monthly")
-                }
-              >
-                <SelectTrigger id="interval">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">日次</SelectItem>
-                  <SelectItem value="weekly">週次</SelectItem>
-                  <SelectItem value="monthly">月次</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* メトリクスカード */}
-      <EvmMetricsCard metrics={currentMetrics} />
 
       {/* タブ */}
       <Tabs defaultValue="chart" className="space-y-4">
@@ -247,6 +328,9 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
           <TaskEvmTable tasks={taskDetails} calculationMode={calculationMode} />
         </TabsContent>
       </Tabs>
+
+      {/* メトリクスカード */}
+      <EvmMetricsCard metrics={currentMetrics} />
     </div>
   );
 }
