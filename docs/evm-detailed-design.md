@@ -17,8 +17,9 @@
 #### EvmMetrics エンティティ（第1フェーズ～）
 ```typescript
 // src/domains/evm/entities/EvmMetrics.ts
+import { ProgressMeasurementMethod } from '@prisma/client'; // Prisma Enumを使用
+
 export type EvmCalculationMode = 'hours' | 'cost';
-export type ProgressMeasurementMethod = '0-100' | '50-50' | 'self-reported';
 
 export class EvmMetrics {
   constructor(
@@ -28,8 +29,29 @@ export class EvmMetrics {
     public readonly ac: number,           // Actual Cost
     public readonly bac: number,          // Budget At Completion
     public readonly calculationMode: EvmCalculationMode = 'hours', // 算出方式
-    public readonly progressMethod: ProgressMeasurementMethod = '50-50', // 進捗率測定方法
+    public readonly progressMethod: ProgressMeasurementMethod = 'SELF_REPORTED', // 進捗率測定方法
   ) {}
+
+  // 既存のEvmMetricsと互換性を保つためのファクトリメソッド
+  public static create(args: {
+    pv: number;
+    ev: number;
+    ac: number;
+    date: Date;
+    bac?: number;
+    calculationMode?: EvmCalculationMode;
+    progressMethod?: ProgressMeasurementMethod;
+  }): EvmMetrics {
+    return new EvmMetrics(
+      args.date,
+      args.pv,
+      args.ev,
+      args.ac,
+      args.bac || 0,
+      args.calculationMode || 'hours',
+      args.progressMethod || 'SELF_REPORTED'
+    );
+  }
 
   // Schedule Variance
   get sv(): number {
@@ -51,20 +73,52 @@ export class EvmMetrics {
     return this.ac === 0 ? 0 : this.ev / this.ac;
   }
 
-  // Estimate To Complete
-  get etc(): number {
-    if (this.cpi === 0) return 0;
-    return (this.bac - this.ev) / this.cpi;
-  }
-
-  // Estimate At Completion
+  // Estimate At Completion (完了時総コスト予測)
   get eac(): number {
-    return this.ac + this.etc;
+    if (this.cpi === 0) return 0;
+    return this.bac / this.cpi;
   }
 
-  // Variance At Completion
+  // Estimate To Complete (完了までの残コスト予測)
+  get etc(): number {
+    return Math.max(0, this.eac - this.ac);
+  }
+
+  // Variance At Completion (完了時差異予測)
   get vac(): number {
     return this.bac - this.eac;
+  }
+
+  // 既存のEvmMetricsとの互換性メソッド
+  get costVariance(): number {
+    return this.cv;
+  }
+
+  get scheduleVariance(): number {
+    return this.sv;
+  }
+
+  get costPerformanceIndex(): number {
+    return this.cpi;
+  }
+
+  get schedulePerformanceIndex(): number {
+    return this.spi;
+  }
+
+  get estimateAtCompletion(): number {
+    return this.eac;
+  }
+
+  get estimateToComplete(): number {
+    return this.etc;
+  }
+
+  // プロジェクトの健全性を判定（既存実装との互換性）
+  get healthStatus(): 'healthy' | 'warning' | 'critical' {
+    if (this.cpi >= 0.9 && this.spi >= 0.9) return 'healthy';
+    if (this.cpi >= 0.8 && this.spi >= 0.8) return 'warning';
+    return 'critical';
   }
 
   // 完了率
@@ -95,6 +149,8 @@ export class EvmMetrics {
 #### TaskEvmData エンティティ（第1フェーズ～）
 ```typescript
 // src/domains/evm/entities/TaskEvmData.ts
+import { TaskStatus, ProgressMeasurementMethod } from '@prisma/client';
+
 export class TaskEvmData {
   constructor(
     public readonly taskId: number,
@@ -108,8 +164,8 @@ export class TaskEvmData {
     public readonly actualManHours: number,
     public readonly status: TaskStatus,
     public readonly progressRate: number,
-    public readonly hourlyRate: number = 0, // 金額ベース計算用（第2.5フェーズ）
-    public readonly selfReportedProgress: number | null = null, // 自己申告進捗率（第2フェーズ）
+    public readonly costPerHour: number = 5000, // 時間単位の原価（円/時間）※wbs_assignee.cost_per_hour
+    public readonly selfReportedProgress: number | null = null, // 自己申告進捗率（wbs_task.progress_rate）
   ) {}
 
   // 工数ベースの出来高計算
@@ -117,21 +173,21 @@ export class TaskEvmData {
     return this.plannedManHours * (this.progressRate / 100);
   }
 
-  // 金額ベースの出来高計算（第2.5フェーズ用）
+  // 金額ベースの出来高計算
   get earnedValueCost(): number {
-    return this.plannedManHours * this.hourlyRate * (this.progressRate / 100);
+    return this.plannedManHours * this.costPerHour * (this.progressRate / 100);
   }
 
-  // 進捗率測定方法に応じた進捗率取得
+  // 進捗率測定方法に応じた進捗率取得（Prisma Enumに対応）
   getProgressRate(method: ProgressMeasurementMethod): number {
     switch (method) {
-      case '0-100':
+      case 'ZERO_HUNDRED':
         return this.status === 'COMPLETED' ? 100 : 0;
-      case '50-50':
+      case 'FIFTY_FIFTY':
         if (this.status === 'COMPLETED') return 100;
         if (this.status === 'IN_PROGRESS') return 50;
         return 0;
-      case 'self-reported':
+      case 'SELF_REPORTED':
         return this.selfReportedProgress ?? this.progressRate;
       default:
         return this.progressRate;
@@ -146,7 +202,7 @@ export class TaskEvmData {
     const progressRate = this.getProgressRate(progressMethod);
 
     if (calculationMode === 'cost') {
-      return this.plannedManHours * this.hourlyRate * (progressRate / 100);
+      return this.plannedManHours * this.costPerHour * (progressRate / 100);
     } else {
       return this.plannedManHours * (progressRate / 100);
     }
@@ -156,7 +212,7 @@ export class TaskEvmData {
     if (evaluationDate < this.plannedStartDate) return 0;
 
     const baseValue = mode === 'cost'
-      ? this.plannedManHours * this.hourlyRate
+      ? this.plannedManHours * this.costPerHour
       : this.plannedManHours;
 
     if (evaluationDate >= this.plannedEndDate) return baseValue;
@@ -220,10 +276,15 @@ export class ProgressForecast {
 
 ### 1.2 データ取得インターフェース
 
-#### IEvmRepository インターフェース（第1フェーズ）
+**注**: 既存の`IEvmRepository`は外部システム（geppo）からのデータ取得用として維持します。
+新規実装では`IWbsEvmRepository`を作成し、本プロジェクトのPostgreSQLからデータを取得します。
+
+#### IWbsEvmRepository インターフェース（第1フェーズ・新規）
 ```typescript
-// src/applications/evm/IEvmRepository.ts
-export interface IEvmRepository {
+// src/applications/evm/IWbsEvmRepository.ts
+import { ProgressMeasurementMethod } from '@prisma/client';
+
+export interface IWbsEvmRepository {
   // WBS全体のEVMデータを取得
   getWbsEvmData(wbsId: number, evaluationDate: Date): Promise<WbsEvmData>;
 
@@ -245,14 +306,22 @@ export interface IEvmRepository {
     endDate: Date,
     calculationMode?: EvmCalculationMode
   ): Promise<Map<string, number>>;
+
+  // バッファ情報の取得
+  getBuffers(wbsId: number): Promise<BufferData[]>;
+
+  // プロジェクト設定の取得
+  getProjectSettings(projectId: string): Promise<ProjectSettingsData | null>;
 }
 
 export interface WbsEvmData {
   wbsId: number;
+  projectId: string;
   projectName: string;
   totalPlannedManHours: number;
   tasks: TaskEvmData[];
   buffers: BufferData[];
+  settings: ProjectSettingsData | null;
 }
 
 export interface BufferData {
@@ -260,6 +329,28 @@ export interface BufferData {
   name: string;
   bufferHours: number;
   bufferType: string;
+}
+
+export interface ProjectSettingsData {
+  projectId: string;
+  progressMeasurementMethod: ProgressMeasurementMethod;
+  forecastCalculationMethod: ForecastCalculationMethod;
+}
+```
+
+#### 既存IEvmRepository（外部システム連携用・維持）
+```typescript
+// src/applications/evm/IEvmRepository.ts
+// 既存の外部MySQL（geppo）からのデータ取得用リポジトリ
+// ダッシュボード機能などで使用を継続
+export interface IEvmRepository {
+  getProjectEvmData(projectId: string): Promise<ProjectEvm | null>;
+  getProjectEvmDataByDateRange(
+    projectId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<EvmMetrics[]>;
+  getAllProjectsEvmSummary(): Promise<ProjectEvm[]>;
 }
 ```
 
@@ -383,7 +474,7 @@ export class EvmService {
     // BAC計算: 完了時の予算
     const bac = calculationMode === 'cost'
       ? wbsData.tasks.reduce((sum, task) =>
-          sum + task.plannedManHours * task.hourlyRate, 0) +
+          sum + task.plannedManHours * task.costPerHour, 0) +
         wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0)
       : wbsData.totalPlannedManHours +
         wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0);
@@ -496,39 +587,35 @@ export class EvmHistoryService {
 ## 3. リポジトリ層実装
 
 ### 3.1 基本リポジトリ実装（第1フェーズ）
+
+#### WbsEvmRepository（新規）
 ```typescript
-// src/infrastructures/evm/EvmRepository.ts
-import { injectable } from 'inversify';
-import { prisma } from '@/lib/prisma';
-import { IEvmRepository, WbsEvmData, BufferData } from '@/applications/evm/IEvmRepository';
+// src/infrastructures/evm/WbsEvmRepository.ts
+import { injectable, inject } from 'inversify';
+import { TYPES } from '@/lib/types';
+import prisma from '@/lib/prisma/prisma';
+import { IWbsEvmRepository, WbsEvmData, BufferData, ProjectSettingsData } from '@/applications/evm/IWbsEvmRepository';
+import { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-repository';
 import { TaskEvmData } from '@/domains/evm/entities/TaskEvmData';
 import { EvmMetrics } from '@/domains/evm/entities/EvmMetrics';
 import { TaskStatus } from '@prisma/client';
 
 @injectable()
-export class EvmRepository implements IEvmRepository {
+export class WbsEvmRepository implements IWbsEvmRepository {
+  constructor(
+    @inject(TYPES.IWbsQueryRepository)
+    private wbsQueryRepository: IWbsQueryRepository
+  ) {}
+
   async getWbsEvmData(wbsId: number, evaluationDate: Date): Promise<WbsEvmData> {
+    // WbsQueryRepositoryを活用してタスクデータを取得
+    const wbsTasksData = await this.wbsQueryRepository.getWbsTasks(wbsId);
+
+    // WBS基本情報の取得
     const wbs = await prisma.wbs.findUnique({
       where: { id: wbsId },
       include: {
         project: true,
-        tasks: {
-          include: {
-            periods: true,
-            statusLogs: {
-              orderBy: { changedAt: 'desc' },
-              take: 1,
-            },
-            workRecords: true,
-            assignee: true,
-          },
-        },
-        buffers: true,
-        kosus: {
-          include: {
-            period: true,
-          },
-        },
       },
     });
 
@@ -536,42 +623,39 @@ export class EvmRepository implements IEvmRepository {
       throw new Error(`WBS not found: ${wbsId}`);
     }
 
-    const tasks = wbs.tasks.map(task => {
-      const plannedPeriod = task.periods.find(p => p.type === 'PLANNED');
-      const actualPeriod = task.periods.find(p => p.type === 'ACTUAL');
+    // TaskEvmDataに変換
+    const tasks = wbsTasksData.map(task => {
+      const plannedManHours = task.yoteiKosu ?? task.kijunKosu ?? 0;
+      const actualManHours = task.jissekiKosu ?? 0;
 
-      // 工数の計算
-      const plannedManHours = this.calculatePlannedManHours(task, wbs.kosus);
-      const actualManHours = task.workRecords.reduce((sum, wr) =>
-        sum + Number(wr.hours_worked), 0
-      );
-
-      // 進捗率の計算
-      const progressRate = this.calculateProgressRate(task.status);
+      // WbsAssigneeからcostPerHourを取得
+      // TODO: assigneeテーブルからcostPerHourを取得する必要がある
+      // 現在のWbsQueryRepositoryはassigneeのcostPerHourを返していないため、
+      // 別途クエリで取得するか、WbsQueryRepositoryを拡張する必要がある
+      const costPerHour = 5000; // 暫定デフォルト値
 
       return new TaskEvmData(
-        task.id,
-        task.taskNo,
+        Number(task.id),
         task.name,
-        plannedPeriod?.startDate || new Date(),
-        plannedPeriod?.endDate || new Date(),
-        actualPeriod?.startDate || null,
-        actualPeriod?.endDate || null,
+        task.name,
+        task.yoteiStart ?? task.kijunStart ?? new Date(),
+        task.yoteiEnd ?? task.kijunEnd ?? new Date(),
+        task.jissekiStart ?? null,
+        task.jissekiEnd ?? null,
         plannedManHours,
         actualManHours,
-        task.status,
-        progressRate,
-        task.assignee?.hourlyRate || 0, // 第2.5フェーズで実装
-        task.progressRate || null // 自己申告進捗率（第2フェーズで実装）
+        task.status as TaskStatus,
+        task.progressRate ?? 0,
+        costPerHour,
+        task.progressRate // 自己申告進捗率
       );
     });
 
-    const buffers: BufferData[] = wbs.buffers.map(buffer => ({
-      id: buffer.id,
-      name: buffer.name,
-      bufferHours: buffer.buffer,
-      bufferType: buffer.bufferType,
-    }));
+    // バッファ情報の取得
+    const buffers = await this.getBuffers(wbsId);
+
+    // プロジェクト設定の取得
+    const settings = await this.getProjectSettings(wbs.projectId);
 
     const totalPlannedManHours = tasks.reduce((sum, task) =>
       sum + task.plannedManHours, 0
@@ -579,10 +663,39 @@ export class EvmRepository implements IEvmRepository {
 
     return {
       wbsId: wbs.id,
+      projectId: wbs.projectId,
       projectName: wbs.project.name,
       totalPlannedManHours,
       tasks,
       buffers,
+      settings,
+    };
+  }
+
+  async getBuffers(wbsId: number): Promise<BufferData[]> {
+    const buffers = await prisma.wbsBuffer.findMany({
+      where: { wbsId },
+    });
+
+    return buffers.map(buffer => ({
+      id: buffer.id,
+      name: buffer.name,
+      bufferHours: buffer.buffer,
+      bufferType: buffer.bufferType,
+    }));
+  }
+
+  async getProjectSettings(projectId: string): Promise<ProjectSettingsData | null> {
+    const settings = await prisma.projectSettings.findUnique({
+      where: { projectId },
+    });
+
+    if (!settings) return null;
+
+    return {
+      projectId: settings.projectId,
+      progressMeasurementMethod: settings.progressMeasurementMethod,
+      forecastCalculationMethod: settings.forecastCalculationMethod,
     };
   }
 
@@ -653,7 +766,7 @@ export class EvmRepository implements IEvmRepository {
 
       // 計算モードに応じて工数または金額を加算
       const cost = calculationMode === 'cost'
-        ? Number(record.hours_worked) * (record.task.assignee?.hourlyRate || 0) // 第2.5フェーズで実装
+        ? Number(record.hours_worked) * (record.task.assignee?.costPerHour || 5000)
         : Number(record.hours_worked);
 
       costMap.set(dateKey, currentCost + cost);

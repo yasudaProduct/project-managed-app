@@ -30,11 +30,13 @@
 #### 進捗率測定方法の選択
 EV（出来高）算出における進捗率の測定方法を選択可能：
 
-| 測定方法 | 進捗率の算出 | 特徴 | 実装フェーズ |
-|---------|-------------|------|-------------|
-| **0/100法** | 完了=100%、未完了=0% | 保守的、確実な成果のみ評価 | 第1フェーズ |
-| **50/50法** | 着手=50%、完了=100% | 着手時に半分の価値を認める | 第1フェーズ |
-| **自己申告進捗率** | wbs_taskテーブルのprogress_rateフィールド | 詳細な進捗管理が可能 | 第2フェーズ |
+| 測定方法 | 進捗率の算出 | 特徴 | Enum値 | 実装フェーズ |
+|---------|-------------|------|--------|-------------|
+| **0/100法** | 完了=100%、未完了=0% | 保守的、確実な成果のみ評価 | `ZERO_HUNDRED` | 第1フェーズ |
+| **50/50法** | 着手=50%、完了=100% | 着手時に半分の価値を認める | `FIFTY_FIFTY` | 第1フェーズ |
+| **自己申告進捗率** | `wbs_task.progress_rate`フィールド（0-100の実数値） | 詳細な進捗管理が可能 | `SELF_REPORTED` | 第1フェーズ |
+
+**注**: 進捗率測定方法は`ProgressMeasurementMethod` Enum（Prismaスキーマ定義）を使用します。
 
 **EV算出式（統一）**: `EV = Σ(タスクの計画工数 × 進捗率)`
 
@@ -89,12 +91,18 @@ EV（出来高）算出における進捗率の測定方法を選択可能：
 ```sql
 -- 必要最小限のテーブル
 - wbs: WBS情報
-- wbs_task: タスク情報（status, taskNo, name）
+- wbs_task: タスク情報（status, taskNo, name, progress_rate）
 - task_period: タスク期間（startDate, endDate, type）
 - task_kosu: 工数情報（kosu, type）
-- work_record: 実績工数（hours_worked, date）
-- wbs_assignee: 担当者情報（rate）
+- work_records: 実績工数（hours_worked, date）
+- wbs_assignee: 担当者情報（rate, cost_per_hour）
+- wbs_buffer: バッファ情報（buffer, bufferType）
+- project_settings: プロジェクト設定（progress_measurement_method）
 ```
+
+**既存リポジトリの活用**:
+- `WbsQueryRepository`: タスク一覧、工数、期間、進捗率の取得に活用
+- 新規`WbsEvmRepository`: EVM特化の計算・集計処理を実装
 
 **特徴**：
 - 履歴テーブル不使用でシンプル実装
@@ -357,10 +365,9 @@ CREATE TABLE task_status_changes (
 
   INDEX idx_task_date (task_id, changed_at)
 );
-
--- 進捗率の自己申告用フィールド
-ALTER TABLE wbs_task ADD COLUMN progress_rate DECIMAL(5,2) DEFAULT NULL;
 ```
+
+**注**: `wbs_task.progress_rate`フィールドと`wbs_assignee.cost_per_hour`フィールドは既に実装済みです。
 
 #### 8.2.2 追加機能
 - 自動日次スナップショット機能
@@ -372,15 +379,15 @@ ALTER TABLE wbs_task ADD COLUMN progress_rate DECIMAL(5,2) DEFAULT NULL;
 **目標**: 金額ベースEVM算出機能
 
 #### 8.3.1 データベース拡張
-```sql
--- 担当者単価情報
-ALTER TABLE wbs_assignee ADD COLUMN hourly_rate DECIMAL(10,2);
 
--- 単価履歴管理
+**注**: `wbs_assignee.cost_per_hour`フィールドは既に実装済みです（時間単位の原価、デフォルト5000円/時間）。
+
+```sql
+-- 単価履歴管理（将来的な拡張）
 CREATE TABLE assignee_rate_history (
   id INT PRIMARY KEY AUTO_INCREMENT,
   assignee_id INT,
-  hourly_rate DECIMAL(10,2),
+  cost_per_hour DECIMAL(10,2),
   currency VARCHAR(3) DEFAULT 'JPY',
   valid_from DATE,
   valid_to DATE,
