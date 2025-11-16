@@ -67,6 +67,8 @@ export const SYMBOL = {
     // EVM
     IEvmRepository: Symbol.for('IEvmRepository'),
     IEvmApplicationService: Symbol.for('IEvmApplicationService'),
+    IWbsEvmRepository: Symbol.for('IWbsEvmRepository'),
+    EvmService: Symbol.for('EvmService'),
 
     // Import Job
     IImportJobRepository: Symbol.for('IImportJobRepository'),

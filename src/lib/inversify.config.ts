@@ -101,6 +101,9 @@ import { MilestoneRepository } from '@/infrastructures/milestone/milestone.repos
 import { IEvmRepository } from '@/applications/evm/ievm-repository';
 import { EvmRepository } from '@/infrastructures/evm/evm-repository';
 import { EvmApplicationService } from '@/applications/evm/evm-application-service';
+import { IWbsEvmRepository } from '@/applications/evm/iwbs-evm-repository';
+import { WbsEvmRepository } from '@/infrastructures/evm/wbs-evm-repository';
+import { EvmService } from '@/applications/evm/evm-service';
 
 // Import Job関連
 import type { IImportJobRepository } from '@/applications/import-job/iimport-job.repository';
@@ -134,6 +137,7 @@ container.bind<TaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDepe
 // container.bind<IWbsSyncService>(SYMBOL.IWbsSyncService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<IMilestoneApplicationService>(SYMBOL.IMilestoneApplicationService).to(MilestoneApplicationService).inSingletonScope();
 container.bind<EvmApplicationService>(SYMBOL.IEvmApplicationService).to(EvmApplicationService).inSingletonScope();
+container.bind<EvmService>(SYMBOL.EvmService).to(EvmService).inSingletonScope();
 container.bind<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService).to(ImportJobApplicationService).inSingletonScope();
 container.bind<INotificationService>(SYMBOL.INotificationService).to(NotificationService).inSingletonScope();
 container.bind<PushNotificationService>('PushNotificationService').to(PushNotificationService).inSingletonScope();
@@ -165,6 +169,7 @@ container.bind<IMilestoneRepository>(SYMBOL.IMilestoneRepository).to(MilestoneRe
 container.bind<ICompanyHolidayRepository>(SYMBOL.ICompanyHolidayRepository).to(CompanyHolidayRepository).inSingletonScope();
 container.bind<IUserScheduleRepository>(SYMBOL.IUserScheduleRepository).to(UserScheduleRepository).inSingletonScope();
 container.bind<IEvmRepository>(SYMBOL.IEvmRepository).to(EvmRepository).inSingletonScope();
+container.bind<IWbsEvmRepository>(SYMBOL.IWbsEvmRepository).to(WbsEvmRepository).inSingletonScope();
 container.bind<IImportJobRepository>(SYMBOL.IImportJobRepository).to(ImportJobPrismaRepository).inSingletonScope();
 container.bind<INotificationRepository>('NotificationRepository').to(NotificationRepository).inSingletonScope();
 container.bind<ISystemSettingsRepository>(SYMBOL.ISystemSettingsRepository).to(SystemSettingsRepository).inSingletonScope();
