@@ -1,0 +1,249 @@
+'use server';
+
+import { z } from 'zod';
+import { container } from '@/lib/inversify.config';
+import { SYMBOL } from '@/types/symbol';
+import { EvmService } from '@/applications/evm/evm-service';
+import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
+import { TaskEvmData } from '@/domains/evm/task-evm-data';
+import { ProgressMeasurementMethod } from '@prisma/client';
+
+const evmService = container.get<EvmService>(SYMBOL.EvmService);
+
+// バリデーションスキーマ
+const GetCurrentEvmMetricsSchema = z.object({
+  wbsId: z.number(),
+  evaluationDate: z.string().optional(), // ISO 8601 string
+  calculationMode: z.enum(['hours', 'cost']).default('hours'),
+  progressMethod: z.enum(['ZERO_HUNDRED', 'FIFTY_FIFTY', 'SELF_REPORTED']).optional(),
+});
+
+const GetEvmTimeSeriesSchema = z.object({
+  wbsId: z.number(),
+  startDate: z.string(), // ISO 8601 string
+  endDate: z.string(), // ISO 8601 string
+  interval: z.enum(['daily', 'weekly', 'monthly']).default('weekly'),
+  calculationMode: z.enum(['hours', 'cost']).default('hours'),
+  progressMethod: z.enum(['ZERO_HUNDRED', 'FIFTY_FIFTY', 'SELF_REPORTED']).optional(),
+});
+
+const GetTaskEvmDetailsSchema = z.object({
+  wbsId: z.number(),
+});
+
+// 型定義
+export type EvmActionResult<T = unknown> = {
+  success: boolean;
+  error?: string;
+  data?: T;
+};
+
+export type EvmMetricsData = {
+  date: string; // ISO 8601 string
+  pv: number;
+  ev: number;
+  ac: number;
+  bac: number;
+  sv: number;
+  cv: number;
+  spi: number;
+  cpi: number;
+  eac: number;
+  etc: number;
+  vac: number;
+  completionRate: number;
+  healthStatus: 'healthy' | 'warning' | 'critical';
+  calculationMode: EvmCalculationMode;
+  progressMethod: ProgressMeasurementMethod;
+  formattedPv: string;
+  formattedEv: string;
+  formattedAc: string;
+  formattedBac: string;
+};
+
+export type TaskEvmDataSerialized = {
+  taskId: number;
+  taskNo: string;
+  taskName: string;
+  plannedStartDate: string;
+  plannedEndDate: string;
+  actualStartDate: string | null;
+  actualEndDate: string | null;
+  plannedManHours: number;
+  actualManHours: number;
+  status: string;
+  progressRate: number;
+  costPerHour: number;
+  selfReportedProgress: number | null;
+  earnedValue: number;
+  earnedValueCost: number;
+};
+
+/**
+ * EvmMetricsをシリアライズ可能な形式に変換
+ */
+function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
+  return {
+    date: metrics.date.toISOString(),
+    pv: metrics.pv,
+    ev: metrics.ev,
+    ac: metrics.ac,
+    bac: metrics.bac,
+    sv: metrics.sv,
+    cv: metrics.cv,
+    spi: metrics.spi,
+    cpi: metrics.cpi,
+    eac: metrics.eac,
+    etc: metrics.etc,
+    vac: metrics.vac,
+    completionRate: metrics.completionRate,
+    healthStatus: metrics.healthStatus,
+    calculationMode: metrics.calculationMode,
+    progressMethod: metrics.progressMethod,
+    formattedPv: metrics.formattedPv,
+    formattedEv: metrics.formattedEv,
+    formattedAc: metrics.formattedAc,
+    formattedBac: metrics.formattedBac,
+  };
+}
+
+/**
+ * TaskEvmDataをシリアライズ可能な形式に変換
+ */
+function serializeTaskEvmData(task: TaskEvmData): TaskEvmDataSerialized {
+  return {
+    taskId: task.taskId,
+    taskNo: task.taskNo,
+    taskName: task.taskName,
+    plannedStartDate: task.plannedStartDate.toISOString(),
+    plannedEndDate: task.plannedEndDate.toISOString(),
+    actualStartDate: task.actualStartDate?.toISOString() ?? null,
+    actualEndDate: task.actualEndDate?.toISOString() ?? null,
+    plannedManHours: task.plannedManHours,
+    actualManHours: task.actualManHours,
+    status: task.status,
+    progressRate: task.progressRate,
+    costPerHour: task.costPerHour,
+    selfReportedProgress: task.selfReportedProgress,
+    earnedValue: task.earnedValue,
+    earnedValueCost: task.earnedValueCost,
+  };
+}
+
+/**
+ * 現在のEVMメトリクスを取得
+ */
+export async function getCurrentEvmMetrics(
+  params: z.infer<typeof GetCurrentEvmMetricsSchema>
+): Promise<EvmActionResult<EvmMetricsData>> {
+  try {
+    const validated = GetCurrentEvmMetricsSchema.parse(params);
+    const evaluationDate = validated.evaluationDate
+      ? new Date(validated.evaluationDate)
+      : new Date();
+
+    const metrics = await evmService.calculateCurrentEvmMetrics(
+      validated.wbsId,
+      evaluationDate,
+      validated.calculationMode as EvmCalculationMode,
+      validated.progressMethod as ProgressMeasurementMethod | undefined
+    );
+
+    return {
+      success: true,
+      data: serializeEvmMetrics(metrics),
+    };
+  } catch (error) {
+    console.error('Failed to get current EVM metrics:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * EVM時系列データを取得
+ */
+export async function getEvmTimeSeries(
+  params: z.infer<typeof GetEvmTimeSeriesSchema>
+): Promise<EvmActionResult<EvmMetricsData[]>> {
+  try {
+    const validated = GetEvmTimeSeriesSchema.parse(params);
+    const startDate = new Date(validated.startDate);
+    const endDate = new Date(validated.endDate);
+
+    const metricsList = await evmService.getEvmTimeSeries(
+      validated.wbsId,
+      startDate,
+      endDate,
+      validated.interval,
+      validated.calculationMode as EvmCalculationMode,
+      validated.progressMethod as ProgressMeasurementMethod | undefined
+    );
+
+    return {
+      success: true,
+      data: metricsList.map(serializeEvmMetrics),
+    };
+  } catch (error) {
+    console.error('Failed to get EVM time series:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * タスク別EVMデータを取得
+ */
+export async function getTaskEvmDetails(
+  params: z.infer<typeof GetTaskEvmDetailsSchema>
+): Promise<EvmActionResult<TaskEvmDataSerialized[]>> {
+  try {
+    const validated = GetTaskEvmDetailsSchema.parse(params);
+
+    const tasks = await evmService.getTaskEvmDetails(validated.wbsId);
+
+    return {
+      success: true,
+      data: tasks.map(serializeTaskEvmData),
+    };
+  } catch (error) {
+    console.error('Failed to get task EVM details:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * ヘルスステータスを取得（メトリクスから判定）
+ */
+export async function getEvmHealthStatus(
+  params: z.infer<typeof GetCurrentEvmMetricsSchema>
+): Promise<EvmActionResult<'healthy' | 'warning' | 'critical'>> {
+  try {
+    const result = await getCurrentEvmMetrics(params);
+
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        error: result.error ?? 'Failed to get metrics',
+      };
+    }
+
+    return {
+      success: true,
+      data: result.data.healthStatus,
+    };
+  } catch (error) {
+    console.error('Failed to get EVM health status:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}

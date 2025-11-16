@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
-import { IWbsEvmRepository } from './iwbs-evm-repository';
+import type { IWbsEvmRepository } from './iwbs-evm-repository';
 import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { ProgressMeasurementMethod } from '@prisma/client';
@@ -10,7 +10,7 @@ export class EvmService {
   constructor(
     @inject(SYMBOL.IWbsEvmRepository)
     private wbsEvmRepository: IWbsEvmRepository
-  ) {}
+  ) { }
 
   async calculateCurrentEvmMetrics(
     wbsId: number,
@@ -51,11 +51,11 @@ export class EvmService {
     const bac =
       calculationMode === 'cost'
         ? wbsData.tasks.reduce(
-            (sum, task) => sum + task.plannedManHours * task.costPerHour,
-            0
-          ) + wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0)
+          (sum, task) => sum + task.plannedManHours * task.costPerHour,
+          0
+        ) + wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0)
         : wbsData.totalPlannedManHours +
-          wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0);
+        wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0);
 
     return EvmMetrics.create({
       date: evaluationDate,

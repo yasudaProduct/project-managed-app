@@ -20,6 +20,7 @@ import {
   Calendar,
   ArrowLeft,
   Edit,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import WbsImportJobButtons from "@/components/wbs/wbs-import-job-buttons";
 import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { Badge } from "@/components/ui/badge";
 import { getProjectStatusName } from "@/utils/utils";
+import { EvmDashboard } from "@/components/evm/evm-dashboard";
 
 export default async function ProjectPage({
   params,
@@ -240,6 +242,9 @@ export default async function ProjectPage({
               >
                 <Users className="h-4 w-4" />
               </TabsTrigger>
+              <TabsTrigger value="evm" className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+              </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
               </TabsTrigger>
@@ -288,6 +293,9 @@ export default async function ProjectPage({
             </TabsContent>
             <TabsContent value="assignee-gantt">
               <AssigneeGanttChart wbsId={latestWbs.id} />
+            </TabsContent>
+            <TabsContent value="evm">
+              <EvmDashboard wbsId={latestWbs.id} />
             </TabsContent>
           </Tabs>
         </Suspense>

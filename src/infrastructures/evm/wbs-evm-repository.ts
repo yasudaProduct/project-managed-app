@@ -7,7 +7,7 @@ import {
   BufferData,
   ProjectSettingsData,
 } from '@/applications/evm/iwbs-evm-repository';
-import { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-repository';
+import type { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-repository';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
 import { TaskStatus } from '@prisma/client';
@@ -17,7 +17,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
   constructor(
     @inject(SYMBOL.IWbsQueryRepository)
     private wbsQueryRepository: IWbsQueryRepository
-  ) {}
+  ) { }
 
   async getWbsEvmData(wbsId: number, evaluationDate: Date): Promise<WbsEvmData> {
     // WbsQueryRepositoryを活用してタスクデータを取得
@@ -212,7 +212,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       const cost =
         calculationMode === 'cost'
           ? Number(record.hours_worked) *
-            (record.task.assignee?.costPerHour || 5000)
+          (record.task.assignee?.costPerHour || 5000)
           : Number(record.hours_worked);
 
       costMap.set(dateKey, currentCost + cost);
