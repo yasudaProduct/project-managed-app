@@ -67,7 +67,7 @@ interface MockData {
     workRecords: {
         id: number;
         userId: string;
-        taskId: number;
+        taskNo: string;
         date: Date;
         hours_worked: number;
     }[];
@@ -587,7 +587,64 @@ export function getMockData(): MockData[] {
                     bufferType: "RISK",
                 },
             ],
-            workRecords: [],
+            workRecords: [
+                // D2-0001: 要件定義書レビュー (完了済み・dummy01担当)
+                { id: wbsTaskId * 1000, userId: "dummy01", taskNo: "D2-0001", date: addDays(0), hours_worked: 4 },
+                { id: wbsTaskId * 1000 + 1, userId: "dummy01", taskNo: "D2-0001", date: addDays(1), hours_worked: 6 },
+                { id: wbsTaskId * 1000 + 2, userId: "dummy01", taskNo: "D2-0001", date: addDays(2), hours_worked: 2 },
+
+                // D2-0002: 基本設計（画面・API）(進行中・dummy02担当)
+                { id: wbsTaskId * 1000 + 10, userId: "dummy02", taskNo: "D2-0002", date: addDays(2), hours_worked: 6 },
+                { id: wbsTaskId * 1000 + 11, userId: "dummy02", taskNo: "D2-0002", date: addDays(3), hours_worked: 6.5 },
+                { id: wbsTaskId * 1000 + 12, userId: "dummy02", taskNo: "D2-0002", date: addDays(4), hours_worked: 7 },
+                { id: wbsTaskId * 1000 + 13, userId: "dummy02", taskNo: "D2-0002", date: addDays(5), hours_worked: 5 },
+
+                // D2-0003: 詳細設計（DB・ドメイン）(進行中・dummy03担当)
+                { id: wbsTaskId * 1000 + 20, userId: "dummy03", taskNo: "D2-0003", date: addDays(7), hours_worked: 4 },
+                { id: wbsTaskId * 1000 + 21, userId: "dummy03", taskNo: "D2-0003", date: addDays(8), hours_worked: 4 },
+                { id: wbsTaskId * 1000 + 22, userId: "dummy03", taskNo: "D2-0003", date: addDays(9), hours_worked: 5.5 },
+                { id: wbsTaskId * 1000 + 23, userId: "dummy03", taskNo: "D2-0003", date: addDays(10), hours_worked: 6 },
+
+                // D3-0003: 認証/権限まわり実装 (進行中・dummy03担当)
+                { id: wbsTaskId * 1000 + 30, userId: "dummy03", taskNo: "D3-0003", date: addDays(16), hours_worked: 3 },
+                { id: wbsTaskId * 1000 + 31, userId: "dummy03", taskNo: "D3-0003", date: addDays(17), hours_worked: 5 },
+                { id: wbsTaskId * 1000 + 32, userId: "dummy03", taskNo: "D3-0003", date: addDays(18), hours_worked: 7 },
+                { id: wbsTaskId * 1000 + 33, userId: "dummy03", taskNo: "D3-0003", date: addDays(19), hours_worked: 4 },
+
+                // D3-0004: 通知・ジョブ実装 (進行中・dummy04担当)
+                { id: wbsTaskId * 1000 + 40, userId: "dummy04", taskNo: "D3-0004", date: addDays(20), hours_worked: 7.5 },
+                { id: wbsTaskId * 1000 + 41, userId: "dummy04", taskNo: "D3-0004", date: addDays(21), hours_worked: 7.5 },
+                { id: wbsTaskId * 1000 + 42, userId: "dummy04", taskNo: "D3-0004", date: addDays(22), hours_worked: 6 },
+
+                // D3-0007: エラーハンドリング/ロギング (進行中・dummy01担当)
+                { id: wbsTaskId * 1000 + 50, userId: "dummy01", taskNo: "D3-0007", date: addDays(18), hours_worked: 3.5 },
+                { id: wbsTaskId * 1000 + 51, userId: "dummy01", taskNo: "D3-0007", date: addDays(19), hours_worked: 3.5 },
+                { id: wbsTaskId * 1000 + 52, userId: "dummy01", taskNo: "D3-0007", date: addDays(22), hours_worked: 4 },
+
+                // D9-0001: 進捗会議/ステータス更新（週次×4）(進行中・dummy04担当)
+                { id: wbsTaskId * 1000 + 60, userId: "dummy04", taskNo: "D9-0001", date: addDays(0), hours_worked: 2 },
+                { id: wbsTaskId * 1000 + 61, userId: "dummy04", taskNo: "D9-0001", date: addDays(7), hours_worked: 2 },
+                { id: wbsTaskId * 1000 + 62, userId: "dummy04", taskNo: "D9-0001", date: addDays(14), hours_worked: 2 },
+
+                // D9-0002: 課題/品質管理（チケット運用）(進行中・dummy04担当)
+                { id: wbsTaskId * 1000 + 70, userId: "dummy04", taskNo: "D9-0002", date: addDays(5), hours_worked: 1.5 },
+                { id: wbsTaskId * 1000 + 71, userId: "dummy04", taskNo: "D9-0002", date: addDays(6), hours_worked: 2 },
+                { id: wbsTaskId * 1000 + 72, userId: "dummy04", taskNo: "D9-0002", date: addDays(8), hours_worked: 1 },
+                { id: wbsTaskId * 1000 + 73, userId: "dummy04", taskNo: "D9-0002", date: addDays(12), hours_worked: 1.5 },
+                { id: wbsTaskId * 1000 + 74, userId: "dummy04", taskNo: "D9-0002", date: addDays(15), hours_worked: 2 },
+                { id: wbsTaskId * 1000 + 75, userId: "dummy04", taskNo: "D9-0002", date: addDays(19), hours_worked: 1 },
+
+                // dummy02の他の作業日（担当タスク外の日も記録）
+                { id: wbsTaskId * 1000 + 80, userId: "dummy02", taskNo: "D2-0002", date: addDays(6), hours_worked: 6.5 },
+                { id: wbsTaskId * 1000 + 81, userId: "dummy02", taskNo: "D2-0002", date: addDays(9), hours_worked: 5 },
+
+                // dummy01の追加作業（レビュー作業の追加）
+                { id: wbsTaskId * 1000 + 90, userId: "dummy01", taskNo: "D3-0007", date: addDays(23), hours_worked: 2.5 },
+
+                // dummy03の追加作業
+                { id: wbsTaskId * 1000 + 100, userId: "dummy03", taskNo: "D2-0003", date: addDays(11), hours_worked: 5 },
+                { id: wbsTaskId * 1000 + 101, userId: "dummy03", taskNo: "D2-0003", date: addDays(12), hours_worked: 6.5 },
+            ],
             milestone: [
                 {
                     id: wbsMilestoneId,

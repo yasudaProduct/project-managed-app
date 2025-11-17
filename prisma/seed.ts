@@ -248,18 +248,29 @@ async function main() {
 
         for (const workRecord of mock.workRecords) {
             const d = new Date(workRecord.date);
+            // taskNoから実際のwbsId経由でtaskIdを取得
+            const wbsId = mock.wbs[0]?.id ?? 0;
+            const task = await prisma.wbsTask.findUnique({
+                where: { taskNo_wbsId: { taskNo: workRecord.taskNo, wbsId: wbsId } },
+            });
+
+            if (!task) {
+                console.warn(`⚠️ タスクが見つかりません: ${workRecord.taskNo} (wbsId: ${wbsId})`);
+                continue;
+            }
+
             await prisma.workRecord.upsert({
                 where: { id: workRecord.id },
                 update: {
                     userId: workRecord.userId,
-                    taskId: workRecord.taskId,
+                    taskId: task.id,
                     date: d,
                     hours_worked: workRecord.hours_worked,
                 },
                 create: {
                     id: workRecord.id,
                     userId: workRecord.userId,
-                    taskId: workRecord.taskId,
+                    taskId: task.id,
                     date: d,
                     hours_worked: workRecord.hours_worked,
                 },

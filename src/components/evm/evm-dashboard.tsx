@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EvmChart } from "./evm-chart";
 import { EvmMetricsCard } from "./evm-metrics-card";
 import { TaskEvmTable } from "./task-evm-table";
+import { EvmTimeSeriesTable } from "./evm-timeseries-table";
 import {
   getCurrentEvmMetrics,
   getEvmTimeSeries,
@@ -313,11 +314,19 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
       <Tabs defaultValue="chart" className="space-y-4">
         <TabsList>
           <TabsTrigger value="chart">トレンドチャート</TabsTrigger>
+          <TabsTrigger value="timeseries">時系列データ</TabsTrigger>
           <TabsTrigger value="tasks">タスク別詳細</TabsTrigger>
         </TabsList>
 
         <TabsContent value="chart">
           <EvmChart data={timeSeriesData} calculationMode={calculationMode} />
+        </TabsContent>
+
+        <TabsContent value="timeseries">
+          <EvmTimeSeriesTable
+            data={timeSeriesData}
+            calculationMode={calculationMode}
+          />
         </TabsContent>
 
         <TabsContent value="tasks">
