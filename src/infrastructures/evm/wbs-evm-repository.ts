@@ -55,7 +55,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
 
       return new TaskEvmData(
         Number(task.id),
-        task.name, // taskNo
+        task.no, // taskNo
         task.name, // taskName
         task.yoteiStart ?? task.kijunStart ?? new Date(),
         task.yoteiEnd ?? task.kijunEnd ?? new Date(),
@@ -120,7 +120,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
   }
 
   async getTasksEvmData(wbsId: number): Promise<TaskEvmData[]> {
-    const wbsData = await this.getWbsEvmData(wbsId, new Date());
+    const wbsData = await this.getWbsEvmData(wbsId);
     return wbsData.tasks;
   }
 
@@ -134,7 +134,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
     const metrics: EvmMetrics[] = [];
 
     for (const date of dates) {
-      const wbsData = await this.getWbsEvmData(wbsId, date);
+      const wbsData = await this.getWbsEvmData(wbsId);
 
       // 各日付でのPV, EV, AC計算（基本計算のみ、詳細はEvmServiceで行う）
       const pv = wbsData.tasks.reduce(
@@ -212,7 +212,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       const cost =
         calculationMode === 'cost'
           ? Number(record.hours_worked) *
-          (record.task.assignee?.costPerHour || 5000)
+          (record.task?.assignee?.costPerHour ?? 5000)
           : Number(record.hours_worked);
 
       costMap.set(dateKey, currentCost + cost);

@@ -5,6 +5,7 @@ export interface IWbsQueryRepository {
 
 export interface WbsTaskData {
   id: string;
+  no: string;
   name: string;
   kijunKosu: number | null;
   yoteiKosu: number | null;

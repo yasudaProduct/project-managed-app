@@ -10,6 +10,7 @@ export class WbsQueryRepository implements IWbsQueryRepository {
     const tasks = await prisma.$queryRaw<WbsTaskData[]>`
       SELECT
         t.id,
+        t."taskNo" AS "no",
         t.name,
         COALESCE(tk_kijun."kijunKosu", 0) AS "kijunKosu",
         COALESCE(tk_yotei."yoteiKosu", 0) AS "yoteiKosu",
