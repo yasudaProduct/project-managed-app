@@ -17,7 +17,7 @@ export class TaskEvmData {
     public readonly progressRate: number,
     public readonly costPerHour: number = 5000,
     public readonly selfReportedProgress: number | null = null
-  ) {}
+  ) { }
 
   // 工数ベースの出来高計算
   get earnedValue(): number {
@@ -47,9 +47,11 @@ export class TaskEvmData {
 
   // 計算モードと進捗率測定方法に応じた出来高取得
   getEarnedValue(
+    evaluationDate: Date,
     calculationMode: EvmCalculationMode,
     progressMethod: ProgressMeasurementMethod
   ): number {
+    if (!this.actualStartDate || evaluationDate < this.actualStartDate) return 0;
     const rate = this.getProgressRate(progressMethod);
 
     if (calculationMode === 'cost') {

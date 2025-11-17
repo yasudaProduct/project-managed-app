@@ -31,7 +31,7 @@ export class EvmService {
 
     // EV計算: 完了した作業の出来高
     const ev = wbsData.tasks.reduce((sum, task) => {
-      return sum + task.getEarnedValue(calculationMode, method);
+      return sum + task.getEarnedValue(evaluationDate, calculationMode, method);
     }, 0);
 
     // AC計算: 実際の投入コスト
