@@ -64,24 +64,21 @@ export function ProjectForm({ project }: ProjectFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: project
       ? {
-          ...project,
-          startDate: formatDate(project.startDate, "YYYY/MM/DD"),
-          endDate: formatDate(project.endDate, "YYYY/MM/DD"),
-        }
+        ...project,
+        startDate: formatDate(project.startDate, "YYYY/MM/DD"),
+        endDate: formatDate(project.endDate, "YYYY/MM/DD"),
+      }
       : {
-          name: "",
-          description: undefined,
-          startDate: "",
-          endDate: "",
-          status: ProjectStatus.INACTIVE,
-        },
+        name: "",
+        description: undefined,
+        startDate: "",
+        endDate: "",
+        status: ProjectStatus.INACTIVE,
+      },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-    console.log("values", values);
-    console.log("new Date(values.startDate)", new Date(values.startDate));
-    console.log("new Date(values.endDate)", new Date(values.endDate));
     try {
       if (project) {
         const { project: updatedProject, error } = await updateProject(
@@ -247,8 +244,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
           {isSubmitting
             ? "保存中..."
             : project
-            ? "プロジェクトを更新"
-            : "プロジェクトを作成"}
+              ? "プロジェクトを更新"
+              : "プロジェクトを作成"}
         </Button>
         {project && (
           <Button
