@@ -1,3 +1,7 @@
+// NOTE: passwordはクライアントへ流出のリスクがあるためUserモデルに保持しない方がベスト
+//       認証サービスでのみpasswordを扱い、リスクを最小化するのが良い
+//       当アプリケーションではセキュリティを考慮しないため、Userモデルに保持する
+
 export class User {
     public readonly id?: string;
     public name: string;
@@ -30,34 +34,47 @@ export class User {
         this.updatedAt = args.updatedAt;
 
         // バリデーション
-        if (this.costPerHour < 0) {
-            throw new Error('costPerHour must be non-negative');
-        }
+        this.validate();
     }
 
-    public isEqual(user: User) {
-        if (this.id === undefined || user.id === undefined) {
-            return false;
-        }
-        return this.id === user.id;
-    }
-
-    public static create(args: { name: string; displayName: string; email: string; costPerHour: number }): User {
+    public static create(args: {
+        name: string;
+        displayName: string;
+        email: string;
+        costPerHour: number
+    }): User {
         return new User(args);
     }
 
-    public static createFromDb(args: { id: string; name: string; displayName: string; email: string; costPerHour: number; password?: string; createdAt?: Date; updatedAt?: Date }): User {
+    public static createFromDb(args: {
+        id: string;
+        name: string;
+        displayName: string;
+        email: string;
+        costPerHour: number;
+        password?: string;
+        createdAt?: Date;
+        updatedAt?: Date
+    }): User {
         return new User(args);
-    }
-
-    isEmailValid(): boolean {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(this.email);
     }
 
     hasPassword(): boolean {
-        // パスワードが設定されている場合は true
         return this.password ? true : false;
+    }
+
+    private validate() {
+        if (!this.isEmailValid()) {
+            throw new Error('メールアドレスが不正です。');
+        }
+        if (this.costPerHour < 0) {
+            throw new Error('原価は0以上の数値である必要があります。');
+        }
+    }
+
+    private isEmailValid(): boolean {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(this.email);
     }
 
 }

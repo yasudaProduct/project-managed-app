@@ -10,7 +10,7 @@ describe('Phase', () => {
         code: phaseCode,
         seq: 1
       });
-      
+
       expect(phase).toBeInstanceOf(Phase);
       expect(phase.id).toBeUndefined();
       expect(phase.name).toBe('設計フェーズ');
@@ -18,7 +18,7 @@ describe('Phase', () => {
       expect(phase.seq).toBe(1);
     });
   });
-  
+
   describe('createFromDb', () => {
     it('ID、名前、コード、順序からフェーズを作成できること', () => {
       const phaseCode = new PhaseCode('PH');
@@ -28,7 +28,7 @@ describe('Phase', () => {
         code: phaseCode,
         seq: 1
       });
-      
+
       expect(phase).toBeInstanceOf(Phase);
       expect(phase.id).toBe(1);
       expect(phase.name).toBe('設計フェーズ');
@@ -36,42 +36,17 @@ describe('Phase', () => {
       expect(phase.seq).toBe(1);
     });
   });
-  
-  describe('isEqual', () => {
-    it('同じIDのフェーズは等しいと判定されること', () => {
-      const phase1 = Phase.createFromDb({
-        id: 1,
-        name: '設計フェーズ',
-        code: new PhaseCode('PH'),
-        seq: 1
-      });
-      
-      const phase2 = Phase.createFromDb({
-        id: 1,
-        name: '異なる名前',
-        code: new PhaseCode('XX'),
-        seq: 2
-      });
-      
-      expect(phase1.isEqual(phase2)).toBe(true);
-    });
-    
-    it('異なるIDのフェーズは等しくないと判定されること', () => {
-      const phase1 = Phase.createFromDb({
-        id: 1,
-        name: '設計フェーズ',
-        code: new PhaseCode('PH'),
-        seq: 1
-      });
-      
-      const phase2 = Phase.createFromDb({
-        id: 2,
-        name: '設計フェーズ',
-        code: new PhaseCode('PH'),
-        seq: 1
-      });
-      
-      expect(phase1.isEqual(phase2)).toBe(false);
+
+  describe('validate', () => {
+    it('期間が不正な場合はエラーが発生する', () => {
+      expect(() => {
+        Phase.create({
+          name: '設計フェーズ',
+          code: new PhaseCode('PH'),
+          seq: 1,
+          period: { start: new Date('2025-01-01'), end: new Date('2024-01-01') }
+        });
+      }).toThrow('無効な期間: 開始日は終了日より前である必要があります。');
     });
   });
 });

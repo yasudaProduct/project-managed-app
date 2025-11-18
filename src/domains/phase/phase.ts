@@ -5,7 +5,7 @@ export class Phase {
     public name: string;
     public code: PhaseCode;
     public seq: number;
-    public period?: { start: Date; end: Date };
+    public period?: { start: Date; end: Date }; // TODO: フェーズの期間は使用されていなので削除検討
 
     private constructor(args: { id?: number; name: string; code: PhaseCode; seq: number, period?: { start: Date; end: Date } }) {
         this.id = args.id;
@@ -23,10 +23,6 @@ export class Phase {
 
     public static createFromDb(args: { id: number; name: string; code: PhaseCode; seq: number, period?: { start: Date; end: Date } }): Phase {
         return new Phase(args);
-    }
-
-    public isEqual(phase: Phase) {
-        return this.id === phase.id;
     }
 
     private validate() {
