@@ -26,7 +26,7 @@ export class EvmService {
 
     // PV計算: 評価日までの計画値
     const pv = wbsData.tasks.reduce((sum, task) => {
-      return sum + task.getPlannedValueAtDate(evaluationDate, calculationMode);
+      return sum + task.getPlannedValueAtDate(evaluationDate, calculationMode, method);
     }, 0);
 
     // EV計算: 完了した作業の出来高
@@ -86,10 +86,6 @@ export class EvmService {
     calculationMode: EvmCalculationMode = 'hours',
     progressMethod?: ProgressMeasurementMethod
   ): Promise<EvmMetrics[]> {
-    console.log('getEvmTimeSeries start --------------------------------');
-    console.log('startDate:', startDate);
-    console.log('endDate:', endDate);
-
     const dates = this.generateDateRange(startDate, endDate, interval);
     const metrics: EvmMetrics[] = [];
 
