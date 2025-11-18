@@ -69,7 +69,7 @@ const prismaQueryWithTimeMod = Prisma.defineExtension({
             async $allOperations({ operation, args, query }) {
 
                 // create/update操作時に日付型のフィールドを処理
-                if ((operation === 'create' || operation === 'update')) {
+                if ((operation === 'create' || operation === 'update' || operation === 'upsert' || operation === 'createMany' || operation === 'updateMany')) {
                     // argsが存在し、dataプロパティを持っている場合
                     if (args && typeof args === 'object' && 'data' in args) {
                         const data = args.data as Record<string, unknown>;
@@ -77,8 +77,15 @@ const prismaQueryWithTimeMod = Prisma.defineExtension({
                         // 日付型のフィールドが存在する場合、prismaTimeModで処理
                         const dateFields = Object.keys(data).filter((key) => {
                             const value = data[key];
+                            // TODO: createManyの時にうまく動作していない？？
+                            if (operation === 'createMany') {
+                                console.log('---------------------------------')
+                                console.log(`[Prisma] Checking field: ${key} with value: ${value}  ${Object.prototype.toString.call(value)}`);
+                                console.log(`[Prisma] isDateObject(value): ${isDateObject(value)} && !isAtField(key): ${!isAtField(key)}`);
+                            }
                             return isDateObject(value) && !isAtField(key);
                         });
+                        console.log(`[Prisma] dateFields: ${dateFields}`);
                         dateFields.forEach((field) => {
                             const value = (data as Record<string, unknown>)[field];
                             const normalized = new Date(format(value as Date, 'yyyy-MM-dd'));

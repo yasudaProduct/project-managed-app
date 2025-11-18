@@ -1,3 +1,4 @@
+import prisma from "@/lib/prisma/prisma";
 import { injectable, inject } from 'inversify'
 import { PrismaClient } from '@prisma/client'
 import { WorkRecord } from '@/domains/work-records/work-recoed'
@@ -7,7 +8,7 @@ import { SYMBOL } from '@/types/symbol'
 @injectable()
 export class WorkRecordPrismaRepository implements IWorkRecordRepository {
   constructor(
-    @inject(SYMBOL.PrismaClient) private prisma: PrismaClient
+    // @inject(SYMBOL.PrismaClient) private prisma: PrismaClient
   ) { }
 
   async bulkCreate(workRecords: WorkRecord[]): Promise<void> {
@@ -19,10 +20,15 @@ export class WorkRecordPrismaRepository implements IWorkRecordRepository {
         hours_worked: wr.manHours!
       }))
 
-      await this.prisma.workRecord.createMany({
-        data,
-        skipDuplicates: true
-      })
+      // await prisma.workRecord.createMany({
+      //   data,
+      //   skipDuplicates: true
+      // })
+      for (const record of data) {
+        await prisma.workRecord.create({
+          data: record
+        })
+      }
     } catch (error) {
       console.error('Failed to bulk create work records:', error)
       throw new Error('作業実績の一括作成に失敗しました')
@@ -46,7 +52,7 @@ export class WorkRecordPrismaRepository implements IWorkRecordRepository {
         }
 
         // 既存レコードの確認
-        const existing = await this.prisma.workRecord.findFirst({
+        const existing = await prisma.workRecord.findFirst({
           where: {
             userId,
             date: wr.startDate!,
@@ -55,7 +61,7 @@ export class WorkRecordPrismaRepository implements IWorkRecordRepository {
         })
 
         if (existing) {
-          await this.prisma.workRecord.update({
+          await prisma.workRecord.update({
             where: { id: existing.id },
             data: {
               hours_worked: wr.manHours!,
@@ -64,7 +70,7 @@ export class WorkRecordPrismaRepository implements IWorkRecordRepository {
           })
           updated++
         } else {
-          await this.prisma.workRecord.create({
+          await prisma.workRecord.create({
             data
           })
           created++
@@ -80,7 +86,7 @@ export class WorkRecordPrismaRepository implements IWorkRecordRepository {
 
   async deleteByUserAndDateRange(userIds: string[], startDate: Date, endDate: Date): Promise<number> {
     try {
-      const result = await this.prisma.workRecord.deleteMany({
+      const result = await prisma.workRecord.deleteMany({
         where: {
           userId: { in: userIds },
           date: {

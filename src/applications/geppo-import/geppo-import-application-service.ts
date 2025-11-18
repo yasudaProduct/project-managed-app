@@ -243,11 +243,6 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
     const taskMap = await this.taskMappingService.createTaskMap(uniqueWbsNos)
 
     for (const geppo of geppoRecords) {
-      console.log("--convertGeppoToWorkRecords--")
-      console.log(geppo)
-      console.log(geppo.MEMBER_ID)
-      console.log(userMap.get(geppo.MEMBER_ID))
-      console.log("--------------------------------")
       const userId = userMap.get(geppo.MEMBER_ID)
       if (!userId) {
         // ユーザーマッピングエラーは既にバリデーションで検出されているのでスキップ
@@ -272,7 +267,6 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
               date: workDate,
               hoursWorked
             })
-
             workRecords.push(workRecord)
           } catch (error) {
             errors.push({
@@ -291,6 +285,12 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
     return { workRecords, errors }
   }
 
+  /**
+   * YYYYMMと日付からDateオブジェクトを作成
+   * @param yyyymm 
+   * @param day 
+   * @returns 
+   */
   private createDateFromYearMonthDay(yyyymm: string, day: number): Date {
     const year = parseInt(yyyymm.substring(0, 4))
     const month = parseInt(yyyymm.substring(4, 6)) - 1 // Dateは0ベース
