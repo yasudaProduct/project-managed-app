@@ -9,14 +9,6 @@ export interface IWbsEvmRepository {
   // タスクごとのEVMデータを取得
   getTasksEvmData(wbsId: number): Promise<TaskEvmData[]>;
 
-  // 期間指定でのEVM履歴データを取得（第1フェーズは推測計算）
-  getEvmHistory(
-    wbsId: number,
-    startDate: Date,
-    endDate: Date,
-    interval: 'daily' | 'weekly' | 'monthly'
-  ): Promise<EvmMetrics[]>;
-
   // 実績コストの集計（算出方式に応じて工数または金額）
   getActualCostByDate(
     wbsId: number,

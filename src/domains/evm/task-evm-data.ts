@@ -8,10 +8,13 @@ export class TaskEvmData {
     public readonly taskId: number,
     public readonly taskNo: string,
     public readonly taskName: string,
+    public readonly baseStartDate: Date,
+    public readonly baseEndDate: Date,
     public readonly plannedStartDate: Date,
     public readonly plannedEndDate: Date,
     public readonly actualStartDate: Date | null,
     public readonly actualEndDate: Date | null,
+    public readonly baseManHours: number,
     public readonly plannedManHours: number,
     public readonly actualManHours: number,
     public readonly status: TaskStatus,
@@ -79,18 +82,33 @@ export class TaskEvmData {
    *  FIFTY_FIFTY: 予定工数または予定コスト * 50%
    */
   getPlannedValueAtDate(
+    type: 'YOTEI' | 'BASE',
     evaluationDate: Date,
     mode: EvmCalculationMode = 'hours',
     progressMethod: 'LINEAR' | ProgressMeasurementMethod = 'LINEAR' //TODO: PVの算出optionとProgressMeasurementMethodを分ける?
   ): number {
-    if (evaluationDate < this.plannedStartDate) return 0;
+    let startDate: Date;
+    let endDate: Date;
+    let hours: number;
+
+    if (type === 'BASE') {
+      startDate = this.baseStartDate;
+      endDate = this.baseEndDate;
+      hours = this.baseManHours;
+    } else {
+      startDate = this.plannedStartDate;
+      endDate = this.plannedEndDate;
+      hours = this.plannedManHours
+    }
+
+    if (evaluationDate < startDate) return 0;
 
     const baseValue =
       mode === 'cost'
-        ? this.plannedManHours * this.costPerHour
-        : this.plannedManHours;
+        ? hours * this.costPerHour
+        : hours;
 
-    if (evaluationDate >= this.plannedEndDate) return baseValue;
+    if (evaluationDate >= endDate) return baseValue;
 
     // SELF_REPORTEDの場合はLINEARとして扱う
     if (progressMethod === 'SELF_REPORTED') progressMethod = 'LINEAR';
@@ -99,13 +117,13 @@ export class TaskEvmData {
       case 'LINEAR':
         // 総日数
         const totalDays = this.getDaysBetween(
-          this.plannedStartDate,
-          this.plannedEndDate
+          startDate,
+          endDate
         );
 
         // 経過日数
         const elapsedDays = this.getDaysBetween(
-          this.plannedStartDate,
+          startDate,
           evaluationDate
         );
 

@@ -3,6 +3,7 @@ import { ProgressMeasurementMethod } from '@prisma/client';
 export type EvmCalculationMode = 'hours' | 'cost';
 
 export class EvmMetrics {
+  public readonly pv_base: number; // 基準計画価値
   public readonly pv: number; // Planned Value
   public readonly ev: number; // Earned Value
   public readonly ac: number; // Actual Cost
@@ -12,6 +13,7 @@ export class EvmMetrics {
   public readonly progressMethod: ProgressMeasurementMethod;
 
   constructor(args: {
+    pv_base: number;
     pv: number;
     ev: number;
     ac: number;
@@ -20,6 +22,7 @@ export class EvmMetrics {
     calculationMode?: EvmCalculationMode;
     progressMethod?: ProgressMeasurementMethod;
   }) {
+    this.pv_base = args.pv_base;
     this.pv = args.pv;
     this.ev = args.ev;
     this.ac = args.ac;
@@ -30,6 +33,7 @@ export class EvmMetrics {
   }
 
   public static create(args: {
+    pv_base: number;
     pv: number;
     ev: number;
     ac: number;

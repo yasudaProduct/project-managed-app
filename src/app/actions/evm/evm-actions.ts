@@ -44,6 +44,7 @@ export type EvmActionResult<T = unknown> = {
 
 export type EvmMetricsData = {
   date: string; // ISO 8601 string
+  pv_base: number; // 基準計画価値
   pv: number;
   ev: number;
   ac: number;
@@ -98,6 +99,7 @@ export type EvmDateRangeData = {
 function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
   return {
     date: metrics.date.toISOString(),
+    pv_base: metrics.pv_base,
     pv: metrics.pv,
     ev: metrics.ev,
     ac: metrics.ac,

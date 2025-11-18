@@ -89,6 +89,7 @@ export function EvmTimeSeriesTable({
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[120px]">評価日</TableHead>
+                <TableHead className="text-right">PV_BASE</TableHead>
                 <TableHead className="text-right">PV</TableHead>
                 <TableHead className="text-right">EV</TableHead>
                 <TableHead className="text-right">AC</TableHead>
@@ -120,6 +121,9 @@ export function EvmTimeSeriesTable({
                         month: "2-digit",
                         day: "2-digit",
                       })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatValue(metrics.pv_base)}
                     </TableCell>
                     <TableCell className="text-right">
                       {formatValue(metrics.pv)}

@@ -38,6 +38,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
 
     // TaskEvmDataに変換
     const tasks = wbsTasksData.map((task) => {
+      const baseManHours = task.kijunKosu ?? 0;
       const plannedManHours = task.yoteiKosu ?? task.kijunKosu ?? 0;
       const actualManHours = task.jissekiKosu ?? 0;
 
@@ -57,10 +58,13 @@ export class WbsEvmRepository implements IWbsEvmRepository {
         Number(task.id),
         task.no, // taskNo
         task.name, // taskName
+        task.kijunStart!,
+        task.kijunEnd!,
         task.yoteiStart ?? task.kijunStart ?? new Date(),
         task.yoteiEnd ?? task.kijunEnd ?? new Date(),
         task.jissekiStart ?? null,
         task.jissekiEnd ?? null,
+        baseManHours,
         plannedManHours,
         actualManHours,
         task.status as TaskStatus,
@@ -122,58 +126,6 @@ export class WbsEvmRepository implements IWbsEvmRepository {
   async getTasksEvmData(wbsId: number): Promise<TaskEvmData[]> {
     const wbsData = await this.getWbsEvmData(wbsId);
     return wbsData.tasks;
-  }
-
-  async getEvmHistory(
-    wbsId: number,
-    startDate: Date,
-    endDate: Date,
-    interval: 'daily' | 'weekly' | 'monthly'
-  ): Promise<EvmMetrics[]> {
-    const dates = this.generateDateRange(startDate, endDate, interval);
-    const metrics: EvmMetrics[] = [];
-
-    for (const date of dates) {
-      const wbsData = await this.getWbsEvmData(wbsId);
-
-      // 各日付でのPV, EV, AC計算（基本計算のみ、詳細はEvmServiceで行う）
-      const pv = wbsData.tasks.reduce(
-        (sum, task) => sum + task.getPlannedValueAtDate(date, 'hours'),
-        0
-      );
-
-      const ev = wbsData.tasks.reduce(
-        (sum, task) => sum + task.earnedValue,
-        0
-      );
-
-      const actualCostMap = await this.getActualCostByDate(
-        wbsId,
-        wbsData.tasks[0]?.plannedStartDate || startDate,
-        date,
-        'hours'
-      );
-      const ac = Array.from(actualCostMap.values()).reduce(
-        (sum, cost) => sum + cost,
-        0
-      );
-
-      const bac =
-        wbsData.totalPlannedManHours +
-        wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0);
-
-      metrics.push(
-        EvmMetrics.create({
-          date,
-          pv,
-          ev,
-          ac,
-          bac,
-        })
-      );
-    }
-
-    return metrics;
   }
 
   async getActualCostByDate(

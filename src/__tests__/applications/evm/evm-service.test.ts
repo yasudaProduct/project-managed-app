@@ -13,7 +13,6 @@ describe('EvmService', () => {
     mockRepository = {
       getWbsEvmData: jest.fn(),
       getTasksEvmData: jest.fn(),
-      getEvmHistory: jest.fn(),
       getActualCostByDate: jest.fn(),
       getBuffers: jest.fn(),
       getProjectSettings: jest.fn(),

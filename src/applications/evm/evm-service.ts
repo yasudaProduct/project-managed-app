@@ -24,9 +24,14 @@ export class EvmService {
     const method =
       progressMethod ?? wbsData.settings?.progressMeasurementMethod ?? 'SELF_REPORTED';
 
+    // PV_BASE計算: 基準計画価値（WBS全体の計画工数合計）
+    const pv_base = wbsData.tasks.reduce((sum, task) => {
+      return sum + task.getPlannedValueAtDate('BASE', evaluationDate, calculationMode, method);
+    }, 0);
+
     // PV計算: 評価日までの計画値
     const pv = wbsData.tasks.reduce((sum, task) => {
-      return sum + task.getPlannedValueAtDate(evaluationDate, calculationMode, method);
+      return sum + task.getPlannedValueAtDate('YOTEI', evaluationDate, calculationMode, method);
     }, 0);
 
     // EV計算: 完了した作業の出来高
@@ -59,6 +64,7 @@ export class EvmService {
 
     return EvmMetrics.create({
       date: evaluationDate,
+      pv_base: pv_base,
       pv,
       ev,
       ac,
