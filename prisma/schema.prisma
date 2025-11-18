@@ -380,7 +380,8 @@ model ProjectSettings {
   projectId                 String                     @id
   roundToQuarter            Boolean                    @default(false)
   progressMeasurementMethod ProgressMeasurementMethod  @default(SELF_REPORTED)
-  forecastCalculationMethod ForecastCalculationMethod @default(REALISTIC)
+  forecastCalculationMethod ForecastCalculationMethod  @default(REALISTIC)
+  evmExcludeSettings        Json                       @default("{}") // EVM除外設定 (enabled, task_names 等)
   createdAt                 DateTime                   @default(now()) @db.Timestamptz
   updatedAt                 DateTime                   @updatedAt @db.Timestamptz
 

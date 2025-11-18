@@ -190,6 +190,7 @@ erDiagram
   Boolean roundToQuarter
   ProgressMeasurementMethod progressMeasurementMethod
   ForecastCalculationMethod forecastCalculationMethod
+  Json evmExcludeSettings
   DateTime createdAt
   DateTime updatedAt
 }
@@ -509,6 +510,7 @@ erDiagram
   - `roundToQuarter`: 
   - `progressMeasurementMethod`: 
   - `forecastCalculationMethod`: 
+  - `evmExcludeSettings`: 
   - `createdAt`: 
   - `updatedAt`: 
 

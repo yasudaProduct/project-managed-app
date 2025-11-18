@@ -57,3 +57,16 @@ export const PROGRESS_MEASUREMENT_METHOD_INFO: Record<
     useCase: '詳細な進捗トラッキング、アジャイル開発',
   },
 };
+
+/**
+ * EVM除外設定インターフェース
+ */
+export interface EvmExcludeSettings {
+  enabled: boolean;
+  task_names: string[];
+  task_name_patterns: string[];
+  task_no: string[];
+  task_phase: string[];
+  task_assignee: string[];
+  note?: string;
+}
