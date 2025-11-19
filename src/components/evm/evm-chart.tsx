@@ -11,6 +11,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 
 type EvmChartProps = {
@@ -36,6 +37,15 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
     AC: metrics.ac,
   }));
 
+  // 現在日付のラベル（X軸のフォーマットと合わせる）
+  const todayLabel = new Date().toLocaleDateString("ja-JP", {
+    month: "short",
+    day: "numeric",
+  });
+
+  // PVの最大値
+  const maxPv = Math.max(...data.map((metrics) => metrics.pv));
+
   /**
    * 値を計算モードに応じてフォーマット
    * @param value 値
@@ -53,7 +63,7 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
         <CardTitle>EVMトレンドチャート</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={400}>
+        <ResponsiveContainer width="100%" height={600}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
@@ -63,12 +73,25 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
               labelStyle={{ color: "#000" }}
             />
             <Legend />
+            <ReferenceLine
+              x={todayLabel}
+              stroke="#ef4444"
+              strokeDasharray="4 4"
+            />
+            <ReferenceLine
+              y={maxPv}
+              stroke="red"
+              label={
+                { value: "BAC", position: "top", fill: "red", fontSize: 12 }
+              }
+            />
             <Line
               type="monotone"
               dataKey="PV_BASE"
-              stroke="#050404ff"
+              stroke="#585555ff"
               name="当初計画価値 (PV)"
-              strokeWidth={2}
+              strokeDasharray="5 5"
+              strokeWidth={1}
             />
             <Line
               type="monotone"
