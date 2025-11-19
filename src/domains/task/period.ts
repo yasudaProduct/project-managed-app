@@ -18,7 +18,12 @@ export class Period {
         this.validate();
     }
 
-    public static create(args: { startDate: Date; endDate: Date; type: PeriodType; manHours: ManHour[] }): Period {
+    public static create(args: {
+        startDate: Date;
+        endDate: Date;
+        type: PeriodType;
+        manHours: ManHour[]
+    }): Period {
         return new Period(args);
     }
 
@@ -36,10 +41,6 @@ export class Period {
             type: args.type,
             manHours: args.manHours,
         });
-    }
-
-    public isEqual(period: Period) {
-        return this.id === period.id;
     }
 
     private validate() {

@@ -9,7 +9,6 @@ import { PeriodType } from "./value-object/period-type";
 import { TaskNo } from "./value-object/task-id";
 import { WorkRecord } from "../work-records/work-recoed";
 
-
 export class Task {
     public id?: number;
     public taskNo: TaskNo;
@@ -56,10 +55,6 @@ export class Task {
         this.progressRate = args.progressRate;
         this.createdAt = args.createdAt;
         this.updatedAt = args.updatedAt;
-    }
-
-    public isEqual(task: Task) {
-        return this.taskNo === task.taskNo;
     }
 
     public static create(args: {
@@ -125,7 +120,6 @@ export class Task {
         const period = this.periods?.findLast(
             p => p.type.type === 'YOTEI'
         );
-        console.log(period);
 
         if (period) {
             // 期間モデルが存在する場合
@@ -155,32 +149,8 @@ export class Task {
         return this.status.getStatus();
     }
 
-    public updateKijun(kijunStart: Date, kijunEnd: Date, kijunKosu: number) {
-        const period = this.periods?.findLast(
-            p => p.type.type === 'KIJUN'
-        );
-
-        if (period) {
-            period.startDate = kijunStart;
-            period.endDate = kijunEnd;
-
-            const manHour = period.manHours.findLast(
-                m => m.type.type === 'NORMAL'
-            );
-            if (manHour) {
-                manHour.kosu = kijunKosu;
-            } else {
-                period.manHours.push(ManHour.create({ type: new ManHourType({ type: 'NORMAL' }), kosu: kijunKosu }));
-            }
-
-        } else {
-            const manHour = ManHour.create({ type: new ManHourType({ type: 'NORMAL' }), kosu: kijunKosu });
-            this.periods?.push(Period.create({ type: new PeriodType({ type: 'KIJUN' }), startDate: kijunStart, endDate: kijunEnd, manHours: [manHour] }));
-        }
-    }
-
-
     public getKijunStart(): Date | undefined {
+        // TODO: 同一typeが複数ある想定ある？バリデーションを設けておくべきかも
         return this.periods?.findLast(
             p => p.type.type === 'KIJUN'
         )?.startDate;
@@ -221,174 +191,17 @@ export class Task {
     }
 
     public getJissekiStart(): Date | undefined {
-        return this.workRecords?.findLast(
-            w => w.startDate
-        )?.startDate;
+        // 最小のstartDateを取得
+        return this.workRecords?.sort((a, b) => b.startDate!.getTime() - a.startDate!.getTime())
+            .findLast(w => w.startDate)?.startDate;
     }
 
     public getJissekiEnd(): Date | undefined {
-        return this.workRecords?.findLast(
-            w => w.endDate
-        )?.endDate;
+        return this.workRecords?.sort((a, b) => (a.endDate?.getTime() ?? 0) - (b.endDate?.getTime() ?? 0))
+            .findLast(w => w.endDate)?.endDate;
     }
 
     public getJissekiKosus(): number | undefined {
         return this.workRecords?.reduce((acc, workRecord) => acc + (workRecord.manHours ?? 0), 0);
     }
-
-    /**
-     * タスクの進捗率を取得（完了ステータス優先）
-     */
-    public getProgressRate(): number {
-        // 完了ステータスの場合は必ず100%を返す
-        if (this.status.getStatus() === 'COMPLETED') {
-            return 100;
-        }
-
-        // 完了以外の場合は、データベースの値またはステータスベースの値を使用
-        if (this.progressRate !== undefined && this.progressRate !== null) {
-            return this.progressRate;
-        }
-
-        // フォールバック: ステータスベースの進捗率
-        switch (this.status.getStatus()) {
-            case 'NOT_STARTED':
-                return 0;
-            case 'IN_PROGRESS':
-                return 50;
-            case 'ON_HOLD':
-                return 0;
-            default:
-                return 0;
-        }
-    }
-
-    /**
-     * タスクリストから進捗集計を計算
-     */
-    public static calculateAggregation(tasks: Task[]): TaskAggregation {
-        const totalTaskCount = tasks.length;
-        const completedCount = tasks.filter(task => task.status.getStatus() === 'COMPLETED').length;
-        const inProgressCount = tasks.filter(task => task.status.getStatus() === 'IN_PROGRESS').length;
-        const notStartedCount = tasks.filter(task => task.status.getStatus() === 'NOT_STARTED').length;
-
-        const completionRate = totalTaskCount === 0 ? 0 : (completedCount / totalTaskCount) * 100;
-
-        const plannedManHours = tasks.reduce((sum, task) => sum + (task.getYoteiKosus() || 0), 0);
-        const actualManHours = tasks.reduce((sum, task) => sum + (task.getJissekiKosus() || 0), 0);
-        const varianceManHours = actualManHours - plannedManHours;
-
-        // フェーズ別集計
-        const phaseAggregations = Task.calculatePhaseAggregations(tasks);
-
-        // 担当者別集計
-        const assigneeAggregations = Task.calculateAssigneeAggregations(tasks);
-
-        return {
-            totalTaskCount,
-            completedCount,
-            inProgressCount,
-            notStartedCount,
-            completionRate,
-            plannedManHours,
-            actualManHours,
-            varianceManHours,
-            phaseAggregations,
-            assigneeAggregations,
-        };
-    }
-
-    private static calculatePhaseAggregations(tasks: Task[]): PhaseAggregation[] {
-        const phaseGroups = new Map<string, Task[]>();
-
-        tasks.forEach(task => {
-            const key = `${task.phaseId || 'undefined'}|${task.phase?.name || 'undefined'}`;
-            const group = phaseGroups.get(key) || [];
-            group.push(task);
-            phaseGroups.set(key, group);
-        });
-
-        return Array.from(phaseGroups.entries()).map(([key, phaseTasks]) => {
-            const [phaseId, phaseName] = key.split('|');
-            const taskCount = phaseTasks.length;
-            const completedCount = phaseTasks.filter(task => task.status.getStatus() === 'COMPLETED').length;
-            const plannedManHours = phaseTasks.reduce((sum, task) => sum + (task.getYoteiKosus() || 0), 0);
-            const actualManHours = phaseTasks.reduce((sum, task) => sum + (task.getJissekiKosus() || 0), 0);
-            const completionRate = taskCount === 0 ? 0 : (completedCount / taskCount) * 100;
-
-            return {
-                phaseId: phaseId === 'undefined' ? undefined : parseInt(phaseId),
-                phaseName: phaseName === 'undefined' ? undefined : phaseName,
-                taskCount,
-                completedCount,
-                plannedManHours,
-                actualManHours,
-                completionRate,
-            };
-        });
-    }
-
-    private static calculateAssigneeAggregations(tasks: Task[]): AssigneeAggregation[] {
-        const assigneeGroups = new Map<string, Task[]>();
-
-        tasks.forEach(task => {
-            const key = `${task.assigneeId || 'undefined'}|${task.assignee?.name || 'undefined'}`;
-            const group = assigneeGroups.get(key) || [];
-            group.push(task);
-            assigneeGroups.set(key, group);
-        });
-
-        return Array.from(assigneeGroups.entries()).map(([key, assigneeTasks]) => {
-            const [assigneeId, assigneeName] = key.split('|');
-            const taskCount = assigneeTasks.length;
-            const completedCount = assigneeTasks.filter(task => task.status.getStatus() === 'COMPLETED').length;
-            const plannedManHours = assigneeTasks.reduce((sum, task) => sum + (task.getYoteiKosus() || 0), 0);
-            const actualManHours = assigneeTasks.reduce((sum, task) => sum + (task.getJissekiKosus() || 0), 0);
-            const completionRate = taskCount === 0 ? 0 : (completedCount / taskCount) * 100;
-
-            return {
-                assigneeId: assigneeId === 'undefined' ? undefined : parseInt(assigneeId),
-                assigneeName: assigneeName === 'undefined' ? undefined : assigneeName,
-                taskCount,
-                completedCount,
-                plannedManHours,
-                actualManHours,
-                completionRate,
-            };
-        });
-    }
-}
-
-// 集計結果の型定義
-export interface TaskAggregation {
-    totalTaskCount: number;
-    completedCount: number;
-    inProgressCount: number;
-    notStartedCount: number;
-    completionRate: number;
-    plannedManHours: number;
-    actualManHours: number;
-    varianceManHours: number;
-    phaseAggregations: PhaseAggregation[];
-    assigneeAggregations: AssigneeAggregation[];
-}
-
-export interface PhaseAggregation {
-    phaseId?: number;
-    phaseName?: string;
-    taskCount: number;
-    completedCount: number;
-    plannedManHours: number;
-    actualManHours: number;
-    completionRate: number;
-}
-
-export interface AssigneeAggregation {
-    assigneeId?: number;
-    assigneeName?: string;
-    taskCount: number;
-    completedCount: number;
-    plannedManHours: number;
-    actualManHours: number;
-    completionRate: number;
 }

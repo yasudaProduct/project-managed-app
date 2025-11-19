@@ -7,8 +7,9 @@ describe('WorkRecord', () => {
   const manHours = 8;
 
   describe('create', () => {
-    it('タスクID、開始日、終了日、工数から作業記録を作成できること', () => {
+    it('作業記録を作成できること', () => {
       const workRecord = WorkRecord.create({
+        userId: 'user-id-1',
         taskId,
         startDate,
         endDate,
@@ -22,12 +23,17 @@ describe('WorkRecord', () => {
       expect(workRecord.endDate).toBe(endDate);
       expect(workRecord.manHours).toBe(manHours);
     });
+
+    it('工数が0未満の場合はエラーが発生する', () => {
+
+    })
   });
 
   describe('createFromDb', () => {
     it('ID、タスクID、開始日、終了日、工数から作業記録を作成できること', () => {
       const workRecord = WorkRecord.createFromDb({
         id: 1,
+        userId: 'user-id-1',
         taskId,
         startDate,
         endDate,
@@ -36,6 +42,7 @@ describe('WorkRecord', () => {
 
       expect(workRecord).toBeInstanceOf(WorkRecord);
       expect(workRecord.id).toBe(1);
+      expect(workRecord.userId).toBe('user-id-1');
       expect(workRecord.taskId).toBe(taskId);
       expect(workRecord.startDate).toBe(startDate);
       expect(workRecord.endDate).toBe(endDate);

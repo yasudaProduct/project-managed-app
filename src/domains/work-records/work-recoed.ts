@@ -6,13 +6,13 @@ export class WorkRecord {
     public readonly endDate?: Date;
     public readonly manHours?: number;
 
-    private constructor(args: { 
-        id?: number; 
-        userId?: string; 
-        taskId?: number; 
-        startDate?: Date; 
-        endDate?: Date; 
-        manHours?: number 
+    private constructor(args: {
+        id?: number;
+        userId?: string;
+        taskId?: number;
+        startDate?: Date;
+        endDate?: Date;
+        manHours?: number
     }) {
         this.id = args.id;
         this.userId = args.userId;
@@ -20,25 +20,27 @@ export class WorkRecord {
         this.startDate = args.startDate;
         this.endDate = args.endDate;
         this.manHours = args.manHours;
+
+        this.validate()
     }
 
-    public static create(args: { 
-        userId: string; 
-        taskId?: number; 
-        startDate: Date; 
-        endDate: Date; 
-        manHours: number 
+    public static create(args: {
+        userId: string;
+        taskId?: number;
+        startDate: Date;
+        endDate: Date;
+        manHours: number
     }): WorkRecord {
         return new WorkRecord(args);
     }
 
-    public static createFromDb(args: { 
-        id: number; 
-        userId: string; 
-        taskId?: number; 
-        startDate: Date; 
-        endDate: Date; 
-        manHours: number 
+    public static createFromDb(args: {
+        id: number;
+        userId: string;
+        taskId?: number;
+        startDate: Date;
+        endDate: Date;
+        manHours: number
     }): WorkRecord {
         return new WorkRecord(args);
     }
@@ -56,5 +58,14 @@ export class WorkRecord {
             endDate: args.date,
             manHours: args.hoursWorked
         });
+    }
+
+    private validate() {
+        if (this.manHours && this.manHours < 0) {
+            throw new Error('工数は0以上である必要があります');
+        }
+        if (this.startDate && this.endDate && this.startDate > this.endDate) {
+            throw new Error('開始日は終了日より前である必要があります');
+        }
     }
 }
