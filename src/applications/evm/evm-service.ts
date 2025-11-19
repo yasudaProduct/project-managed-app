@@ -95,15 +95,26 @@ export class EvmService {
     const dates = this.generateDateRange(startDate, endDate, interval);
     const metrics: EvmMetrics[] = [];
 
-    for (const date of dates) {
-      const metric = await this.calculateCurrentEvmMetrics(
+    // TODO: 日付の数だけDBアクセスが発生してしまうため、パフォーマンス改善が必要
+    // for (const date of dates) {
+    //   const metric = await this.calculateCurrentEvmMetrics(
+    //     wbsId,
+    //     date,
+    //     calculationMode,
+    //     progressMethod
+    //   );
+    //   metrics.push(metric);
+    // }
+    const metricPromises = dates.map((date) =>
+      this.calculateCurrentEvmMetrics(
         wbsId,
         date,
         calculationMode,
         progressMethod
-      );
-      metrics.push(metric);
-    }
+      )
+    );
+    const resolvedMetrics = await Promise.all(metricPromises);
+    metrics.push(...resolvedMetrics);
 
     return metrics;
   }

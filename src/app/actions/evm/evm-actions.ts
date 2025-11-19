@@ -164,10 +164,6 @@ export async function getCurrentEvmMetrics(
       validated.progressMethod as ProgressMeasurementMethod | undefined
     );
 
-    console.log('--------------------------------');
-    console.log('Current EVM metrics:', metrics);
-    console.log('--------------------------------');
-
     return {
       success: true,
       data: serializeEvmMetrics(metrics),
@@ -200,10 +196,6 @@ export async function getEvmTimeSeries(
       validated.calculationMode as EvmCalculationMode,
       validated.progressMethod as ProgressMeasurementMethod | undefined
     );
-
-    // console.log('--------------------------------');
-    // console.log('EVM time series data:', metricsList);
-    // console.log('--------------------------------');
 
     return {
       success: true,

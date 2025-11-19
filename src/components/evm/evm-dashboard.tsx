@@ -141,6 +141,7 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
       );
 
       // 時系列データを取得
+      // TODO: このアクションが遅いのでパフォーマンス改善を検討
       const timeSeriesResult = await getEvmTimeSeries({
         wbsId,
         startDate: startDate.toISOString(),
@@ -220,10 +221,10 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
                 onValueChange={(value) =>
                   setPeriodMode(
                     value as
-                      | "project"
-                      | "recent3months"
-                      | "recent1month"
-                      | "custom"
+                    | "project"
+                    | "recent3months"
+                    | "recent1month"
+                    | "custom"
                   )
                 }
               >

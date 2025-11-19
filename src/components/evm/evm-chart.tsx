@@ -30,6 +30,7 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
       month: "short",
       day: "numeric",
     }),
+    PV_BASE: metrics.pv_base,
     PV: metrics.pv,
     EV: metrics.ev,
     AC: metrics.ac,
@@ -62,6 +63,13 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
               labelStyle={{ color: "#000" }}
             />
             <Legend />
+            <Line
+              type="monotone"
+              dataKey="PV_BASE"
+              stroke="#050404ff"
+              name="当初計画価値 (PV)"
+              strokeWidth={2}
+            />
             <Line
               type="monotone"
               dataKey="PV"
