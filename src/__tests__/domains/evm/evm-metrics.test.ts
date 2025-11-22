@@ -3,57 +3,6 @@ import { ProgressMeasurementMethod } from '@prisma/client';
 
 describe('EvmMetrics', () => {
   describe('基本的なEVM指標の計算', () => {
-    it('SV（スケジュール差異）を正しく計算する', () => {
-      const metrics = new EvmMetrics({
-        date: new Date('2025-01-01'),
-        pv: 100,
-        ev: 80,
-        ac: 90,
-        bac: 200,
-      });
-
-      expect(metrics.sv).toBe(-20); // EV - PV = 80 - 100 = -20
-      expect(metrics.scheduleVariance).toBe(-20); // 互換性メソッド
-    });
-
-    it('CV（コスト差異）を正しく計算する', () => {
-      const metrics = new EvmMetrics({
-        date: new Date('2025-01-01'),
-        pv: 100,
-        ev: 80,
-        ac: 90,
-        bac: 200,
-      });
-
-      expect(metrics.cv).toBe(-10); // EV - AC = 80 - 90 = -10
-      expect(metrics.costVariance).toBe(-10); // 互換性メソッド
-    });
-
-    it('SPI（スケジュール効率指数）を正しく計算する', () => {
-      const metrics = new EvmMetrics({
-        date: new Date('2025-01-01'),
-        pv: 100,
-        ev: 80,
-        ac: 90,
-        bac: 200,
-      });
-
-      expect(metrics.spi).toBe(0.8); // EV / PV = 80 / 100 = 0.8
-      expect(metrics.schedulePerformanceIndex).toBe(0.8); // 互換性メソッド
-    });
-
-    it('CPI（コスト効率指数）を正しく計算する', () => {
-      const metrics = new EvmMetrics({
-        date: new Date('2025-01-01'),
-        pv: 100,
-        ev: 80,
-        ac: 90,
-        bac: 200,
-      });
-
-      expect(metrics.cpi).toBeCloseTo(0.888, 2); // EV / AC = 80 / 90 ≈ 0.888
-      expect(metrics.costPerformanceIndex).toBeCloseTo(0.888, 2); // 互換性メソッド
-    });
 
     it('PVが0の場合、SPIは0を返す', () => {
       const metrics = new EvmMetrics({

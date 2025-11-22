@@ -1,6 +1,6 @@
 import { ProgressMeasurementMethod, ForecastCalculationMethod } from '@prisma/client';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
-import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
+import { EvmCalculationMode } from '@/domains/evm/evm-metrics';
 
 export interface IWbsEvmRepository {
   // WBS全体のEVMデータを取得

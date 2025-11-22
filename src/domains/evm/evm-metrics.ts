@@ -55,15 +55,6 @@ export class EvmMetrics {
     return this.ev - this.ac;
   }
 
-  // 互換性のためのエイリアス
-  get costVariance(): number {
-    return this.cv;
-  }
-
-  get scheduleVariance(): number {
-    return this.sv;
-  }
-
   // Schedule Performance Index (スケジュール効率指標)
   get spi(): number {
     return this.pv === 0 ? 0 : this.ev / this.pv;
@@ -74,38 +65,25 @@ export class EvmMetrics {
     return this.ac === 0 ? 0 : this.ev / this.ac;
   }
 
-  // 互換性のためのエイリアス
-  get costPerformanceIndex(): number {
-    return this.cpi;
-  }
-
-  get schedulePerformanceIndex(): number {
-    return this.spi;
-  }
-
   // Estimate At Completion (完了時総コスト予測)
+  // AC + ETC
   get eac(): number {
-    if (this.cpi === 0) return 0;
-    return this.bac / this.cpi;
+    // if (this.cpi === 0) return 0;
+    // return this.bac / this.cpi;
+    return this.ac + this.etc;
   }
 
   // Estimate To Complete (完了までの残コスト予測)
+  //  (BAC - EV) / CPI
   get etc(): number {
-    return Math.max(0, this.eac - this.ac);
+    // return Math.max(0, this.eac - this.ac);
+    return (this.bac - this.ev) / this.cpi;
   }
 
   // Variance At Completion (完了時差異予測)
+  // BAC - EAC
   get vac(): number {
     return this.bac - this.eac;
-  }
-
-  // 互換性のためのエイリアス
-  get estimateAtCompletion(): number {
-    return this.eac;
-  }
-
-  get estimateToComplete(): number {
-    return this.etc;
   }
 
   // 完了率
