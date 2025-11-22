@@ -1,6 +1,8 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import type { EvmMetricsData } from "@/app/actions/evm/evm-actions";
 import {
   LineChart,
@@ -13,6 +15,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
+import { useState } from "react";
 
 type EvmChartProps = {
   data: EvmMetricsData[];
@@ -25,6 +28,8 @@ type EvmChartProps = {
  * @param calculationMode 計算モード
  */
 export function EvmChart({ data, calculationMode }: EvmChartProps) {
+  const [showPvBase, setShowPvBase] = useState(true);
+
   // データをチャート用に変換
   const chartData = data.map((metrics) => ({
     date: new Date(metrics.date).toLocaleDateString("ja-JP", {
@@ -60,7 +65,17 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>EVMトレンドチャート</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>EVMトレンドチャート</CardTitle>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="show-pv-base"
+              checked={showPvBase}
+              onCheckedChange={setShowPvBase}
+            />
+            <Label htmlFor="show-pv-base">当初計画を表示</Label>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={600}>
@@ -81,9 +96,12 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
             <ReferenceLine
               y={maxPv}
               stroke="red"
-              label={
-                { value: "BAC", position: "top", fill: "red", fontSize: 12 }
-              }
+              label={{
+                value: "BAC",
+                position: "top",
+                fill: "red",
+                fontSize: 12,
+              }}
             />
             <Line
               type="monotone"
@@ -92,6 +110,7 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
               name="当初計画価値 (PV)"
               strokeDasharray="5 5"
               strokeWidth={1}
+              hide={!showPvBase}
             />
             <Line
               type="monotone"
