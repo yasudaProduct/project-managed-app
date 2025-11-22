@@ -1,3 +1,4 @@
+// TODO: リファクタリングの余地あり このクラスいる？
 export class Assignee {
     public readonly id?: number;
     public name: string;
@@ -15,9 +16,5 @@ export class Assignee {
 
     public static createFromDb(args: { id: number; name: string; displayName: string }): Assignee {
         return new Assignee(args);
-    }
-
-    public isEqual(assignee: Assignee) {
-        return this.id === assignee.id;
     }
 }

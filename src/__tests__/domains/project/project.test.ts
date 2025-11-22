@@ -20,7 +20,7 @@ describe('Project', () => {
       expect(project.description).toBe('これはテスト用のプロジェクトです');
       expect(project.startDate).toEqual(startDate);
       expect(project.endDate).toEqual(endDate);
-      expect(project.getStatus()).toBe('INACTIVE'); // デフォルトのステータスがINACTIVEであること
+      expect(project.getStatus()).toBe('INACTIVE');
     });
 
     it('説明なしでプロジェクトを作成できること', () => {
@@ -31,7 +31,12 @@ describe('Project', () => {
       });
 
       expect(project).toBeInstanceOf(Project);
+      expect(project.id).toBeUndefined();
+      expect(project.name).toBe('テストプロジェクト');
       expect(project.description).toBeUndefined();
+      expect(project.startDate).toEqual(startDate);
+      expect(project.endDate).toEqual(endDate);
+      expect(project.getStatus()).toBe('INACTIVE');
     });
   });
 
@@ -135,21 +140,6 @@ describe('Project', () => {
     });
   });
 
-  describe('getStatusName', () => {
-    it('プロジェクトのステータス名を取得できること', () => {
-      const status = new ProjectStatus({ status: 'ACTIVE' });
-      const project = Project.createFromDb({
-        id: 'project-1',
-        name: 'プロジェクト1',
-        status,
-        startDate,
-        endDate
-      });
-
-      expect(project.getStatusName()).toBe('進行中');
-    });
-  });
-
   describe('更新メソッド', () => {
     let project: Project;
 
@@ -170,6 +160,12 @@ describe('Project', () => {
     it('updateDescription: 説明を更新できること', () => {
       project.updateDescription('新しい説明');
       expect(project.description).toBe('新しい説明');
+    });
+
+    it('updateStatus: ステータスを更新できること', () => {
+      const newStatus = new ProjectStatus({ status: 'ACTIVE' });
+      project.updateStatus(newStatus);
+      expect(project.getStatus()).toBe('ACTIVE');
     });
 
     it('updateStartDate: 開始日を更新できること', () => {

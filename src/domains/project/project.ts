@@ -36,10 +36,6 @@ export class Project {
         return this.status.status;
     }
 
-    public getStatusName() {
-        return this.status.Name();
-    }
-
     public updateName(name: string) {
         this.name = name;
     }

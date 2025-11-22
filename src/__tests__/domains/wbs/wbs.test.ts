@@ -2,7 +2,7 @@ import { Wbs } from "@/domains/wbs/wbs";
 
 describe('Wbs', () => {
   describe('create', () => {
-    it('ID、名前、プロジェクトIDからWBSを作成できること', () => {
+    it('名前、プロジェクトIDからWBSを作成できること', () => {
       const wbs = Wbs.create({
         name: 'テストWBS',
         projectId: 'project-1'
@@ -57,6 +57,17 @@ describe('Wbs', () => {
       });
 
       expect(wbs1.isEqual(wbs2)).toBe(true);
+    });
+  });
+
+  describe('updateName', () => {
+    it('名前を更新できること', () => {
+      const wbs = Wbs.create({
+        name: 'テストWBS',
+        projectId: 'project-1'
+      });
+      wbs.updateName('新しい名前');
+      expect(wbs.name).toBe('新しい名前');
     });
   });
 });

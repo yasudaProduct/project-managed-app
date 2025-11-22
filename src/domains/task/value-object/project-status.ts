@@ -7,10 +7,6 @@ export class TaskStatus {
         this.status = args.status;
     }
 
-    public isEqual(status: TaskStatusType) {
-        return this.status === status;
-    }
-
     public getStatus(): TaskStatusType {
         return this.status;
     }

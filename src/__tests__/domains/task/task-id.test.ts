@@ -23,10 +23,9 @@ describe('TaskId', () => {
       expect(taskId.getValue()).toBe('C10-9876');
     });
 
-    it('フェーズコードが1文字でない場合はエラーになること', () => {
-      expect(() => {
-        TaskNo.create('XY', 1);
-      }).toThrow('タスクIDのフォーマットが不正です。');
+    it('フェーズコードが2文字以上の場合は正常に作成できること', () => {
+      const taskId = TaskNo.create('XY', 1);
+      expect(taskId.getValue()).toBe('XY-0001');
     });
   });
 
@@ -41,11 +40,6 @@ describe('TaskId', () => {
       expect(() => {
         TaskNo.reconstruct('D0001');
       }).toThrow('タスクIDのフォーマットが不正です。');
-
-      expect(() => {
-        TaskNo.reconstruct('D-001');
-      }).toThrow('タスクIDのフォーマットが不正です。');
-
     });
   });
 

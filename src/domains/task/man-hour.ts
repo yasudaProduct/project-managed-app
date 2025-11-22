@@ -9,6 +9,8 @@ export class ManHour {
         this.id = args.id;
         this.kosu = args.kosu;
         this.type = args.type;
+
+        this.validate();
     }
 
     public static create(args: { kosu: number; type: ManHourType }): ManHour {
@@ -19,7 +21,9 @@ export class ManHour {
         return new ManHour(args);
     }
 
-    public isEqual(manHour: ManHour) {
-        return this.id === manHour.id;
+    private validate() {
+        if (this.kosu < 0) {
+            throw new Error('工数は0以上である必要があります');
+        }
     }
 }

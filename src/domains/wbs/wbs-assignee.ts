@@ -31,10 +31,6 @@ export class WbsAssignee {
         return new WbsAssignee(args);
     }
 
-    public isEqual(wbsAssignee: WbsAssignee) {
-        return this.id === wbsAssignee.id;
-    }
-
     public getRate(): number {
         return this.rate;
     }
