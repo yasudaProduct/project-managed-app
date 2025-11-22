@@ -30,9 +30,13 @@ import {
 
 type EvmDashboardProps = {
   wbsId: number;
+  defaultProgressMethod?: "ZERO_HUNDRED" | "FIFTY_FIFTY" | "SELF_REPORTED";
 };
 
-export function EvmDashboard({ wbsId }: EvmDashboardProps) {
+export function EvmDashboard({
+  wbsId,
+  defaultProgressMethod,
+}: EvmDashboardProps) {
   const [currentMetrics, setCurrentMetrics] = useState<EvmMetricsData | null>(
     null
   );
@@ -49,7 +53,7 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
   // 進捗率測定方法
   const [progressMethod, setProgressMethod] = useState<
     "ZERO_HUNDRED" | "FIFTY_FIFTY" | "SELF_REPORTED"
-  >("ZERO_HUNDRED");
+  >(defaultProgressMethod ?? "ZERO_HUNDRED");
 
   // 時系列間隔
   const [interval, setInterval] = useState<"daily" | "weekly" | "monthly">(
@@ -221,10 +225,10 @@ export function EvmDashboard({ wbsId }: EvmDashboardProps) {
                 onValueChange={(value) =>
                   setPeriodMode(
                     value as
-                    | "project"
-                    | "recent3months"
-                    | "recent1month"
-                    | "custom"
+                      | "project"
+                      | "recent3months"
+                      | "recent1month"
+                      | "custom"
                   )
                 }
               >

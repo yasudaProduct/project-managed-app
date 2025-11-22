@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { Settings } from "lucide-react";
 import { ProjectSettings } from "@/components/wbs/project-settings";
+import { getProjectSettings } from "@/app/wbs/[id]/project-settings-actions";
 import { TaskDependencyModal } from "@/components/wbs/task-dependency-modal";
 import { ProjectInfoCard } from "@/components/wbs/project-info-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -112,13 +113,15 @@ export default async function ProjectPage({
   }
 
   // WBS関連のデータを取得
-  const [tasks, buffers, phases, assignees, milestones] = await Promise.all([
-    getTaskAll(latestWbs.id),
-    getWbsBuffers(latestWbs.id),
-    getWbsPhases(latestWbs.id),
-    getWbsAssignees(latestWbs.id),
-    getMilestones(latestWbs.id),
-  ]);
+  const [tasks, buffers, phases, assignees, milestones, settings] =
+    await Promise.all([
+      getTaskAll(latestWbs.id),
+      getWbsBuffers(latestWbs.id),
+      getWbsPhases(latestWbs.id),
+      getWbsAssignees(latestWbs.id),
+      getMilestones(latestWbs.id),
+      getProjectSettings(projectId),
+    ]);
 
   return (
     <>
@@ -295,7 +298,10 @@ export default async function ProjectPage({
               <AssigneeGanttChart wbsId={latestWbs.id} />
             </TabsContent>
             <TabsContent value="evm">
-              <EvmDashboard wbsId={latestWbs.id} />
+              <EvmDashboard
+                wbsId={latestWbs.id}
+                defaultProgressMethod={settings.progressMeasurementMethod}
+              />
             </TabsContent>
           </Tabs>
         </Suspense>
