@@ -12,6 +12,14 @@ export class EvmService {
     private wbsEvmRepository: IWbsEvmRepository
   ) { }
 
+  /**
+   * 現在のEVMメトリクスを計算
+   * @param wbsId WBS ID
+   * @param evaluationDate 評価日
+   * @param calculationMode 計算モード
+   * @param progressMethod 進捗率測定方法
+   * @returns EVMメトリクス
+   */
   async calculateCurrentEvmMetrics(
     wbsId: number,
     evaluationDate: Date = new Date(),
