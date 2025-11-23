@@ -25,6 +25,7 @@ const GetEvmTimeSeriesSchema = z.object({
   interval: z.enum(['daily', 'weekly', 'monthly']).default('weekly'),
   calculationMode: z.enum(['hours', 'cost']).default('hours'),
   progressMethod: z.enum(['ZERO_HUNDRED', 'FIFTY_FIFTY', 'SELF_REPORTED']).optional(),
+  showPrediction: z.boolean().optional(),
 });
 
 const GetTaskEvmDetailsSchema = z.object({
@@ -64,6 +65,7 @@ export type EvmMetricsData = {
   formattedEv: string; // 出来高のフォーマット（hours or cost）
   formattedAc: string; // 実コストのフォーマット（hours or cost）
   formattedBac: string; // 完了時予算のフォーマット（hours or cost）
+  isPredicted: boolean;
 };
 
 export type TaskEvmDataSerialized = {
@@ -119,6 +121,7 @@ function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
     formattedEv: metrics.formattedEv,
     formattedAc: metrics.formattedAc,
     formattedBac: metrics.formattedBac,
+    isPredicted: metrics.isPredicted,
   };
 }
 
@@ -194,7 +197,8 @@ export async function getEvmTimeSeries(
       endDate,
       validated.interval,
       validated.calculationMode as EvmCalculationMode,
-      validated.progressMethod as ProgressMeasurementMethod | undefined
+      validated.progressMethod as ProgressMeasurementMethod | undefined,
+      validated.showPrediction
     );
 
     return {

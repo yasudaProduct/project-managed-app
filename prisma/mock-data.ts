@@ -5,6 +5,12 @@ const addDays = (days: number): Date => {
     return date;
 };
 
+const subDays = (days: number): Date => {
+    const date = new Date(baseDate);
+    date.setDate(date.getDate() - days);
+    return date;
+};
+
 interface MockData {
     project: {
         id: string;
@@ -1457,8 +1463,8 @@ export function getMockData(): MockData[] {
                 name: "集計表検証",
                 status: "ACTIVE",
                 description: "集計表検証",
-                startDate: baseDate,
-                endDate: addDays(90),
+                startDate: subDays(30),
+                endDate: addDays(60),
             },
             wbs: [
                 {
@@ -1517,17 +1523,17 @@ export function getMockData(): MockData[] {
                     assigneeId: wbsAssigneeId, // dummy01
                     status: "IN_PROGRESS",
                     startDate: addDays(0),
-                    endDate: addDays(4),
+                    endDate: addDays(3),
                     kosu: 20,
                     progressRate: 50,
                     jisseki: [{
                         userId: "dummy01",
-                        jissekiKosu: 8,
-                        date: addDays(0),
+                        jissekiKosu: 10,
+                        date: subDays(0),
                     }],
                     kijun: {
                         startDate: addDays(0),
-                        endDate: addDays(4),
+                        endDate: addDays(3),
                         kosu: 20,
                     }
                 },
@@ -1567,16 +1573,16 @@ export function getMockData(): MockData[] {
                     phaseId: wbsPhaseId + 1, // 詳細設計
                     name: "[検証]月跨ぎ2ヶ月・完了",
                     assigneeId: wbsAssigneeId + 1, // dummy02
-                    status: "IN_PROGRESS",
-                    startDate: addDays(0),
-                    endDate: addDays(35),
+                    status: "COMPLETED",
+                    startDate: subDays(21),
+                    endDate: subDays(20),
                     kosu: 40,
                     progressRate: 50,
                     jisseki: [
                         {
                             userId: "dummy02",
                             jissekiKosu: 10,
-                            date: addDays(25),
+                            date: subDays(20),
                         },
                         // {
                         //     userId: "dummy02",
@@ -1585,8 +1591,8 @@ export function getMockData(): MockData[] {
                         // }
                     ],
                     kijun: {
-                        startDate: addDays(0),
-                        endDate: addDays(20),
+                        startDate: subDays(23),
+                        endDate: subDays(20),
                         kosu: 20,
                     }
                 },

@@ -98,29 +98,73 @@ export class EvmService {
     endDate: Date,
     interval: 'daily' | 'weekly' | 'monthly' = 'weekly',
     calculationMode: EvmCalculationMode = 'hours',
-    progressMethod?: ProgressMeasurementMethod
+    progressMethod?: ProgressMeasurementMethod,
+    includePrediction: boolean = false
   ): Promise<EvmMetrics[]> {
     const dates = this.generateDateRange(startDate, endDate, interval);
     const metrics: EvmMetrics[] = [];
+    const now = new Date();
 
-    // TODO: 日付の数だけDBアクセスが発生してしまうため、パフォーマンス改善が必要
-    // for (const date of dates) {
-    //   const metric = await this.calculateCurrentEvmMetrics(
-    //     wbsId,
-    //     date,
-    //     calculationMode,
-    //     progressMethod
-    //   );
-    //   metrics.push(metric);
-    // }
-    const metricPromises = dates.map((date) =>
-      this.calculateCurrentEvmMetrics(
+    // 予測計算用の現在時点メトリクスを取得
+    let currentMetrics: EvmMetrics | null = null;
+    if (includePrediction) {
+      currentMetrics = await this.calculateCurrentEvmMetrics(
+        wbsId,
+        now,
+        calculationMode,
+        progressMethod
+      );
+    }
+
+    const metricPromises = dates.map(async (date) => {
+      // 未来日付かつ予測モード有効の場合
+      if (includePrediction && date > now && currentMetrics) {
+        // ベースとなるメトリクス（PV計算用）
+        const baseMetric = await this.calculateCurrentEvmMetrics(
+          wbsId,
+          date,
+          calculationMode,
+          progressMethod
+        );
+
+        // 予測EV: 現在EV + (将来PV - 現在PV) * SPI
+        // SPIが極端な値にならないようガード（例: 0の場合は0、大きすぎる場合はキャップするなど検討可だが一旦そのまま）
+        const spi = currentMetrics!.spi;
+        const pvIncrement = Math.max(0, baseMetric.pv - currentMetrics!.pv);
+        const predictedEvIncrement = pvIncrement * spi;
+        const predictedEv = Math.min(
+          currentMetrics!.bac, // BACを超えない
+          currentMetrics!.ev + predictedEvIncrement
+        );
+
+        // 予測AC: 現在AC + (予測EV増加分) / CPI
+        const cpi = currentMetrics!.cpi;
+        // CPIが0の場合は1（計画通り）と仮定して計算
+        const effectiveCpi = cpi === 0 ? 1 : cpi;
+        const evIncrement = Math.max(0, predictedEv - currentMetrics!.ev);
+        const predictedAc = currentMetrics!.ac + (evIncrement / effectiveCpi);
+
+        return EvmMetrics.create({
+          date: date,
+          pv_base: baseMetric.pv_base,
+          pv: baseMetric.pv,
+          ev: predictedEv,
+          ac: predictedAc,
+          bac: baseMetric.bac,
+          calculationMode,
+          progressMethod: baseMetric.progressMethod,
+          isPredicted: true,
+        });
+      }
+
+      return this.calculateCurrentEvmMetrics(
         wbsId,
         date,
         calculationMode,
         progressMethod
-      )
-    );
+      );
+    });
+
     const resolvedMetrics = await Promise.all(metricPromises);
     metrics.push(...resolvedMetrics);
 

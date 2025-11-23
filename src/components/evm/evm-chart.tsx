@@ -31,16 +31,26 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
   const [showPvBase, setShowPvBase] = useState(true);
 
   // データをチャート用に変換
-  const chartData = data.map((metrics) => ({
-    date: new Date(metrics.date).toLocaleDateString("ja-JP", {
-      month: "short",
-      day: "numeric",
-    }),
-    PV_BASE: metrics.pv_base,
-    PV: metrics.pv,
-    EV: metrics.ev,
-    AC: metrics.ac,
-  }));
+  const chartData = data.map((metrics, index) => {
+    const nextMetrics = data[index + 1];
+    // 次のデータが予測値の場合、現在のデータ（実績）を予測線の開始点としても使用する
+    const isLastActual = !metrics.isPredicted && nextMetrics?.isPredicted;
+
+    return {
+      date: new Date(metrics.date).toLocaleDateString("ja-JP", {
+        month: "short",
+        day: "numeric",
+      }),
+      PV_BASE: metrics.pv_base,
+      PV: metrics.pv,
+      // 実績データ（予測データの場合はnull）
+      EV: !metrics.isPredicted ? metrics.ev : null,
+      AC: !metrics.isPredicted ? metrics.ac : null,
+      // 予測データ（実績データの場合はnull、ただしつなぎ目の点は含める）
+      EV_PREDICTED: metrics.isPredicted || isLastActual ? metrics.ev : null,
+      AC_PREDICTED: metrics.isPredicted || isLastActual ? metrics.ac : null,
+    };
+  });
 
   // 現在日付のラベル（X軸のフォーマットと合わせる）
   const todayLabel = new Date().toLocaleDateString("ja-JP", {
@@ -119,6 +129,7 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
               name="計画価値 (PV)"
               strokeWidth={2}
             />
+            {/* 実績線 */}
             <Line
               type="monotone"
               dataKey="EV"
@@ -132,6 +143,25 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
               stroke="#ffc658"
               name="実コスト (AC)"
               strokeWidth={2}
+            />
+            {/* 予測線 */}
+            <Line
+              type="monotone"
+              dataKey="EV_PREDICTED"
+              stroke="#82ca9d"
+              name="予測出来高 (EV)"
+              strokeDasharray="5 5"
+              strokeWidth={2}
+              dot={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="AC_PREDICTED"
+              stroke="#ffc658"
+              name="予測コスト (AC)"
+              strokeDasharray="5 5"
+              strokeWidth={2}
+              dot={false}
             />
           </LineChart>
         </ResponsiveContainer>

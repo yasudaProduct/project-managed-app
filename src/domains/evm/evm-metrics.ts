@@ -11,6 +11,7 @@ export class EvmMetrics {
   public readonly date: Date;
   public readonly calculationMode: EvmCalculationMode;
   public readonly progressMethod: ProgressMeasurementMethod;
+  public readonly isPredicted: boolean;
 
   constructor(args: {
     pv_base: number;
@@ -21,6 +22,7 @@ export class EvmMetrics {
     bac?: number;
     calculationMode?: EvmCalculationMode;
     progressMethod?: ProgressMeasurementMethod;
+    isPredicted?: boolean;
   }) {
     this.pv_base = args.pv_base;
     this.pv = args.pv;
@@ -30,6 +32,7 @@ export class EvmMetrics {
     this.bac = args.bac ?? 0;
     this.calculationMode = args.calculationMode ?? 'hours';
     this.progressMethod = args.progressMethod ?? 'SELF_REPORTED';
+    this.isPredicted = args.isPredicted ?? false;
   }
 
   public static create(args: {
@@ -41,6 +44,7 @@ export class EvmMetrics {
     bac?: number;
     calculationMode?: EvmCalculationMode;
     progressMethod?: ProgressMeasurementMethod;
+    isPredicted?: boolean;
   }): EvmMetrics {
     return new EvmMetrics(args);
   }

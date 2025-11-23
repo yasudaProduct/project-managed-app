@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EvmChart } from "./evm-chart";
 import { EvmMetricsCard } from "./evm-metrics-card";
@@ -65,10 +66,20 @@ export function EvmDashboard({
     "project" | "recent3months" | "recent1month" | "custom"
   >("project");
 
+  // 予測表示
+  const [showPrediction, setShowPrediction] = useState(false);
+
   useEffect(() => {
     loadEvmData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wbsId, calculationMode, progressMethod, interval, periodMode]);
+  }, [
+    wbsId,
+    calculationMode,
+    progressMethod,
+    interval,
+    periodMode,
+    showPrediction,
+  ]);
 
   /**
    * 期間モードに基づいて開始日と終了日を計算
@@ -153,6 +164,7 @@ export function EvmDashboard({
         interval,
         calculationMode,
         progressMethod,
+        showPrediction,
       });
 
       if (!timeSeriesResult.success || !timeSeriesResult.data) {
@@ -310,6 +322,17 @@ export function EvmDashboard({
                   <SelectItem value="SELF_REPORTED">自己申告進捗率</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex flex-col space-y-2 justify-end pb-1">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="show-prediction"
+                  checked={showPrediction}
+                  onCheckedChange={setShowPrediction}
+                />
+                <Label htmlFor="show-prediction">予測線を表示</Label>
+              </div>
             </div>
           </div>
         </CardContent>
