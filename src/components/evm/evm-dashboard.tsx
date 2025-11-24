@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EvmChart } from "./evm-chart";
 import { EvmMetricsCard } from "./evm-metrics-card";
@@ -17,7 +23,7 @@ import {
   type TaskEvmDataSerialized,
   type EvmDateRangeData,
 } from "@/app/actions/evm/evm-actions";
-import { Loader2, TrendingUp, DollarSign } from "lucide-react";
+import { Loader2, TrendingUp, DollarSign, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -332,6 +338,38 @@ export function EvmDashboard({
                   onCheckedChange={setShowPrediction}
                 />
                 <Label htmlFor="show-prediction">予測線を表示</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[350px] p-4">
+                      <div className="space-y-3">
+                        <p className="font-semibold">予測値の算出について</p>
+                        <p className="text-sm">
+                          現在のパフォーマンス効率（CPIおよびSPI）が、今後も継続すると仮定して算出しています。
+                        </p>
+                        <div className="text-xs text-muted-foreground space-y-1.5 bg-muted p-2 rounded">
+                          <p>
+                            <span className="font-medium">予測EV (出来高)</span>{" "}
+                            = <br />
+                            現在EV + (将来PV - 現在PV) × SPI
+                          </p>
+                          <p>
+                            <span className="font-medium">
+                              予測AC (実コスト)
+                            </span>{" "}
+                            = <br />
+                            現在AC + (予測EV増加分) / CPI
+                          </p>
+                          <p className="pt-1 border-t border-border mt-1">
+                            ※EVはBAC（完了時予算）を上限とします
+                          </p>
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </div>
