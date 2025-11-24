@@ -267,7 +267,6 @@ enum BufferType {
 enum PeriodType {
   KIJUN
   YOTEI
-  JISSEKI
 }
 
 enum KosuType {

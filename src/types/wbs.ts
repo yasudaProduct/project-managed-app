@@ -2,7 +2,7 @@ export type TaskStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "ON_HOLD"
 
 export type ProjectStatus = "INACTIVE" | "ACTIVE" | "DONE" | "CANCELLED" | "PENDING"
 
-export type PeriodType = "KIJUN" | "YOTEI" | "JISSEKI"
+export type PeriodType = "KIJUN" | "YOTEI"
 
 export type KosuType = "NORMAL" | "RISK"
 
@@ -37,9 +37,6 @@ export type WbsTask = {
   yoteiStart?: Date
   yoteiEnd?: Date
   yoteiKosu?: number
-  jissekiStart?: Date
-  jissekiEnd?: Date
-  jissekiKosu?: number
   createdAt?: Date
   updatedAt?: Date
 }
