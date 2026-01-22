@@ -208,6 +208,7 @@ export function usePushNotifications() {
     return () => {
       navigator.serviceWorker.removeEventListener('controllerchange', handleServiceWorkerUpdate);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status.isSupported, updateStatus]);
 
   // 権限変更の監視（ブラウザによってはサポートされていない）

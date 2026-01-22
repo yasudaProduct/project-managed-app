@@ -16,6 +16,7 @@ export type User = {
   email: string;
   name: string;
   displayName: string;
+  costPerHour: number;
 };
 
 export const columns: ColumnDef<User & { link?: string }>[] = [

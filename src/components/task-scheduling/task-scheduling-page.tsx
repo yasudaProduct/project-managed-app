@@ -13,7 +13,7 @@ import {
   Calendar,
   Clock,
 } from "lucide-react";
-import { TaskSchedulingResult } from "@/domains/task-scheduling/task-scheduling.service";
+import { TaskSchedulingResult } from "@/applications/task-scheduling/task-scheduling-application.service";
 import { calculateTaskSchedules } from "./task-scheduling-actions";
 import { toast } from "@/hooks/use-toast";
 

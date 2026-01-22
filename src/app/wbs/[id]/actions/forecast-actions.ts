@@ -21,7 +21,7 @@ export async function calculateTasksForecast(
     const wbsQueryRepository = container.get<IWbsQueryRepository>(SYMBOL.IWbsQueryRepository);
 
     // WBSタスクデータを取得
-    const tasks = await wbsQueryRepository.getWbsTasks(projectId, wbsId);
+    const tasks = await wbsQueryRepository.getWbsTasks(wbsId);
 
     // 見通し工数を計算
     const forecastResults = ForecastCalculationService.calculateMultipleTasksForecast(
@@ -53,7 +53,7 @@ export async function calculateSingleTaskForecast(
     const wbsQueryRepository = container.get<IWbsQueryRepository>(SYMBOL.IWbsQueryRepository);
 
     // WBSタスクデータを取得
-    const tasks = await wbsQueryRepository.getWbsTasks(projectId, wbsId);
+    const tasks = await wbsQueryRepository.getWbsTasks(wbsId);
     const task = tasks.find(t => t.id === taskId);
 
     if (!task) {

@@ -5,7 +5,6 @@ import {
   GeppoImportOptions,
   GeppoImportResult,
   GeppoImportValidation,
-  GeppoImportPreview,
   GeppoImportRecord,
   GeppoImportError,
   ProjectMappingValidation

@@ -359,20 +359,20 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
   );
 
   // 表示期間のフォーマット
-  const formatPeriod = () => {
-    if (!dateRange.length) return "";
+  // const formatPeriod = () => {
+  //   if (!dateRange.length) return "";
 
-    const start = dateRange[0];
-    const end = dateRange[dateRange.length - 1];
+  //   const start = dateRange[0];
+  //   const end = dateRange[dateRange.length - 1];
 
-    if (viewMode === "month") {
-      return `${start.getFullYear()}年${start.getMonth() + 1}月`;
-    }
+  //   if (viewMode === "month") {
+  //     return `${start.getFullYear()}年${start.getMonth() + 1}月`;
+  //   }
 
-    return `${start.toLocaleDateString("ja-JP")} - ${end.toLocaleDateString(
-      "ja-JP"
-    )}`;
-  };
+  //   return `${start.toLocaleDateString("ja-JP")} - ${end.toLocaleDateString(
+  //     "ja-JP"
+  //   )}`;
+  // };
 
   // 読み込み中
   if (loading) {
