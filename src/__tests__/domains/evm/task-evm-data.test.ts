@@ -6,10 +6,13 @@ describe('TaskEvmData', () => {
     taskId: number;
     taskNo: string;
     taskName: string;
+    baseStartDate: Date;
+    baseEndDate: Date;
     plannedStartDate: Date;
     plannedEndDate: Date;
     actualStartDate: Date | null;
     actualEndDate: Date | null;
+    baseManHours: number;
     plannedManHours: number;
     actualManHours: number;
     status: TaskStatus;
@@ -21,10 +24,13 @@ describe('TaskEvmData', () => {
       overrides?.taskId ?? 1,
       overrides?.taskNo ?? 'T001',
       overrides?.taskName ?? 'テストタスク',
+      overrides?.baseStartDate ?? new Date('2025-01-01'),
+      overrides?.baseEndDate ?? new Date('2025-01-10'),
       overrides?.plannedStartDate ?? new Date('2025-01-01'),
       overrides?.plannedEndDate ?? new Date('2025-01-10'),
       overrides?.actualStartDate ?? null,
       overrides?.actualEndDate ?? null,
+      overrides?.baseManHours ?? 100,
       overrides?.plannedManHours ?? 100,
       overrides?.actualManHours ?? 0,
       overrides?.status ?? 'NOT_STARTED',
@@ -135,14 +141,17 @@ describe('TaskEvmData', () => {
   });
 
   describe('計算モードと進捗率測定方法に応じた出来高取得', () => {
+    const evaluationDate = new Date('2025-01-15'); // 終了日以降
+
     it('工数ベース + ZERO_HUNDRED法', () => {
       const task = createTestTask({
         plannedManHours: 100,
         status: 'COMPLETED',
         costPerHour: 5000,
+        actualStartDate: new Date('2025-01-01'),
       });
 
-      const ev = task.getEarnedValue('hours', 'ZERO_HUNDRED');
+      const ev = task.getEarnedValue(evaluationDate, 'hours', 'ZERO_HUNDRED');
       expect(ev).toBe(100); // 100 * 1.0 = 100
     });
 
@@ -150,9 +159,10 @@ describe('TaskEvmData', () => {
       const task = createTestTask({
         plannedManHours: 100,
         status: 'IN_PROGRESS',
+        actualStartDate: new Date('2025-01-01'),
       });
 
-      const ev = task.getEarnedValue('hours', 'FIFTY_FIFTY');
+      const ev = task.getEarnedValue(evaluationDate, 'hours', 'FIFTY_FIFTY');
       expect(ev).toBe(50); // 100 * 0.5 = 50
     });
 
@@ -161,9 +171,10 @@ describe('TaskEvmData', () => {
         plannedManHours: 100,
         status: 'IN_PROGRESS',
         costPerHour: 5000,
+        actualStartDate: new Date('2025-01-01'),
       });
 
-      const ev = task.getEarnedValue('cost', 'FIFTY_FIFTY');
+      const ev = task.getEarnedValue(evaluationDate, 'cost', 'FIFTY_FIFTY');
       expect(ev).toBe(250000); // 100 * 5000 * 0.5 = 250000
     });
 
@@ -172,9 +183,10 @@ describe('TaskEvmData', () => {
         plannedManHours: 100,
         status: 'IN_PROGRESS',
         selfReportedProgress: 75,
+        actualStartDate: new Date('2025-01-01'),
       });
 
-      const ev = task.getEarnedValue('hours', 'SELF_REPORTED');
+      const ev = task.getEarnedValue(evaluationDate, 'hours', 'SELF_REPORTED');
       expect(ev).toBe(75); // 100 * 0.75 = 75
     });
 
@@ -184,10 +196,33 @@ describe('TaskEvmData', () => {
         status: 'IN_PROGRESS',
         costPerHour: 5000,
         selfReportedProgress: 75,
+        actualStartDate: new Date('2025-01-01'),
       });
 
-      const ev = task.getEarnedValue('cost', 'SELF_REPORTED');
+      const ev = task.getEarnedValue(evaluationDate, 'cost', 'SELF_REPORTED');
       expect(ev).toBe(375000); // 100 * 5000 * 0.75 = 375000
+    });
+
+    it('actualStartDateがnullの場合、出来高は0', () => {
+      const task = createTestTask({
+        plannedManHours: 100,
+        status: 'COMPLETED',
+        actualStartDate: null,
+      });
+
+      const ev = task.getEarnedValue(evaluationDate, 'hours', 'ZERO_HUNDRED');
+      expect(ev).toBe(0);
+    });
+
+    it('評価日がactualStartDate前の場合、出来高は0', () => {
+      const task = createTestTask({
+        plannedManHours: 100,
+        status: 'IN_PROGRESS',
+        actualStartDate: new Date('2025-01-20'),
+      });
+
+      const ev = task.getEarnedValue(evaluationDate, 'hours', 'FIFTY_FIFTY');
+      expect(ev).toBe(0);
     });
   });
 
@@ -202,7 +237,7 @@ describe('TaskEvmData', () => {
         plannedManHours: 100,
       });
 
-      const pv = task.getPlannedValueAtDate(new Date('2024-12-31'), 'hours');
+      const pv = task.getPlannedValueAtDate('YOTEI', new Date('2024-12-31'), 'hours');
       expect(pv).toBe(0);
     });
 
@@ -213,7 +248,7 @@ describe('TaskEvmData', () => {
         plannedManHours: 100,
       });
 
-      const pv = task.getPlannedValueAtDate(new Date('2025-01-15'), 'hours');
+      const pv = task.getPlannedValueAtDate('YOTEI', new Date('2025-01-15'), 'hours');
       expect(pv).toBe(100);
     });
 
@@ -225,7 +260,7 @@ describe('TaskEvmData', () => {
       });
 
       // 2025-01-05は開始から4日後（9日間の約44.4%）
-      const pv = task.getPlannedValueAtDate(new Date('2025-01-05'), 'hours');
+      const pv = task.getPlannedValueAtDate('YOTEI', new Date('2025-01-05'), 'hours', 'LINEAR');
       expect(pv).toBeCloseTo(44.4, 1); // 100 * (4/9) ≈ 44.4
     });
 
@@ -238,7 +273,7 @@ describe('TaskEvmData', () => {
       });
 
       // 2025-01-06は開始から5日後（9日間の約55.6%）
-      const pv = task.getPlannedValueAtDate(new Date('2025-01-06'), 'cost');
+      const pv = task.getPlannedValueAtDate('YOTEI', new Date('2025-01-06'), 'cost', 'LINEAR');
       expect(pv).toBeCloseTo(277777, -1); // 100 * 5000 * (5/9) ≈ 277777
     });
 
@@ -250,8 +285,22 @@ describe('TaskEvmData', () => {
         plannedManHours: 100,
       });
 
-      const pv = task.getPlannedValueAtDate(sameDate, 'hours');
+      const pv = task.getPlannedValueAtDate('YOTEI', sameDate, 'hours');
       expect(pv).toBe(100); // 終了日以降なので全体を返す
+    });
+
+    it('BASEタイプでbaseStartDate/baseEndDateを使用する', () => {
+      const task = createTestTask({
+        baseStartDate: new Date('2025-01-01'),
+        baseEndDate: new Date('2025-01-10'),
+        baseManHours: 200,
+        plannedStartDate: new Date('2025-01-05'),
+        plannedEndDate: new Date('2025-01-15'),
+        plannedManHours: 100,
+      });
+
+      const pv = task.getPlannedValueAtDate('BASE', new Date('2025-01-15'), 'hours');
+      expect(pv).toBe(200); // baseManHoursを使用
     });
   });
 
@@ -263,8 +312,11 @@ describe('TaskEvmData', () => {
         'テストタスク',
         new Date('2025-01-01'),
         new Date('2025-01-10'),
+        new Date('2025-01-01'),
+        new Date('2025-01-10'),
         new Date('2025-01-02'),
         new Date('2025-01-11'),
+        100,
         100,
         80,
         'COMPLETED',
@@ -276,6 +328,7 @@ describe('TaskEvmData', () => {
       expect(task.taskId).toBe(1);
       expect(task.taskNo).toBe('T001');
       expect(task.taskName).toBe('テストタスク');
+      expect(task.baseManHours).toBe(100);
       expect(task.plannedManHours).toBe(100);
       expect(task.actualManHours).toBe(80);
       expect(task.status).toBe('COMPLETED');
@@ -291,8 +344,11 @@ describe('TaskEvmData', () => {
         'テストタスク',
         new Date('2025-01-01'),
         new Date('2025-01-10'),
+        new Date('2025-01-01'),
+        new Date('2025-01-10'),
         null,
         null,
+        100,
         100,
         0,
         'NOT_STARTED',

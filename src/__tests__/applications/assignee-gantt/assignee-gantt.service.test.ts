@@ -7,9 +7,9 @@ import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
 import { CompanyHoliday } from '@/domains/calendar/company-calendar';
-import { TaskNo } from '@/domains/task/task-no';
-import { TaskStatus } from '@/domains/task/task-status';
-import { Period } from '@/domains/period/period';
+import { TaskNo } from '@/domains/task/value-object/task-id';
+import { TaskStatus } from '@/domains/task/value-object/project-status';
+import { Period } from '@/domains/task/period';
 
 describe('AssigneeGanttService', () => {
   let service: AssigneeGanttService;
@@ -84,12 +84,14 @@ describe('AssigneeGanttService', () => {
   };
 
   const createMockAssignee = (id: number, userId: string, name: string, rate: number = 1.0) => {
-    return WbsAssignee.reconstruct({
+    return WbsAssignee.createFromDb({
       id: id,
       wbsId: testWbsId,
       userId: userId,
       userName: name,
-      rate
+      rate: rate,
+      costPerHour: 5000,
+      seq: id
     });
   };
 

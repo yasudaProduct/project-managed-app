@@ -6,6 +6,27 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
+
+// Prismaモジュールをモック化
+jest.mock('@/lib/prisma/prisma', () => ({
+  __esModule: true,
+  default: {},
+}));
+
+// inversify.configをモック化
+jest.mock('@/lib/inversify.config', () => ({
+  __esModule: true,
+  container: {
+    get: jest.fn(),
+  },
+}));
+
+// server actionsをモック化
+jest.mock('@/app/wbs/[id]/actions/wbs-task-actions', () => ({
+  updateWbsTaskPeriod: jest.fn(),
+  updateTaskKosu: jest.fn(),
+}));
+
 import GanttV2Component from "@/components/ganttv2/gantt-v2";
 import { TaskStatus } from "@/types/wbs";
 import {

@@ -2,8 +2,11 @@
  * @jest-environment node
  */
 
-import { getAssigneeWorkloads } from '@/app/wbs/[id]/assignee-gantt/assignee-gantt-actions';
-import { container } from '@/lib/inversify.config';
+// Prismaモジュールをモック化（インポート前にモックする必要がある）
+jest.mock('@/lib/prisma/prisma', () => ({
+  __esModule: true,
+  default: {},
+}));
 
 // DIコンテナのモック
 jest.mock('@/lib/inversify.config', () => ({
@@ -11,6 +14,9 @@ jest.mock('@/lib/inversify.config', () => ({
     get: jest.fn()
   }
 }));
+
+import { getAssigneeWorkloads } from '@/app/wbs/[id]/assignee-gantt/assignee-gantt-actions';
+import { container } from '@/lib/inversify.config';
 
 describe('assignee-gantt-actions', () => {
   const mockService = {

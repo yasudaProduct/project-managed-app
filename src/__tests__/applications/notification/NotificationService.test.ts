@@ -1,5 +1,5 @@
 import { Notification } from '@/domains/notification/notification';
-import { NotificationType } from '@/domains/notification/notification-type';
+import { NotificationType } from '@/types/notification';
 import { NotificationPriority } from '@/domains/notification/notification-priority';
 import { NotificationChannel } from '@/domains/notification/notification-channel';
 

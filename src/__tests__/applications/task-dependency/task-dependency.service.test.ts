@@ -45,17 +45,17 @@ describe('TaskDependencyService', () => {
         const tasksInWbs = [
             Task.createFromDb({
                 id: 1,
-                taskNo: new TaskNo("T001"),
+                taskNo: TaskNo.reconstruct("T-0001"),
                 wbsId: 1,
                 name: "Task 1",
-                status: new TaskStatus("NOT_STARTED"),
+                status: new TaskStatus({ status: "NOT_STARTED" }),
             }),
             Task.createFromDb({
                 id: 2,
-                taskNo: new TaskNo("T002"),
+                taskNo: TaskNo.reconstruct("T-0002"),
                 wbsId: 1,
                 name: "Task 2",
-                status: new TaskStatus("NOT_STARTED"),
+                status: new TaskStatus({ status: "NOT_STARTED" }),
             }),
         ];
 
@@ -160,10 +160,10 @@ describe('TaskDependencyService', () => {
 
             const completedTask = Task.createFromDb({
                 id: 1,
-                taskNo: new TaskNo("T001"),
+                taskNo: TaskNo.reconstruct("T-0001"),
                 wbsId: 1,
                 name: "Task 1",
-                status: new TaskStatus("COMPLETED"),
+                status: new TaskStatus({ status: "COMPLETED" }),
             });
 
             mockTaskDependencyRepository.findPredecessorsByTaskId.mockResolvedValue([predecessorDependency]);
@@ -184,10 +184,10 @@ describe('TaskDependencyService', () => {
 
             const incompleteTask = Task.createFromDb({
                 id: 1,
-                taskNo: new TaskNo("T001"),
+                taskNo: TaskNo.reconstruct("T-0001"),
                 wbsId: 1,
                 name: "Task 1",
-                status: new TaskStatus("IN_PROGRESS"),
+                status: new TaskStatus({ status: "IN_PROGRESS" }),
             });
 
             mockTaskDependencyRepository.findPredecessorsByTaskId.mockResolvedValue([predecessorDependency]);

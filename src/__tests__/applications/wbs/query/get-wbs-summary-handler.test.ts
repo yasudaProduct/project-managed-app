@@ -1,3 +1,13 @@
+// Prismaモジュールをモック化（インポート前にモックする必要がある）
+jest.mock('@/lib/prisma/prisma', () => ({
+  __esModule: true,
+  default: {
+    projectSettings: {
+      findUnique: jest.fn().mockResolvedValue(null),
+    },
+  },
+}));
+
 import { GetWbsSummaryHandler } from '@/applications/wbs/query/get-wbs-summary-handler';
 import { GetWbsSummaryQuery } from '@/applications/wbs/query/get-wbs-summary-query';
 import { AllocationCalculationMode } from '@/applications/wbs/query/allocation-calculation-mode';
@@ -6,6 +16,7 @@ import type { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-rep
 import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
+import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
 
 describe('GetWbsSummaryHandler', () => {
   let handler: GetWbsSummaryHandler;
@@ -13,6 +24,7 @@ describe('GetWbsSummaryHandler', () => {
   let mockCompanyHolidayRepository: jest.Mocked<ICompanyHolidayRepository>;
   let mockUserScheduleRepository: jest.Mocked<IUserScheduleRepository>;
   let mockWbsAssigneeRepository: jest.Mocked<IWbsAssigneeRepository>;
+  let mockSystemSettingsRepository: jest.Mocked<ISystemSettingsRepository>;
 
   const mockTasks: WbsTaskData[] = [
     {
@@ -88,11 +100,17 @@ describe('GetWbsSummaryHandler', () => {
       findByWbsId: jest.fn(),
     } as jest.Mocked<IWbsAssigneeRepository>;
 
+    mockSystemSettingsRepository = {
+      get: jest.fn(),
+      update: jest.fn(),
+    } as jest.Mocked<ISystemSettingsRepository>;
+
     handler = new GetWbsSummaryHandler(
       mockWbsQueryRepository,
       mockCompanyHolidayRepository,
       mockUserScheduleRepository,
-      mockWbsAssigneeRepository
+      mockWbsAssigneeRepository,
+      mockSystemSettingsRepository
     );
 
     // デフォルトのモック設定
