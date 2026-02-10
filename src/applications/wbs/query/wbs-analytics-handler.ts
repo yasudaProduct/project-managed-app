@@ -2,6 +2,8 @@ import { IWbsCrossQueryRepository, PhaseHoursSummary } from "../iwbs-cross-query
 import { IWbsTagRepository } from "../iwbs-tag-repository";
 import { PhaseCoefficientService, PhaseCoefficient } from "@/domains/wbs/phase-coefficient.service";
 import { PhaseProportionService, PhaseProportion } from "@/domains/wbs/phase-proportion.service";
+import { SYMBOL } from "@/types/symbol";
+import { inject, injectable } from "inversify";
 
 type FilterType = 'wbs' | 'all' | 'tag';
 
@@ -21,10 +23,11 @@ export type ProportionQuery = {
     customBaseTemplateIds?: number[];
 };
 
+@injectable()
 export class WbsAnalyticsHandler {
     constructor(
-        private readonly crossQueryRepository: IWbsCrossQueryRepository,
-        private readonly tagRepository: IWbsTagRepository,
+        @inject(SYMBOL.IWbsCrossQueryRepository) private readonly crossQueryRepository: IWbsCrossQueryRepository,
+        @inject(SYMBOL.IWbsTagRepository) private readonly tagRepository: IWbsTagRepository,
     ) {}
 
     async getCoefficients(query: CoefficientQuery): Promise<PhaseCoefficient[]> {

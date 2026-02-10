@@ -1,5 +1,7 @@
 import { WbsTag } from "@/domains/wbs/wbs-tag";
 import { IWbsTagRepository } from "./iwbs-tag-repository";
+import { SYMBOL } from "@/types/symbol";
+import { inject, injectable } from "inversify";
 
 export interface IWbsTagApplicationService {
     getTagsByWbsId(wbsId: number): Promise<{ id: number; name: string }[]>;
@@ -8,8 +10,9 @@ export interface IWbsTagApplicationService {
     removeTag(wbsId: number, name: string): Promise<void>;
 }
 
+@injectable()
 export class WbsTagApplicationService implements IWbsTagApplicationService {
-    constructor(private readonly tagRepository: IWbsTagRepository) {}
+    constructor(@inject(SYMBOL.IWbsTagRepository) private readonly tagRepository: IWbsTagRepository) {}
 
     async getTagsByWbsId(wbsId: number): Promise<{ id: number; name: string }[]> {
         const tags = await this.tagRepository.findByWbsId(wbsId);
