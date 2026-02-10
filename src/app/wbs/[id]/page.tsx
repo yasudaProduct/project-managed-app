@@ -32,6 +32,7 @@ import MilestoneManagement from "@/components/milestone/milestone-management";
 import { WbsSummaryTables } from "@/components/wbs/wbs-summary-tables";
 import { AssigneeGanttChart } from "./assignee-gantt/assignee-gantt-chart";
 import WbsImportJobButtons from "@/components/wbs/wbs-import-job-buttons";
+import { WbsTagInput } from "@/components/wbs/wbs-tag-input";
 
 export default async function WbsManagementPage({
   params,
@@ -153,12 +154,15 @@ export default async function WbsManagementPage({
               </TabsTrigger>
             </TabsList>
             <TabsContent value="summary">
-              <ProjectInfoCard
-                project={project}
-                phases={phases}
-                assignees={assignees || []}
-                buffers={buffers}
-              />
+              <div className="space-y-4">
+                <WbsTagInput wbsId={wbs.id} />
+                <ProjectInfoCard
+                  project={project}
+                  phases={phases}
+                  assignees={assignees || []}
+                  buffers={buffers}
+                />
+              </div>
             </TabsContent>
             <TabsContent value="settings">
               <ProjectSettings projectId={project.id} />
