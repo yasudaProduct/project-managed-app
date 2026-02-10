@@ -26,7 +26,7 @@ export function Header() {
     null
   );
   const [loading, setLoading] = useState(false);
-  const { user, loading: authLoading, clearAuth } = useAuth();
+  const { user, loading: authLoading} = useAuth();
 
   const getProjectIdFromPath = (path: string): string | null => {
     // /projects/[id] のパターンにマッチ

@@ -14,6 +14,7 @@ import type { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-re
 import type { ISystemSettingsRepository } from "@/applications/system-settings/isystem-settings-repository";
 import { AllocationQuantizer } from "@/domains/wbs/allocation-quantizer";
 import { MonthlySummaryAccumulator } from "./monthly-summary-accumulator";
+import { MonthlyPhaseSummaryAccumulator } from "./monthly-phase-summary-accumulator";
 import { ForecastCalculationService } from "@/domains/forecast/forecast-calculation.service";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import { toForecastMethodOption } from "@/types/forecast-calculation-method";
@@ -63,23 +64,32 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
 
     // 月別・担当者別集計
     let monthlyAssigneeSummary: MonthlyAssigneeSummary;
+    let monthlyPhaseSummary;
     switch (query.calculationMode) {
       case AllocationCalculationMode.BUSINESS_DAY_ALLOCATION: // 営業日案分による月別・担当者別集計
-        monthlyAssigneeSummary = await this.calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(
-          tasks,
-          query.wbsId,
-          roundToQuarter,
-          progressMeasurementMethod,
-          forecastMethodOption
-        );
-        break;
+        {
+          const monthlySummaries = await this.calculateMonthlySummariesWithBusinessDayAllocation(
+            tasks,
+            query.wbsId,
+            roundToQuarter,
+            progressMeasurementMethod,
+            forecastMethodOption
+          );
+          monthlyAssigneeSummary = monthlySummaries.assignee;
+          monthlyPhaseSummary = monthlySummaries.phase;
+          break;
+        }
       case AllocationCalculationMode.START_DATE_BASED: // 開始日基準による月別・担当者別集計
-        monthlyAssigneeSummary = this.calculateMonthlyAssigneeSummaryWithStartDateBased(
-          tasks,
-          progressMeasurementMethod,
-          forecastMethodOption
-        );
-        break;
+        {
+          const monthlySummaries = this.calculateMonthlySummariesWithStartDateBased(
+            tasks,
+            progressMeasurementMethod,
+            forecastMethodOption
+          );
+          monthlyAssigneeSummary = monthlySummaries.assignee;
+          monthlyPhaseSummary = monthlySummaries.phase;
+          break;
+        }
       default:
         throw new Error(`不明な計算モード: ${query.calculationMode}`);
     }
@@ -90,6 +100,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       assigneeSummaries,
       assigneeTotal,
       monthlyAssigneeSummary,
+      monthlyPhaseSummary,
     };
   }
 
@@ -171,7 +182,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
    * 営業日案分を実行し、見通し工数を計算し、MonthlySummaryAccumulatorで集計する
    * @param progressMeasurementMethod 進捗測定方式（0/100法、50/50法、自己申告進捗率）
    */
-  private async calculateMonthlyAssigneeSummaryWithBusinessDayAllocation(
+  private async calculateMonthlySummariesWithBusinessDayAllocation(
     tasks: WbsTaskData[],
     wbsId: number,
     roundToQuarter: boolean,
@@ -195,7 +206,8 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     const quantizer = roundToQuarter ? new AllocationQuantizer(0.25) : undefined;
 
     // 集計用のアキュムレータを作成
-    const accumulator = new MonthlySummaryAccumulator();
+    const assigneeAccumulator = new MonthlySummaryAccumulator();
+    const phaseAccumulator = new MonthlyPhaseSummaryAccumulator();
 
     // タスクごとに営業日案分を適用
     for (const task of tasks) {
@@ -204,6 +216,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
 
       // 担当者名を取得 (未割当の場合は'未割当'を返す)
       const assigneeName = task.assignee?.displayName ?? '未割当';
+      const phaseName = task.phase?.name ?? '未設定';
 
       // 担当者のWbsAssigneeを取得（担当者未割当またはWbsAssignee未登録時はundefined）
       const wbsAssignee = task.assignee ? assigneeMap.get(task.assignee.id.toString()) : undefined;
@@ -278,8 +291,8 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           ? (detail.plannedHours / totalPlannedHours) * totalForecastHours
           : 0;
 
-        // アキュムレータに追加
-        accumulator.addTaskAllocation(
+        // 担当者アキュムレータに追加
+        assigneeAccumulator.addTaskAllocation(
           assigneeName,
           yearMonth,
           detail.plannedHours,
@@ -288,11 +301,25 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           taskDetail,
           monthForecastHours  // 見通し工数を追加
         );
+
+        // 工程アキュムレータに追加
+        phaseAccumulator.addTaskAllocation(
+          phaseName,
+          yearMonth,
+          detail.plannedHours,
+          detail.actualHours,
+          detail.baselineHours,
+          taskDetail,
+          monthForecastHours
+        );
       }
     }
 
     // 集計結果を取得して返す
-    return accumulator.getTotals();
+    return {
+      assignee: assigneeAccumulator.getTotals(),
+      phase: phaseAccumulator.getTotals(),
+    };
   }
 
   /**
@@ -327,12 +354,13 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
    * ForecastCalculationServiceで見通し工数を計算する
    * @param progressMeasurementMethod 進捗測定方式（0/100法、50/50法、自己申告進捗率）
    */
-  private calculateMonthlyAssigneeSummaryWithStartDateBased(
+  private calculateMonthlySummariesWithStartDateBased(
     tasks: WbsTaskData[],
     progressMeasurementMethod: ProgressMeasurementMethod = 'SELF_REPORTED',
     forecastMethodOption: 'conservative' | 'realistic' | 'optimistic' | 'plannedOrActual' = 'realistic'
   ) {
-    const accumulator = new MonthlySummaryAccumulator();
+    const assigneeAccumulator = new MonthlySummaryAccumulator();
+    const phaseAccumulator = new MonthlyPhaseSummaryAccumulator();
 
     // タスクごとに開始日の月に全工数を計上
     for (const task of tasks) {
@@ -340,6 +368,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       if (!task.yoteiStart) continue;
 
       const assigneeName = task.assignee?.displayName ?? '未割当';
+      const phaseName = task.phase?.name || (typeof task.phase === "string" ? task.phase : '未設定');
 
       // 開始日の月を取得
       const date = new Date(task.yoteiStart);
@@ -375,7 +404,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       const forecastHours = forecastResult.forecastHours;
 
       // アキュムレータに追加（開始日基準なので見通し工数も全て開始月に計上）
-      accumulator.addTaskAllocation(
+      assigneeAccumulator.addTaskAllocation(
         assigneeName,
         yearMonth,
         Number(task.yoteiKosu || 0),
@@ -384,9 +413,22 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         taskDetail,
         forecastHours  // 見通し工数を追加
       );
+
+      phaseAccumulator.addTaskAllocation(
+        phaseName ?? '未設定',
+        yearMonth,
+        Number(task.yoteiKosu || 0),
+        Number(task.jissekiKosu || 0),
+        Number(task.kijunKosu || 0),
+        taskDetail,
+        forecastHours
+      );
     }
 
     // 集計結果を取得して返す
-    return accumulator.getTotals();
+    return {
+      assignee: assigneeAccumulator.getTotals(),
+      phase: phaseAccumulator.getTotals(),
+    };
   }
 }

@@ -49,7 +49,7 @@ export class MonthlySummaryAccumulator {
     };
 
     existing.taskCount += 1;
-    existing.baselineHours += baselineHours;
+    existing.baselineHours = (existing.baselineHours ?? 0) + baselineHours;
     existing.plannedHours += plannedHours;
     existing.actualHours += actualHours;
     existing.difference = existing.actualHours - existing.plannedHours;
@@ -107,16 +107,16 @@ export class MonthlySummaryAccumulator {
     plannedHours: number;
     actualHours: number;
     difference: number;
-    baselineHours?: number;
-    forecastHours?: number;
+    baselineHours: number;
+    forecastHours: number;
   }> {
     const monthlyTotals: Record<string, {
       taskCount: number;
       plannedHours: number;
       actualHours: number;
       difference: number;
-      baselineHours?: number;
-      forecastHours?: number;
+      baselineHours: number;
+      forecastHours: number;
     }> = {};
 
     months.forEach(month => {
@@ -159,16 +159,16 @@ export class MonthlySummaryAccumulator {
     plannedHours: number;
     actualHours: number;
     difference: number;
-    baselineHours?: number;
-    forecastHours?: number;
+    baselineHours: number;
+    forecastHours: number;
   }> {
     const assigneeTotals: Record<string, {
       taskCount: number;
       plannedHours: number;
       actualHours: number;
       difference: number;
-      baselineHours?: number;
-      forecastHours?: number;
+      baselineHours: number;
+      forecastHours: number;
     }> = {};
 
     assignees.forEach(assignee => {
@@ -210,8 +210,8 @@ export class MonthlySummaryAccumulator {
     plannedHours: number;
     actualHours: number;
     difference: number;
-    baselineHours?: number;
-    forecastHours?: number;
+    baselineHours: number;
+    forecastHours: number;
   } {
     const grandTotal = {
       taskCount: 0,

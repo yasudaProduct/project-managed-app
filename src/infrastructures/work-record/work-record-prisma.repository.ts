@@ -1,9 +1,7 @@
 import prisma from "@/lib/prisma/prisma";
-import { injectable, inject } from 'inversify'
-import { PrismaClient } from '@prisma/client'
+import { injectable} from 'inversify'
 import { WorkRecord } from '@/domains/work-records/work-recoed'
 import { IWorkRecordRepository } from '@/applications/work-record/repositories/iwork-record.repository'
-import { SYMBOL } from '@/types/symbol'
 
 @injectable()
 export class WorkRecordPrismaRepository implements IWorkRecordRepository {

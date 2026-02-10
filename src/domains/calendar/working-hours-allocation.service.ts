@@ -156,6 +156,24 @@ export class WorkingHoursAllocationService {
       ? quantizer.quantize(allocatedPlannedHoursRaw)
       : allocatedPlannedHoursRaw;
 
+    // 見通し工数の按分（見通し工数が設定されている場合）
+    let allocatedForecastHours: Map<string, number> | undefined;
+    if (task.forecastKosu && task.forecastKosu > 0) {
+      const allocatedForecastHoursRaw = this.allocateTaskHoursByAssigneeWorkingDays(
+        {
+          yoteiStart: task.yoteiStart,
+          yoteiEnd: task.yoteiEnd!,
+          yoteiKosu: task.forecastKosu
+        },
+        targetAssignee,
+        userSchedules
+      );
+
+      allocatedForecastHours = quantizer
+        ? quantizer.quantize(allocatedForecastHoursRaw)
+        : allocatedForecastHoursRaw;
+    }
+
     // 基準工数の按分（基準期間が存在する場合）
     let allocatedBaselineHours: Map<string, number> | undefined;
     let kijunPeriod: BusinessDayPeriod | undefined;
@@ -200,7 +218,8 @@ export class WorkingHoursAllocationService {
       allocatedPlannedHours,
       yoteiPeriod,
       allocatedBaselineHours,
-      kijunPeriod
+      kijunPeriod,
+      allocatedForecastHours
     );
   }
 

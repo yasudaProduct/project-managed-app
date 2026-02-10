@@ -9,9 +9,9 @@ import { TaskSchedulingPage } from "@/components/task-scheduling/task-scheduling
 export default async function TaskSchedulingPageWrapper({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const idNum = Number(params.id);
+  const idNum = Number((await params).id);
 
   const wbs = await getWbsById(idNum);
   if (!wbs) {

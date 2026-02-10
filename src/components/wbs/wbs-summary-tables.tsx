@@ -446,16 +446,18 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
       />
 
       {/* 月別・工程別集計表 */}
-      <MonthlyPhaseSummary
-        monthlyData={summary.monthlyAssigneeSummary}
-        hoursUnit={hoursUnit}
-        showDifference={showMonthlyDifference}
-        showBaseline={showMonthlyBaseline}
-        showForecast={showMonthlyForecast}
-        onShowDifferenceChange={setShowMonthlyDifference}
-        onShowBaselineChange={setShowMonthlyBaseline}
-        onShowForecastChange={setShowMonthlyForecast}
-      />
+      {summary.monthlyPhaseSummary && (
+        <MonthlyPhaseSummary
+          monthlyData={summary.monthlyPhaseSummary}
+          hoursUnit={hoursUnit}
+          showDifference={showMonthlyDifference}
+          showBaseline={showMonthlyBaseline}
+          showForecast={showMonthlyForecast}
+          onShowDifferenceChange={setShowMonthlyDifference}
+          onShowBaselineChange={setShowMonthlyBaseline}
+          onShowForecastChange={setShowMonthlyForecast}
+        />
+      )}
     </div>
   );
 }

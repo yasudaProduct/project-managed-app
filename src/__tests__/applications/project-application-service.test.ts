@@ -2,7 +2,6 @@ import { IProjectRepository } from "@/applications/projects/iproject-repository"
 import { ProjectApplicationService } from "@/applications/projects/project-application-service";
 import { IWbsRepository } from "@/applications/wbs/iwbs-repository";
 import { Project } from "@/domains/project/project";
-import { Wbs } from "@/domains/wbs/wbs";
 
 // Jestのモック機能を使用してリポジトリをモック化
 jest.mock("@/applications/projects/iproject-repository", () => ({

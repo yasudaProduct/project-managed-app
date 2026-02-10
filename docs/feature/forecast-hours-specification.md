@@ -3,9 +3,11 @@
 ## 1. 概要
 
 ### 1.1 目的
+
 プロジェクト管理において、タスクの現在の進捗状況を基に将来の工数を予測する「見通し工数」を算出し、より正確なスケジュール管理と工数管理を支援する機能。
 
 ### 1.2 スコープ
+
 - ✅ タスクレベルでの見通し工数算出
 - ✅ 月別・担当者別集計での見通し工数表示
 - ✅ 複数の算出方式（conservative, realistic, optimistic）
@@ -13,6 +15,7 @@
 - ⏳ 基準工数との比較機能（部分実装）
 
 ### 1.3 用語定義
+
 - **見通し工数（Forecast Hours）**: 現時点での最終的な工数予測値
 - **予定工数（Planned Hours）**: プロジェクト開始時に計画された工数
 - **実績工数（Actual Hours）**: 現時点までに実際に消費された工数
@@ -22,6 +25,7 @@
 ## 2. 算出ロジック
 
 ### 2.1 基本方針
+
 タスクのステータスと進捗率に応じて、以下の優先順位で見通し工数を算出する：
 
 | タスクステータス | 進捗率 | 見通し工数 |
@@ -36,6 +40,7 @@
 ### 2.2 計算方式
 
 #### 2.2.1 保守的方式（Conservative）
+
 実績ベースの推定を行い、リスクを重視した見通しを算出。
 
 ```typescript
@@ -43,17 +48,20 @@
 ```
 
 **特徴**:
+
 - 現在の実績ペースがそのまま続くと仮定
 - 進捗が遅れている場合、大きな値となる
 - リスク管理重視のプロジェクトに適する
 
 **例**:
+
 - 予定工数: 40時間
 - 実績工数: 30時間
 - 進捗率: 50%
 - 見通し工数: (30 / 50) × 100 = **60時間**
 
 #### 2.2.2 現実的方式（Realistic）- 推奨
+
 実績ベースと予定ベースの加重平均により、バランスの取れた見通しを算出。
 
 ```typescript
@@ -68,11 +76,13 @@
 ```
 
 **特徴**:
+
 - 進捗率が高いほど実績ベースの重みが増加
 - 進捗率が低い段階では予定工数を重視
 - 最もバランスの取れた予測
 
 **例**:
+
 - 予定工数: 40時間
 - 実績工数: 30時間
 - 進捗率: 50%
@@ -81,6 +91,7 @@
 - 見通し工数: 60 × 0.5 + (30 + 20) × 0.5 = **55時間**
 
 #### 2.2.3 楽観的方式（Optimistic）
+
 予定工数を基準とし、残り作業は予定通り完了すると仮定。
 
 ```typescript
@@ -89,11 +100,13 @@
 ```
 
 **特徴**:
+
 - 残り作業は予定通り完了すると楽観視
 - 順調に進んでいるプロジェクトに適する
 - 最も小さな値となる傾向
 
 **例**:
+
 - 予定工数: 40時間
 - 実績工数: 30時間
 - 進捗率: 50%
@@ -103,32 +116,40 @@
 ### 2.3 特殊ケースの処理
 
 #### 2.3.1 進捗率0%の場合
+
 ```typescript
 見通し工数 = 予定工数
 ```
+
 未着手のため、予定工数をそのまま見通しとする。
 
 #### 2.3.2 進捗率100%の場合
+
 ```typescript
 見通し工数 = 実績工数
 ```
+
 完了済みのため、実績工数が確定値となる。
 
 #### 2.3.3 実績が存在するが進捗率0%の場合
+
 ```typescript
 // 注意: 実績入力があっても申告進捗が0%の場合は予定工数を返す
 見通し工数 = 予定工数
 ```
+
 これは設計上の仕様であり、進捗率の申告が優先される。
 
 ## 3. 進捗測定方式（Progress Measurement Method）
 
 ### 3.1 概要
+
 プロジェクト設定により、タスクの進捗率をどのように測定するかを3つの方式から選択できます。この設定は見通し工数算出だけでなく、EVM（Earned Value Management）などの他の機能でも共通して使用されます。
 
 ### 3.2 3つの測定方式
 
 #### 3.2.1 0/100法（ZERO_HUNDRED）
+
 **完了のみを評価する保守的な方式**
 
 | ステータス | 進捗率 |
@@ -139,11 +160,13 @@
 | COMPLETED | 100% |
 
 **特徴**:
+
 - 確実な成果のみを評価
 - リスク管理重視のプロジェクトに適する
 - EVMの保守的な進捗管理
 
 **適用例**:
+
 ```typescript
 // 進行中のタスクでも0%として扱う
 タスクステータス: IN_PROGRESS
@@ -152,6 +175,7 @@
 ```
 
 #### 3.2.2 50/50法（FIFTY_FIFTY）
+
 **着手時に半分の価値を認めるバランス型**
 
 | ステータス | 進捗率 |
@@ -162,11 +186,13 @@
 | COMPLETED | 100% |
 
 **特徴**:
+
 - 着手時点での貢献を評価
 - 作業開始のモチベーション向上
 - EVMのバランス型進捗管理
 
 **適用例**:
+
 ```typescript
 // 進行中は一律50%
 タスクステータス: IN_PROGRESS
@@ -175,6 +201,7 @@
 ```
 
 #### 3.2.3 自己申告進捗率（SELF_REPORTED）- デフォルト
+
 **タスクの進捗率フィールドを使用する詳細管理方式**
 
 | ステータス | 進捗率 |
@@ -185,11 +212,13 @@
 | COMPLETED | 100%（優先） |
 
 **特徴**:
+
 - 最も柔軟で詳細な進捗管理
 - 担当者の申告値を使用
 - 完了ステータスは100%優先（データ整合性のため）
 
 **適用例**:
+
 ```typescript
 // 自己申告値を使用
 タスクステータス: IN_PROGRESS
@@ -207,6 +236,7 @@
 進捗測定方式はプロジェクトごとに設定します。
 
 **データベース構造**:
+
 ```sql
 -- project_settings テーブル
 progressMeasurementMethod ENUM('ZERO_HUNDRED', 'FIFTY_FIFTY', 'SELF_REPORTED')
@@ -214,6 +244,7 @@ DEFAULT 'SELF_REPORTED'
 ```
 
 **設定の取得**:
+
 ```typescript
 const settings = await prisma.projectSettings.findUnique({
   where: { projectId: query.projectId }
@@ -250,11 +281,13 @@ Application Layer
 ## 4. 月別配分における見通し算出
 
 ### 4.1 基本方針
+
 営業日案分モードにおいて、タスク全体の見通し工数を各月に配分する。
 
 ### 4.2 配分ロジック
 
 #### 4.2.1 タスク全体の見通し工数計算
+
 ```typescript
 // ForecastCalculationService で計算
 const forecastResult = ForecastCalculationService.calculateTaskForecast(
@@ -265,6 +298,7 @@ const totalForecastHours = forecastResult.forecastHours;
 ```
 
 #### 4.2.2 月別見通し工数の按分
+
 ```typescript
 // 予定工数の配分比率を使用
 const totalPlannedHours = allocation.getTotalPlannedHours();
@@ -276,6 +310,7 @@ const monthForecastHours = totalPlannedHours > 0
 ```
 
 **配分ロジックの例**:
+
 ```
 タスク: 2025/01 ~ 2025/03 (3ヶ月)
 予定工数: 60時間
@@ -294,6 +329,7 @@ const monthForecastHours = totalPlannedHours > 0
 ```
 
 ### 4.3 開始日基準モードでの見通し
+
 開始日基準モードでは、タスクの全見通し工数を開始月に計上する。
 
 ```typescript
@@ -311,6 +347,7 @@ accumulator.addTaskAllocation(
 ## 4. データフロー
 
 ### 4.1 アーキテクチャ概要
+
 ```
 UI Layer (wbs-summary-tables.tsx)
   ↓ useWbsSummary フック
@@ -327,6 +364,7 @@ Application Layer (get-wbs-summary-handler.ts)
 ### 4.2 処理フロー
 
 #### 4.2.1 集計実行時
+
 ```typescript
 // 1. タスクデータ取得
 const tasks = await this.wbsQueryRepository.getWbsTasks(wbsId);
@@ -366,6 +404,7 @@ return accumulator.getTotals();
 ### 4.3 データ構造
 
 #### 4.3.1 見通し工数を含む月別データ
+
 ```typescript
 interface MonthlyAssigneeData {
   assignee: string;           // 担当者名
@@ -380,6 +419,7 @@ interface MonthlyAssigneeData {
 ```
 
 #### 4.3.2 集計結果
+
 ```typescript
 interface MonthlyAssigneeSummary {
   data: MonthlyAssigneeData[];      // 月別・担当者別データ
@@ -422,6 +462,7 @@ interface MonthlyAssigneeSummary {
 | 見通し工数 | 算出された予測 | OFF | ✅ 実装済み |
 
 ### 5.2 表示制御のState管理
+
 ```tsx
 const [showMonthlyDifference, setShowMonthlyDifference] = useState(true);
 const [showMonthlyBaseline, setShowMonthlyBaseline] = useState(false);
@@ -429,6 +470,7 @@ const [showMonthlyForecast, setShowMonthlyForecast] = useState(false);
 ```
 
 ### 5.3 コンポーネント構成
+
 ```
 wbs-summary-tables.tsx
   ├─ MonthlyAssigneeSummary (月別・担当者別)
@@ -444,6 +486,7 @@ wbs-summary-tables.tsx
 ### 5.4 見通し工数の表示例
 
 #### 5.4.1 月別・担当者別集計表
+
 ```
 担当者 | 月 | 予定 | 実績 | 差分 | 見通し |
 -------|-----|-----|-----|-----|-------|
@@ -452,6 +495,7 @@ wbs-summary-tables.tsx
 ```
 
 #### 5.4.2 合計行
+
 ```
 合計   | -   | 90  | 30  | -60 | 105   |
 ```
@@ -461,6 +505,7 @@ wbs-summary-tables.tsx
 ### 6.1 主要ファイル
 
 #### 6.1.1 ドメイン層
+
 ```
 src/domains/forecast/
   └─ forecast-calculation.service.ts
@@ -471,6 +516,7 @@ src/domains/forecast/
 ```
 
 #### 6.1.2 アプリケーション層
+
 ```
 src/applications/wbs/query/
   ├─ get-wbs-summary-handler.ts
@@ -484,6 +530,7 @@ src/applications/wbs/query/
 ```
 
 #### 6.1.3 UI層
+
 ```
 src/components/wbs/
   ├─ wbs-summary-tables.tsx              // メインコンポーネント
@@ -494,6 +541,7 @@ src/components/wbs/
 ### 6.2 主要インターフェース
 
 #### 6.2.1 ForecastCalculationService
+
 ```typescript
 interface ForecastCalculationOptions {
   method: 'conservative' | 'realistic' | 'optimistic';
@@ -512,6 +560,7 @@ interface ForecastCalculationResult {
 ```
 
 #### 6.2.2 MonthlySummaryAccumulator
+
 ```typescript
 addTaskAllocation(
   assigneeName: string,
@@ -526,6 +575,7 @@ addTaskAllocation(
 ## 7. 計算例
 
 ### 7.1 シナリオ1: 順調に進行中のタスク
+
 ```
 タスク名: 基本設計書作成
 予定工数: 40時間
@@ -547,6 +597,7 @@ addTaskAllocation(
 ```
 
 ### 7.2 シナリオ2: 遅れているタスク
+
 ```
 タスク名: 詳細設計書作成
 予定工数: 50時間
@@ -567,6 +618,7 @@ addTaskAllocation(
 ```
 
 ### 7.3 シナリオ3: 完了タスク
+
 ```
 タスク名: 要件定義書作成
 予定工数: 30時間
@@ -581,12 +633,14 @@ addTaskAllocation(
 ## 8. 制限事項と注意点
 
 ### 8.1 現在の制限事項
+
 1. **基準工数の代用**: 基準工数は現在予定工数で代用している
 2. **進捗率の取得**: WbsTaskDataから直接取得（progress_rateカラムの想定）
 3. **計算方法の選択**: 現在は'realistic'固定（UI選択は未実装）
 4. **過去月の扱い**: 実績工数がある月も見通し按分の対象
 
 ### 8.2 注意事項
+
 1. **完了優先ルール**: ステータスがCOMPLETEDの場合、進捗率は必ず100%
 2. **進捗率0%の扱い**: 実績があっても進捗率0%の場合は予定工数を返す
 3. **除算エラー防止**: 進捗率や予定工数が0の場合の安全処理を実装
@@ -595,16 +649,20 @@ addTaskAllocation(
 ## 9. テスト
 
 ### 9.1 単体テスト
+
 `src/__tests__/applications/wbs/query/monthly-summary-accumulator.test.ts`
 
 **見通し工数関連テスト**:
+
 - ✅ 見通し工数を追加できる
 - ✅ 見通し工数が月別・担当者別に正しく集計される
 - ✅ 複数担当者・複数月の見通し工数を正しく集計できる
 - ✅ 見通し工数が指定されていない場合は0として扱われる
 
 ### 9.2 統合テスト
+
 実装時に以下のシナリオをテストする必要がある:
+
 - タスク全体の見通し工数計算
 - 月別按分での見通し配分
 - 担当者別・月別の集計
@@ -613,6 +671,7 @@ addTaskAllocation(
 ## 10. 今後の拡張予定
 
 ### 10.1 計画中の機能
+
 - [ ] UI上での計算方式選択（conservative/realistic/optimistic）
 - [ ] 基準工数の正式実装（task_period.type='KIJUN'からの取得）
 - [ ] 見通し工数の履歴管理
@@ -620,6 +679,7 @@ addTaskAllocation(
 - [ ] 過去月は実績確定値として扱う機能
 
 ### 10.2 検討中の改善
+
 - [ ] 進捗率の自動計算オプション（実績/予定ベース）
 - [ ] タスク依存関係を考慮した見通し算出
 - [ ] 担当者の稼働率を考慮した調整
@@ -628,11 +688,12 @@ addTaskAllocation(
 ## 11. 参照
 
 ### 11.1 関連ドキュメント
+
 - `/docs/_old/forecast-calculation-design.md` - 基本設計書（設計段階の資料）
 - `ERD.md` - データベーススキーマ
-- `CLAUDE.md` - プロジェクト全体の開発ガイドライン
 
 ### 11.2 関連コードパス
+
 ```
 src/domains/forecast/forecast-calculation.service.ts
 src/applications/wbs/query/get-wbs-summary-handler.ts
@@ -643,6 +704,7 @@ src/components/wbs/monthly-phase-summary.tsx
 ```
 
 ### 11.3 型定義
+
 ```
 src/applications/wbs/query/wbs-summary-result.ts
   - MonthlyAssigneeData

@@ -1,14 +1,11 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table } from "@/components/ui/table"; // parent keeps import for consistency
 import { Calendar, Layers, Download } from "lucide-react";
 import React, { useMemo } from "react";
-import { MonthlyAssigneeSummary as MonthlyAssigneeSummaryData } from "@/applications/wbs/query/wbs-summary-result";
+import { MonthlyPhaseSummary as MonthlyPhaseSummaryData } from "@/applications/wbs/query/wbs-summary-result";
 import {
   HoursUnit,
-  convertHours,
-  getUnitSuffix,
 } from "@/utils/hours-converter";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +26,7 @@ import { useState } from "react";
 import MonthlySummaryTable, { SummaryCell } from "@/components/wbs/monthly-summary-table";
 
 interface MonthlyPhaseSummaryProps {
-  monthlyData: MonthlyAssigneeSummaryData;
+  monthlyData: MonthlyPhaseSummaryData;
   hoursUnit: HoursUnit;
   showDifference?: boolean;
   showBaseline?: boolean;
@@ -44,6 +41,7 @@ type Cell = {
   plannedHours: number;
   actualHours: number;
   difference: number;
+  forecastHours: number;
 };
 
 export function MonthlyPhaseSummary({
@@ -57,114 +55,78 @@ export function MonthlyPhaseSummary({
   onShowForecastChange,
 }: MonthlyPhaseSummaryProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const formatNumber = (num: number) => {
-    const converted = convertHours(num, hoursUnit);
-    return converted.toLocaleString("ja-JP", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
+  // const formatNumber = (num: number) => {
+  //   const converted = convertHours(num, hoursUnit);
+  //   return converted.toLocaleString("ja-JP", {
+  //     minimumFractionDigits: 2,
+  //     maximumFractionDigits: 2,
+  //   });
+  // };
 
-  const getDifferenceColor = (difference: number) => {
-    if (difference > 0) return "text-red-600";
-    if (difference === 0) return "text-green-600";
-    return "text-blue-600";
-  };
+  // const getDifferenceColor = (difference: number) => {
+  //   if (difference > 0) return "text-red-600";
+  //   if (difference === 0) return "text-green-600";
+  //   return "text-blue-600";
+  // };
 
   const { phases, cells, monthlyTotals, phaseTotals, grandTotal } =
     useMemo(() => {
-      const phaseSet = new Set<string>();
+      // サーバー集計済みデータをそのまま使用
       const cellMap = new Map<string, Cell>(); // key: `${month}|${phase}`
 
-      // 集計元: monthlyData.data の各 (assignee, month) の taskDetails
       for (const entry of monthlyData.data) {
-        const month = entry.month;
-        const details = entry.taskDetails || [];
-        for (const td of details) {
-          const phase = td.phase || "未設定";
-          phaseSet.add(phase);
-
-          const alloc = td.monthlyAllocations.find((ma) => ma.month === month);
-          if (!alloc) continue;
-
-          const key = `${month}|${phase}`;
-          const existing = cellMap.get(key) || {
-            taskCount: 0,
-            plannedHours: 0,
-            actualHours: 0,
-            difference: 0,
-          };
-
-          // その月に配分があるタスクのみカウント
-          if (
-            alloc.allocatedPlannedHours > 0 ||
-            alloc.allocatedActualHours > 0
-          ) {
-            existing.taskCount += 1;
-          }
-          existing.plannedHours += alloc.allocatedPlannedHours || 0;
-          existing.actualHours += alloc.allocatedActualHours || 0;
-          existing.difference = existing.actualHours - existing.plannedHours;
-
-          cellMap.set(key, existing);
-        }
+        const key = `${entry.month}|${entry.phase}`;
+        cellMap.set(key, {
+          taskCount: entry.taskCount,
+          plannedHours: entry.plannedHours,
+          actualHours: entry.actualHours,
+          difference: entry.difference,
+          forecastHours: entry.forecastHours || 0,
+        });
       }
 
-      const phases = Array.from(phaseSet).sort();
+      // totals は monthlyData から利用
+      const monthlyTotals = Object.fromEntries(
+        monthlyData.months.map((m) => [
+          m,
+          {
+            taskCount: monthlyData.monthlyTotals[m]?.taskCount || 0,
+            plannedHours: monthlyData.monthlyTotals[m]?.plannedHours || 0,
+            actualHours: monthlyData.monthlyTotals[m]?.actualHours || 0,
+            difference: monthlyData.monthlyTotals[m]?.difference || 0,
+            forecastHours: monthlyData.monthlyTotals[m]?.forecastHours || 0,
+          },
+        ])
+      );
 
-      // 月別合計（工程横断）
-      const monthlyTotals: Record<string, Cell> = {};
-      for (const month of monthlyData.months) {
-        monthlyTotals[month] = {
-          taskCount: 0,
-          plannedHours: 0,
-          actualHours: 0,
-          difference: 0,
-        };
-        for (const phase of phases) {
-          const c = cellMap.get(`${month}|${phase}`);
-          if (!c) continue;
-          monthlyTotals[month].taskCount += c.taskCount;
-          monthlyTotals[month].plannedHours += c.plannedHours;
-          monthlyTotals[month].actualHours += c.actualHours;
-          monthlyTotals[month].difference += c.difference;
-        }
-      }
+      const phaseTotals = Object.fromEntries(
+        monthlyData.phases.map((p) => [
+          p,
+          {
+            taskCount: monthlyData.phaseTotals[p]?.taskCount || 0,
+            plannedHours: monthlyData.phaseTotals[p]?.plannedHours || 0,
+            actualHours: monthlyData.phaseTotals[p]?.actualHours || 0,
+            difference: monthlyData.phaseTotals[p]?.difference || 0,
+            forecastHours: monthlyData.phaseTotals[p]?.forecastHours || 0,
+          },
+        ])
+      );
 
-      // 工程別合計（月横断）
-      const phaseTotals: Record<string, Cell> = {};
-      for (const phase of phases) {
-        phaseTotals[phase] = {
-          taskCount: 0,
-          plannedHours: 0,
-          actualHours: 0,
-          difference: 0,
-        };
-        for (const month of monthlyData.months) {
-          const c = cellMap.get(`${month}|${phase}`);
-          if (!c) continue;
-          phaseTotals[phase].taskCount += c.taskCount;
-          phaseTotals[phase].plannedHours += c.plannedHours;
-          phaseTotals[phase].actualHours += c.actualHours;
-          phaseTotals[phase].difference += c.difference;
-        }
-      }
-
-      // 全体合計
       const grandTotal: Cell = {
-        taskCount: 0,
-        plannedHours: 0,
-        actualHours: 0,
-        difference: 0,
+        taskCount: monthlyData.grandTotal.taskCount,
+        plannedHours: monthlyData.grandTotal.plannedHours,
+        actualHours: monthlyData.grandTotal.actualHours,
+        difference: monthlyData.grandTotal.difference,
+        forecastHours: monthlyData.grandTotal.forecastHours,
       };
-      for (const phase of phases) {
-        grandTotal.taskCount += phaseTotals[phase].taskCount;
-        grandTotal.plannedHours += phaseTotals[phase].plannedHours;
-        grandTotal.actualHours += phaseTotals[phase].actualHours;
-        grandTotal.difference += phaseTotals[phase].difference;
-      }
 
-      return { phases, cells: cellMap, monthlyTotals, phaseTotals, grandTotal };
+      return {
+        phases: monthlyData.phases,
+        cells: cellMap,
+        monthlyTotals,
+        phaseTotals,
+        grandTotal,
+      };
     }, [monthlyData]);
 
   if (monthlyData.months.length === 0) {
@@ -353,14 +315,14 @@ export function MonthlyPhaseSummary({
                 plannedHours: 0,
                 actualHours: 0,
                 difference: 0,
+                forecastHours: 0,
               };
-              const forecast = cell.actualHours > 0 ? cell.actualHours : cell.plannedHours;
               return {
                 plannedHours: cell.plannedHours,
                 actualHours: cell.actualHours,
                 difference: cell.difference,
-                baselineHours: 0, // 未実装
-                forecastHours: forecast,
+                baselineHours: 0,
+                forecastHours: cell.forecastHours,
               } as SummaryCell;
             }}
             rowTotals={Object.fromEntries(
@@ -370,6 +332,8 @@ export function MonthlyPhaseSummary({
                   plannedHours: phaseTotals[p]?.plannedHours || 0,
                   actualHours: phaseTotals[p]?.actualHours || 0,
                   difference: phaseTotals[p]?.difference || 0,
+                  baselineHours: monthlyData.phaseTotals[p]?.baselineHours || 0,
+                  forecastHours: phaseTotals[p]?.forecastHours || 0,
                 },
               ])
             )}
@@ -380,11 +344,8 @@ export function MonthlyPhaseSummary({
                   plannedHours: monthlyTotals[m]?.plannedHours || 0,
                   actualHours: monthlyTotals[m]?.actualHours || 0,
                   difference: monthlyTotals[m]?.difference || 0,
-                  baselineHours: 0,
-                  forecastHours:
-                    (monthlyTotals[m]?.actualHours || 0) > 0
-                      ? monthlyTotals[m]?.actualHours || 0
-                      : monthlyTotals[m]?.plannedHours || 0,
+                  baselineHours: monthlyData.monthlyTotals[m]?.baselineHours || 0,
+                  forecastHours: monthlyTotals[m]?.forecastHours || 0,
                 },
               ])
             )}
@@ -392,9 +353,8 @@ export function MonthlyPhaseSummary({
               plannedHours: grandTotal.plannedHours,
               actualHours: grandTotal.actualHours,
               difference: grandTotal.difference,
-              baselineHours: 0,
-              forecastHours:
-                grandTotal.actualHours > 0 ? grandTotal.actualHours : grandTotal.plannedHours,
+              baselineHours: monthlyData.grandTotal.baselineHours,
+              forecastHours: grandTotal.forecastHours,
             }}
             stickyFirstColumn={true}
           />

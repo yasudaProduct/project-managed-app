@@ -1,5 +1,5 @@
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
-import { TaskStatus, ProgressMeasurementMethod } from '@prisma/client';
+import { TaskStatus} from '@prisma/client';
 
 describe('TaskEvmData', () => {
   const createTestTask = (overrides?: Partial<{
@@ -21,6 +21,8 @@ describe('TaskEvmData', () => {
       overrides?.taskId ?? 1,
       overrides?.taskNo ?? 'T001',
       overrides?.taskName ?? 'テストタスク',
+      new Date('2025-01-01'),
+      new Date('2025-01-10'),
       overrides?.plannedStartDate ?? new Date('2025-01-01'),
       overrides?.plannedEndDate ?? new Date('2025-01-10'),
       overrides?.actualStartDate ?? null,
@@ -30,7 +32,8 @@ describe('TaskEvmData', () => {
       overrides?.status ?? 'NOT_STARTED',
       overrides?.progressRate ?? 0,
       overrides?.costPerHour ?? 5000,
-      overrides?.selfReportedProgress ?? null
+      overrides?.selfReportedProgress ?? null,
+      overrides?.progressRate ?? 0
     );
   };
 

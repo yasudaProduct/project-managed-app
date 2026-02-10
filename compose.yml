@@ -1,19 +1,4 @@
 services:
-  app:
-    build:
-      context: .
-    ports:
-      - "3000:3000"
-    tty: true
-    volumes:
-      - .:/app
-    environment:
-      - WATCHPACK_POLLING=true
-      - CRON_SECRET=${CRON_SECRET:-dev-cron-secret-key}
-    command: npm run dev
-    networks:
-      - app-network
-
   db:
     image: postgres:17-alpine
     container_name: project-managed-postgres
@@ -28,6 +13,28 @@ services:
       - postgres:/var/lib/postgresql/data
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: localhost:5000/project-managed-app:latest
+    ports:
+      - "3000:3000"
+    tty: true
+    volumes:
+      - .:/app
+      # node_modules を除外して高速化
+      - /app/node_modules
+    environment:
+      - WATCHPACK_POLLING=true
+      - CRON_SECRET=${CRON_SECRET:-dev-cron-secret-key}
+    command: npm run dev
+    network_mode: host
+    depends_on:
+      - db
 
   db-test:
     image: postgres:17-alpine
@@ -67,8 +74,8 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    # depends_on:
-    #   - app
+    depends_on:
+      - app
     healthcheck:
       test: ["CMD", "/usr/local/bin/health-check.sh"]
       interval: 30s
