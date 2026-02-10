@@ -119,6 +119,11 @@ describe('GetWbsSummaryHandler', () => {
     mockCompanyHolidayRepository.findAll.mockResolvedValue([]);
     mockUserScheduleRepository.findByUserIdAndDateRange.mockResolvedValue([]);
     mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([]);
+    // SystemSettingsにデフォルト値を設定
+    mockSystemSettingsRepository.get.mockResolvedValue({
+      standardWorkingHours: 7.5,
+      roundToQuarter: false,
+    });
   });
 
   describe('execute', () => {
@@ -205,8 +210,8 @@ describe('GetWbsSummaryHandler', () => {
       it('should throw error for unknown calculation mode', async () => {
         // @ts-expect-error - テスト用に無効な値を設定
         const query = new GetWbsSummaryQuery('project-1', 1, 'INVALID_MODE' as AllocationCalculationMode);
-        
-        await expect(handler.execute(query)).rejects.toThrow('Unknown calculation mode: INVALID_MODE');
+
+        await expect(handler.execute(query)).rejects.toThrow('不明な計算モード: INVALID_MODE');
       });
     });
 
@@ -237,14 +242,15 @@ describe('GetWbsSummaryHandler', () => {
           assignee: null
         }
       ];
-      
+
       mockWbsQueryRepository.getWbsTasks.mockResolvedValue(tasksWithoutAssignee);
-      
+
       const query = new GetWbsSummaryQuery('project-1', 1);
       const result = await handler.execute(query);
 
-      // 担当者がいないタスクは月別担当者別集計から除外される
-      expect(result.monthlyAssigneeSummary.data).toHaveLength(0);
+      // 担当者がいないタスクは「未割当」として月別担当者別集計に含まれる
+      expect(result.monthlyAssigneeSummary.data).toHaveLength(1);
+      expect(result.monthlyAssigneeSummary.data[0].assignee).toBe('未割当');
     });
 
     it('should handle tasks without start dates', async () => {

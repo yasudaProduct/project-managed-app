@@ -20,12 +20,16 @@ import { container } from '@/lib/inversify.config';
 
 describe('assignee-gantt-actions', () => {
   const mockService = {
-    getAssigneeWorkloads: jest.fn()
+    getAssigneeWorkloads: jest.fn(),
+    getAssigneeWarnings: jest.fn()
   };
 
   beforeEach(() => {
     (container.get as jest.Mock).mockReturnValue(mockService);
     mockService.getAssigneeWorkloads.mockClear();
+    mockService.getAssigneeWarnings.mockClear();
+    // デフォルトのモック値を設定
+    mockService.getAssigneeWarnings.mockResolvedValue([]);
   });
 
   describe('getAssigneeWorkloads', () => {
@@ -34,22 +38,22 @@ describe('assignee-gantt-actions', () => {
       const mockWorkloads = [{
         assigneeId: 'user-1',
         assigneeName: '山田太郎',
+        assigneeRate: 1.0,
         dailyAllocations: [{
           date: new Date('2024-01-15'),
           availableHours: 7.5,
+          isWeekend: false,
+          isCompanyHoliday: false,
+          userSchedules: [],
           taskAllocations: [{
             taskId: 'task-1',
             taskName: 'サンプルタスク',
             allocatedHours: 4.0,
-            getFormattedHours: () => '4.0',
-            equals: () => false,
-            addHours: () => ({})
+            totalHours: 8.0,
+            periodStart: new Date('2024-01-15'),
+            periodEnd: new Date('2024-01-17')
           }],
-          get allocatedHours() { return 4.0; },
-          isOverloaded: () => false,
-          getUtilizationRate: () => 0.53,
-          getOverloadedHours: () => 0,
-          addTaskAllocation: () => { }
+          get allocatedHours() { return 4.0; }
         }],
         getOverloadedDays: () => [],
         getTotalHours: () => 4.0,
@@ -80,7 +84,7 @@ describe('assignee-gantt-actions', () => {
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('wbsId, startDate, endDate are required');
+      expect(result.error).toBe('wbsid、startdate、enddateが必要です');
       expect(mockService.getAssigneeWorkloads).not.toHaveBeenCalled();
     });
 

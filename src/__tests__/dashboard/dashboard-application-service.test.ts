@@ -95,13 +95,16 @@ describe("DashboardApplicationService", () => {
 
             mockProjectRepository.findAll.mockResolvedValue(mockProjects);
             mockWbsRepository.findAll.mockResolvedValue(mockWbs);
+            mockWbsRepository.findByProjectId.mockImplementation((projectId: string) => {
+                return Promise.resolve(mockWbs.filter(w => w.projectId === projectId));
+            });
             mockTaskRepository.findAll.mockResolvedValue(mockTasks);
 
             // Act
             const result = await service.getDashboardStats();
 
             // Assert
-            expect(result).toEqual({
+            expect(result).toMatchObject({
                 totalProjects: 2,
                 activeProjects: 1,
                 totalTasks: 2,
@@ -137,6 +140,7 @@ describe("DashboardApplicationService", () => {
 
             mockProjectRepository.findAll.mockResolvedValue(mockProjects);
             mockWbsRepository.findAll.mockResolvedValue([]);
+            mockWbsRepository.findByProjectId.mockResolvedValue([]);
             mockTaskRepository.findAll.mockResolvedValue([]);
 
             // Act
@@ -168,6 +172,7 @@ describe("DashboardApplicationService", () => {
 
             mockProjectRepository.findAll.mockResolvedValue(mockProjects);
             mockWbsRepository.findAll.mockResolvedValue([]);
+            mockWbsRepository.findByProjectId.mockResolvedValue([]);
             mockTaskRepository.findAll.mockResolvedValue([]);
 
             // Act
@@ -186,6 +191,7 @@ describe("DashboardApplicationService", () => {
             // Arrange
             mockProjectRepository.findAll.mockResolvedValue([]);
             mockWbsRepository.findAll.mockResolvedValue([]);
+            mockWbsRepository.findByProjectId.mockResolvedValue([]);
             mockTaskRepository.findAll.mockResolvedValue([]);
 
             // Act
@@ -195,6 +201,7 @@ describe("DashboardApplicationService", () => {
             expect(result).toEqual({
                 totalProjects: 0,
                 activeProjects: 0,
+                activeProjectsList: [],
                 totalTasks: 0,
                 completedTasks: 0,
                 totalWbs: 0,

@@ -3,6 +3,7 @@ import { ITaskRepository } from '@/applications/task/itask-repository';
 import { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
+import { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
 import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
@@ -10,6 +11,9 @@ import { CompanyHoliday } from '@/domains/calendar/company-calendar';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/project-status';
 import { Period } from '@/domains/task/period';
+import { PeriodType } from '@/domains/task/value-object/period-type';
+import { ManHour } from '@/domains/task/man-hour';
+import { ManHourType } from '@/domains/task/value-object/man-hour-type';
 
 describe('AssigneeGanttService', () => {
   let service: AssigneeGanttService;
@@ -17,6 +21,7 @@ describe('AssigneeGanttService', () => {
   let mockUserScheduleRepository: jest.Mocked<IUserScheduleRepository>;
   let mockCompanyHolidayRepository: jest.Mocked<ICompanyHolidayRepository>;
   let mockWbsAssigneeRepository: jest.Mocked<IWbsAssigneeRepository>;
+  let mockSystemSettingsRepository: jest.Mocked<ISystemSettingsRepository>;
 
   const testStartDate = new Date('2024-01-15');
   const testEndDate = new Date('2024-01-19');
@@ -55,29 +60,38 @@ describe('AssigneeGanttService', () => {
       delete: jest.fn(),
     } as jest.Mocked<IWbsAssigneeRepository>;
 
+    mockSystemSettingsRepository = {
+      get: jest.fn().mockResolvedValue({
+        standardWorkingHours: 7.5,
+        roundToQuarter: false,
+      }),
+      update: jest.fn(),
+    } as jest.Mocked<ISystemSettingsRepository>;
+
     service = new AssigneeGanttService(
       mockTaskRepository,
       mockUserScheduleRepository,
       mockCompanyHolidayRepository,
-      mockWbsAssigneeRepository
+      mockWbsAssigneeRepository,
+      mockSystemSettingsRepository
     );
   });
 
   const createMockTask = (taskNo: string, assigneeId: number, startDate: Date, endDate: Date, hours: number) => {
-    return Task.reconstruct({
+    return Task.createFromDb({
       id: parseInt(taskNo),
-      taskNo: TaskNo.create(`TASK-${taskNo.padStart(3, '0')}`),
+      taskNo: TaskNo.reconstruct(`TASK-${taskNo.padStart(3, '0')}`),
       wbsId: testWbsId,
       name: `タスク${taskNo}`,
-      status: TaskStatus.NotStarted,
+      status: new TaskStatus({ status: 'NOT_STARTED' }),
       assigneeId: assigneeId,
       periods: [
-        Period.reconstruct({
+        Period.createFromDb({
           id: parseInt(taskNo),
-          periodType: 'YOTEI',
           startDate,
           endDate,
-          kosuu: hours
+          type: new PeriodType({ type: 'YOTEI' }),
+          manHours: [ManHour.createFromDb({ id: parseInt(taskNo), kosu: hours, type: new ManHourType({ type: 'NORMAL' }) })]
         })
       ]
     });

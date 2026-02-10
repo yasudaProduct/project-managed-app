@@ -26,10 +26,13 @@ describe('EvmService', () => {
       taskId: number;
       taskNo: string;
       taskName: string;
+      baseStartDate: Date;
+      baseEndDate: Date;
       plannedStartDate: Date;
       plannedEndDate: Date;
       actualStartDate: Date | null;
       actualEndDate: Date | null;
+      baseManHours: number;
       plannedManHours: number;
       actualManHours: number;
       status: TaskStatus;
@@ -41,10 +44,13 @@ describe('EvmService', () => {
         overrides?.taskId ?? 1,
         overrides?.taskNo ?? 'T001',
         overrides?.taskName ?? 'テストタスク',
+        overrides?.baseStartDate ?? overrides?.plannedStartDate ?? new Date('2025-01-01'),
+        overrides?.baseEndDate ?? overrides?.plannedEndDate ?? new Date('2025-01-10'),
         overrides?.plannedStartDate ?? new Date('2025-01-01'),
         overrides?.plannedEndDate ?? new Date('2025-01-10'),
         overrides?.actualStartDate ?? null,
         overrides?.actualEndDate ?? null,
+        overrides?.baseManHours ?? overrides?.plannedManHours ?? 100,
         overrides?.plannedManHours ?? 100,
         overrides?.actualManHours ?? 0,
         overrides?.status ?? 'NOT_STARTED',
@@ -61,6 +67,7 @@ describe('EvmService', () => {
           taskId: 1,
           plannedStartDate: new Date('2025-01-01'),
           plannedEndDate: new Date('2025-01-10'),
+          actualStartDate: new Date('2025-01-01'),
           plannedManHours: 100,
           status: 'IN_PROGRESS',
           progressRate: 50,
@@ -69,6 +76,7 @@ describe('EvmService', () => {
           taskId: 2,
           plannedStartDate: new Date('2025-01-01'),
           plannedEndDate: new Date('2025-01-10'),
+          actualStartDate: new Date('2025-01-01'),
           plannedManHours: 200,
           status: 'COMPLETED',
           progressRate: 100,
@@ -124,6 +132,7 @@ describe('EvmService', () => {
           taskId: 1,
           plannedStartDate: new Date('2025-01-01'),
           plannedEndDate: new Date('2025-01-10'),
+          actualStartDate: new Date('2025-01-01'),
           plannedManHours: 100,
           costPerHour: 5000,
           status: 'IN_PROGRESS',
@@ -172,12 +181,14 @@ describe('EvmService', () => {
           plannedManHours: 100,
           status: 'COMPLETED',
           progressRate: 75, // 無視される
+          actualStartDate: new Date('2025-01-01'), // EVを計算するために必要
         }),
         createMockTask({
           taskId: 2,
           plannedManHours: 100,
           status: 'IN_PROGRESS',
           progressRate: 50, // 無視される
+          actualStartDate: new Date('2025-01-01'), // EVを計算するために必要
         }),
       ];
 
@@ -201,7 +212,7 @@ describe('EvmService', () => {
         'ZERO_HUNDRED'
       );
 
-      // EV: Task1 = 100 * 1.0 = 100, Task2 = 100 * 0 = 0
+      // EV: Task1 = 100 * 1.0 = 100 (COMPLETED), Task2 = 100 * 0 = 0 (IN_PROGRESS but ZERO_HUNDRED = 0)
       expect(result.ev).toBe(100);
       expect(result.progressMethod).toBe('ZERO_HUNDRED');
     });
@@ -213,16 +224,19 @@ describe('EvmService', () => {
           taskId: 1,
           plannedManHours: 100,
           status: 'COMPLETED',
+          actualStartDate: new Date('2025-01-01'),
         }),
         createMockTask({
           taskId: 2,
           plannedManHours: 100,
           status: 'IN_PROGRESS',
+          actualStartDate: new Date('2025-01-01'),
         }),
         createMockTask({
           taskId: 3,
           plannedManHours: 100,
           status: 'NOT_STARTED',
+          // NOT_STARTED tasks don't have actualStartDate
         }),
       ];
 
@@ -259,6 +273,7 @@ describe('EvmService', () => {
           plannedManHours: 100,
           status: 'IN_PROGRESS',
           progressRate: 50,
+          actualStartDate: new Date('2025-01-01'),
         }),
       ];
 
@@ -292,6 +307,7 @@ describe('EvmService', () => {
           plannedManHours: 100,
           status: 'IN_PROGRESS',
           progressRate: 50,
+          actualStartDate: new Date('2025-01-01'),
         }),
       ];
 

@@ -8,7 +8,55 @@ import { TaskAllocation } from '@/domains/assignee-workload/task-allocation';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/project-status';
 import { Period } from '@/domains/task/period';
+import { PeriodType } from '@/domains/task/value-object/period-type';
+import { ManHour } from '@/domains/task/man-hour';
+import { ManHourType } from '@/domains/task/value-object/man-hour-type';
 import { getDefaultStandardWorkingHours } from "@/__tests__/helpers/system-settings-helper";
+
+// テストヘルパー: Period.createFromDbを使用してPeriodを作成
+const createTestPeriod = (args: { id: number; startDate: Date; endDate: Date; kosu: number }) => {
+  return Period.createFromDb({
+    id: args.id,
+    startDate: args.startDate,
+    endDate: args.endDate,
+    type: new PeriodType({ type: 'YOTEI' }),
+    manHours: [ManHour.createFromDb({ id: args.id, kosu: args.kosu, type: new ManHourType({ type: 'NORMAL' }) })],
+  });
+};
+
+// テストヘルパー: WbsAssignee.createFromDbを使用してWbsAssigneeを作成
+const createTestAssignee = (args: { id: number; wbsId: number; userId: string; userName: string; rate: number }) => {
+  return WbsAssignee.createFromDb({
+    id: args.id,
+    wbsId: args.wbsId,
+    userId: args.userId,
+    userName: args.userName,
+    rate: args.rate,
+    costPerHour: 5000,
+    seq: args.id,
+  });
+};
+
+// テストヘルパー: Task.createFromDbを使用してTaskを作成
+const createTestTask = (args: {
+  id: number;
+  taskNo: string;
+  wbsId: number;
+  name: string;
+  assigneeId?: number;
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+  periods?: Period[];
+}) => {
+  return Task.createFromDb({
+    id: args.id,
+    taskNo: TaskNo.reconstruct(args.taskNo),
+    wbsId: args.wbsId,
+    name: args.name,
+    assigneeId: args.assigneeId,
+    status: new TaskStatus({ status: args.status }),
+    periods: args.periods,
+  });
+};
 
 describe('WorkloadCalculationService', () => {
   let service: WorkloadCalculationService;
@@ -20,26 +68,25 @@ describe('WorkloadCalculationService', () => {
     service = new WorkloadCalculationService();
 
     // モックタスクの作成
-    mockTask = Task.reconstruct({
+    mockTask = createTestTask({
       id: 1,
-      taskNo: new TaskNo('TASK-001'),
+      taskNo: 'TASK-001',
       wbsId: 1,
       name: 'Test Task',
       assigneeId: 1,
-      status: new TaskStatus({ status: 'NOT_STARTED' }),
+      status: 'NOT_STARTED',
       periods: [
-        Period.reconstruct({
+        createTestPeriod({
           id: 1,
-          periodType: 'YOTEI',
           startDate: new Date('2024-01-01'),
           endDate: new Date('2024-01-05'),
-          kosuu: 40
+          kosu: 40
         })
       ]
     });
 
     // モック担当者の作成
-    mockAssignee = WbsAssignee.reconstruct({
+    mockAssignee = createTestAssignee({
       id: 1,
       wbsId: 1,
       userId: 'user1',
@@ -223,12 +270,12 @@ describe('WorkloadCalculationService', () => {
     });
 
     it('予定期間が設定されていない場合falseを返す', () => {
-      const taskWithoutPeriod = Task.reconstruct({
+      const taskWithoutPeriod = createTestTask({
         id: 2,
-        taskNo: new TaskNo('TASK-002'),
+        taskNo: 'TASK-002',
         wbsId: 1,
         name: 'Task without period',
-        status: new TaskStatus({ status: 'NOT_STARTED' })
+        status: 'NOT_STARTED'
       });
 
       const date = new Date('2024-01-03');
@@ -266,46 +313,45 @@ describe('WorkloadCalculationService', () => {
 
   describe('複数タスクの配分計算', () => {
     it('複数タスクの工数を正しく配分する', () => {
-      const task1 = Task.reconstruct({
+      // 日本の祝日ではない平日を使用（2024年2月5日〜8日は月〜木の平日）
+      const task1 = createTestTask({
         id: 1,
-        taskNo: new TaskNo('TASK-001'),
+        taskNo: 'TASK-001',
         wbsId: 1,
         name: 'Task 1',
         assigneeId: 1,
-        status: new TaskStatus({ status: 'IN_PROGRESS' }),
+        status: 'IN_PROGRESS',
         periods: [
-          Period.reconstruct({
+          createTestPeriod({
             id: 1,
-            periodType: 'YOTEI',
-            startDate: new Date('2024-01-01'),
-            endDate: new Date('2024-01-03'),
-            kosuu: 24
+            startDate: new Date('2024-02-05'),
+            endDate: new Date('2024-02-07'),
+            kosu: 24
           })
         ]
       });
 
-      const task2 = Task.reconstruct({
+      const task2 = createTestTask({
         id: 2,
-        taskNo: new TaskNo('TASK-002'),
+        taskNo: 'TASK-002',
         wbsId: 1,
         name: 'Task 2',
         assigneeId: 1,
-        status: new TaskStatus({ status: 'NOT_STARTED' }),
+        status: 'NOT_STARTED',
         periods: [
-          Period.reconstruct({
+          createTestPeriod({
             id: 2,
-            periodType: 'YOTEI',
-            startDate: new Date('2024-01-02'),
-            endDate: new Date('2024-01-04'),
-            kosuu: 18
+            startDate: new Date('2024-02-06'),
+            endDate: new Date('2024-02-08'),
+            kosu: 18
           })
         ]
       });
 
       const tasks = [task1, task2];
       const userSchedules: UserSchedule[] = [];
-      const startDate = new Date('2024-01-01');
-      const endDate = new Date('2024-01-04');
+      const startDate = new Date('2024-02-05');
+      const endDate = new Date('2024-02-08');
 
       const result = service.calculateDailyAllocations(
         tasks,
@@ -316,17 +362,17 @@ describe('WorkloadCalculationService', () => {
         endDate
       );
 
-      // 1月1日: Task1のみアクティブ
+      // 2月5日: Task1のみアクティブ
       expect(result[0].taskAllocations).toHaveLength(1);
       expect(result[0].taskAllocations[0].taskName).toBe('Task 1');
 
-      // 1月2日: Task1とTask2の両方がアクティブ
+      // 2月6日: Task1とTask2の両方がアクティブ
       expect(result[1].taskAllocations).toHaveLength(2);
 
-      // 1月3日: Task1とTask2の両方がアクティブ
+      // 2月7日: Task1とTask2の両方がアクティブ
       expect(result[2].taskAllocations).toHaveLength(2);
 
-      // 1月4日: Task2のみアクティブ
+      // 2月8日: Task2のみアクティブ
       expect(result[3].taskAllocations).toHaveLength(1);
       expect(result[3].taskAllocations[0].taskName).toBe('Task 2');
     });

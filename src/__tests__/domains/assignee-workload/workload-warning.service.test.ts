@@ -6,7 +6,54 @@ import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/project-status';
 import { Period } from '@/domains/task/period';
+import { PeriodType } from '@/domains/task/value-object/period-type';
+import { ManHour } from '@/domains/task/man-hour';
+import { ManHourType } from '@/domains/task/value-object/man-hour-type';
 import { getDefaultStandardWorkingHours } from "@/__tests__/helpers/system-settings-helper";
+
+// テストヘルパー: Period.createFromDbを使用してPeriodを作成
+const createTestPeriod = (args: { id: number; startDate: Date; endDate: Date; kosu: number }) => {
+  return Period.createFromDb({
+    id: args.id,
+    startDate: args.startDate,
+    endDate: args.endDate,
+    type: new PeriodType({ type: 'YOTEI' }),
+    manHours: [ManHour.createFromDb({ id: args.id, kosu: args.kosu, type: new ManHourType({ type: 'NORMAL' }) })],
+  });
+};
+
+// テストヘルパー: WbsAssignee.createFromDbを使用してWbsAssigneeを作成
+const createTestAssignee = (args: { id: number; wbsId: number; userId: string; userName: string; rate: number }) => {
+  return WbsAssignee.createFromDb({
+    id: args.id,
+    wbsId: args.wbsId,
+    userId: args.userId,
+    userName: args.userName,
+    rate: args.rate,
+    costPerHour: 5000,
+    seq: args.id,
+  });
+};
+
+// テストヘルパー: Task.createFromDbを使用してTaskを作成
+const createTestTask = (args: {
+  id: number;
+  taskNo: string;
+  wbsId: number;
+  name: string;
+  assigneeId?: number;
+  periods?: Period[];
+}) => {
+  return Task.createFromDb({
+    id: args.id,
+    taskNo: TaskNo.reconstruct(args.taskNo),
+    wbsId: args.wbsId,
+    name: args.name,
+    assigneeId: args.assigneeId,
+    status: new TaskStatus({ status: 'NOT_STARTED' }),
+    periods: args.periods,
+  });
+};
 
 describe('WorkloadWarningService', () => {
   let service: WorkloadWarningService;
@@ -18,26 +65,24 @@ describe('WorkloadWarningService', () => {
     service = new WorkloadWarningService();
 
     // モックタスクの作成
-    mockTask = Task.reconstruct({
+    mockTask = createTestTask({
       id: 1,
-      taskNo: TaskNo.create('TASK-001'),
+      taskNo: 'TASK-001',
       wbsId: 1,
       name: 'Test Task',
       assigneeId: 1,
-      status: TaskStatus.NotStarted,
       periods: [
-        Period.reconstruct({
+        createTestPeriod({
           id: 1,
-          periodType: 'YOTEI',
           startDate: new Date('2024-01-01'),
           endDate: new Date('2024-01-05'),
-          kosuu: 40
+          kosu: 40
         })
       ]
     });
 
     // モック担当者の作成
-    mockAssignee = WbsAssignee.reconstruct({
+    mockAssignee = createTestAssignee({
       id: 1,
       wbsId: 1,
       userId: 'user1',
@@ -121,12 +166,11 @@ describe('WorkloadWarningService', () => {
     });
 
     it('タスクの期間が未設定の場合はnullを返す', () => {
-      const taskWithoutPeriod = Task.reconstruct({
+      const taskWithoutPeriod = createTestTask({
         id: 2,
-        taskNo: TaskNo.create('TASK-002'),
+        taskNo: 'TASK-002',
         wbsId: 1,
         name: 'Task without period',
-        status: TaskStatus.NotStarted
       });
 
       const result = service.validateTaskFeasibility(
@@ -140,20 +184,18 @@ describe('WorkloadWarningService', () => {
     });
 
     it('週末のみのタスクで会社休日でない場合は警告を返さない', () => {
-      const weekendTask = Task.reconstruct({
+      const weekendTask = createTestTask({
         id: 3,
-        taskNo: TaskNo.create('TASK-003'),
+        taskNo: 'TASK-003',
         wbsId: 1,
         name: 'Weekend Task',
         assigneeId: 1,
-        status: TaskStatus.NotStarted,
         periods: [
-          Period.reconstruct({
+          createTestPeriod({
             id: 3,
-            periodType: 'YOTEI',
             startDate: new Date('2024-01-06'), // 土曜日
             endDate: new Date('2024-01-07'), // 日曜日
-            kosuu: 16
+            kosu: 16
           })
         ]
       });
@@ -179,45 +221,41 @@ describe('WorkloadWarningService', () => {
 
   describe('validateTasksFeasibility', () => {
     it('複数タスクの実現可能性を一括検証する', () => {
-      const task1 = Task.reconstruct({
+      const task1 = createTestTask({
         id: 1,
-        taskNo: TaskNo.create('TASK-001'),
+        taskNo: 'TASK-001',
         wbsId: 1,
         name: 'Task 1',
         assigneeId: 1,
-        status: TaskStatus.NotStarted,
         periods: [
-          Period.reconstruct({
+          createTestPeriod({
             id: 1,
-            periodType: 'YOTEI',
             startDate: new Date('2024-01-01'),
             endDate: new Date('2024-01-05'),
-            kosuu: 40
+            kosu: 40
           })
         ]
       });
 
-      const task2 = Task.reconstruct({
+      const task2 = createTestTask({
         id: 2,
-        taskNo: TaskNo.create('TASK-002'),
+        taskNo: 'TASK-002',
         wbsId: 1,
         name: 'Task 2',
         assigneeId: 2,
-        status: TaskStatus.NotStarted,
         periods: [
-          Period.reconstruct({
+          createTestPeriod({
             id: 2,
-            periodType: 'YOTEI',
             startDate: new Date('2024-01-01'),
             endDate: new Date('2024-01-05'),
-            kosuu: 32
+            kosu: 32
           })
         ]
       });
 
       const tasks = [task1, task2];
 
-      const assignee1 = WbsAssignee.reconstruct({
+      const assignee1 = createTestAssignee({
         id: 1,
         wbsId: 1,
         userId: 'user1',
@@ -225,7 +263,7 @@ describe('WorkloadWarningService', () => {
         rate: 0.8
       });
 
-      const assignee2 = WbsAssignee.reconstruct({
+      const assignee2 = createTestAssignee({
         id: 2,
         wbsId: 1,
         userId: 'user2',
@@ -254,45 +292,41 @@ describe('WorkloadWarningService', () => {
     });
 
     it('一部のタスクが実現不可能な場合は該当タスクの警告のみ返す', () => {
-      const task1 = Task.reconstruct({
+      const task1 = createTestTask({
         id: 1,
-        taskNo: TaskNo.create('TASK-001'),
+        taskNo: 'TASK-001',
         wbsId: 1,
         name: 'Feasible Task',
         assigneeId: 1,
-        status: TaskStatus.NotStarted,
         periods: [
-          Period.reconstruct({
+          createTestPeriod({
             id: 1,
-            periodType: 'YOTEI',
             startDate: new Date('2024-01-01'),
             endDate: new Date('2024-01-05'),
-            kosuu: 40
+            kosu: 40
           })
         ]
       });
 
-      const task2 = Task.reconstruct({
+      const task2 = createTestTask({
         id: 2,
-        taskNo: TaskNo.create('TASK-002'),
+        taskNo: 'TASK-002',
         wbsId: 1,
         name: 'Infeasible Task',
         assigneeId: 2,
-        status: TaskStatus.NotStarted,
         periods: [
-          Period.reconstruct({
+          createTestPeriod({
             id: 2,
-            periodType: 'YOTEI',
             startDate: new Date('2024-01-06'),
             endDate: new Date('2024-01-07'),
-            kosuu: 16
+            kosu: 16
           })
         ]
       });
 
       const tasks = [task1, task2];
 
-      const assignee1 = WbsAssignee.reconstruct({
+      const assignee1 = createTestAssignee({
         id: 1,
         wbsId: 1,
         userId: 'user1',
@@ -300,7 +334,7 @@ describe('WorkloadWarningService', () => {
         rate: 0.8
       });
 
-      const assignee2 = WbsAssignee.reconstruct({
+      const assignee2 = createTestAssignee({
         id: 2,
         wbsId: 1,
         userId: 'user2',
@@ -323,9 +357,9 @@ describe('WorkloadWarningService', () => {
       ]);
 
       // 週末を会社休日にする
-      const holidays = [
-        CompanyHoliday.create(new Date('2024-01-06'), '土曜日'),
-        CompanyHoliday.create(new Date('2024-01-07'), '日曜日')
+      const holidays: CompanyHoliday[] = [
+        { date: new Date('2024-01-06'), name: '土曜日', type: 'COMPANY' },
+        { date: new Date('2024-01-07'), name: '日曜日', type: 'COMPANY' }
       ];
       const holidayCalendar = new CompanyCalendar(getDefaultStandardWorkingHours(), holidays);
 
@@ -344,20 +378,18 @@ describe('WorkloadWarningService', () => {
     });
 
     it('担当者が見つからない場合でも処理を継続する', () => {
-      const task = Task.reconstruct({
+      const task = createTestTask({
         id: 1,
-        taskNo: TaskNo.create('TASK-001'),
+        taskNo: 'TASK-001',
         wbsId: 1,
         name: 'Task without assignee',
         assigneeId: 999, // 存在しない担当者ID
-        status: TaskStatus.NotStarted,
         periods: [
-          Period.reconstruct({
+          createTestPeriod({
             id: 1,
-            periodType: 'YOTEI',
             startDate: new Date('2024-01-01'),
             endDate: new Date('2024-01-05'),
-            kosuu: 40
+            kosu: 40
           })
         ]
       });
@@ -377,27 +409,25 @@ describe('WorkloadWarningService', () => {
     });
 
     it('個人予定がない担当者でも正しく処理する', () => {
-      const task = Task.reconstruct({
+      const task = createTestTask({
         id: 1,
-        taskNo: TaskNo.create('TASK-001'),
+        taskNo: 'TASK-001',
         wbsId: 1,
         name: 'Task',
         assigneeId: 1,
-        status: TaskStatus.NotStarted,
         periods: [
-          Period.reconstruct({
+          createTestPeriod({
             id: 1,
-            periodType: 'YOTEI',
             startDate: new Date('2024-01-01'),
             endDate: new Date('2024-01-05'),
-            kosuu: 40
+            kosu: 40
           })
         ]
       });
 
       const tasks = [task];
 
-      const assignee = WbsAssignee.reconstruct({
+      const assignee = createTestAssignee({
         id: 1,
         wbsId: 1,
         userId: 'user1',
