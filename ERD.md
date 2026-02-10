@@ -41,6 +41,12 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"wbs_tag" {
+  Int id PK
+  Int wbsId FK
+  String name
+  DateTime createdAt
+}
 "wbs_assignee" {
   Int id PK
   Int wbsId FK
@@ -54,6 +60,7 @@ erDiagram
 "wbs_phase" {
   Int id PK
   Int wbsId FK
+  Int templateId FK "nullable"
   String name
   String code
   Int seq
@@ -260,9 +267,11 @@ erDiagram
 }
 "user_sessions" }o--|| "users" : user
 "wbs" }o--|| "projects" : project
+"wbs_tag" }o--|| "wbs" : wbs
 "wbs_assignee" }o--|| "wbs" : wbs
 "wbs_assignee" }o--|| "users" : assignee
 "wbs_phase" }o--|| "wbs" : wbs
+"wbs_phase" }o--o| "phase_template" : template
 "wbs_buffer" }o--|| "wbs" : wbs
 "wbs_task" }o--|| "wbs" : wbs
 "wbs_task" }o--o| "wbs_phase" : phase
@@ -331,6 +340,14 @@ erDiagram
   - `createdAt`: 
   - `updatedAt`: 
 
+### `wbs_tag`
+
+**Properties**
+  - `id`: 
+  - `wbsId`: 
+  - `name`: 
+  - `createdAt`: 
+
 ### `wbs_assignee`
 
 **Properties**
@@ -348,6 +365,7 @@ erDiagram
 **Properties**
   - `id`: 
   - `wbsId`: 
+  - `templateId`: 
   - `name`: 
   - `code`: 
   - `seq`: 
