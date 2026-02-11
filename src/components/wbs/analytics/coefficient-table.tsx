@@ -54,7 +54,7 @@ type Props = {
 export function CoefficientTable({ phaseTemplates, wbsList, tagNames }: Props) {
     const [filterType, setFilterType] = useState<"wbs" | "all" | "tag">("all");
     const [hoursType, setHoursType] = useState<"planned" | "actual">("planned");
-    const [selectedWbsId, setSelectedWbsId] = useState<number | undefined>(wbsList[0]?.id);
+    const [selectedWbsIds, setSelectedWbsIds] = useState<number[]>([]);
     const [selectedTag, setSelectedTag] = useState<string | undefined>(tagNames[0]);
     const [baseTemplateId, setBaseTemplateId] = useState<number>(phaseTemplates[0]?.id ?? 0);
     const [data, setData] = useState<PhaseCoefficient[]>([]);
@@ -65,7 +65,7 @@ export function CoefficientTable({ phaseTemplates, wbsList, tagNames }: Props) {
         try {
             const result = await getCoefficients({
                 filterType,
-                wbsIds: filterType === "wbs" && selectedWbsId ? [selectedWbsId] : undefined,
+                wbsIds: filterType === "wbs" ? selectedWbsIds : undefined,
                 tagNames: filterType === "tag" && selectedTag ? [selectedTag] : undefined,
                 baseTemplateId,
                 hoursType,
@@ -76,7 +76,7 @@ export function CoefficientTable({ phaseTemplates, wbsList, tagNames }: Props) {
         } finally {
             setIsLoading(false);
         }
-    }, [filterType, hoursType, selectedWbsId, selectedTag, baseTemplateId]);
+    }, [filterType, hoursType, selectedWbsIds, selectedTag, baseTemplateId]);
 
     useEffect(() => {
         fetchData();
@@ -89,8 +89,8 @@ export function CoefficientTable({ phaseTemplates, wbsList, tagNames }: Props) {
                 onFilterTypeChange={setFilterType}
                 hoursType={hoursType}
                 onHoursTypeChange={setHoursType}
-                selectedWbsId={selectedWbsId}
-                onWbsChange={setSelectedWbsId}
+                selectedWbsIds={selectedWbsIds}
+                onWbsChange={setSelectedWbsIds}
                 selectedTag={selectedTag}
                 onTagChange={setSelectedTag}
                 wbsList={wbsList}

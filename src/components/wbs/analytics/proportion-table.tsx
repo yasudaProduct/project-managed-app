@@ -51,7 +51,7 @@ function formatPercent(value: number | null | undefined): string {
 export function ProportionTable({ phaseTemplates, wbsList, tagNames }: Props) {
     const [filterType, setFilterType] = useState<"wbs" | "all" | "tag">("all");
     const [hoursType, setHoursType] = useState<"planned" | "actual">("planned");
-    const [selectedWbsId, setSelectedWbsId] = useState<number | undefined>(wbsList[0]?.id);
+    const [selectedWbsIds, setSelectedWbsIds] = useState<number[]>([]);
     const [selectedTag, setSelectedTag] = useState<string | undefined>(tagNames[0]);
     const [customBaseIds, setCustomBaseIds] = useState<number[]>([]);
     const [data, setData] = useState<PhaseProportion[]>([]);
@@ -62,7 +62,7 @@ export function ProportionTable({ phaseTemplates, wbsList, tagNames }: Props) {
         try {
             const result = await getProportions({
                 filterType,
-                wbsIds: filterType === "wbs" && selectedWbsId ? [selectedWbsId] : undefined,
+                wbsIds: filterType === "wbs" ? selectedWbsIds : undefined,
                 tagNames: filterType === "tag" && selectedTag ? [selectedTag] : undefined,
                 hoursType,
                 customBaseTemplateIds: customBaseIds.length > 0 ? customBaseIds : undefined,
@@ -73,7 +73,7 @@ export function ProportionTable({ phaseTemplates, wbsList, tagNames }: Props) {
         } finally {
             setIsLoading(false);
         }
-    }, [filterType, hoursType, selectedWbsId, selectedTag, customBaseIds]);
+    }, [filterType, hoursType, selectedWbsIds, selectedTag, customBaseIds]);
 
     useEffect(() => {
         fetchData();
@@ -96,8 +96,8 @@ export function ProportionTable({ phaseTemplates, wbsList, tagNames }: Props) {
                 onFilterTypeChange={setFilterType}
                 hoursType={hoursType}
                 onHoursTypeChange={setHoursType}
-                selectedWbsId={selectedWbsId}
-                onWbsChange={setSelectedWbsId}
+                selectedWbsIds={selectedWbsIds}
+                onWbsChange={setSelectedWbsIds}
                 selectedTag={selectedTag}
                 onTagChange={setSelectedTag}
                 wbsList={wbsList}
