@@ -1,4 +1,4 @@
-import { NotificationType } from '@/domains/notification/notification-type';
+import { NotificationType } from '@/types/notification';
 import { NotificationPriority } from '@/domains/notification/notification-priority';
 
 // Simple unit test for hook types and interfaces

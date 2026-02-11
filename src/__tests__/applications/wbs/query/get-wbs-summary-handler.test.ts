@@ -1,3 +1,13 @@
+// Prismaモジュールをモック化（インポート前にモックする必要がある）
+jest.mock('@/lib/prisma/prisma', () => ({
+  __esModule: true,
+  default: {
+    projectSettings: {
+      findUnique: jest.fn().mockResolvedValue(null),
+    },
+  },
+}));
+
 import { GetWbsSummaryHandler } from '@/applications/wbs/query/get-wbs-summary-handler';
 import { GetWbsSummaryQuery } from '@/applications/wbs/query/get-wbs-summary-query';
 import { AllocationCalculationMode } from '@/applications/wbs/query/allocation-calculation-mode';
@@ -6,6 +16,7 @@ import type { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-rep
 import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
+import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
 
 describe('GetWbsSummaryHandler', () => {
   let handler: GetWbsSummaryHandler;
@@ -13,6 +24,7 @@ describe('GetWbsSummaryHandler', () => {
   let mockCompanyHolidayRepository: jest.Mocked<ICompanyHolidayRepository>;
   let mockUserScheduleRepository: jest.Mocked<IUserScheduleRepository>;
   let mockWbsAssigneeRepository: jest.Mocked<IWbsAssigneeRepository>;
+  let mockSystemSettingsRepository: jest.Mocked<ISystemSettingsRepository>;
 
   const mockTasks: WbsTaskData[] = [
     {
@@ -88,11 +100,17 @@ describe('GetWbsSummaryHandler', () => {
       findByWbsId: jest.fn(),
     } as jest.Mocked<IWbsAssigneeRepository>;
 
+    mockSystemSettingsRepository = {
+      get: jest.fn(),
+      update: jest.fn(),
+    } as jest.Mocked<ISystemSettingsRepository>;
+
     handler = new GetWbsSummaryHandler(
       mockWbsQueryRepository,
       mockCompanyHolidayRepository,
       mockUserScheduleRepository,
-      mockWbsAssigneeRepository
+      mockWbsAssigneeRepository,
+      mockSystemSettingsRepository
     );
 
     // デフォルトのモック設定
@@ -101,6 +119,11 @@ describe('GetWbsSummaryHandler', () => {
     mockCompanyHolidayRepository.findAll.mockResolvedValue([]);
     mockUserScheduleRepository.findByUserIdAndDateRange.mockResolvedValue([]);
     mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([]);
+    // SystemSettingsにデフォルト値を設定
+    mockSystemSettingsRepository.get.mockResolvedValue({
+      standardWorkingHours: 7.5,
+      roundToQuarter: false,
+    });
   });
 
   describe('execute', () => {
@@ -187,8 +210,8 @@ describe('GetWbsSummaryHandler', () => {
       it('should throw error for unknown calculation mode', async () => {
         // @ts-expect-error - テスト用に無効な値を設定
         const query = new GetWbsSummaryQuery('project-1', 1, 'INVALID_MODE' as AllocationCalculationMode);
-        
-        await expect(handler.execute(query)).rejects.toThrow('Unknown calculation mode: INVALID_MODE');
+
+        await expect(handler.execute(query)).rejects.toThrow('不明な計算モード: INVALID_MODE');
       });
     });
 
@@ -219,14 +242,15 @@ describe('GetWbsSummaryHandler', () => {
           assignee: null
         }
       ];
-      
+
       mockWbsQueryRepository.getWbsTasks.mockResolvedValue(tasksWithoutAssignee);
-      
+
       const query = new GetWbsSummaryQuery('project-1', 1);
       const result = await handler.execute(query);
 
-      // 担当者がいないタスクは月別担当者別集計から除外される
-      expect(result.monthlyAssigneeSummary.data).toHaveLength(0);
+      // 担当者がいないタスクは「未割当」として月別担当者別集計に含まれる
+      expect(result.monthlyAssigneeSummary.data).toHaveLength(1);
+      expect(result.monthlyAssigneeSummary.data[0].assignee).toBe('未割当');
     });
 
     it('should handle tasks without start dates', async () => {

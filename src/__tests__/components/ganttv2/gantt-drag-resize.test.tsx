@@ -1,3 +1,17 @@
+// Prismaモジュールをモック化（インポート前にモックする必要がある）
+jest.mock('@/lib/prisma/prisma', () => ({
+  __esModule: true,
+  default: {},
+}));
+
+// DIコンテナのモック
+jest.mock('@/lib/inversify.config', () => ({
+  __esModule: true,
+  container: {
+    get: jest.fn(),
+  },
+}));
+
 import React from "react";
 import { render, waitFor, fireEvent, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
@@ -29,7 +43,7 @@ Object.defineProperty(HTMLElement.prototype, "scrollLeft", {
 });
 
 // updateTask をモック
-jest.mock("@/app/wbs/[id]/wbs-task-actions", () => ({
+jest.mock("@/app/wbs/[id]/actions/wbs-task-actions", () => ({
   __esModule: true,
   updateTask: jest.fn().mockResolvedValue({ success: true }),
 }));

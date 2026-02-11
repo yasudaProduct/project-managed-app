@@ -5,7 +5,7 @@ import { ProjectStatus } from "@/domains/project/project-status";
 import prisma from "@/lib/prisma/prisma";
 
 // Prismaクライアントのモック化
-jest.mock('@/lib/prisma', () => ({
+jest.mock('@/lib/prisma/prisma', () => ({
   __esModule: true,
   default: {
     projects: {

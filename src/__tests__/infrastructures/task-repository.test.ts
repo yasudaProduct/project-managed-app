@@ -10,7 +10,7 @@ import { ManHourType } from "@/domains/task/value-object/man-hour-type";
 import prisma from "@/lib/prisma/prisma";
 
 // Prismaクライアントのモック化
-jest.mock('@/lib/prisma', () => ({
+jest.mock('@/lib/prisma/prisma', () => ({
   __esModule: true,
   default: {
     wbsTask: {

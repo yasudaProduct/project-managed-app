@@ -3,11 +3,11 @@ import { Project } from "@/domains/project/project";
 import { Wbs } from "@/domains/wbs/wbs";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
 
-jest.mock("@/lib/utils", () => ({
+jest.mock("@/utils/date-util", () => ({
     isHoliday: jest.fn(),
 }));
 
-const isHoliday = (jest.requireMock("@/lib/utils").isHoliday as jest.Mock);
+const isHoliday = (jest.requireMock("@/utils/date-util").isHoliday as jest.Mock);
 
 describe("GetOperationPossible.execute", () => {
     let getOperationPossible: GetOperationPossible;

@@ -7,6 +7,7 @@ describe('EvmMetrics', () => {
     it('PVが0の場合、SPIは0を返す', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 0,
         ev: 80,
         ac: 90,
@@ -19,6 +20,7 @@ describe('EvmMetrics', () => {
     it('ACが0の場合、CPIは0を返す', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 80,
         ac: 0,
@@ -33,34 +35,37 @@ describe('EvmMetrics', () => {
     it('EAC（完了時総コスト予測）を正しく計算する', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 80,
         ac: 90,
         bac: 200,
       });
 
-      // EAC = BAC / CPI = 200 / (80/90) ≈ 225
+      // EAC = AC + ETC
+      // ETC = (BAC - EV) / CPI = (200 - 80) / (80/90) = 120 / 0.888... ≈ 135
+      // EAC = 90 + 135 ≈ 225
       expect(metrics.eac).toBeCloseTo(225, 1);
-      expect(metrics.estimateAtCompletion).toBeCloseTo(225, 1); // 互換性メソッド
     });
 
     it('ETC（完了までの残コスト予測）を正しく計算する', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 80,
         ac: 90,
         bac: 200,
       });
 
-      // ETC = EAC - AC = 225 - 90 = 135
+      // ETC = (BAC - EV) / CPI = (200 - 80) / (80/90) = 120 / 0.888... ≈ 135
       expect(metrics.etc).toBeCloseTo(135, 1);
-      expect(metrics.estimateToComplete).toBeCloseTo(135, 1); // 互換性メソッド
     });
 
     it('VAC（完了時差異予測）を正しく計算する', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 80,
         ac: 90,
@@ -71,21 +76,24 @@ describe('EvmMetrics', () => {
       expect(metrics.vac).toBeCloseTo(-25, 1);
     });
 
-    it('CPIが0の場合、EACは0を返す', () => {
+    it('CPIが0の場合、ETCはInfinityを返す', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 0,
         ac: 90,
         bac: 200,
       });
 
-      expect(metrics.eac).toBe(0);
+      // CPI = 0 の場合、ETC = (BAC - EV) / CPI = (200 - 0) / 0 = Infinity
+      expect(metrics.etc).toBe(Infinity);
     });
 
-    it('EACがACより小さい場合、ETCは0を返す', () => {
+    it('CPI > 1 の場合、ETCは残工数を正しく計算する', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 120,
         ac: 90,
@@ -93,9 +101,8 @@ describe('EvmMetrics', () => {
       });
 
       // CPI = 120 / 90 = 1.333
-      // EAC = 200 / 1.333 = 150
-      // ETC = 150 - 90 = 60
-      expect(metrics.etc).toBeGreaterThan(0);
+      // ETC = (BAC - EV) / CPI = (200 - 120) / 1.333 ≈ 60
+      expect(metrics.etc).toBeCloseTo(60, 0);
     });
   });
 
@@ -103,6 +110,7 @@ describe('EvmMetrics', () => {
     it('完了率を正しく計算する', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 80,
         ac: 90,
@@ -115,6 +123,7 @@ describe('EvmMetrics', () => {
     it('BACが0の場合、完了率は0を返す', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 80,
         ac: 90,
@@ -127,6 +136,7 @@ describe('EvmMetrics', () => {
     it('EVがBACを超える場合、100%以上を返す', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 220,
         ac: 90,
@@ -141,6 +151,7 @@ describe('EvmMetrics', () => {
     it('CPI ≥ 0.9 かつ SPI ≥ 0.9 の場合、healthyを返す', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 95,
         ac: 100,
@@ -153,6 +164,7 @@ describe('EvmMetrics', () => {
     it('CPI ≥ 0.8 かつ SPI ≥ 0.8 の場合、warningを返す', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 85,
         ac: 100,
@@ -165,6 +177,7 @@ describe('EvmMetrics', () => {
     it('CPI < 0.8 または SPI < 0.8 の場合、criticalを返す', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 75,
         ac: 100,
@@ -179,6 +192,7 @@ describe('EvmMetrics', () => {
     it('工数ベースの場合、時間単位でフォーマットする', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100.5,
         ev: 80.75,
         ac: 90.25,
@@ -195,6 +209,7 @@ describe('EvmMetrics', () => {
     it('金額ベースの場合、円単位でフォーマットする', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 1000000,
         pv: 1000000,
         ev: 800000,
         ac: 900000,
@@ -213,6 +228,7 @@ describe('EvmMetrics', () => {
     it('デフォルトでSELF_REPORTEDを使用する', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 80,
         ac: 90,
@@ -225,6 +241,7 @@ describe('EvmMetrics', () => {
     it('ZERO_HUNDREDを設定できる', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 80,
         ac: 90,
@@ -238,6 +255,7 @@ describe('EvmMetrics', () => {
     it('FIFTY_FIFTYを設定できる', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 80,
         ac: 90,
@@ -249,9 +267,10 @@ describe('EvmMetrics', () => {
     });
   });
 
-  describe('createファクトリメソッド（既存互換性）', () => {
-    it('最小限のパラメータでインスタンスを作成できる', () => {
+  describe('createファクトリメソッド', () => {
+    it('必須パラメータでインスタンスを作成できる', () => {
       const metrics = EvmMetrics.create({
+        pv_base: 100,
         pv: 100,
         ev: 80,
         ac: 90,
@@ -268,6 +287,7 @@ describe('EvmMetrics', () => {
 
     it('すべてのパラメータを指定してインスタンスを作成できる', () => {
       const metrics = EvmMetrics.create({
+        pv_base: 100,
         pv: 100,
         ev: 80,
         ac: 90,
