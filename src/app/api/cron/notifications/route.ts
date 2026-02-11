@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { container } from '@/lib/inversify.config';
 import type { INotificationService } from '@/applications/notification/INotificationService';
 import { NotificationEventDetector } from '@/applications/notification/NotificationEventDetector';
+import { SYMBOL } from '@/types/symbol';
 
-const notificationService = container.get<INotificationService>('NotificationService');
+const notificationService = container.get<INotificationService>(SYMBOL.INotificationService);
 const eventDetector = container.get<NotificationEventDetector>('NotificationEventDetector');
 
 /**

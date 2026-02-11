@@ -75,10 +75,22 @@ model Wbs {
   milestones Milestone[]
   taskDependencies TaskDependency[]
   importJobs ImportJob[]
+  tags      WbsTag[]
   createdAt DateTime   @default(now()) @db.Timestamptz
   updatedAt DateTime   @updatedAt @db.Timestamptz
 
   @@map("wbs")
+}
+
+model WbsTag {
+  id        Int      @id @default(autoincrement())
+  wbsId     Int
+  name      String
+  wbs       Wbs      @relation(fields: [wbsId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  @@unique([wbsId, name])
+  @@map("wbs_tag")
 }
 
 model WbsAssignee {
@@ -98,15 +110,17 @@ model WbsAssignee {
 }
 
 model WbsPhase {
-  id         Int       @id @default(autoincrement())
+  id         Int             @id @default(autoincrement())
   wbsId      Int
+  templateId Int?
   name       String
   code       String
   seq        Int
-  wbs        Wbs       @relation(fields: [wbsId], references: [id])
+  wbs        Wbs             @relation(fields: [wbsId], references: [id])
+  template   PhaseTemplate?  @relation(fields: [templateId], references: [id])
   tasks      WbsTask[]
-  createdAt  DateTime  @default(now()) @db.Timestamptz
-  updatedAt  DateTime  @updatedAt @db.Timestamptz
+  createdAt  DateTime        @default(now()) @db.Timestamptz
+  updatedAt  DateTime        @updatedAt @db.Timestamptz
 
   @@map("wbs_phase")
 }
@@ -118,6 +132,7 @@ model PhaseTemplate {
   seq       Int        @default(0)
   createdAt DateTime   @default(now()) @db.Timestamptz
   updatedAt DateTime   @updatedAt @db.Timestamptz
+  wbsPhases WbsPhase[]
 
   @@map("phase_template")
 }

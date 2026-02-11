@@ -15,6 +15,12 @@ export interface TaskForAllocation {
   yoteiEnd?: Date;
   yoteiKosu: number;
   jissekiKosu?: number;
+  /** 見通し工数 */
+  forecastKosu?: number;
+  /** 進捗率 */
+  progressRate?: number;
+  /** 実績工数 */
+  actualKosu?: number;
 }
 
 /**
@@ -24,6 +30,7 @@ export interface MonthlyAllocationDetail {
   baselineHours: number;
   plannedHours: number;
   actualHours: number;
+  forecastHours: number;
   workingDays: number;
   availableHours: number;
   allocationRatio: number;
@@ -51,6 +58,7 @@ export class MonthlyTaskAllocation {
       baselineHours: task.kijunKosu || 0,
       plannedHours: task.yoteiKosu,
       actualHours: task.jissekiKosu || 0,
+      forecastHours: task.forecastKosu || 0,
       workingDays: 1,
       availableHours: 7.5, // デフォルト値
       allocationRatio: 1.0
@@ -65,13 +73,15 @@ export class MonthlyTaskAllocation {
    * @param yoteiPeriod 予定期間のBusinessDayPeriod
    * @param allocatedBaselineHours 基準工数の按分結果（月別、オプション）
    * @param kijunPeriod 基準期間のBusinessDayPeriod（オプション）
+   * @param allocatedForecastHours 見通し工数の按分結果（月別、オプション）
    */
   static createMultiMonth(
     task: TaskForAllocation,
     allocatedPlannedHours: Map<string, number>,
     yoteiPeriod: BusinessDayPeriod,
     allocatedBaselineHours?: Map<string, number>,
-    kijunPeriod?: BusinessDayPeriod
+    kijunPeriod?: BusinessDayPeriod,
+    allocatedForecastHours?: Map<string, number>
   ): MonthlyTaskAllocation {
     const allocations = new Map<string, MonthlyAllocationDetail>();
     const startYearMonth = formatYearMonth(task.yoteiStart);
@@ -91,6 +101,9 @@ export class MonthlyTaskAllocation {
       // 基準工数は独立した按分結果から取得（なければ0）
       const baselineHours = allocatedBaselineHours?.get(yearMonth) || 0;
 
+      // 見通し工数は独立した按分結果から取得（なければ0）
+      const forecastHours = allocatedForecastHours?.get(yearMonth) || 0;
+
       // ビジネスルール: 実績工数は開始月のみ計上
       const actualHours = yearMonth === startYearMonth
         ? (task.jissekiKosu || 0)
@@ -100,6 +113,7 @@ export class MonthlyTaskAllocation {
         baselineHours,
         plannedHours,
         actualHours,
+        forecastHours,
         workingDays,
         availableHours,
         allocationRatio
@@ -118,6 +132,7 @@ export class MonthlyTaskAllocation {
             baselineHours,
             plannedHours: 0,
             actualHours: 0,
+            forecastHours: 0,
             workingDays: kijunBusinessDays,
             availableHours: kijunAvailableHours,
             allocationRatio: 0
@@ -141,6 +156,34 @@ export class MonthlyTaskAllocation {
    */
   getAllocation(yearMonth: string): MonthlyAllocationDetail | undefined {
     return this.monthlyAllocations.get(yearMonth);
+  }
+
+  /**
+   * 月別按分詳細を配列で取得（ソート済み）
+   */
+  getMonthlyAllocations(): Array<{ 
+    month: string; 
+    allocatedPlannedHours: number;
+    allocatedActualHours: number;
+    allocatedForecastHours: number;
+    allocatedBaselineHours: number;
+    workingDays: number;
+    availableHours: number;
+    allocationRatio: number;
+  }> {
+    return this.getMonths().map(month => {
+      const allocation = this.getAllocation(month)!;
+      return {
+        month,
+        allocatedPlannedHours: allocation.plannedHours,
+        allocatedActualHours: allocation.actualHours,
+        allocatedForecastHours: allocation.forecastHours,
+        allocatedBaselineHours: allocation.baselineHours,
+        workingDays: allocation.workingDays,
+        availableHours: allocation.availableHours,
+        allocationRatio: allocation.allocationRatio,
+      };
+    });
   }
 
   /**

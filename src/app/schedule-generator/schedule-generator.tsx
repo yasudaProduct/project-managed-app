@@ -198,7 +198,15 @@ export function ScheduleGenerator({
     ].join("\n");
 
     try {
-      await navigator.clipboard.writeText(tsvContent);
+      // document.execCommand('copy')は非推奨だが、HTTP環境ではnavigator.clipboard APIが利用できないため使用
+      const textarea = document.createElement('textarea');
+      textarea.value = tsvContent;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
       toast({
         title: "コピー完了",
         description: "スケジュールをクリップボードにコピーしました",

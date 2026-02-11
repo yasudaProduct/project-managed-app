@@ -162,6 +162,10 @@ export function NewWbsPhaseForm({ wbsId }: NewWbsPhaseFormProps) {
               </FormControl>
               <FormDescription>
                 既存のテンプレートからフェーズを選択するか、新規作成してください。
+                <br />
+                <span className="text-xs text-muted-foreground">
+                  テンプレートから選択した工程は、クロスWBS分析（係数指標・工程割合）の集計対象になります。
+                </span>
               </FormDescription>
               <FormMessage />
             </FormItem>

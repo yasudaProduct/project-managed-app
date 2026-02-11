@@ -91,9 +91,6 @@ describe('AllocationQuantizer', () => {
         ['2025/03', 0.34],  // floor: 0.25, frac: 0.36
       ]);
 
-      const rawTotal = 0.33 + 0.33 + 0.34; // 1.0
-      const expectedTotalUnits = Math.round(rawTotal / 0.25); // 4 units (1.0)
-
       const result = quantizer.quantize(raw);
 
       // 合計が保持されているか確認
@@ -112,9 +109,6 @@ describe('AllocationQuantizer', () => {
         ['2025/01', 1.3],  // floor: 1.0, frac: 0.6
         ['2025/02', 2.2],  // floor: 2.0, frac: 0.4
       ]);
-
-      const rawTotal = 1.3 + 2.2; // 3.5
-      const expectedTotalUnits = Math.round(rawTotal / 0.5); // 7 units (3.5)
 
       const result = quantizer.quantize(raw);
 
@@ -153,9 +147,6 @@ describe('AllocationQuantizer', () => {
         ['2025/02', 2.35],
         ['2025/03', 1.50],
       ]);
-
-      const rawTotal = 1.15 + 2.35 + 1.50; // 5.0
-      const expectedTotalUnits = Math.round(rawTotal / 0.25); // 20 units (5.0)
 
       const result = quantizer.quantize(raw);
 

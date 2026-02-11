@@ -37,6 +37,41 @@ describe('Phase', () => {
     });
   });
 
+  describe('templateId', () => {
+    it('templateIdを指定してフェーズを作成できること', () => {
+      const phase = Phase.create({
+        name: '基本設計',
+        code: new PhaseCode('BD'),
+        seq: 1,
+        templateId: 10
+      });
+
+      expect(phase.templateId).toBe(10);
+    });
+
+    it('templateIdなしでフェーズを作成できること', () => {
+      const phase = Phase.create({
+        name: 'カスタムフェーズ',
+        code: new PhaseCode('CUSTOM'),
+        seq: 1
+      });
+
+      expect(phase.templateId).toBeUndefined();
+    });
+
+    it('createFromDbでtemplateIdを復元できること', () => {
+      const phase = Phase.createFromDb({
+        id: 1,
+        name: '基本設計',
+        code: new PhaseCode('BD'),
+        seq: 1,
+        templateId: 10
+      });
+
+      expect(phase.templateId).toBe(10);
+    });
+  });
+
   describe('validate', () => {
     it('期間が不正な場合はエラーが発生する', () => {
       expect(() => {

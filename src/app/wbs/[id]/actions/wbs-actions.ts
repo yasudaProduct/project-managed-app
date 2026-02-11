@@ -35,7 +35,7 @@ export async function updateWbs(id: number, wbsData: { name: string }) {
     return { success: true, wbs: wbs }
 }
 
-export async function createWbsPhase(wbsId: number, wbsPhaseData: { name: string; code: string; seq: number; }) {
+export async function createWbsPhase(wbsId: number, wbsPhaseData: { name: string; code: string; seq: number; templateId?: string; }) {
 
     const cheack = await prisma.wbsPhase.findFirst({
         where: {
@@ -48,12 +48,17 @@ export async function createWbsPhase(wbsId: number, wbsPhaseData: { name: string
         return { success: false, message: "すでにフェーズが存在します。" };
     }
 
+    const templateId = wbsPhaseData.templateId && wbsPhaseData.templateId !== "new"
+        ? Number(wbsPhaseData.templateId)
+        : null;
+
     const newWbsPhase = await prisma.wbsPhase.create({
         data: {
             wbsId,
             name: wbsPhaseData.name,
             code: wbsPhaseData.code,
             seq: wbsPhaseData.seq,
+            templateId,
         },
     });
     return { success: true, wbsPhase: newWbsPhase };

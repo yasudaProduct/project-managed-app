@@ -13,7 +13,7 @@ import {
   Calendar,
   Clock,
 } from "lucide-react";
-import { TaskSchedulingResult } from "@/domains/task-scheduling/task-scheduling.service";
+import { TaskSchedulingResult } from "@/applications/task-scheduling/task-scheduling-application.service";
 import { calculateTaskSchedules } from "./task-scheduling-actions";
 import { toast } from "@/hooks/use-toast";
 
@@ -70,10 +70,17 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
       .map((row) => row.join("\t"))
       .join("\n");
 
-    navigator.clipboard.writeText(tsvContent).then(() => {
-      toast({
-        title: "TSVデータをクリップボードにコピーしました",
-      });
+    // document.execCommand('copy')は非推奨だが、HTTP環境ではnavigator.clipboard APIが利用できないため使用
+    const textarea = document.createElement('textarea');
+    textarea.value = tsvContent;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    toast({
+      title: "TSVデータをクリップボードにコピーしました",
     });
   };
 

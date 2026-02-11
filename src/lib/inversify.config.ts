@@ -118,6 +118,17 @@ import { SystemSettingsRepository } from '@/infrastructures/system-settings/syst
 import type { ISystemSettingsApplicationService } from '@/applications/system-settings/system-settings-application-service';
 import { SystemSettingsApplicationService } from '@/applications/system-settings/system-settings-application-service';
 
+// WBS Tags関連
+import type { IWbsTagRepository } from '@/applications/wbs/iwbs-tag-repository';
+import { WbsTagRepository } from '@/infrastructures/wbs/wbs-tag-repository';
+import type { IWbsTagApplicationService } from '@/applications/wbs/wbs-tag-application-service';
+import { WbsTagApplicationService } from '@/applications/wbs/wbs-tag-application-service';
+
+// WBS Analytics関連
+import type { IWbsCrossQueryRepository } from '@/applications/wbs/iwbs-cross-query-repository';
+import { WbsCrossQueryRepository } from '@/infrastructures/wbs/wbs-cross-query-repository';
+import { WbsAnalyticsHandler } from '@/applications/wbs/query/wbs-analytics-handler';
+
 
 const container: Container = new Container();
 // アプリケーションサービス
@@ -145,6 +156,8 @@ container.bind<NotificationEventDetector>('NotificationEventDetector').to(Notifi
 container.bind<ITaskSchedulingApplicationService>(SYMBOL.ITaskSchedulingApplicationService).to(TaskSchedulingApplicationService).inSingletonScope();
 container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<ISystemSettingsApplicationService>(SYMBOL.ISystemSettingsApplicationService).to(SystemSettingsApplicationService).inSingletonScope();
+container.bind<IWbsTagApplicationService>(SYMBOL.IWbsTagApplicationService).to(WbsTagApplicationService).inSingletonScope();
+container.bind<WbsAnalyticsHandler>(SYMBOL.WbsAnalyticsHandler).to(WbsAnalyticsHandler).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
@@ -173,6 +186,8 @@ container.bind<IWbsEvmRepository>(SYMBOL.IWbsEvmRepository).to(WbsEvmRepository)
 container.bind<IImportJobRepository>(SYMBOL.IImportJobRepository).to(ImportJobPrismaRepository).inSingletonScope();
 container.bind<INotificationRepository>('NotificationRepository').to(NotificationRepository).inSingletonScope();
 container.bind<ISystemSettingsRepository>(SYMBOL.ISystemSettingsRepository).to(SystemSettingsRepository).inSingletonScope();
+container.bind<IWbsTagRepository>(SYMBOL.IWbsTagRepository).to(WbsTagRepository).inSingletonScope();
+container.bind<IWbsCrossQueryRepository>(SYMBOL.IWbsCrossQueryRepository).to(WbsCrossQueryRepository).inSingletonScope();
 
 // Geppo Import関連サービス
 container.bind<ProjectMappingService>(SYMBOL.ProjectMappingService).to(ProjectMappingService).inSingletonScope();

@@ -9,7 +9,7 @@ import {
 } from '@/applications/evm/iwbs-evm-repository';
 import type { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-repository';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
-import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
+import { EvmCalculationMode } from '@/domains/evm/evm-metrics';
 import { TaskStatus } from '@prisma/client';
 
 @injectable()

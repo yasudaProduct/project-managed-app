@@ -7,13 +7,16 @@ interface ExportOptions {
 
 /**
  * クリップボードにコピー
+ * navigator.clipboard.writeText()はHTTPS環境でのみ利用可能なため、
+ * HTTP環境でも動作するdocument.execCommand('copy')を使用する。
+ * ※ document.execCommand('copy')は非推奨APIだが、HTTP環境での互換性のために使用。
  * @param headers ヘッダー
  * @param rows データ
  */
-async function copyToClipboard(
+function copyToClipboard(
   headers: string[],
   rows: (string | number | undefined | null)[][],
-): Promise<void> {
+): void {
   const formatCell = (cell: string | number | undefined | null): string => {
     if (cell === undefined || cell === null) return '';
     return String(cell);
@@ -25,8 +28,15 @@ async function copyToClipboard(
   const content = [headerRow, ...dataRows].join('\n');
 
   // クリップボードにコピー
-  await navigator.clipboard.writeText(content);
-
+  // document.execCommand('copy')は非推奨だが、HTTP環境ではnavigator.clipboard APIが利用できないため使用
+  const textarea = document.createElement('textarea');
+  textarea.value = content;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
 }
 
 /**

@@ -57,7 +57,7 @@ export interface ScheduleDelayInfo {
 @injectable()
 export class NotificationEventDetector {
   constructor(
-    @inject('NotificationService') private notificationService: INotificationService,
+    @inject(SYMBOL.INotificationService) private notificationService: INotificationService,
     @inject(SYMBOL.ITaskRepository) private taskRepository: ITaskRepository,
     @inject(SYMBOL.IProjectRepository) private projectRepository: IProjectRepository,
     @inject(SYMBOL.IUserRepository) private userRepository: IUserRepository

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { container } from '@/lib/inversify.config';
 import type { INotificationService } from '@/applications/notification/INotificationService';
 import { getCurrentUserIdOrThrow } from '@/lib/get-current-user-id';
+import { SYMBOL } from '@/types/symbol';
 
-const notificationService = container.get<INotificationService>('NotificationService');
+const notificationService = container.get<INotificationService>(SYMBOL.INotificationService);
 
 /**
  * POST /api/notifications/subscribe - Push通知購読登録

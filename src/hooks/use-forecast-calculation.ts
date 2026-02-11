@@ -29,6 +29,7 @@ export function useForecastCalculation(
  */
 export function aggregateForecastByMonth(
   forecastResults: ForecastCalculationResult[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   monthlyData: any[] // MonthlyAssigneeData型
 ) {
   const forecastMap = new Map<string, ForecastCalculationResult>();
@@ -40,11 +41,13 @@ export function aggregateForecastByMonth(
     let monthlyForecastHours = 0;
 
     if (data.taskDetails) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data.taskDetails.forEach((task: any) => {
         const forecast = forecastMap.get(task.taskId);
         if (forecast) {
           // 月別配分に応じて見通し工数を按分
           const totalPlanned = task.totalPlannedHours || 1;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           task.monthlyAllocations.forEach((allocation: any) => {
             if (allocation.month === data.month) {
               const allocationRatio = allocation.allocatedPlannedHours / totalPlanned;
