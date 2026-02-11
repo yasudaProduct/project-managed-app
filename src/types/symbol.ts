@@ -86,6 +86,14 @@ export const SYMBOL = {
     ISystemSettingsRepository: Symbol.for('ISystemSettingsRepository'),
     ISystemSettingsApplicationService: Symbol.for('ISystemSettingsApplicationService'),
 
+    // WBS Tags
+    IWbsTagRepository: Symbol.for('IWbsTagRepository'),
+    IWbsTagApplicationService: Symbol.for('IWbsTagApplicationService'),
+
+    // WBS Analytics
+    IWbsCrossQueryRepository: Symbol.for('IWbsCrossQueryRepository'),
+    WbsAnalyticsHandler: Symbol.for('WbsAnalyticsHandler'),
+
     // Infrastructure
     PrismaClient: Symbol.for('PrismaClient'),
 }

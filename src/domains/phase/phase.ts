@@ -6,22 +6,24 @@ export class Phase {
     public code: PhaseCode;
     public seq: number;
     public period?: { start: Date; end: Date }; // TODO: フェーズの期間は使用されていなので削除検討
+    public readonly templateId?: number;
 
-    private constructor(args: { id?: number; name: string; code: PhaseCode; seq: number, period?: { start: Date; end: Date } }) {
+    private constructor(args: { id?: number; name: string; code: PhaseCode; seq: number, period?: { start: Date; end: Date }, templateId?: number }) {
         this.id = args.id;
         this.name = args.name;
         this.code = args.code;
         this.seq = args.seq;
         this.period = args.period;
+        this.templateId = args.templateId;
 
         this.validate()
     }
 
-    public static create(args: { name: string; code: PhaseCode; seq: number, period?: { start: Date; end: Date } }): Phase {
+    public static create(args: { name: string; code: PhaseCode; seq: number, period?: { start: Date; end: Date }, templateId?: number }): Phase {
         return new Phase(args);
     }
 
-    public static createFromDb(args: { id: number; name: string; code: PhaseCode; seq: number, period?: { start: Date; end: Date } }): Phase {
+    public static createFromDb(args: { id: number; name: string; code: PhaseCode; seq: number, period?: { start: Date; end: Date }, templateId?: number }): Phase {
         return new Phase(args);
     }
 

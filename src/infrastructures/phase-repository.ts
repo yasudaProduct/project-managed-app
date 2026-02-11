@@ -20,6 +20,7 @@ export class PhaseRepository implements IPhaseRepository {
             name: phaseDb.name,
             code: new PhaseCode(phaseDb.code),
             seq: phaseDb.seq,
+            templateId: phaseDb.templateId ?? undefined,
         });
     }
 
@@ -34,6 +35,7 @@ export class PhaseRepository implements IPhaseRepository {
             name: phaseDb.name,
             code: new PhaseCode(phaseDb.code),
             seq: phaseDb.seq,
+            templateId: phaseDb.templateId ?? undefined,
         }));
     }
 
@@ -99,6 +101,7 @@ export class PhaseRepository implements IPhaseRepository {
             name: phaseDb.name,
             code: new PhaseCode(phaseDb.code),
             seq: phaseDb.seq,
+            templateId: phaseDb.templateId ?? undefined,
             period: await computePeriod(phasesDb)
         })));
     }
@@ -122,6 +125,7 @@ export class PhaseRepository implements IPhaseRepository {
             name: phaseDb.name,
             code: new PhaseCode(phaseDb.code),
             seq: phaseDb.seq,
+            templateId: phaseDb.templateId ?? undefined,
         }));
     }
 
@@ -168,6 +172,7 @@ export class PhaseRepository implements IPhaseRepository {
                 name: phase.name,
                 code: phase.code.value(),
                 seq: phase.seq,
+                templateId: phase.templateId ?? null,
             },
         });
         return Phase.createFromDb({
@@ -175,6 +180,7 @@ export class PhaseRepository implements IPhaseRepository {
             name: phaseDb.name,
             code: new PhaseCode(phaseDb.code),
             seq: phaseDb.seq,
+            templateId: phaseDb.templateId ?? undefined,
         });
     }
 
@@ -186,6 +192,7 @@ export class PhaseRepository implements IPhaseRepository {
                 name: phase.name,
                 code: phase.code.value(),
                 seq: phase.seq,
+                templateId: phase.templateId ?? null,
             },
         });
         return Phase.createFromDb({
@@ -193,6 +200,7 @@ export class PhaseRepository implements IPhaseRepository {
             name: phaseDb.name,
             code: new PhaseCode(phaseDb.code),
             seq: phaseDb.seq,
+            templateId: phaseDb.templateId ?? undefined,
         });
     }
 
