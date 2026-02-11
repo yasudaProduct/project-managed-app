@@ -1,5 +1,5 @@
 import { WbsTag } from "@/domains/wbs/wbs-tag";
-import { IWbsTagRepository } from "./iwbs-tag-repository";
+import type { IWbsTagRepository } from "./iwbs-tag-repository";
 import { SYMBOL } from "@/types/symbol";
 import { inject, injectable } from "inversify";
 

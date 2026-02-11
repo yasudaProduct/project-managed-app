@@ -1,7 +1,9 @@
-import { IWbsCrossQueryRepository, PhaseHoursSummary } from "../iwbs-cross-query-repository";
-import { IWbsTagRepository } from "../iwbs-tag-repository";
-import { PhaseCoefficientService, PhaseCoefficient } from "@/domains/wbs/phase-coefficient.service";
-import { PhaseProportionService, PhaseProportion } from "@/domains/wbs/phase-proportion.service";
+import type { IWbsCrossQueryRepository, PhaseHoursSummary } from "../iwbs-cross-query-repository";
+import type { IWbsTagRepository } from "../iwbs-tag-repository";
+import { PhaseCoefficientService } from "@/domains/wbs/phase-coefficient.service";
+import type { PhaseCoefficient } from "@/domains/wbs/phase-coefficient.service";
+import { PhaseProportionService } from "@/domains/wbs/phase-proportion.service";
+import type { PhaseProportion } from "@/domains/wbs/phase-proportion.service";
 import { SYMBOL } from "@/types/symbol";
 import { inject, injectable } from "inversify";
 
