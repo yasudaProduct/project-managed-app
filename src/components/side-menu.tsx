@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  BarChart3,
   Calendar,
   FolderKanban,
   Home,
@@ -75,6 +76,13 @@ export function SideMenu() {
             >
               <Trello className="h-4 w-4" />
               工程
+            </Link>
+            <Link
+              href="/wbs/analytics"
+              className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
+              <BarChart3 className="h-4 w-4" />
+              WBS分析
             </Link>
             <Link
               href="/work-records"
