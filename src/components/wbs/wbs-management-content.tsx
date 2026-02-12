@@ -67,8 +67,8 @@ export function WbsManagementContent({
   assignees,
   milestones,
   defaultTab,
-  showEvm = false,
-  showTags = false,
+  showEvm = true,
+  showTags = true,
   defaultProgressMethod,
 }: WbsManagementContentProps) {
   return (
