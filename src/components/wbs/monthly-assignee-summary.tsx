@@ -218,7 +218,10 @@ export function MonthlyAssigneeSummary({
                 onClick={async () => {
                   try {
                     await copyMonthlyAssigneeSummaryToClipboard(
-                      monthlyData,
+                      {
+                        ...monthlyData,
+                        assignees: monthlyData.assignees.map(a => a.key),
+                      },
                       hoursUnit
                     );
                     toast({
@@ -248,7 +251,10 @@ export function MonthlyAssigneeSummary({
                   <DropdownMenuItem
                     onClick={() =>
                       exportMonthlyAssigneeSummary(
-                        monthlyData,
+                        {
+                          ...monthlyData,
+                          assignees: monthlyData.assignees.map(a => a.key),
+                        },
                         "csv",
                         hoursUnit
                       )
@@ -259,7 +265,10 @@ export function MonthlyAssigneeSummary({
                   <DropdownMenuItem
                     onClick={() =>
                       exportMonthlyAssigneeSummary(
-                        monthlyData,
+                        {
+                          ...monthlyData,
+                          assignees: monthlyData.assignees.map(a => a.key),
+                        },
                         "tsv",
                         hoursUnit
                       )
