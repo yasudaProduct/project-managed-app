@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { createWbs, updateWbs } from "@/app/wbs/[id]/actions/wbs-actions";
+import { toast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -47,15 +48,37 @@ export function WbsForm({ projectId, wbs }: WbsFormProps) {
     setIsSubmitting(true);
     try {
       if (wbs) {
-        await updateWbs(wbs.id, values);
+        const result = await updateWbs(wbs.id, values);
+        if (result.success) {
+          toast({ title: "WBSを更新しました" });
+          router.push(`/projects/${projectId}/wbs`);
+          router.refresh();
+        } else {
+          toast({
+            title: "WBSを更新できませんでした",
+            description: "エラーが発生しました",
+            variant: "destructive",
+          });
+        }
       } else {
-        await createWbs(projectId, values);
+        const result = await createWbs(projectId, values);
+        if (result.success) {
+          toast({ title: "WBSを作成しました" });
+          router.push(`/projects/${projectId}/wbs`);
+          router.refresh();
+        } else {
+          toast({
+            title: "WBSを作成できませんでした",
+            variant: "destructive",
+          });
+        }
       }
-      router.push(`/projects/${projectId}/wbs`);
-      router.refresh();
     } catch (error) {
-      console.error("Failed to save WBS:", error);
-      // エラーハンドリングをここに追加（例：エラーメッセージの表示）
+      toast({
+        title: "WBSを保存できませんでした",
+        description: error instanceof Error ? error.message : "不明なエラー",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }

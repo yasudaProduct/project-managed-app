@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProjectById } from "../actions";
-import { getLatestWbsByProjectId } from "./wbs/wbs-actions";
-import { getWbsBuffers } from "@/app/wbs/[id]/actions/wbs-actions";
+import { getLatestWbsByProjectId, getWbsBuffers } from "@/app/wbs/[id]/actions/wbs-actions";
 import { getWbsPhases } from "@/app/wbs/[id]/actions/wbs-phase-actions";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
 import { getTaskAll } from "@/app/wbs/[id]/actions/wbs-task-actions";

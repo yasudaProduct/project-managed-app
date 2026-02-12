@@ -12,10 +12,8 @@ import { Button } from "@/components/ui/button";
 import { FileText, ExternalLink, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  getWbsAssignees,
-  getWbsPhases,
-} from "@/app/projects/[id]/wbs-detail-actions";
+import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
+import { getWbsPhases } from "@/app/wbs/[id]/actions/wbs-phase-actions";
 
 interface Assignee {
   assignee: {

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { columns } from "./columns";
 import { DataTable } from "@/components/data-table";
 import { getProjectById } from "../../actions";
-import { getWbsByProjectId } from "./wbs-actions";
+import { getWbsByProjectId } from "@/app/wbs/[id]/actions/wbs-actions";
 
 export default async function WbsPage({
   params,

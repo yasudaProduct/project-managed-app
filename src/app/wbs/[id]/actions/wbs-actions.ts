@@ -4,6 +4,23 @@ import prisma from '@/lib/prisma/prisma'
 import { Assignee } from '@/types/wbs'
 import { revalidatePath } from 'next/cache'
 
+export async function getWbsByProjectId(projectId: string) {
+    const wbsList = await prisma.wbs.findMany({
+        where: { projectId },
+        orderBy: { id: 'asc' },
+    })
+    return wbsList
+}
+
+export async function getLatestWbsByProjectId(projectId: string) {
+    const wbsList = await prisma.wbs.findMany({
+        where: { projectId },
+        orderBy: { id: 'desc' },
+        take: 1,
+    })
+    return wbsList[0] ?? null
+}
+
 export async function getWbsById(id: number) {
     const wbs = await prisma.wbs.findUnique({
         where: {
