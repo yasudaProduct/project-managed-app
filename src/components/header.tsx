@@ -45,7 +45,7 @@ export function Header() {
         import("@/app/projects/actions").then(({ getProjectById }) =>
           getProjectById(projectId)
         ),
-        import("@/app/projects/[id]/wbs/wbs-actions").then(
+        import("@/app/wbs/[id]/actions/wbs-actions").then(
           ({ getLatestWbsByProjectId }) => getLatestWbsByProjectId(projectId)
         ),
       ])
