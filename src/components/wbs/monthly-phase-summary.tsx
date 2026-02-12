@@ -101,13 +101,13 @@ export function MonthlyPhaseSummary({
 
       const phaseTotals = Object.fromEntries(
         monthlyData.phases.map((p) => [
-          p,
+          p.key,
           {
-            taskCount: monthlyData.phaseTotals[p]?.taskCount || 0,
-            plannedHours: monthlyData.phaseTotals[p]?.plannedHours || 0,
-            actualHours: monthlyData.phaseTotals[p]?.actualHours || 0,
-            difference: monthlyData.phaseTotals[p]?.difference || 0,
-            forecastHours: monthlyData.phaseTotals[p]?.forecastHours || 0,
+            taskCount: monthlyData.phaseTotals[p.key]?.taskCount || 0,
+            plannedHours: monthlyData.phaseTotals[p.key]?.plannedHours || 0,
+            actualHours: monthlyData.phaseTotals[p.key]?.actualHours || 0,
+            difference: monthlyData.phaseTotals[p.key]?.difference || 0,
+            forecastHours: monthlyData.phaseTotals[p.key]?.forecastHours || 0,
           },
         ])
       );
@@ -225,7 +225,7 @@ export function MonthlyPhaseSummary({
                   await copyMonthlyPhaseSummaryToClipboard(
                     {
                       months: monthlyData.months,
-                      phases,
+                      phases: phases.map(p => p.key),
                       cells,
                       monthlyTotals,
                       phaseTotals,
@@ -262,7 +262,7 @@ export function MonthlyPhaseSummary({
                     exportMonthlyPhaseSummary(
                       {
                         months: monthlyData.months,
-                        phases,
+                        phases: phases.map(p => p.key),
                         cells,
                         monthlyTotals,
                         phaseTotals,
@@ -280,7 +280,7 @@ export function MonthlyPhaseSummary({
                     exportMonthlyPhaseSummary(
                       {
                         months: monthlyData.months,
-                        phases,
+                        phases: phases.map(p => p.key),
                         cells,
                         monthlyTotals,
                         phaseTotals,
@@ -327,13 +327,13 @@ export function MonthlyPhaseSummary({
             }}
             rowTotals={Object.fromEntries(
               phases.map((p) => [
-                p,
+                p.key,
                 {
-                  plannedHours: phaseTotals[p]?.plannedHours || 0,
-                  actualHours: phaseTotals[p]?.actualHours || 0,
-                  difference: phaseTotals[p]?.difference || 0,
-                  baselineHours: monthlyData.phaseTotals[p]?.baselineHours || 0,
-                  forecastHours: phaseTotals[p]?.forecastHours || 0,
+                  plannedHours: phaseTotals[p.key]?.plannedHours || 0,
+                  actualHours: phaseTotals[p.key]?.actualHours || 0,
+                  difference: phaseTotals[p.key]?.difference || 0,
+                  baselineHours: monthlyData.phaseTotals[p.key]?.baselineHours || 0,
+                  forecastHours: phaseTotals[p.key]?.forecastHours || 0,
                 },
               ])
             )}
