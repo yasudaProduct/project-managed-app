@@ -107,7 +107,10 @@ describe('MonthlySummaryAccumulator', () => {
       const result = accumulator.getTotals();
 
       expect(result.data.length).toBe(2);
-      expect(result.assignees).toEqual(['佐藤', '田中']); // ソートされている
+      expect(result.assignees).toEqual([
+        { key: '佐藤', seq: Number.MAX_SAFE_INTEGER },
+        { key: '田中', seq: Number.MAX_SAFE_INTEGER },
+      ]); // seq順 → 名前順でソートされている
     });
 
     it('異なる月のデータは別々に管理される', () => {
@@ -229,7 +232,7 @@ describe('MonthlySummaryAccumulator', () => {
 
       expect(result.data).toEqual([]);
       expect(result.months).toEqual([]);
-      expect(result.assignees).toEqual([]);
+      expect(result.assignees).toEqual([]); // 空配列
       expect(result.grandTotal.taskCount).toBe(0);
       expect(result.grandTotal.plannedHours).toBe(0);
       expect(result.grandTotal.actualHours).toBe(0);
@@ -264,7 +267,10 @@ describe('MonthlySummaryAccumulator', () => {
       // 全体
       expect(result.data.length).toBe(4); // 田中×2月 + 佐藤×2月
       expect(result.months).toEqual(['2025/01', '2025/02']);
-      expect(result.assignees).toEqual(['佐藤', '田中']);
+      expect(result.assignees).toEqual([
+        { key: '佐藤', seq: Number.MAX_SAFE_INTEGER },
+        { key: '田中', seq: Number.MAX_SAFE_INTEGER },
+      ]);
 
       // 月別合計
       expect(result.monthlyTotals['2025/01'].taskCount).toBe(3); // 田中2 + 佐藤1

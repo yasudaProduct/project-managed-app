@@ -8,6 +8,11 @@ export class MonthlyPhaseSummaryAccumulator {
   private taskDetailsMap = new Map<string, TaskAllocationDetail[]>();
   private months = new Set<string>();
   private phases = new Set<string>();
+  private phaseSeqMap: Map<string, number>;
+
+  constructor(phaseSeqMap: Map<string, number> = new Map()) {
+    this.phaseSeqMap = phaseSeqMap;
+  }
 
   addTaskAllocation(
     phaseName: string,
@@ -60,14 +65,17 @@ export class MonthlyPhaseSummaryAccumulator {
     }
 
     const sortedMonths = Array.from(this.months).sort();
-    const sortedPhases = Array.from(this.phases).sort();
+    const sortedPhases = Array.from(this.phases)
+      .map(name => ({ key: name, seq: this.phaseSeqMap.get(name) ?? Number.MAX_SAFE_INTEGER }))
+      .sort((a, b) => a.seq - b.seq || a.key.localeCompare(b.key));
+    const sortedPhaseKeys = sortedPhases.map(p => p.key);
 
     return {
       data,
       months: sortedMonths,
       phases: sortedPhases,
       monthlyTotals: this.calculateMonthlyTotals(data, sortedMonths),
-      phaseTotals: this.calculatePhaseTotals(data, sortedPhases),
+      phaseTotals: this.calculatePhaseTotals(data, sortedPhaseKeys),
       grandTotal: this.calculateGrandTotal(data),
     };
   }

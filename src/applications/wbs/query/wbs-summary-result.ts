@@ -4,6 +4,8 @@
 export interface PhaseSummary {
   /** 工程 */
   phase: string;
+  /** 表示順 */
+  seq: number;
   /** タスク数 */
   taskCount: number;
   /** 予定工数 */
@@ -19,6 +21,8 @@ export interface PhaseSummary {
  */
 export interface AssigneeSummary {
   assignee: string;
+  /** 表示順 */
+  seq: number;
   taskCount: number;
   plannedHours: number;
   actualHours: number;
@@ -69,7 +73,7 @@ export interface MonthlyAssigneeData {
 export interface MonthlyAssigneeSummary {
   data: MonthlyAssigneeData[];
   months: string[];
-  assignees: string[];
+  assignees: { key: string; seq: number }[];
   monthlyTotals: Record<string, {
     taskCount: number;
     plannedHours: number;
@@ -117,7 +121,7 @@ export interface MonthlyPhaseData {
 export interface MonthlyPhaseSummary {
   data: MonthlyPhaseData[];
   months: string[];
-  phases: string[];
+  phases: { key: string; seq: number }[];
   monthlyTotals: Record<string, {
     taskCount: number;
     plannedHours: number;

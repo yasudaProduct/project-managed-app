@@ -93,6 +93,8 @@ export function MonthlyAssigneeSummary({
     setIsSheetOpen(true);
   };
 
+  const assigneeKeys = monthlyData.assignees.map(a => a.key);
+
   if (monthlyData.months.length === 0 || monthlyData.assignees.length === 0) {
     return (
       <Card className="rounded-none shadow-none">
@@ -274,10 +276,7 @@ export function MonthlyAssigneeSummary({
           <div className="overflow-x-auto">
             <MonthlySummaryTable
               months={monthlyData.months}
-              rows={monthlyData.assignees.map((assignee) => ({
-                key: assignee,
-                seq: 0,
-              }))} // TODO: ここにseqも持ってくる
+              rows={monthlyData.assignees}
               firstColumnHeader="担当者"
               hoursUnit={hoursUnit}
               showDifference={showDifference}
@@ -304,7 +303,7 @@ export function MonthlyAssigneeSummary({
                 } as SummaryCell;
               }}
               rowTotals={Object.fromEntries(
-                monthlyData.assignees.map((a) => [
+                assigneeKeys.map((a) => [
                   a,
                   {
                     plannedHours: monthlyData.assigneeTotals[a].plannedHours,

@@ -51,8 +51,11 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     const phaseSummaries = this.calculatePhaseSummary(tasks, phases);
     const phaseTotal = this.calculateTotal(phaseSummaries);
 
+    // WBS担当者情報を取得（担当者別集計と月別集計の両方で使用）
+    const wbsAssignees = await this.wbsAssigneeRepository.findByWbsId(query.wbsId);
+
     // 担当者別集計
-    const assigneeSummaries = this.calculateAssigneeSummary(tasks);
+    const assigneeSummaries = this.calculateAssigneeSummary(tasks, wbsAssignees);
     const assigneeTotal = this.calculateTotal(assigneeSummaries);
 
     // プロジェクト設定を取得（量子化フラグ、進捗測定方式、見通し算出方式）
@@ -73,7 +76,9 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
             query.wbsId,
             roundToQuarter,
             progressMeasurementMethod,
-            forecastMethodOption
+            forecastMethodOption,
+            phases,
+            wbsAssignees
           );
           monthlyAssigneeSummary = monthlySummaries.assignee;
           monthlyPhaseSummary = monthlySummaries.phase;
@@ -84,7 +89,9 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           const monthlySummaries = this.calculateMonthlySummariesWithStartDateBased(
             tasks,
             progressMeasurementMethod,
-            forecastMethodOption
+            forecastMethodOption,
+            phases,
+            wbsAssignees
           );
           monthlyAssigneeSummary = monthlySummaries.assignee;
           monthlyPhaseSummary = monthlySummaries.phase;
@@ -117,10 +124,11 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
   private calculatePhaseSummary(tasks: WbsTaskData[], phases: PhaseData[]): PhaseSummary[] {
     const summaryMap = new Map<string, PhaseSummary>();
 
-    // 初期化
+    // 初期化（seqを含める）
     phases.forEach(phase => {
       summaryMap.set(phase.name, {
         phase: phase.name,
+        seq: phase.seq,
         taskCount: 0,
         plannedHours: 0,
         actualHours: 0,
@@ -140,7 +148,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       }
     });
 
-    return Array.from(summaryMap.values());
+    return Array.from(summaryMap.values()).sort((a, b) => a.seq - b.seq);
   }
 
   /**
@@ -151,13 +159,22 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
    * @description
    * 担当者ごとにタスク数、予定工数、実績工数、差分を計算する
    */
-  private calculateAssigneeSummary(tasks: WbsTaskData[]): AssigneeSummary[] {
+  private calculateAssigneeSummary(tasks: WbsTaskData[], wbsAssignees: import("@/domains/wbs/wbs-assignee").WbsAssignee[]): AssigneeSummary[] {
+    // 担当者名 → seq のマップを構築
+    const assigneeSeqMap = new Map<string, number>();
+    wbsAssignees.forEach(a => {
+      if (a.userName) {
+        assigneeSeqMap.set(a.userName, a.seq);
+      }
+    });
+
     const summaryMap = new Map<string, AssigneeSummary>();
 
     tasks.forEach(task => {
       const key = task.assignee ? task.assignee.displayName : '未割当';
       const existing = summaryMap.get(key) || {
         assignee: key,
+        seq: assigneeSeqMap.get(key) ?? Number.MAX_SAFE_INTEGER,
         taskCount: 0,
         plannedHours: 0,
         actualHours: 0,
@@ -172,7 +189,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       summaryMap.set(key, existing);
     });
 
-    return Array.from(summaryMap.values());
+    return Array.from(summaryMap.values()).sort((a, b) => a.seq - b.seq);
   }
 
   /**
@@ -187,7 +204,9 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     wbsId: number,
     roundToQuarter: boolean,
     progressMeasurementMethod: ProgressMeasurementMethod = 'SELF_REPORTED',
-    forecastMethodOption: 'conservative' | 'realistic' | 'optimistic' | 'plannedOrActual' = 'realistic'
+    forecastMethodOption: 'conservative' | 'realistic' | 'optimistic' | 'plannedOrActual' = 'realistic',
+    phases: PhaseData[] = [],
+    wbsAssignees: import("@/domains/wbs/wbs-assignee").WbsAssignee[] = []
   ) {
     // 会社休日とWorking Hours Allocation Serviceの準備
     const systemSettings = await this.systemSettingsRepository.get();
@@ -198,16 +217,21 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     );
     const workingHoursAllocationService = new WorkingHoursAllocationService(companyCalendar);
 
-    // WBS担当者情報(WbsAssigneeモデル)を取得
-    const wbsAssignees = await this.wbsAssigneeRepository.findByWbsId(wbsId);
     const assigneeMap = new Map(wbsAssignees.map(a => [a.userId, a]));
 
     // 量子化器を作成（0.25単位）
     const quantizer = roundToQuarter ? new AllocationQuantizer(0.25) : undefined;
 
-    // 集計用のアキュムレータを作成
-    const assigneeAccumulator = new MonthlySummaryAccumulator();
-    const phaseAccumulator = new MonthlyPhaseSummaryAccumulator();
+    // 集計用のアキュムレータを作成（seq情報を渡す）
+    const assigneeSeqMap = new Map<string, number>();
+    wbsAssignees.forEach(a => {
+      if (a.userName) assigneeSeqMap.set(a.userName, a.seq);
+    });
+    const phaseSeqMap = new Map<string, number>();
+    phases.forEach(p => phaseSeqMap.set(p.name, p.seq));
+
+    const assigneeAccumulator = new MonthlySummaryAccumulator(assigneeSeqMap);
+    const phaseAccumulator = new MonthlyPhaseSummaryAccumulator(phaseSeqMap);
 
     // タスクごとに営業日案分を適用
     for (const task of tasks) {
@@ -357,10 +381,20 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
   private calculateMonthlySummariesWithStartDateBased(
     tasks: WbsTaskData[],
     progressMeasurementMethod: ProgressMeasurementMethod = 'SELF_REPORTED',
-    forecastMethodOption: 'conservative' | 'realistic' | 'optimistic' | 'plannedOrActual' = 'realistic'
+    forecastMethodOption: 'conservative' | 'realistic' | 'optimistic' | 'plannedOrActual' = 'realistic',
+    phases: PhaseData[] = [],
+    wbsAssignees: import("@/domains/wbs/wbs-assignee").WbsAssignee[] = []
   ) {
-    const assigneeAccumulator = new MonthlySummaryAccumulator();
-    const phaseAccumulator = new MonthlyPhaseSummaryAccumulator();
+    // seq情報を構築
+    const assigneeSeqMap = new Map<string, number>();
+    wbsAssignees.forEach(a => {
+      if (a.userName) assigneeSeqMap.set(a.userName, a.seq);
+    });
+    const phaseSeqMap = new Map<string, number>();
+    phases.forEach(p => phaseSeqMap.set(p.name, p.seq));
+
+    const assigneeAccumulator = new MonthlySummaryAccumulator(assigneeSeqMap);
+    const phaseAccumulator = new MonthlyPhaseSummaryAccumulator(phaseSeqMap);
 
     // タスクごとに開始日の月に全工数を計上
     for (const task of tasks) {

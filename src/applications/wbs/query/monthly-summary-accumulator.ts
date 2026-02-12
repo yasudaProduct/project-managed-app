@@ -12,6 +12,11 @@ export class MonthlySummaryAccumulator {
   private taskDetailsMap = new Map<string, TaskAllocationDetail[]>();
   private months = new Set<string>();
   private assignees = new Set<string>();
+  private assigneeSeqMap: Map<string, number>;
+
+  constructor(assigneeSeqMap: Map<string, number> = new Map()) {
+    this.assigneeSeqMap = assigneeSeqMap;
+  }
 
   /**
    * タスク配分結果を追加
@@ -84,14 +89,17 @@ export class MonthlySummaryAccumulator {
     }
 
     const sortedMonths = Array.from(this.months).sort();
-    const sortedAssignees = Array.from(this.assignees).sort();
+    const sortedAssignees = Array.from(this.assignees)
+      .map(name => ({ key: name, seq: this.assigneeSeqMap.get(name) ?? Number.MAX_SAFE_INTEGER }))
+      .sort((a, b) => a.seq - b.seq || a.key.localeCompare(b.key));
+    const sortedAssigneeKeys = sortedAssignees.map(a => a.key);
 
     return {
       data: monthlyData,
       months: sortedMonths,
       assignees: sortedAssignees,
       monthlyTotals: this.calculateMonthlyTotals(monthlyData, sortedMonths),
-      assigneeTotals: this.calculateAssigneeTotals(monthlyData, sortedAssignees),
+      assigneeTotals: this.calculateAssigneeTotals(monthlyData, sortedAssigneeKeys),
       grandTotal: this.calculateGrandTotal(monthlyData),
     };
   }

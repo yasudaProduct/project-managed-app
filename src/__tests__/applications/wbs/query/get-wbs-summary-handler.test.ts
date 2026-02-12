@@ -78,8 +78,8 @@ describe('GetWbsSummaryHandler', () => {
   ];
 
   const mockPhases: PhaseData[] = [
-    { id: 1, name: 'Phase 1' },
-    { id: 2, name: 'Phase 2' }
+    { id: 1, name: 'Phase 1', seq: 1 },
+    { id: 2, name: 'Phase 2', seq: 2 }
   ];
 
   beforeEach(() => {
@@ -137,6 +137,7 @@ describe('GetWbsSummaryHandler', () => {
       const phase1Summary = result.phaseSummaries.find(p => p.phase === 'Phase 1');
       expect(phase1Summary).toEqual({
         phase: 'Phase 1',
+        seq: 1,
         taskCount: 2,
         plannedHours: 70, // Task 1: 40 + Task 3: 30
         actualHours: 67,  // Task 1: 35 + Task 3: 32
@@ -146,6 +147,7 @@ describe('GetWbsSummaryHandler', () => {
       const phase2Summary = result.phaseSummaries.find(p => p.phase === 'Phase 2');
       expect(phase2Summary).toEqual({
         phase: 'Phase 2',
+        seq: 2,
         taskCount: 1,
         plannedHours: 60,
         actualHours: 55,
@@ -163,6 +165,7 @@ describe('GetWbsSummaryHandler', () => {
       const johnSummary = result.assigneeSummaries.find(a => a.assignee === 'John Doe');
       expect(johnSummary).toEqual({
         assignee: 'John Doe',
+        seq: Number.MAX_SAFE_INTEGER,
         taskCount: 2,
         plannedHours: 100, // Task 1: 40 + Task 2: 60
         actualHours: 90,   // Task 1: 35 + Task 2: 55
@@ -172,6 +175,7 @@ describe('GetWbsSummaryHandler', () => {
       const janeSummary = result.assigneeSummaries.find(a => a.assignee === 'Jane Smith');
       expect(janeSummary).toEqual({
         assignee: 'Jane Smith',
+        seq: Number.MAX_SAFE_INTEGER,
         taskCount: 1,
         plannedHours: 30,
         actualHours: 32,

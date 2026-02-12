@@ -6,7 +6,7 @@ import { MonthlyPhaseSummary as MonthlyPhaseSummaryData } from '@/applications/w
 describe('MonthlyPhaseSummary - 見通し計算統一化', () => {
   const createMockData = (): MonthlyPhaseSummaryData => ({
     months: ['2024-01', '2024-02'],
-    phases: ['要件定義'],
+    phases: [{ key: '要件定義', seq: 1 }],
     data: [
       {
         month: '2024-01',
