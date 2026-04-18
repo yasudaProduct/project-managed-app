@@ -396,6 +396,7 @@ model ProjectSettings {
   progressMeasurementMethod ProgressMeasurementMethod  @default(SELF_REPORTED)
   forecastCalculationMethod ForecastCalculationMethod  @default(REALISTIC)
   evmExcludeSettings        Json                       @default("{}") // EVM除外設定 (enabled, task_names 等)
+  qualityThresholds         Json?                                      // 品質指標の閾値設定
   createdAt                 DateTime                   @default(now()) @db.Timestamptz
   updatedAt                 DateTime                   @updatedAt @db.Timestamptz
 
@@ -522,6 +523,105 @@ model ImportJobProgress {
 
   @@index([jobId, recordedAt])
   @@map("import_job_progress")
+}
+
+// =====================================================
+// 定量品質管理機能
+// =====================================================
+
+// 評価対象（WBSタスクと論理結合。FKは貼らず洗い替えインポートから保護）
+model QualityReviewTarget {
+  id            Int                    @id @default(autoincrement())
+  wbsId         Int
+  taskNo        String
+  name          String
+  documentType  QualityDocumentType    @default(OTHER)
+  reviewType    QualityReviewType      @default(PEER)
+  isActive      Boolean                @default(true)
+  createdAt     DateTime               @default(now()) @db.Timestamptz
+  updatedAt     DateTime               @updatedAt @db.Timestamptz
+  reviewers     QualityReviewer[]
+  sizeMetrics   QualitySizeMetric[]
+  findings      QualityFinding[]
+
+  @@unique([wbsId, taskNo])
+  @@index([wbsId, isActive])
+  @@map("quality_review_target")
+}
+
+// レビュー担当者（1評価対象に複数人対応）
+model QualityReviewer {
+  id              Int                  @id @default(autoincrement())
+  targetId        Int
+  reviewerUserId  String
+  reviewTaskNo    String
+  createdAt       DateTime             @default(now()) @db.Timestamptz
+  updatedAt       DateTime             @updatedAt @db.Timestamptz
+  target          QualityReviewTarget  @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([targetId, reviewTaskNo])
+  @@index([reviewerUserId])
+  @@map("quality_reviewer")
+}
+
+// 規模データ（MAN_HOURは都度集計するため保存しない）
+model QualitySizeMetric {
+  id          Int                  @id @default(autoincrement())
+  targetId    Int
+  unit        QualitySizeUnit
+  value       Decimal              @db.Decimal(12, 2)
+  measuredAt  DateTime             @db.Date
+  note        String?
+  createdAt   DateTime             @default(now()) @db.Timestamptz
+  updatedAt   DateTime             @updatedAt @db.Timestamptz
+  target      QualityReviewTarget  @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([targetId, unit])
+  @@index([measuredAt])
+  @@map("quality_size_metric")
+}
+
+// 指摘データ
+model QualityFinding {
+  id          Int                  @id @default(autoincrement())
+  targetId    Int
+  severity    QualitySeverity      @default(MINOR)
+  category    String?
+  description String?
+  foundAt     DateTime             @db.Date
+  createdAt   DateTime             @default(now()) @db.Timestamptz
+  updatedAt   DateTime             @updatedAt @db.Timestamptz
+  target      QualityReviewTarget  @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@index([targetId, foundAt])
+  @@index([severity])
+  @@map("quality_finding")
+}
+
+enum QualityDocumentType {
+  DESIGN
+  CODE
+  TEST
+  OTHER
+}
+
+enum QualityReviewType {
+  PEER
+  FORMAL
+  INSPECTION
+  OTHER
+}
+
+enum QualitySizeUnit {
+  PAGE
+  LINES_OF_CODE
+  TEST_CASE
+}
+
+enum QualitySeverity {
+  MAJOR
+  MINOR
+  INFO
 }
 
 // システム全体設定（シングルトン）
