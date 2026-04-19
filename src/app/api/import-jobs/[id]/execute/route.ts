@@ -242,6 +242,7 @@ async function syncQualityTargetsFromExcel(jobId: string, wbsId: number) {
     return
   }
 
+  // 品質評価対象の同期
   const qualityResult = await syncQualityService.syncFromExcelRows(wbsId, excelRows)
 
   await importJobService.addProgress(jobId, {

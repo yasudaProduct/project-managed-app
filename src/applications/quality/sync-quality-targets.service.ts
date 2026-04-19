@@ -21,7 +21,7 @@ export class SyncQualityTargetsService {
     private readonly reviewerRepo: IQualityReviewerRepository,
     @inject(SYMBOL.IQualityTaskRepository)
     private readonly taskRepo: IQualityTaskRepository,
-  ) {}
+  ) { }
 
   async syncForWbs(wbsId: number): Promise<SyncResult> {
     const tasks = await this.taskRepo.findByWbsIdWithReviewInfo(wbsId);
@@ -64,11 +64,14 @@ export class SyncQualityTargetsService {
    * 同一評価対象の複数レビュアーとして登録する。
    */
   async syncFromExcelRows(wbsId: number, rows: ExcelWbs[]): Promise<SyncResult> {
+
+    // TANTO_REVが設定されている行をレビュー対象とする
     const reviewRows = rows.filter((r) => {
       const tanto = r.TANTO_REV;
       return typeof tanto === 'string' && tanto.trim() !== '';
     });
 
+    // TASK名が同一の行を同一評価対象の複数レビュアーとして登録する
     const groups = new Map<string, ExcelWbs[]>();
     for (const row of reviewRows) {
       const key = (row.TASK ?? '').trim();
