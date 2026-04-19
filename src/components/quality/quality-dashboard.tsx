@@ -164,12 +164,15 @@ export function QualityDashboard({
     <div className="space-y-4">
       {/* ① フェーズ選択 + インポート/エクスポート ボタン行 */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Select value={selectedPhase} onValueChange={setSelectedPhase}>
+        <Select
+          value={selectedPhase || "__all__"}
+          onValueChange={(v) => setSelectedPhase(v === "__all__" ? "" : v)}
+        >
           <SelectTrigger className="w-[160px] h-8 text-xs">
             <SelectValue placeholder="すべてのフェーズ" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">すべて</SelectItem>
+            <SelectItem value="__all__">すべて</SelectItem>
             {phases.map((p) => (
               <SelectItem key={p} value={p}>{p}</SelectItem>
             ))}
