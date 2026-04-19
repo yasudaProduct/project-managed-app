@@ -1,7 +1,9 @@
 import { QualityApplicationService } from '@/applications/quality/quality-application.service';
 import { QualityReviewTarget } from '@/domains/quality/quality-review-target';
 import { QualityReviewer } from '@/domains/quality/quality-reviewer';
-import { QualityDocumentType, QualityReviewType, QualitySeverity } from '@/domains/quality/value-objects/quality-enums';
+import { QualityDocumentType, QualityReviewType, QualitySeverity, QualitySizeUnit } from '@/domains/quality/value-objects/quality-enums';
+import { QualityFinding } from '@/domains/quality/quality-finding';
+import { QualitySizeMetric } from '@/domains/quality/quality-size-metric';
 
 const targetRepo = {
   findById: jest.fn(),
@@ -245,6 +247,165 @@ describe('QualityApplicationService', () => {
       targetRepo.findByWbs.mockResolvedValue([]);
       const points = await service.getTrend({ wbsId: 1, sizeUnit: 'MAN_HOUR' });
       expect(points).toEqual([]);
+    });
+  });
+
+  describe('getAggregated', () => {
+    it('axis=target: 評価対象ごとに1行の集計行を返す', async () => {
+      const targets = [sampleTarget(1, 1, 'T-001'), sampleTarget(2, 1, 'T-002')];
+      targetRepo.findByWbs.mockResolvedValue(targets);
+      taskRepo.findPhasesByTaskNos.mockResolvedValue(
+        new Map([
+          ['T-001', 'Design'],
+          ['T-002', 'Code'],
+        ]),
+      );
+      findingRepo.countByTarget
+        .mockResolvedValueOnce({ total: 3, major: 1 })
+        .mockResolvedValueOnce({ total: 0, major: 0 });
+      readRepo.getTaskManHours
+        .mockResolvedValueOnce([{ wbsId: 1, taskNo: 'T-001', totalHours: 10 }])
+        .mockResolvedValueOnce([{ wbsId: 1, taskNo: 'T-002', totalHours: 20 }]);
+      reviewerRepo.findByTarget
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const rows = await service.getAggregated(1, 'target', 'MAN_HOUR');
+
+      expect(rows).toHaveLength(2);
+      const t1 = rows.find((r) => r.key === 'T-001')!;
+      expect(t1.targetCount).toBe(1);
+      expect(t1.totalSize).toBe(10);
+      expect(t1.findingCount).toBe(3);
+      expect(t1.majorCount).toBe(1);
+      expect(t1.defectDensity).toBeCloseTo(3 / 10);
+    });
+
+    it('axis=phase: フェーズごとに集約する', async () => {
+      const targets = [
+        sampleTarget(1, 1, 'T-001'),
+        sampleTarget(2, 1, 'T-002'),
+        sampleTarget(3, 1, 'T-003'),
+      ];
+      targetRepo.findByWbs.mockResolvedValue(targets);
+      taskRepo.findPhasesByTaskNos.mockResolvedValue(
+        new Map([
+          ['T-001', '設計'],
+          ['T-002', '設計'],
+          ['T-003', 'コーディング'],
+        ]),
+      );
+      findingRepo.countByTarget
+        .mockResolvedValueOnce({ total: 2, major: 1 })
+        .mockResolvedValueOnce({ total: 1, major: 0 })
+        .mockResolvedValueOnce({ total: 5, major: 2 });
+      readRepo.getTaskManHours
+        .mockResolvedValueOnce([{ wbsId: 1, taskNo: 'T-001', totalHours: 10 }])
+        .mockResolvedValueOnce([{ wbsId: 1, taskNo: 'T-002', totalHours: 20 }])
+        .mockResolvedValueOnce([{ wbsId: 1, taskNo: 'T-003', totalHours: 30 }]);
+      reviewerRepo.findByTarget
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const rows = await service.getAggregated(1, 'phase', 'MAN_HOUR');
+
+      expect(rows).toHaveLength(2);
+      const design = rows.find((r) => r.key === '設計')!;
+      expect(design.targetCount).toBe(2);
+      expect(design.totalSize).toBe(30);
+      expect(design.findingCount).toBe(3);
+      expect(design.majorCount).toBe(1);
+
+      const coding = rows.find((r) => r.key === 'コーディング')!;
+      expect(coding.targetCount).toBe(1);
+      expect(coding.totalSize).toBe(30);
+      expect(coding.findingCount).toBe(5);
+    });
+
+    it('axis=reviewer: 担当者ごとにレビュー工数を集約する', async () => {
+      const targets = [sampleTarget(1, 1, 'T-001')];
+      targetRepo.findByWbs.mockResolvedValue(targets);
+      taskRepo.findPhasesByTaskNos.mockResolvedValue(new Map());
+      findingRepo.countByTarget.mockResolvedValue({ total: 4, major: 2 });
+      readRepo.getTaskManHours.mockResolvedValue([
+        { wbsId: 1, taskNo: 'T-001', totalHours: 10 },
+      ]);
+      reviewerRepo.findByTarget.mockResolvedValue([
+        QualityReviewer.reconstruct({
+          id: 1, targetId: 1, reviewerUserId: 'userA', reviewTaskNo: 'R-A',
+        }),
+        QualityReviewer.reconstruct({
+          id: 2, targetId: 1, reviewerUserId: 'userB', reviewTaskNo: 'R-B',
+        }),
+      ]);
+      readRepo.getReviewManHours.mockResolvedValue([
+        { wbsId: 1, taskNo: 'R-A', totalHours: 3 },
+        { wbsId: 1, taskNo: 'R-B', totalHours: 5 },
+      ]);
+
+      const rows = await service.getAggregated(1, 'reviewer', 'MAN_HOUR');
+
+      expect(rows).toHaveLength(2);
+      const a = rows.find((r) => r.key === 'userA')!;
+      expect(a.totalReviewManHours).toBe(3);
+      const b = rows.find((r) => r.key === 'userB')!;
+      expect(b.totalReviewManHours).toBe(5);
+    });
+
+    it('axis=date: 指摘発生日ごとに件数を集約する', async () => {
+      const targets = [sampleTarget(1, 1, 'T-001')];
+      targetRepo.findByWbs.mockResolvedValue(targets);
+      taskRepo.findPhasesByTaskNos.mockResolvedValue(new Map());
+      findingRepo.countByTarget.mockResolvedValue({ total: 3, major: 1 });
+      readRepo.getTaskManHours.mockResolvedValue([
+        { wbsId: 1, taskNo: 'T-001', totalHours: 10 },
+      ]);
+      reviewerRepo.findByTarget.mockResolvedValue([]);
+      findingRepo.findByTarget.mockResolvedValue([
+        QualityFinding.reconstruct({
+          id: 1, targetId: 1, severity: QualitySeverity.MAJOR,
+          foundAt: new Date('2026-04-01T00:00:00Z'),
+        }),
+        QualityFinding.reconstruct({
+          id: 2, targetId: 1, severity: QualitySeverity.MINOR,
+          foundAt: new Date('2026-04-01T00:00:00Z'),
+        }),
+        QualityFinding.reconstruct({
+          id: 3, targetId: 1, severity: QualitySeverity.MINOR,
+          foundAt: new Date('2026-04-02T00:00:00Z'),
+        }),
+      ]);
+
+      const rows = await service.getAggregated(1, 'date', 'MAN_HOUR');
+
+      expect(rows).toHaveLength(2);
+      const d1 = rows.find((r) => r.key === '2026-04-01')!;
+      expect(d1.findingCount).toBe(2);
+      expect(d1.majorCount).toBe(1);
+      const d2 = rows.find((r) => r.key === '2026-04-02')!;
+      expect(d2.findingCount).toBe(1);
+      expect(d2.majorCount).toBe(0);
+    });
+
+    it('規模単位PAGE時はQualitySizeMetricから取得する', async () => {
+      const targets = [sampleTarget(1, 1, 'T-001')];
+      targetRepo.findByWbs.mockResolvedValue(targets);
+      taskRepo.findPhasesByTaskNos.mockResolvedValue(new Map());
+      findingRepo.countByTarget.mockResolvedValue({ total: 2, major: 0 });
+      sizeRepo.findByTarget.mockResolvedValue([
+        QualitySizeMetric.reconstruct({
+          id: 1, targetId: 1, unit: QualitySizeUnit.PAGE,
+          value: 20, measuredAt: new Date(),
+        }),
+      ]);
+      reviewerRepo.findByTarget.mockResolvedValue([]);
+
+      const rows = await service.getAggregated(1, 'target', QualitySizeUnit.PAGE);
+
+      expect(readRepo.getTaskManHours).not.toHaveBeenCalled();
+      expect(rows[0].totalSize).toBe(20);
+      expect(rows[0].defectDensity).toBeCloseTo(2 / 20);
     });
   });
 

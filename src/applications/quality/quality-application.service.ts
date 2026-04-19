@@ -96,6 +96,23 @@ export interface GetTrendInput {
   toDate?: Date;
 }
 
+export type AggregationAxis = 'target' | 'phase' | 'reviewer' | 'date';
+
+export interface AggregatedQualityRow {
+  axis: AggregationAxis;
+  key: string;
+  label: string;
+  targetCount: number;
+  totalSize: number;
+  totalReviewManHours: number;
+  findingCount: number;
+  majorCount: number;
+  reviewDensity: number | null;
+  defectDensity: number | null;
+  majorDefectDensity: number | null;
+  majorRatio: number | null;
+}
+
 export interface IQualityApplicationService {
   registerSizeMetric(input: RegisterSizeMetricInput): Promise<QualitySizeMetric>;
   deleteSizeMetric(targetId: number, unit: QualitySizeUnit): Promise<void>;
@@ -114,6 +131,11 @@ export interface IQualityApplicationService {
     thresholds?: QualityThresholds,
   ): Promise<WbsQualitySummary>;
   getTrend(input: GetTrendInput): Promise<QualityTrendPoint[]>;
+  getAggregated(
+    wbsId: number,
+    axis: AggregationAxis,
+    sizeUnit: QualitySizeUnit | 'MAN_HOUR',
+  ): Promise<AggregatedQualityRow[]>;
 }
 
 @injectable()
@@ -391,6 +413,162 @@ export class QualityApplicationService implements IQualityApplicationService {
         status: this.calc.evaluateStatus(reviewCompletionRateValue, null),
       },
     };
+  }
+
+  async getAggregated(
+    wbsId: number,
+    axis: AggregationAxis,
+    sizeUnit: QualitySizeUnit | 'MAN_HOUR',
+  ): Promise<AggregatedQualityRow[]> {
+    const targets = await this.targetRepo.findByWbs(wbsId, { isActive: true });
+    if (targets.length === 0) return [];
+
+    const phaseMap = await this.taskRepo.findPhasesByTaskNos(
+      wbsId,
+      targets.map((t) => t.taskNo),
+    );
+
+    type Bucket = {
+      key: string;
+      label: string;
+      targetIds: Set<number>;
+      totalSize: number;
+      totalReviewManHours: number;
+      findingCount: number;
+      majorCount: number;
+    };
+    const buckets = new Map<string, Bucket>();
+    const ensureBucket = (key: string, label: string): Bucket => {
+      let b = buckets.get(key);
+      if (!b) {
+        b = {
+          key,
+          label,
+          targetIds: new Set(),
+          totalSize: 0,
+          totalReviewManHours: 0,
+          findingCount: 0,
+          majorCount: 0,
+        };
+        buckets.set(key, b);
+      }
+      return b;
+    };
+
+    for (const t of targets) {
+      const { total: fTotal, major: fMajor } =
+        await this.findingRepo.countByTarget(t.id!);
+
+      let size = 0;
+      if (sizeUnit === 'MAN_HOUR') {
+        const mh = await this.readRepo.getTaskManHours([
+          { wbsId: t.wbsId, taskNo: t.taskNo },
+        ]);
+        size = mh[0]?.totalHours ?? 0;
+      } else {
+        const metrics = await this.sizeRepo.findByTarget(t.id!);
+        const m = metrics.find((x) => x.unit === sizeUnit);
+        size = m?.value ?? 0;
+      }
+
+      const reviewers = await this.reviewerRepo.findByTarget(t.id!);
+      let reviewHours = 0;
+      if (reviewers.length > 0) {
+        const rh = await this.readRepo.getReviewManHours(
+          reviewers.map((r) => ({ wbsId: t.wbsId, taskNo: r.reviewTaskNo })),
+        );
+        reviewHours = rh.reduce((sum, x) => sum + x.totalHours, 0);
+      }
+
+      if (axis === 'target') {
+        const b = ensureBucket(t.taskNo, t.name);
+        b.targetIds.add(t.id!);
+        b.totalSize += size;
+        b.totalReviewManHours += reviewHours;
+        b.findingCount += fTotal;
+        b.majorCount += fMajor;
+      } else if (axis === 'phase') {
+        const phase = phaseMap.get(t.taskNo) ?? null;
+        const key = phase ?? '__none__';
+        const label = phase ?? '(未割当)';
+        const b = ensureBucket(key, label);
+        b.targetIds.add(t.id!);
+        b.totalSize += size;
+        b.totalReviewManHours += reviewHours;
+        b.findingCount += fTotal;
+        b.majorCount += fMajor;
+      } else if (axis === 'reviewer') {
+        if (reviewers.length === 0) {
+          const b = ensureBucket('__none__', '(レビュアー未割当)');
+          b.targetIds.add(t.id!);
+          b.totalSize += size;
+          b.findingCount += fTotal;
+          b.majorCount += fMajor;
+        } else {
+          const perReviewer = reviewers.length;
+          const rh = await this.readRepo.getReviewManHours(
+            reviewers.map((r) => ({ wbsId: t.wbsId, taskNo: r.reviewTaskNo })),
+          );
+          const hoursByTaskNo = new Map(
+            rh.map((x) => [x.taskNo, x.totalHours]),
+          );
+          for (const r of reviewers) {
+            const b = ensureBucket(r.reviewerUserId, r.reviewerUserId);
+            b.targetIds.add(t.id!);
+            b.totalSize += size / perReviewer;
+            b.totalReviewManHours += hoursByTaskNo.get(r.reviewTaskNo) ?? 0;
+            b.findingCount += fTotal / perReviewer;
+            b.majorCount += fMajor / perReviewer;
+          }
+        }
+      } else if (axis === 'date') {
+        const findings = await this.findingRepo.findByTarget(t.id!);
+        for (const f of findings) {
+          const dateKey = f.foundAt.toISOString().split('T')[0];
+          const b = ensureBucket(dateKey, dateKey);
+          b.targetIds.add(t.id!);
+          b.findingCount += 1;
+          if (f.severity === QualitySeverity.MAJOR) b.majorCount += 1;
+        }
+        if (reviewers.length > 0) {
+          const rtk = reviewers.map((r) => ({
+            wbsId: t.wbsId,
+            taskNo: r.reviewTaskNo,
+          }));
+          const dailyHours = await this.readRepo.getDailyReviewManHours(rtk);
+          for (const dh of dailyHours) {
+            const dateKey = dh.date.toISOString().split('T')[0];
+            const b = ensureBucket(dateKey, dateKey);
+            b.targetIds.add(t.id!);
+            b.totalReviewManHours += dh.totalHours;
+          }
+        }
+      }
+    }
+
+    const rows: AggregatedQualityRow[] = Array.from(buckets.values())
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map((b) => ({
+        axis,
+        key: b.key,
+        label: b.label,
+        targetCount: b.targetIds.size,
+        totalSize: b.totalSize,
+        totalReviewManHours: b.totalReviewManHours,
+        findingCount: b.findingCount,
+        majorCount: b.majorCount,
+        reviewDensity: this.calc.calcReviewDensity(
+          b.totalReviewManHours,
+          b.totalSize,
+        ),
+        defectDensity: this.calc.calcDefectDensity(b.findingCount, b.totalSize),
+        majorDefectDensity: this.calc.calcMajorDefectDensity(
+          b.majorCount,
+          b.totalSize,
+        ),
+        majorRatio: this.calc.calcMajorRatio(b.majorCount, b.findingCount),
+      }));
+    return rows;
   }
 
   async getTrend(input: GetTrendInput): Promise<QualityTrendPoint[]> {

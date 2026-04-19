@@ -12,6 +12,7 @@ import type {
   QualityTargetListItem,
   WbsQualitySummary,
   QualityTrendPoint,
+  AggregationAxis,
 } from "@/applications/quality/quality-application.service";
 import { SyncQualityTargetsService, SyncResult } from "@/applications/quality/sync-quality-targets.service";
 import { QualitySizeUnit, QualitySeverity } from "@/domains/quality/value-objects/quality-enums";
@@ -385,6 +386,54 @@ export async function exportQualitySummaryTsv(
     ]);
   }
   return toTsv(rows);
+}
+
+export async function exportQualityAggregatedTsv(
+  wbsId: number,
+  axis: AggregationAxis,
+  sizeUnit: QualitySizeUnit | "MAN_HOUR",
+): Promise<string> {
+  const app = toQualityAppService();
+  const rows = await app.getAggregated(wbsId, axis, sizeUnit);
+
+  const axisLabel: Record<AggregationAxis, string> = {
+    target: "対象",
+    phase: "フェーズ",
+    reviewer: "担当者",
+    date: "日付",
+  };
+  const header = [
+    axisLabel[axis],
+    "対象数",
+    "sizeUnit",
+    "size",
+    "reviewManHours",
+    "reviewDensity",
+    "findingCount",
+    "majorCount",
+    "defectDensity",
+    "majorDefectDensity",
+    "majorRatio",
+  ];
+  const body: (string | number | null | undefined)[][] = [header];
+  for (const r of rows) {
+    body.push([
+      r.label,
+      r.targetCount,
+      sizeUnit,
+      Number.isFinite(r.totalSize) ? Number(r.totalSize.toFixed(4)) : "",
+      Number.isFinite(r.totalReviewManHours)
+        ? Number(r.totalReviewManHours.toFixed(4))
+        : "",
+      r.reviewDensity ?? "",
+      Number(r.findingCount.toFixed(4)),
+      Number(r.majorCount.toFixed(4)),
+      r.defectDensity ?? "",
+      r.majorDefectDensity ?? "",
+      r.majorRatio ?? "",
+    ]);
+  }
+  return toTsv(body);
 }
 
 export async function getQualityThresholds(

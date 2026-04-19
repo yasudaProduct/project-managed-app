@@ -25,7 +25,9 @@ import {
   exportQualityFindingsTsv,
   exportQualitySizeMetricsTsv,
   exportQualitySummaryTsv,
+  exportQualityAggregatedTsv,
 } from "@/app/wbs/[id]/actions/quality-actions";
+import type { AggregationAxis } from "@/applications/quality/quality-application.service";
 import { toast } from "@/hooks/use-toast";
 
 type SizeUnitOption = QualitySizeUnit | "MAN_HOUR";
@@ -158,6 +160,22 @@ export function QualityImportExport({ wbsId, sizeUnit }: Props) {
     });
   };
 
+  const handleAggregatedExport = async (axis: AggregationAxis) => {
+    startTransition(async () => {
+      try {
+        const tsv = await exportQualityAggregatedTsv(wbsId, axis, sizeUnit);
+        const filename = `quality-aggregated-${axis}-wbs${wbsId}.tsv`;
+        downloadText(filename, tsv);
+      } catch (err) {
+        toast({
+          title: "集計エクスポート失敗",
+          description: err instanceof Error ? err.message : String(err),
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -232,13 +250,36 @@ export function QualityImportExport({ wbsId, sizeUnit }: Props) {
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onClick={() => handleExport("summary")}>
-                サマリ
+                明細 (対象別サマリ)
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleExport("findings")}>
                 指摘一覧
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleExport("size")}>
                 規模一覧
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={isWorking}>
+                <Download className="h-4 w-4 mr-2" />
+                集計TSV
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleAggregatedExport("target")}>
+                対象別
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAggregatedExport("phase")}>
+                フェーズ別
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAggregatedExport("reviewer")}>
+                担当者別
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAggregatedExport("date")}>
+                日付別
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
