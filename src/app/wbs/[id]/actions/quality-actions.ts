@@ -14,6 +14,14 @@ import type {
 import { SyncQualityTargetsService, SyncResult } from "@/applications/quality/sync-quality-targets.service";
 import { QualitySizeUnit, QualitySeverity } from "@/domains/quality/value-objects/quality-enums";
 import type { QualityThresholds } from "@/domains/quality/value-objects/quality-threshold";
+import {
+  FindingCsvRow,
+  SizeCsvRow,
+  parseFindingRows,
+  parseSizeRows,
+  toTsv,
+} from "@/applications/quality/quality-io.service";
+import type { IQualityReviewTargetRepository } from "@/applications/quality/i-quality-review-target.repository";
 
 export interface QualityActionResult<T = unknown> {
   success: boolean;
@@ -179,4 +187,177 @@ export async function syncQualityTargets(
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "評価対象の同期に失敗しました" };
   }
+}
+
+async function resolveTargetIdByTaskNo(
+  wbsId: number,
+  taskNo: string,
+): Promise<number | null> {
+  const repo = container.get<IQualityReviewTargetRepository>(
+    SYMBOL.IQualityReviewTargetRepository,
+  );
+  const target = await repo.findByWbsAndTaskNo(wbsId, taskNo);
+  return target?.id ?? null;
+}
+
+export interface ImportQualityCsvResult {
+  success: boolean;
+  created: number;
+  errors: { line: number; message: string }[];
+}
+
+export async function importQualityFindingsCsv(
+  wbsId: number,
+  rows: FindingCsvRow[],
+  mode: "merge" | "replace",
+): Promise<ImportQualityCsvResult> {
+  const parsed = parseFindingRows(rows);
+  const errors = [...parsed.errors];
+  const app = toQualityAppService();
+
+  const grouped = new Map<number, typeof parsed.rows>();
+  for (let i = 0; i < parsed.rows.length; i++) {
+    const row = parsed.rows[i];
+    const targetId = await resolveTargetIdByTaskNo(wbsId, row.taskNo);
+    if (targetId === null) {
+      errors.push({ line: i + 2, message: `評価対象が見つかりません: ${row.taskNo}` });
+      continue;
+    }
+    const arr = grouped.get(targetId) ?? [];
+    arr.push(row);
+    grouped.set(targetId, arr);
+  }
+
+  let created = 0;
+  for (const [targetId, items] of grouped.entries()) {
+    const res = await app.importFindings(
+      targetId,
+      items.map((x) => ({
+        severity: x.severity,
+        category: x.category,
+        description: x.description,
+        foundAt: x.foundAt,
+      })),
+      mode,
+    );
+    created += res.created;
+  }
+
+  revalidatePath(`/wbs/${wbsId}/quality`);
+  return { success: errors.length === 0, created, errors };
+}
+
+export async function importQualitySizeMetricsCsv(
+  wbsId: number,
+  rows: SizeCsvRow[],
+  mode: "merge" | "replace",
+): Promise<ImportQualityCsvResult> {
+  const parsed = parseSizeRows(rows);
+  const errors = [...parsed.errors];
+  const app = toQualityAppService();
+
+  const items: RegisterSizeMetricInput[] = [];
+  for (let i = 0; i < parsed.rows.length; i++) {
+    const row = parsed.rows[i];
+    const targetId = await resolveTargetIdByTaskNo(wbsId, row.taskNo);
+    if (targetId === null) {
+      errors.push({ line: i + 2, message: `評価対象が見つかりません: ${row.taskNo}` });
+      continue;
+    }
+    items.push({
+      targetId,
+      unit: row.unit,
+      value: row.value,
+      measuredAt: row.measuredAt,
+      note: row.note,
+    });
+  }
+
+  const res = await app.importSizeMetrics(items, mode);
+  revalidatePath(`/wbs/${wbsId}/quality`);
+  return { success: errors.length === 0, created: res.created, errors };
+}
+
+export async function exportQualityFindingsTsv(wbsId: number): Promise<string> {
+  const app = toQualityAppService();
+  const targets = await app.listTargetsByWbs(wbsId);
+  const header = ["taskNo", "name", "severity", "category", "description", "foundAt"];
+  const rows: (string | number | null | undefined)[][] = [header];
+
+  for (const t of targets) {
+    const findings = await app.listFindings(t.id);
+    for (const f of findings) {
+      rows.push([
+        t.taskNo,
+        t.name,
+        f.severity,
+        f.category ?? "",
+        f.description ?? "",
+        f.foundAt.toISOString(),
+      ]);
+    }
+  }
+  return toTsv(rows);
+}
+
+export async function exportQualitySizeMetricsTsv(wbsId: number): Promise<string> {
+  const app = toQualityAppService();
+  const targets = await app.listTargetsByWbs(wbsId);
+  const header = ["taskNo", "name", "unit", "value", "measuredAt", "note"];
+  const rows: (string | number | null | undefined)[][] = [header];
+
+  for (const t of targets) {
+    const metrics = await app.listSizeMetrics(t.id);
+    for (const m of metrics) {
+      rows.push([
+        t.taskNo,
+        t.name,
+        m.unit,
+        m.value,
+        m.measuredAt.toISOString(),
+        m.note ?? "",
+      ]);
+    }
+  }
+  return toTsv(rows);
+}
+
+export async function exportQualitySummaryTsv(
+  wbsId: number,
+  sizeUnit: QualitySizeUnit | "MAN_HOUR",
+): Promise<string> {
+  const app = toQualityAppService();
+  const targets = await app.listTargetsByWbs(wbsId, true);
+  const header = [
+    "taskNo",
+    "name",
+    "sizeUnit",
+    "size",
+    "reviewManHours",
+    "reviewDensity",
+    "findingCount",
+    "majorCount",
+    "defectDensity",
+    "majorDefectDensity",
+    "majorRatio",
+  ];
+  const rows: (string | number | null | undefined)[][] = [header];
+
+  for (const t of targets) {
+    const s = await app.getSummary(t.id, sizeUnit);
+    rows.push([
+      t.taskNo,
+      t.name,
+      s.sizeUnit,
+      s.size ?? "",
+      s.reviewManHours,
+      s.reviewDensity ?? "",
+      s.findingCount,
+      s.majorCount,
+      s.defectDensity ?? "",
+      s.majorDefectDensity ?? "",
+      s.majorRatio ?? "",
+    ]);
+  }
+  return toTsv(rows);
 }

@@ -25,6 +25,7 @@ import type { QualityTargetListItem } from "@/applications/quality/quality-appli
 import { syncQualityTargets } from "@/app/wbs/[id]/actions/quality-actions";
 import { toast } from "@/hooks/use-toast";
 import { QualityTargetDetailModal } from "./quality-target-detail-modal";
+import { QualityImportExport } from "./quality-import-export";
 
 type SizeUnitOption = QualitySizeUnit | "MAN_HOUR";
 
@@ -99,6 +100,8 @@ export function QualityDashboard({ wbsId, initialTargets }: QualityDashboardProp
           </CardContent>
         </Card>
       </div>
+
+      <QualityImportExport wbsId={wbsId} sizeUnit={sizeUnit} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
