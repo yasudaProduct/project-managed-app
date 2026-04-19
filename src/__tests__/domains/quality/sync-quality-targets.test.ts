@@ -1,5 +1,33 @@
 import { SyncQualityTargetsService } from '@/applications/quality/sync-quality-targets.service';
 import { QualityDocumentType, QualityReviewType } from '@/domains/quality/value-objects/quality-enums';
+import { ExcelWbs } from '@/domains/sync/ExcelWbs';
+
+function buildExcelRow(overrides: Partial<ExcelWbs> = {}): ExcelWbs {
+  return {
+    ROW_NO: 1,
+    PROJECT_ID: 'P001',
+    WBS_ID: 'T-001',
+    PHASE: 'DESIGN',
+    ACTIVITY: '',
+    TASK: '基本設計書作成',
+    TANTO: 'user1',
+    TANTO_REV: null,
+    KIJUN_START_DATE: null,
+    KIJUN_END_DATE: null,
+    YOTEI_START_DATE: null,
+    YOTEI_END_DATE: null,
+    JISSEKI_START_DATE: null,
+    JISSEKI_END_DATE: null,
+    KIJUN_KOSU: null,
+    YOTEI_KOSU: null,
+    JISSEKI_KOSU: null,
+    KIJUN_KOSU_BUFFER: null,
+    STATUS: '',
+    BIKO: null,
+    PROGRESS_RATE: null,
+    ...overrides,
+  };
+}
 
 const mockTargetRepo = {
   findById: jest.fn(),
@@ -106,6 +134,84 @@ describe('SyncQualityTargetsService', () => {
 
       expect(mockTargetRepo.deactivateMissing).toHaveBeenCalledWith(1, []);
       expect(result.deactivated).toBe(3);
+    });
+  });
+
+  describe('syncFromExcelRows', () => {
+    it('TANTO_REVがある行を評価対象として登録する', async () => {
+      const rows = [
+        buildExcelRow({ WBS_ID: 'T-010', TASK: '基本設計書作成', TANTO_REV: '山田太郎' }),
+        buildExcelRow({ WBS_ID: 'T-020', TASK: '実装', TANTO_REV: null }),
+      ];
+      mockTargetRepo.findByWbsAndTaskNo.mockResolvedValue(null);
+      mockTargetRepo.upsert.mockImplementation(async (t) => ({ ...t, id: 100 }));
+      mockTargetRepo.deactivateMissing.mockResolvedValue(0);
+      mockReviewerRepo.replaceForTarget.mockResolvedValue(undefined);
+
+      const result = await service.syncFromExcelRows(1, rows);
+
+      expect(mockTargetRepo.upsert).toHaveBeenCalledTimes(1);
+      expect(result.created).toBe(1);
+      expect(result.updated).toBe(0);
+    });
+
+    it('同一TASK名で複数行ある場合は1つの評価対象に全員をレビュアーとして登録する', async () => {
+      const rows = [
+        buildExcelRow({ WBS_ID: 'T-010', TASK: '基本設計書作成', TANTO_REV: '山田太郎' }),
+        buildExcelRow({ WBS_ID: 'T-011', TASK: '基本設計書作成', TANTO_REV: '佐藤花子' }),
+        buildExcelRow({ WBS_ID: 'T-012', TASK: '基本設計書作成', TANTO_REV: '鈴木次郎' }),
+      ];
+      mockTargetRepo.findByWbsAndTaskNo.mockResolvedValue(null);
+      mockTargetRepo.upsert.mockImplementation(async (t) => ({ ...t, id: 200 }));
+      mockTargetRepo.deactivateMissing.mockResolvedValue(0);
+      mockReviewerRepo.replaceForTarget.mockResolvedValue(undefined);
+
+      await service.syncFromExcelRows(1, rows);
+
+      expect(mockTargetRepo.upsert).toHaveBeenCalledTimes(1);
+      const reviewersArg = mockReviewerRepo.replaceForTarget.mock.calls[0][1];
+      expect(reviewersArg).toHaveLength(3);
+      const userIds = reviewersArg.map((r: { reviewerUserId: string }) => r.reviewerUserId);
+      expect(userIds).toEqual(expect.arrayContaining(['山田太郎', '佐藤花子', '鈴木次郎']));
+    });
+
+    it('既存の評価対象がある場合はupdatedにカウントする', async () => {
+      const rows = [
+        buildExcelRow({ WBS_ID: 'T-010', TASK: '基本設計書作成', TANTO_REV: '山田太郎' }),
+      ];
+      const existing = { id: 1, wbsId: 1, taskNo: 'T-010', name: '基本設計書作成' };
+      mockTargetRepo.findByWbsAndTaskNo.mockResolvedValue(existing);
+      mockTargetRepo.upsert.mockImplementation(async (t) => ({ ...t, id: 1 }));
+      mockTargetRepo.deactivateMissing.mockResolvedValue(0);
+      mockReviewerRepo.replaceForTarget.mockResolvedValue(undefined);
+
+      const result = await service.syncFromExcelRows(1, rows);
+
+      expect(result.created).toBe(0);
+      expect(result.updated).toBe(1);
+    });
+
+    it('空文字列のTANTO_REVは評価対象にしない', async () => {
+      const rows = [
+        buildExcelRow({ WBS_ID: 'T-010', TASK: '基本設計書作成', TANTO_REV: '   ' }),
+        buildExcelRow({ WBS_ID: 'T-020', TASK: '実装', TANTO_REV: '' }),
+      ];
+      mockTargetRepo.deactivateMissing.mockResolvedValue(0);
+
+      const result = await service.syncFromExcelRows(1, rows);
+
+      expect(mockTargetRepo.upsert).not.toHaveBeenCalled();
+      expect(result.created).toBe(0);
+      expect(result.updated).toBe(0);
+    });
+
+    it('インポートに含まれなくなったタスクはisActive=falseにする', async () => {
+      mockTargetRepo.deactivateMissing.mockResolvedValue(2);
+
+      const result = await service.syncFromExcelRows(1, []);
+
+      expect(mockTargetRepo.deactivateMissing).toHaveBeenCalledWith(1, []);
+      expect(result.deactivated).toBe(2);
     });
   });
 });

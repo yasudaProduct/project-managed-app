@@ -10,6 +10,9 @@ import { NotificationType } from '@/types/notification'
 import { NotificationPriority } from '@/domains/notification/notification-priority'
 import { NotificationChannel } from '@/domains/notification/notification-channel'
 import { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
+import { IWbsRepository } from '@/applications/wbs/iwbs-repository'
+import { IExcelWbsRepository } from '@/applications/excel-sync/IExcelWbsRepository'
+import { SyncQualityTargetsService } from '@/applications/quality/sync-quality-targets.service'
 
 interface Params {
   id: string
@@ -176,6 +179,17 @@ async function executeWbsImport(jobId: string, job: ImportJob) {
 
     if (result.success) {
 
+      // 品質評価対象の自動同期（TANTO_REV由来）
+      try {
+        await syncQualityTargetsFromExcel(jobId, job.wbsId)
+      } catch (qualityError) {
+        // 品質同期の失敗はWBSインポート自体の成功を妨げない
+        await importJobService.addProgress(jobId, {
+          message: `品質評価対象の同期でエラーが発生しました: ${qualityError instanceof Error ? qualityError.message : String(qualityError)}`,
+          level: 'warning',
+        })
+      }
+
       // 完了
       await importJobService.completeJob(jobId, {
         recordCount: 1,
@@ -206,6 +220,34 @@ async function executeWbsImport(jobId: string, job: ImportJob) {
   } catch (error) {
     throw error
   }
+}
+
+/**
+ * WBSインポート完了後、MySQLのTANTO_REVを参照して
+ * 品質評価対象(QualityReviewTarget)を自動同期する
+ */
+async function syncQualityTargetsFromExcel(jobId: string, wbsId: number) {
+  const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
+  const wbsRepository = container.get<IWbsRepository>(SYMBOL.IWbsRepository)
+  const excelWbsRepository = container.get<IExcelWbsRepository>(SYMBOL.IExcelWbsRepository)
+  const syncQualityService = container.get<SyncQualityTargetsService>(SYMBOL.SyncQualityTargetsService)
+
+  const wbs = await wbsRepository.findById(wbsId)
+  if (!wbs) {
+    return
+  }
+
+  const excelRows = await excelWbsRepository.findByWbsName(wbs.name)
+  if (!excelRows || excelRows.length === 0) {
+    return
+  }
+
+  const qualityResult = await syncQualityService.syncFromExcelRows(wbsId, excelRows)
+
+  await importJobService.addProgress(jobId, {
+    message: `品質評価対象を同期しました（新規: ${qualityResult.created}件 / 更新: ${qualityResult.updated}件 / 無効化: ${qualityResult.deactivated}件）`,
+    level: 'info',
+  })
 }
 
 /**
