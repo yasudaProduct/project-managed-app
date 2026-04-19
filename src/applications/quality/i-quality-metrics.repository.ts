@@ -36,6 +36,11 @@ export interface DailyFindingCount {
   major: number;
 }
 
+export interface DailyManHours {
+  date: Date;
+  totalHours: number;
+}
+
 export interface IQualityMetricsReadRepository {
   getReviewManHours(
     reviewTaskNos: { wbsId: number; taskNo: string }[],
@@ -52,4 +57,10 @@ export interface IQualityMetricsReadRepository {
     fromDate?: Date,
     toDate?: Date,
   ): Promise<DailyFindingCount[]>;
+
+  getDailyReviewManHours(
+    reviewTaskNos: { wbsId: number; taskNo: string }[],
+    fromDate?: Date,
+    toDate?: Date,
+  ): Promise<DailyManHours[]>;
 }

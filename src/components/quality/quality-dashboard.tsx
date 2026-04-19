@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -21,12 +21,27 @@ import {
 } from "@/components/ui/select";
 import { RefreshCw, ListChecks, Ruler } from "lucide-react";
 import { QualitySizeUnit } from "@/domains/quality/value-objects/quality-enums";
-import type { QualityTargetListItem } from "@/applications/quality/quality-application.service";
-import { syncQualityTargets } from "@/app/wbs/[id]/actions/quality-actions";
+import type {
+  QualityTargetListItem,
+  WbsQualitySummary,
+  QualityTrendPoint,
+} from "@/applications/quality/quality-application.service";
+import {
+  syncQualityTargets,
+  getWbsQualitySummary,
+  getQualityTrend,
+  getQualityTargets,
+} from "@/app/wbs/[id]/actions/quality-actions";
 import { toast } from "@/hooks/use-toast";
 import { QualityTargetDetailModal } from "./quality-target-detail-modal";
 import { QualityImportExport } from "./quality-import-export";
 import { QualityThresholdSettings } from "./quality-threshold-settings";
+import { QualityIndicatorCards } from "./quality-indicator-cards";
+import { QualityTrendChart } from "./quality-trend-chart";
+import {
+  QualityFilterPanel,
+  type QualityFilter,
+} from "./quality-filter-panel";
 import type { QualityThresholds } from "@/domains/quality/value-objects/quality-threshold";
 
 type SizeUnitOption = QualitySizeUnit | "MAN_HOUR";
@@ -43,6 +58,8 @@ interface QualityDashboardProps {
   projectId: string;
   initialTargets: QualityTargetListItem[];
   initialThresholds: QualityThresholds;
+  initialSummary: WbsQualitySummary;
+  initialTrend: QualityTrendPoint[];
 }
 
 export function QualityDashboard({
@@ -50,12 +67,61 @@ export function QualityDashboard({
   projectId,
   initialTargets,
   initialThresholds,
+  initialSummary,
+  initialTrend,
 }: QualityDashboardProps) {
   const [targets, setTargets] = useState<QualityTargetListItem[]>(initialTargets);
+  const [summary, setSummary] = useState<WbsQualitySummary>(initialSummary);
+  const [trend, setTrend] = useState<QualityTrendPoint[]>(initialTrend);
   const [sizeUnit, setSizeUnit] = useState<SizeUnitOption>("MAN_HOUR");
   const [selectedTarget, setSelectedTarget] = useState<QualityTargetListItem | null>(null);
+  const [filter, setFilter] = useState<QualityFilter>({
+    fromDate: "",
+    toDate: "",
+    phase: "",
+  });
   const thresholds = initialThresholds;
   const [isSyncing, startSyncTransition] = useTransition();
+  const [isRefreshing, startRefreshTransition] = useTransition();
+
+  const phases = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of targets) {
+      if (t.phase) set.add(t.phase);
+    }
+    return Array.from(set).sort();
+  }, [targets]);
+
+  const filteredTargets = useMemo(() => {
+    return targets.filter((t) => {
+      if (filter.phase && t.phase !== filter.phase) return false;
+      return true;
+    });
+  }, [targets, filter.phase]);
+
+  const refreshAll = (unit: SizeUnitOption, f: QualityFilter) => {
+    startRefreshTransition(async () => {
+      const [newSummary, newTrend, newTargets] = await Promise.all([
+        getWbsQualitySummary(wbsId, unit, thresholds),
+        getQualityTrend(wbsId, unit, f.fromDate || undefined, f.toDate || undefined),
+        getQualityTargets(wbsId),
+      ]);
+      setSummary(newSummary);
+      setTrend(newTrend);
+      setTargets(newTargets);
+    });
+  };
+
+  const handleSizeUnitChange = (v: string) => {
+    const unit = v as SizeUnitOption;
+    setSizeUnit(unit);
+    refreshAll(unit, filter);
+  };
+
+  const handleFilterChange = (f: QualityFilter) => {
+    setFilter(f);
+    refreshAll(sizeUnit, f);
+  };
 
   const handleSync = () => {
     startSyncTransition(async () => {
@@ -65,6 +131,7 @@ export function QualityDashboard({
           title: "同期完了",
           description: `新規: ${result.data.created}件 / 更新: ${result.data.updated}件 / 無効化: ${result.data.deactivated}件`,
         });
+        refreshAll(sizeUnit, filter);
       } else {
         toast({
           title: "同期に失敗しました",
@@ -75,41 +142,13 @@ export function QualityDashboard({
     });
   };
 
-  const activeTargets = targets.filter((t) => t.isActive);
-  const totalFindings = activeTargets.reduce((sum, t) => sum + t.findingCount, 0);
-  const totalMajor = activeTargets.reduce((sum, t) => sum + t.majorCount, 0);
-
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-600">評価対象</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{activeTargets.length}</p>
-            <p className="text-xs text-gray-500 mt-1">有効な評価対象数</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-600">指摘件数</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{totalFindings}</p>
-            <p className="text-xs text-gray-500 mt-1">全評価対象の指摘合計</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-600">重大指摘件数</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-red-600">{totalMajor}</p>
-            <p className="text-xs text-gray-500 mt-1">Major指摘の合計</p>
-          </CardContent>
-        </Card>
-      </div>
+      <QualityFilterPanel value={filter} onChange={handleFilterChange} phases={phases} />
+
+      <QualityIndicatorCards summary={summary} />
+
+      <QualityTrendChart data={trend} thresholds={thresholds} />
 
       <QualityImportExport wbsId={wbsId} sizeUnit={sizeUnit} />
 
@@ -123,11 +162,14 @@ export function QualityDashboard({
           <CardTitle className="text-lg flex items-center gap-2">
             <ListChecks className="h-5 w-5" />
             評価対象一覧
+            {isRefreshing && (
+              <span className="text-xs text-gray-500">（更新中...）</span>
+            )}
           </CardTitle>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
               <Ruler className="h-4 w-4 text-gray-500" />
-              <Select value={sizeUnit} onValueChange={(v) => setSizeUnit(v as SizeUnitOption)}>
+              <Select value={sizeUnit} onValueChange={handleSizeUnitChange}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -152,11 +194,11 @@ export function QualityDashboard({
           </div>
         </CardHeader>
         <CardContent>
-          {targets.length === 0 ? (
+          {filteredTargets.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <p>評価対象がまだ登録されていません。</p>
+              <p>評価対象がありません。</p>
               <p className="text-sm mt-1">
-                WBSからインポート後に「WBSから同期」を実行してください。
+                WBSからインポート後に「WBSから同期」を実行するか、フィルタ条件を見直してください。
               </p>
             </div>
           ) : (
@@ -165,6 +207,7 @@ export function QualityDashboard({
                 <TableRow>
                   <TableHead>タスクNo.</TableHead>
                   <TableHead>タスク名</TableHead>
+                  <TableHead>フェーズ</TableHead>
                   <TableHead className="text-right">レビュアー数</TableHead>
                   <TableHead className="text-right">指摘件数</TableHead>
                   <TableHead className="text-right">重大指摘</TableHead>
@@ -173,10 +216,13 @@ export function QualityDashboard({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {targets.map((t) => (
+                {filteredTargets.map((t) => (
                   <TableRow key={t.id} className={!t.isActive ? "opacity-50" : undefined}>
                     <TableCell className="font-mono text-xs">{t.taskNo}</TableCell>
                     <TableCell>{t.name}</TableCell>
+                    <TableCell className="text-xs text-gray-600">
+                      {t.phase ?? "-"}
+                    </TableCell>
                     <TableCell className="text-right">{t.reviewerCount}</TableCell>
                     <TableCell className="text-right">{t.findingCount}</TableCell>
                     <TableCell className="text-right">
@@ -222,6 +268,7 @@ export function QualityDashboard({
             setTargets((prev) =>
               prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)),
             );
+            refreshAll(sizeUnit, filter);
           }}
         />
       )}

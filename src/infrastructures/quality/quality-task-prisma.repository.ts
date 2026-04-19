@@ -48,4 +48,16 @@ export class QualityTaskPrismaRepository implements IQualityTaskRepository {
     });
     return assignee?.assigneeId ?? null;
   }
+
+  async findPhasesByTaskNos(
+    wbsId: number,
+    taskNos: string[],
+  ): Promise<Map<string, string | null>> {
+    if (taskNos.length === 0) return new Map();
+    const tasks = await prisma.wbsTask.findMany({
+      where: { wbsId, taskNo: { in: taskNos } },
+      select: { taskNo: true, phase: { select: { name: true } } },
+    });
+    return new Map(tasks.map((t) => [t.taskNo, t.phase?.name ?? null]));
+  }
 }

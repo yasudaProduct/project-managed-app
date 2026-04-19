@@ -3,6 +3,8 @@ import { getWbsById } from "@/app/wbs/[id]/actions/wbs-actions";
 import {
   getQualityTargets,
   getQualityThresholds,
+  getWbsQualitySummary,
+  getQualityTrend,
 } from "@/app/wbs/[id]/actions/quality-actions";
 import { QualityDashboard } from "@/components/quality/quality-dashboard";
 
@@ -18,9 +20,15 @@ export default async function QualityPage({
     notFound();
   }
 
+  const wbsId = Number(id);
   const [targets, thresholds] = await Promise.all([
-    getQualityTargets(Number(id)),
+    getQualityTargets(wbsId),
     getQualityThresholds(wbs.projectId),
+  ]);
+
+  const [initialSummary, initialTrend] = await Promise.all([
+    getWbsQualitySummary(wbsId, "MAN_HOUR", thresholds),
+    getQualityTrend(wbsId, "MAN_HOUR"),
   ]);
 
   return (
@@ -33,10 +41,12 @@ export default async function QualityPage({
       </div>
 
       <QualityDashboard
-        wbsId={Number(id)}
+        wbsId={wbsId}
         projectId={wbs.projectId}
         initialTargets={targets}
         initialThresholds={thresholds}
+        initialSummary={initialSummary}
+        initialTrend={initialTrend}
       />
     </div>
   );

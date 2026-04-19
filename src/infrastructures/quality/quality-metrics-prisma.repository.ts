@@ -7,6 +7,7 @@ import type {
   FindingFilter,
   ReviewManHoursResult,
   DailyFindingCount,
+  DailyManHours,
 } from '@/applications/quality/i-quality-metrics.repository';
 import { QualitySizeMetric } from '@/domains/quality/quality-size-metric';
 import { QualityFinding } from '@/domains/quality/quality-finding';
@@ -256,6 +257,50 @@ export class QualityMetricsReadPrismaRepository implements IQualityMetricsReadRe
     return Array.from(byDate.entries()).map(([dateStr, counts]) => ({
       date: new Date(dateStr),
       ...counts,
+    }));
+  }
+
+  async getDailyReviewManHours(
+    reviewTaskNos: { wbsId: number; taskNo: string }[],
+    fromDate?: Date,
+    toDate?: Date,
+  ): Promise<DailyManHours[]> {
+    if (reviewTaskNos.length === 0) return [];
+
+    const tasks = await prisma.wbsTask.findMany({
+      where: {
+        OR: reviewTaskNos.map(({ wbsId, taskNo }) => ({ wbsId, taskNo })),
+      },
+      select: { id: true },
+    });
+    const taskIds = tasks.map((t) => t.id);
+    if (taskIds.length === 0) return [];
+
+    const rows = await prisma.workRecord.findMany({
+      where: {
+        taskId: { in: taskIds },
+        ...(fromDate || toDate
+          ? {
+              date: {
+                ...(fromDate ? { gte: fromDate } : {}),
+                ...(toDate ? { lte: toDate } : {}),
+              },
+            }
+          : {}),
+      },
+      select: { date: true, hours_worked: true },
+      orderBy: { date: 'asc' },
+    });
+
+    const byDate = new Map<string, number>();
+    for (const row of rows) {
+      const key = row.date.toISOString().split('T')[0];
+      byDate.set(key, (byDate.get(key) ?? 0) + Number(row.hours_worked));
+    }
+
+    return Array.from(byDate.entries()).map(([dateStr, totalHours]) => ({
+      date: new Date(dateStr),
+      totalHours,
     }));
   }
 }

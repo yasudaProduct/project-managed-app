@@ -10,6 +10,8 @@ import type {
   UpdateFindingInput,
   QualityMetricsSummary,
   QualityTargetListItem,
+  WbsQualitySummary,
+  QualityTrendPoint,
 } from "@/applications/quality/quality-application.service";
 import { SyncQualityTargetsService, SyncResult } from "@/applications/quality/sync-quality-targets.service";
 import { QualitySizeUnit, QualitySeverity } from "@/domains/quality/value-objects/quality-enums";
@@ -47,6 +49,28 @@ export async function getQualitySummary(
   thresholds?: QualityThresholds,
 ): Promise<QualityMetricsSummary> {
   return toQualityAppService().getSummary(targetId, sizeUnit, thresholds);
+}
+
+export async function getWbsQualitySummary(
+  wbsId: number,
+  sizeUnit: QualitySizeUnit | "MAN_HOUR",
+  thresholds?: QualityThresholds,
+): Promise<WbsQualitySummary> {
+  return toQualityAppService().getWbsSummary(wbsId, sizeUnit, thresholds);
+}
+
+export async function getQualityTrend(
+  wbsId: number,
+  sizeUnit: QualitySizeUnit | "MAN_HOUR",
+  fromDate?: string,
+  toDate?: string,
+): Promise<QualityTrendPoint[]> {
+  return toQualityAppService().getTrend({
+    wbsId,
+    sizeUnit,
+    fromDate: fromDate ? new Date(fromDate) : undefined,
+    toDate: toDate ? new Date(toDate) : undefined,
+  });
 }
 
 export async function getQualityFindings(targetId: number) {
