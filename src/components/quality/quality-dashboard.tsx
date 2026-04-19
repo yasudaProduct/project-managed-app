@@ -26,6 +26,8 @@ import { syncQualityTargets } from "@/app/wbs/[id]/actions/quality-actions";
 import { toast } from "@/hooks/use-toast";
 import { QualityTargetDetailModal } from "./quality-target-detail-modal";
 import { QualityImportExport } from "./quality-import-export";
+import { QualityThresholdSettings } from "./quality-threshold-settings";
+import type { QualityThresholds } from "@/domains/quality/value-objects/quality-threshold";
 
 type SizeUnitOption = QualitySizeUnit | "MAN_HOUR";
 
@@ -38,13 +40,21 @@ const SIZE_UNIT_LABELS: Record<SizeUnitOption, string> = {
 
 interface QualityDashboardProps {
   wbsId: number;
+  projectId: string;
   initialTargets: QualityTargetListItem[];
+  initialThresholds: QualityThresholds;
 }
 
-export function QualityDashboard({ wbsId, initialTargets }: QualityDashboardProps) {
+export function QualityDashboard({
+  wbsId,
+  projectId,
+  initialTargets,
+  initialThresholds,
+}: QualityDashboardProps) {
   const [targets, setTargets] = useState<QualityTargetListItem[]>(initialTargets);
   const [sizeUnit, setSizeUnit] = useState<SizeUnitOption>("MAN_HOUR");
   const [selectedTarget, setSelectedTarget] = useState<QualityTargetListItem | null>(null);
+  const thresholds = initialThresholds;
   const [isSyncing, startSyncTransition] = useTransition();
 
   const handleSync = () => {
@@ -102,6 +112,11 @@ export function QualityDashboard({ wbsId, initialTargets }: QualityDashboardProp
       </div>
 
       <QualityImportExport wbsId={wbsId} sizeUnit={sizeUnit} />
+
+      <QualityThresholdSettings
+        projectId={projectId}
+        initialThresholds={initialThresholds}
+      />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -201,6 +216,7 @@ export function QualityDashboard({ wbsId, initialTargets }: QualityDashboardProp
           wbsId={wbsId}
           target={selectedTarget}
           sizeUnit={sizeUnit}
+          thresholds={thresholds}
           onClose={() => setSelectedTarget(null)}
           onChanged={(updated) => {
             setTargets((prev) =>

@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { getWbsById } from "@/app/wbs/[id]/actions/wbs-actions";
-import { getQualityTargets } from "@/app/wbs/[id]/actions/quality-actions";
+import {
+  getQualityTargets,
+  getQualityThresholds,
+} from "@/app/wbs/[id]/actions/quality-actions";
 import { QualityDashboard } from "@/components/quality/quality-dashboard";
 
 export default async function QualityPage({
@@ -15,7 +18,10 @@ export default async function QualityPage({
     notFound();
   }
 
-  const targets = await getQualityTargets(Number(id));
+  const [targets, thresholds] = await Promise.all([
+    getQualityTargets(Number(id)),
+    getQualityThresholds(wbs.projectId),
+  ]);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -26,7 +32,12 @@ export default async function QualityPage({
         </div>
       </div>
 
-      <QualityDashboard wbsId={Number(id)} initialTargets={targets} />
+      <QualityDashboard
+        wbsId={Number(id)}
+        projectId={wbs.projectId}
+        initialTargets={targets}
+        initialThresholds={thresholds}
+      />
     </div>
   );
 }

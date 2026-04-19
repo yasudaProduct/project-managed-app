@@ -29,6 +29,7 @@ import type {
   QualityMetricsSummary,
   QualityTargetListItem,
 } from "@/applications/quality/quality-application.service";
+import type { QualityThresholds } from "@/domains/quality/value-objects/quality-threshold";
 import {
   getQualityFindings,
   getQualitySizeMetrics,
@@ -77,6 +78,7 @@ interface Props {
   wbsId: number;
   target: QualityTargetListItem;
   sizeUnit: SizeUnitOption;
+  thresholds?: QualityThresholds;
   onClose: () => void;
   onChanged: (updated: QualityTargetListItem) => void;
 }
@@ -102,6 +104,7 @@ export function QualityTargetDetailModal({
   wbsId,
   target,
   sizeUnit,
+  thresholds,
   onClose,
   onChanged,
 }: Props) {
@@ -128,7 +131,7 @@ export function QualityTargetDetailModal({
   const reload = async () => {
     setLoading(true);
     const [s, f, m] = await Promise.all([
-      getQualitySummary(target.id, sizeUnit),
+      getQualitySummary(target.id, sizeUnit, thresholds),
       getQualityFindings(target.id),
       getQualitySizeMetrics(target.id),
     ]);
@@ -141,7 +144,7 @@ export function QualityTargetDetailModal({
   useEffect(() => {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target.id, sizeUnit]);
+  }, [target.id, sizeUnit, thresholds]);
 
   const handleAddFinding = () => {
     startTransition(async () => {

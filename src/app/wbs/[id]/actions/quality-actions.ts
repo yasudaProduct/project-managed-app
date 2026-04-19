@@ -22,6 +22,7 @@ import {
   toTsv,
 } from "@/applications/quality/quality-io.service";
 import type { IQualityReviewTargetRepository } from "@/applications/quality/i-quality-review-target.repository";
+import prisma from "@/lib/prisma/prisma";
 
 export interface QualityActionResult<T = unknown> {
   success: boolean;
@@ -360,4 +361,33 @@ export async function exportQualitySummaryTsv(
     ]);
   }
   return toTsv(rows);
+}
+
+export async function getQualityThresholds(
+  projectId: string,
+): Promise<QualityThresholds> {
+  const settings = await prisma.projectSettings.findUnique({ where: { projectId } });
+  if (!settings?.qualityThresholds) return {};
+  return settings.qualityThresholds as unknown as QualityThresholds;
+}
+
+export async function updateQualityThresholds(
+  projectId: string,
+  thresholds: QualityThresholds,
+): Promise<QualityActionResult> {
+  try {
+    await prisma.projectSettings.upsert({
+      where: { projectId },
+      create: {
+        projectId,
+        qualityThresholds: thresholds as never,
+      },
+      update: {
+        qualityThresholds: thresholds as never,
+      },
+    });
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "閾値の保存に失敗しました" };
+  }
 }
