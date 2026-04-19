@@ -17,6 +17,7 @@ export interface FindingFilter {
 
 export interface IQualityFindingRepository {
   findByTarget(targetId: number, filter?: FindingFilter): Promise<QualityFinding[]>;
+  findByTargetIds(targetIds: number[]): Promise<QualityFinding[]>;
   create(finding: QualityFinding): Promise<QualityFinding>;
   update(finding: QualityFinding): Promise<QualityFinding>;
   delete(id: number): Promise<void>;

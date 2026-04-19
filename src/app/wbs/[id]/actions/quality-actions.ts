@@ -74,6 +74,14 @@ export async function getQualityTrend(
   });
 }
 
+export async function getWbsAllFindings(wbsId: number) {
+  const findings = await toQualityAppService().listWbsFindings(wbsId);
+  return findings.map((f) => ({
+    ...f,
+    foundAt: f.foundAt.toISOString(),
+  }));
+}
+
 export async function getQualityFindings(targetId: number) {
   const findings = await toQualityAppService().listFindings(targetId);
   return findings.map((f) => ({

@@ -108,6 +108,26 @@ export class QualityFindingPrismaRepository implements IQualityFindingRepository
     );
   }
 
+  async findByTargetIds(targetIds: number[]): Promise<QualityFinding[]> {
+    if (targetIds.length === 0) return [];
+    const rows = await prisma.qualityFinding.findMany({
+      where: { targetId: { in: targetIds } },
+      orderBy: { foundAt: 'desc' },
+    });
+    return rows.map((r) =>
+      QualityFinding.reconstruct({
+        id: r.id,
+        targetId: r.targetId,
+        severity: toSeverity(r.severity),
+        category: r.category ?? undefined,
+        description: r.description ?? undefined,
+        foundAt: r.foundAt,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      }),
+    );
+  }
+
   async create(finding: QualityFinding): Promise<QualityFinding> {
     const row = await prisma.qualityFinding.create({
       data: {

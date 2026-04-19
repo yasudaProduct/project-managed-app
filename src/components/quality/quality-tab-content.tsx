@@ -3,6 +3,7 @@ import {
   getQualityThresholds,
   getWbsQualitySummary,
   getQualityTrend,
+  getWbsAllFindings,
 } from "@/app/wbs/[id]/actions/quality-actions";
 import { QualityDashboard } from "@/components/quality/quality-dashboard";
 
@@ -20,9 +21,10 @@ export async function QualityTabContent({
     getQualityThresholds(projectId),
   ]);
 
-  const [initialSummary, initialTrend] = await Promise.all([
+  const [initialSummary, initialTrend, initialFindings] = await Promise.all([
     getWbsQualitySummary(wbsId, "MAN_HOUR", thresholds),
     getQualityTrend(wbsId, "MAN_HOUR"),
+    getWbsAllFindings(wbsId),
   ]);
 
   return (
@@ -33,6 +35,7 @@ export async function QualityTabContent({
       initialThresholds={thresholds}
       initialSummary={initialSummary}
       initialTrend={initialTrend}
+      initialFindings={initialFindings}
     />
   );
 }

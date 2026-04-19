@@ -3,7 +3,6 @@
 import { useRef, useState, useTransition } from "react";
 import { parse } from "csv-parse/sync";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, Upload, FileDown } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 import { QualitySizeUnit } from "@/domains/quality/value-objects/quality-enums";
 import {
   importQualityFindingsCsv,
@@ -68,33 +67,19 @@ export function QualityImportExport({ wbsId, sizeUnit }: Props) {
     startTransition(async () => {
       try {
         const text = await readFileAsText(file);
-        const rows = parse(text, {
-          columns: true,
-          skip_empty_lines: true,
-          trim: true,
-        });
+        const rows = parse(text, { columns: true, skip_empty_lines: true, trim: true });
         const result = await importQualityFindingsCsv(wbsId, rows, importMode);
         if (result.errors.length > 0) {
           toast({
             title: `指摘インポート: ${result.created}件登録、${result.errors.length}件エラー`,
-            description: result.errors
-              .slice(0, 5)
-              .map((e) => `行${e.line}: ${e.message}`)
-              .join("\n"),
+            description: result.errors.slice(0, 5).map((e) => `行${e.line}: ${e.message}`).join("\n"),
             variant: "destructive",
           });
         } else {
-          toast({
-            title: "指摘をインポートしました",
-            description: `${result.created}件を登録しました`,
-          });
+          toast({ title: "指摘をインポートしました", description: `${result.created}件を登録しました` });
         }
       } catch (err) {
-        toast({
-          title: "インポート失敗",
-          description: err instanceof Error ? err.message : String(err),
-          variant: "destructive",
-        });
+        toast({ title: "インポート失敗", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       }
     });
   };
@@ -103,33 +88,19 @@ export function QualityImportExport({ wbsId, sizeUnit }: Props) {
     startTransition(async () => {
       try {
         const text = await readFileAsText(file);
-        const rows = parse(text, {
-          columns: true,
-          skip_empty_lines: true,
-          trim: true,
-        });
+        const rows = parse(text, { columns: true, skip_empty_lines: true, trim: true });
         const result = await importQualitySizeMetricsCsv(wbsId, rows, importMode);
         if (result.errors.length > 0) {
           toast({
             title: `規模インポート: ${result.created}件登録、${result.errors.length}件エラー`,
-            description: result.errors
-              .slice(0, 5)
-              .map((e) => `行${e.line}: ${e.message}`)
-              .join("\n"),
+            description: result.errors.slice(0, 5).map((e) => `行${e.line}: ${e.message}`).join("\n"),
             variant: "destructive",
           });
         } else {
-          toast({
-            title: "規模をインポートしました",
-            description: `${result.created}件を登録しました`,
-          });
+          toast({ title: "規模をインポートしました", description: `${result.created}件を登録しました` });
         }
       } catch (err) {
-        toast({
-          title: "インポート失敗",
-          description: err instanceof Error ? err.message : String(err),
-          variant: "destructive",
-        });
+        toast({ title: "インポート失敗", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       }
     });
   };
@@ -151,11 +122,7 @@ export function QualityImportExport({ wbsId, sizeUnit }: Props) {
         }
         downloadText(filename, tsv);
       } catch (err) {
-        toast({
-          title: "エクスポート失敗",
-          description: err instanceof Error ? err.message : String(err),
-          variant: "destructive",
-        });
+        toast({ title: "エクスポート失敗", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       }
     });
   };
@@ -164,133 +131,86 @@ export function QualityImportExport({ wbsId, sizeUnit }: Props) {
     startTransition(async () => {
       try {
         const tsv = await exportQualityAggregatedTsv(wbsId, axis, sizeUnit);
-        const filename = `quality-aggregated-${axis}-wbs${wbsId}.tsv`;
-        downloadText(filename, tsv);
+        downloadText(`quality-aggregated-${axis}-wbs${wbsId}.tsv`, tsv);
       } catch (err) {
-        toast({
-          title: "集計エクスポート失敗",
-          description: err instanceof Error ? err.message : String(err),
-          variant: "destructive",
-        });
+        toast({ title: "集計エクスポート失敗", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       }
     });
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <FileDown className="h-4 w-4" />
-          CSVインポート / TSVエクスポート
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">インポートモード</span>
-            <Select value={importMode} onValueChange={(v) => setImportMode(v as "merge" | "replace")}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="merge">追加 (merge)</SelectItem>
-                <SelectItem value="replace">置換 (replace)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+    <>
+      <input
+        ref={findingInputRef}
+        type="file"
+        accept=".csv,.tsv,.txt"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFindingFile(file);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={sizeInputRef}
+        type="file"
+        accept=".csv,.tsv,.txt"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleSizeFile(file);
+          e.target.value = "";
+        }}
+      />
 
-          <input
-            ref={findingInputRef}
-            type="file"
-            accept=".csv,.tsv,.txt"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFindingFile(file);
-              e.target.value = "";
-            }}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => findingInputRef.current?.click()}
-            disabled={isWorking}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            指摘CSV取込
+      <Select value={importMode} onValueChange={(v) => setImportMode(v as "merge" | "replace")}>
+        <SelectTrigger className="w-[110px] h-8 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="merge">追加</SelectItem>
+          <SelectItem value="replace">置換</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Button variant="outline" size="sm" onClick={() => findingInputRef.current?.click()} disabled={isWorking}>
+        <Upload className="h-3.5 w-3.5 mr-1" />
+        指摘CSV
+      </Button>
+
+      <Button variant="outline" size="sm" onClick={() => sizeInputRef.current?.click()} disabled={isWorking}>
+        <Upload className="h-3.5 w-3.5 mr-1" />
+        規模CSV
+      </Button>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" disabled={isWorking}>
+            <Download className="h-3.5 w-3.5 mr-1" />
+            TSV出力
           </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onClick={() => handleExport("summary")}>対象別サマリ</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleExport("findings")}>指摘一覧</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleExport("size")}>規模一覧</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-          <input
-            ref={sizeInputRef}
-            type="file"
-            accept=".csv,.tsv,.txt"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleSizeFile(file);
-              e.target.value = "";
-            }}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => sizeInputRef.current?.click()}
-            disabled={isWorking}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            規模CSV取込
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" disabled={isWorking}>
+            <Download className="h-3.5 w-3.5 mr-1" />
+            集計TSV
           </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={isWorking}>
-                <Download className="h-4 w-4 mr-2" />
-                TSV出力
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handleExport("summary")}>
-                明細 (対象別サマリ)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport("findings")}>
-                指摘一覧
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport("size")}>
-                規模一覧
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={isWorking}>
-                <Download className="h-4 w-4 mr-2" />
-                集計TSV
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handleAggregatedExport("target")}>
-                対象別
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAggregatedExport("phase")}>
-                フェーズ別
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAggregatedExport("reviewer")}>
-                担当者別
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAggregatedExport("date")}>
-                日付別
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <div className="text-xs text-gray-500">
-          <p>指摘CSV列: <code>taskNo, severity, category, description, foundAt</code></p>
-          <p>規模CSV列: <code>taskNo, unit, value, measuredAt, note</code></p>
-          <p>severity: MAJOR/MINOR/INFO、unit: PAGE/LINES_OF_CODE/TEST_CASE</p>
-        </div>
-      </CardContent>
-    </Card>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onClick={() => handleAggregatedExport("target")}>対象別</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleAggregatedExport("phase")}>フェーズ別</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleAggregatedExport("reviewer")}>担当者別</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleAggregatedExport("date")}>日付別</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }

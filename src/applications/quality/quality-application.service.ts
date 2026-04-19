@@ -113,6 +113,18 @@ export interface AggregatedQualityRow {
   majorRatio: number | null;
 }
 
+export interface WbsFindingItem {
+  id: number;
+  targetId: number;
+  taskNo: string;
+  targetName: string;
+  phase: string | null;
+  severity: QualitySeverity;
+  category: string | null;
+  description: string | null;
+  foundAt: Date;
+}
+
 export interface IQualityApplicationService {
   registerSizeMetric(input: RegisterSizeMetricInput): Promise<QualitySizeMetric>;
   deleteSizeMetric(targetId: number, unit: QualitySizeUnit): Promise<void>;
@@ -124,6 +136,7 @@ export interface IQualityApplicationService {
   getSummary(targetId: number, sizeUnit: QualitySizeUnit | 'MAN_HOUR', thresholds?: QualityThresholds): Promise<QualityMetricsSummary>;
   listTargetsByWbs(wbsId: number, isActive?: boolean): Promise<QualityTargetListItem[]>;
   listFindings(targetId: number): Promise<QualityFinding[]>;
+  listWbsFindings(wbsId: number): Promise<WbsFindingItem[]>;
   listSizeMetrics(targetId: number): Promise<QualitySizeMetric[]>;
   getWbsSummary(
     wbsId: number,
@@ -315,6 +328,31 @@ export class QualityApplicationService implements IQualityApplicationService {
 
   async listFindings(targetId: number): Promise<QualityFinding[]> {
     return this.findingRepo.findByTarget(targetId);
+  }
+
+  async listWbsFindings(wbsId: number): Promise<WbsFindingItem[]> {
+    const targets = await this.targetRepo.findByWbs(wbsId, { isActive: true });
+    if (targets.length === 0) return [];
+    const taskNos = targets.map((t) => t.taskNo);
+    const [findings, phaseMap] = await Promise.all([
+      this.findingRepo.findByTargetIds(targets.map((t) => t.id!)),
+      this.taskRepo.findPhasesByTaskNos(wbsId, taskNos),
+    ]);
+    const targetMap = new Map(targets.map((t) => [t.id!, t]));
+    return findings.map((f) => {
+      const target = targetMap.get(f.targetId)!;
+      return {
+        id: f.id!,
+        targetId: f.targetId,
+        taskNo: target.taskNo,
+        targetName: target.name,
+        phase: phaseMap.get(target.taskNo) ?? null,
+        severity: f.severity,
+        category: f.category ?? null,
+        description: f.description ?? null,
+        foundAt: f.foundAt,
+      };
+    });
   }
 
   async listSizeMetrics(targetId: number): Promise<QualitySizeMetric[]> {

@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import type { QualityTrendPoint } from "@/applications/quality/quality-application.service";
 import type { QualityThreshold } from "@/domains/quality/value-objects/quality-threshold";
 
@@ -38,9 +39,18 @@ interface QualityTrendChartProps {
     majorDefectDensity?: QualityThreshold;
     reviewDensity?: QualityThreshold;
   };
+  fromDate?: string;
+  toDate?: string;
+  onDateChange?: (fromDate: string, toDate: string) => void;
 }
 
-export function QualityTrendChart({ data, thresholds }: QualityTrendChartProps) {
+export function QualityTrendChart({
+  data,
+  thresholds,
+  fromDate = "",
+  toDate = "",
+  onDateChange,
+}: QualityTrendChartProps) {
   const [metric, setMetric] = useState<MetricKey>("defectDensity");
 
   const chartData = useMemo(() => {
@@ -54,20 +64,39 @@ export function QualityTrendChart({ data, thresholds }: QualityTrendChartProps) 
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-lg">日次推移</CardTitle>
-        <Select value={metric} onValueChange={(v) => setMetric(v as MetricKey)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(METRIC_LABEL).map(([k, label]) => (
-              <SelectItem key={k} value={k}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 flex-wrap gap-2">
+        <CardTitle className="text-base">日次推移</CardTitle>
+        <div className="flex items-center gap-2 flex-wrap">
+          {onDateChange && (
+            <>
+              <Input
+                type="date"
+                value={fromDate}
+                onChange={(e) => onDateChange(e.target.value, toDate)}
+                className="w-[140px] h-8 text-xs"
+              />
+              <span className="text-xs text-gray-400">〜</span>
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => onDateChange(fromDate, e.target.value)}
+                className="w-[140px] h-8 text-xs"
+              />
+            </>
+          )}
+          <Select value={metric} onValueChange={(v) => setMetric(v as MetricKey)}>
+            <SelectTrigger className="w-[160px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(METRIC_LABEL).map(([k, label]) => (
+                <SelectItem key={k} value={k}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
         {chartData.length === 0 ? (
@@ -75,12 +104,12 @@ export function QualityTrendChart({ data, thresholds }: QualityTrendChartProps) 
             推移データがありません。
           </div>
         ) : (
-          <div className="w-full h-[320px]">
+          <div className="w-full h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip
                   formatter={(value) => {
                     if (value === null || value === undefined) return "-";
