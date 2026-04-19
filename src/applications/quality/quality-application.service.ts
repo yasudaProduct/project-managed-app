@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
-import type { IQualityReviewTargetRepository } from './i-quality-review-target.repository';
+import type { IQualityReviewTargetRepository, IQualityReviewerRepository } from './i-quality-review-target.repository';
 import type { IQualitySizeMetricRepository, IQualityFindingRepository, IQualityMetricsReadRepository } from './i-quality-metrics.repository';
 import { QualitySizeMetric } from '@/domains/quality/quality-size-metric';
 import { QualityFinding } from '@/domains/quality/quality-finding';
@@ -43,6 +43,17 @@ export interface QualityMetricsSummary {
   status: QualityStatus | null;
 }
 
+export interface QualityTargetListItem {
+  id: number;
+  wbsId: number;
+  taskNo: string;
+  name: string;
+  isActive: boolean;
+  reviewerCount: number;
+  findingCount: number;
+  majorCount: number;
+}
+
 export interface IQualityApplicationService {
   registerSizeMetric(input: RegisterSizeMetricInput): Promise<QualitySizeMetric>;
   deleteSizeMetric(targetId: number, unit: QualitySizeUnit): Promise<void>;
@@ -52,6 +63,9 @@ export interface IQualityApplicationService {
   importFindings(targetId: number, findings: Omit<RegisterFindingInput, 'targetId'>[], mode: 'merge' | 'replace'): Promise<{ created: number }>;
   importSizeMetrics(items: RegisterSizeMetricInput[], mode: 'merge' | 'replace'): Promise<{ created: number }>;
   getSummary(targetId: number, sizeUnit: QualitySizeUnit | 'MAN_HOUR', thresholds?: QualityThresholds): Promise<QualityMetricsSummary>;
+  listTargetsByWbs(wbsId: number, isActive?: boolean): Promise<QualityTargetListItem[]>;
+  listFindings(targetId: number): Promise<QualityFinding[]>;
+  listSizeMetrics(targetId: number): Promise<QualitySizeMetric[]>;
 }
 
 @injectable()
@@ -61,6 +75,8 @@ export class QualityApplicationService implements IQualityApplicationService {
   constructor(
     @inject(SYMBOL.IQualityReviewTargetRepository)
     private readonly targetRepo: IQualityReviewTargetRepository,
+    @inject(SYMBOL.IQualityReviewerRepository)
+    private readonly reviewerRepo: IQualityReviewerRepository,
     @inject(SYMBOL.IQualitySizeMetricRepository)
     private readonly sizeRepo: IQualitySizeMetricRepository,
     @inject(SYMBOL.IQualityFindingRepository)
@@ -170,10 +186,10 @@ export class QualityApplicationService implements IQualityApplicationService {
       size = metric?.value ?? null;
     }
 
-    const reviewers = await this.readRepo.getReviewManHours(
-      [],
-    );
-    reviewManHours = reviewers.reduce((sum, r) => sum + r.totalHours, 0);
+    const reviewers = await this.reviewerRepo.findByTarget(targetId);
+    const reviewTaskNos = reviewers.map((r) => ({ wbsId: target.wbsId, taskNo: r.reviewTaskNo }));
+    const reviewHoursResult = await this.readRepo.getReviewManHours(reviewTaskNos);
+    reviewManHours = reviewHoursResult.reduce((sum, r) => sum + r.totalHours, 0);
 
     const reviewDensity = this.calc.calcReviewDensity(reviewManHours, size ?? 0);
     const defectDensity = this.calc.calcDefectDensity(findingCount, size ?? 0);
@@ -197,5 +213,34 @@ export class QualityApplicationService implements IQualityApplicationService {
       majorRatio,
       status,
     };
+  }
+
+  async listTargetsByWbs(wbsId: number, isActive?: boolean): Promise<QualityTargetListItem[]> {
+    const targets = await this.targetRepo.findByWbs(wbsId, isActive !== undefined ? { isActive } : undefined);
+
+    const items: QualityTargetListItem[] = [];
+    for (const t of targets) {
+      const reviewers = await this.reviewerRepo.findByTarget(t.id!);
+      const counts = await this.findingRepo.countByTarget(t.id!);
+      items.push({
+        id: t.id!,
+        wbsId: t.wbsId,
+        taskNo: t.taskNo,
+        name: t.name,
+        isActive: t.isActive,
+        reviewerCount: reviewers.length,
+        findingCount: counts.total,
+        majorCount: counts.major,
+      });
+    }
+    return items;
+  }
+
+  async listFindings(targetId: number): Promise<QualityFinding[]> {
+    return this.findingRepo.findByTarget(targetId);
+  }
+
+  async listSizeMetrics(targetId: number): Promise<QualitySizeMetric[]> {
+    return this.sizeRepo.findByTarget(targetId);
   }
 }
