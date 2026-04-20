@@ -8,7 +8,6 @@ import { QualityFinding } from '@/domains/quality/quality-finding';
 import { QualityMetricsCalculator } from '@/domains/quality/quality-metrics-calculator';
 import { QualitySizeUnit, QualitySeverity } from '@/domains/quality/value-objects/quality-enums';
 import { QualityStatus } from '@/domains/quality/value-objects/quality-status';
-import type { QualityThresholds } from '@/domains/quality/value-objects/quality-threshold';
 
 export interface RegisterSizeMetricInput {
   targetId: number;
@@ -44,6 +43,13 @@ export interface QualityMetricsSummary {
   status: QualityStatus | null;
 }
 
+export interface QualityTargetSizeByUnit {
+  MAN_HOUR: number | null;
+  PAGE: number | null;
+  LINES_OF_CODE: number | null;
+  TEST_CASE: number | null;
+}
+
 export interface QualityTargetListItem {
   id: number;
   wbsId: number;
@@ -51,9 +57,27 @@ export interface QualityTargetListItem {
   name: string;
   isActive: boolean;
   reviewerCount: number;
+  reviewerNames: string[];
+  revieweeName: string | null;
   findingCount: number;
   majorCount: number;
   phase?: string | null;
+  sizeByUnit: QualityTargetSizeByUnit;
+  reviewManHours: number;
+  reviewDensity: number | null;
+  defectDensity: number | null;
+}
+
+export interface FindingsByReviewee {
+  revieweeName: string;
+  count: number;
+  majorCount: number;
+}
+
+export interface FindingsByCategory {
+  category: string;
+  count: number;
+  majorCount: number;
 }
 
 export interface QualityIndicator {
@@ -97,23 +121,6 @@ export interface GetTrendInput {
   phase?: string;
 }
 
-export type AggregationAxis = 'target' | 'phase' | 'reviewer' | 'date';
-
-export interface AggregatedQualityRow {
-  axis: AggregationAxis;
-  key: string;
-  label: string;
-  targetCount: number;
-  totalSize: number;
-  totalReviewManHours: number;
-  findingCount: number;
-  majorCount: number;
-  reviewDensity: number | null;
-  defectDensity: number | null;
-  majorDefectDensity: number | null;
-  majorRatio: number | null;
-}
-
 export interface WbsFindingItem {
   id: number;
   targetId: number;
@@ -134,22 +141,21 @@ export interface IQualityApplicationService {
   deleteFinding(id: number): Promise<void>;
   importFindings(targetId: number, findings: Omit<RegisterFindingInput, 'targetId'>[], mode: 'merge' | 'replace'): Promise<{ created: number }>;
   importSizeMetrics(items: RegisterSizeMetricInput[], mode: 'merge' | 'replace'): Promise<{ created: number }>;
-  getSummary(targetId: number, sizeUnit: QualitySizeUnit | 'MAN_HOUR', thresholds?: QualityThresholds): Promise<QualityMetricsSummary>;
-  listTargetsByWbs(wbsId: number, isActive?: boolean): Promise<QualityTargetListItem[]>;
+  listTargetsByWbs(
+    wbsId: number,
+    sizeUnit: QualitySizeUnit | 'MAN_HOUR',
+    isActive?: boolean,
+  ): Promise<QualityTargetListItem[]>;
   listFindings(targetId: number): Promise<QualityFinding[]>;
   listWbsFindings(wbsId: number): Promise<WbsFindingItem[]>;
   listSizeMetrics(targetId: number): Promise<QualitySizeMetric[]>;
   getWbsSummary(
     wbsId: number,
     sizeUnit: QualitySizeUnit | 'MAN_HOUR',
-    thresholds?: QualityThresholds,
   ): Promise<WbsQualitySummary>;
   getTrend(input: GetTrendInput): Promise<QualityTrendPoint[]>;
-  getAggregated(
-    wbsId: number,
-    axis: AggregationAxis,
-    sizeUnit: QualitySizeUnit | 'MAN_HOUR',
-  ): Promise<AggregatedQualityRow[]>;
+  getFindingsByReviewee(wbsId: number): Promise<FindingsByReviewee[]>;
+  getFindingsByCategory(wbsId: number): Promise<FindingsByCategory[]>;
 }
 
 @injectable()
@@ -248,70 +254,80 @@ export class QualityApplicationService implements IQualityApplicationService {
     return { created };
   }
 
-  async getSummary(
-    targetId: number,
+  async listTargetsByWbs(
+    wbsId: number,
     sizeUnit: QualitySizeUnit | 'MAN_HOUR',
-    thresholds?: QualityThresholds,
-  ): Promise<QualityMetricsSummary> {
-    const target = await this.targetRepo.findById(targetId);
-    if (!target) throw new Error(`評価対象が見つかりません: ${targetId}`);
-
-    const { total: findingCount, major: majorCount } = await this.findingRepo.countByTarget(targetId);
-
-    let reviewManHours = 0;
-    let size: number | null = null;
-
-    if (sizeUnit === 'MAN_HOUR') {
-      const manHoursResult = await this.readRepo.getTaskManHours([
-        { wbsId: target.wbsId, taskNo: target.taskNo },
-      ]);
-      size = manHoursResult[0]?.totalHours ?? 0;
-    } else {
-      const metrics = await this.sizeRepo.findByTarget(targetId);
-      const metric = metrics.find((m) => m.unit === sizeUnit);
-      size = metric?.value ?? null;
-    }
-
-    const reviewers = await this.reviewerRepo.findByTarget(targetId);
-    const reviewTaskNos = reviewers.map((r) => ({ wbsId: target.wbsId, taskNo: r.reviewTaskNo }));
-    const reviewHoursResult = await this.readRepo.getReviewManHours(reviewTaskNos);
-    reviewManHours = reviewHoursResult.reduce((sum, r) => sum + r.totalHours, 0);
-
-    const reviewDensity = this.calc.calcReviewDensity(reviewManHours, size ?? 0);
-    const defectDensity = this.calc.calcDefectDensity(findingCount, size ?? 0);
-    const majorDefectDensity = this.calc.calcMajorDefectDensity(majorCount, size ?? 0);
-    const majorRatio = this.calc.calcMajorRatio(majorCount, findingCount);
-
-    const status = thresholds?.defectDensity
-      ? this.calc.evaluateStatus(defectDensity, thresholds.defectDensity)
-      : QualityStatus.NORMAL;
-
-    return {
-      targetId,
-      reviewManHours,
-      size,
-      sizeUnit,
-      findingCount,
-      majorCount,
-      reviewDensity,
-      defectDensity,
-      majorDefectDensity,
-      majorRatio,
-      status,
-    };
-  }
-
-  async listTargetsByWbs(wbsId: number, isActive?: boolean): Promise<QualityTargetListItem[]> {
-    const targets = await this.targetRepo.findByWbs(wbsId, isActive !== undefined ? { isActive } : undefined);
-    const phaseMap = await this.taskRepo.findPhasesByTaskNos(
+    isActive?: boolean,
+  ): Promise<QualityTargetListItem[]> {
+    const targets = await this.targetRepo.findByWbs(
       wbsId,
-      targets.map((t) => t.taskNo),
+      isActive !== undefined ? { isActive } : undefined,
     );
+    if (targets.length === 0) return [];
+
+    const taskNos = targets.map((t) => t.taskNo);
+    const [phaseMap, revieweeMap] = await Promise.all([
+      this.taskRepo.findPhasesByTaskNos(wbsId, taskNos),
+      this.taskRepo.findAssigneesByTaskNos(wbsId, taskNos),
+    ]);
+
+    const perTargetReviewers = new Map<number, Awaited<ReturnType<IQualityReviewerRepository['findByTarget']>>>();
+    const reviewerIds = new Set<string>();
+    for (const t of targets) {
+      const reviewers = await this.reviewerRepo.findByTarget(t.id!);
+      perTargetReviewers.set(t.id!, reviewers);
+      for (const r of reviewers) reviewerIds.add(r.reviewerUserId);
+    }
+    const userNameMap = await this.taskRepo.findUserNamesByIds(
+      Array.from(reviewerIds),
+    );
+
+    const taskManHoursMap = new Map<string, number>();
+    if (sizeUnit === 'MAN_HOUR') {
+      const mh = await this.readRepo.getTaskManHours(
+        targets.map((t) => ({ wbsId: t.wbsId, taskNo: t.taskNo })),
+      );
+      for (const r of mh) taskManHoursMap.set(r.taskNo, r.totalHours);
+    }
 
     const items: QualityTargetListItem[] = [];
     for (const t of targets) {
-      const reviewers = await this.reviewerRepo.findByTarget(t.id!);
+      const reviewers = perTargetReviewers.get(t.id!) ?? [];
+      const reviewerNames = reviewers
+        .map((r) => userNameMap.get(r.reviewerUserId) ?? r.reviewerUserId)
+        .filter((n): n is string => !!n);
+
       const counts = await this.findingRepo.countByTarget(t.id!);
+      const metrics = await this.sizeRepo.findByTarget(t.id!);
+      const sizeByUnit: QualityTargetSizeByUnit = {
+        MAN_HOUR:
+          sizeUnit === 'MAN_HOUR'
+            ? taskManHoursMap.get(t.taskNo) ?? null
+            : await this.getTaskManHoursSingle(t.wbsId, t.taskNo),
+        PAGE: metrics.find((m) => m.unit === QualitySizeUnit.PAGE)?.value ?? null,
+        LINES_OF_CODE:
+          metrics.find((m) => m.unit === QualitySizeUnit.LINES_OF_CODE)?.value ?? null,
+        TEST_CASE:
+          metrics.find((m) => m.unit === QualitySizeUnit.TEST_CASE)?.value ?? null,
+      };
+
+      let reviewManHours = 0;
+      if (reviewers.length > 0) {
+        const rh = await this.readRepo.getReviewManHours(
+          reviewers.map((r) => ({ wbsId: t.wbsId, taskNo: r.reviewTaskNo })),
+        );
+        reviewManHours = rh.reduce((sum, x) => sum + x.totalHours, 0);
+      }
+
+      const sizeForDensity =
+        sizeUnit === 'MAN_HOUR'
+          ? sizeByUnit.MAN_HOUR ?? 0
+          : sizeUnit === QualitySizeUnit.PAGE
+            ? sizeByUnit.PAGE ?? 0
+            : sizeUnit === QualitySizeUnit.LINES_OF_CODE
+              ? sizeByUnit.LINES_OF_CODE ?? 0
+              : sizeByUnit.TEST_CASE ?? 0;
+
       items.push({
         id: t.id!,
         wbsId: t.wbsId,
@@ -319,12 +335,26 @@ export class QualityApplicationService implements IQualityApplicationService {
         name: t.name,
         isActive: t.isActive,
         reviewerCount: reviewers.length,
+        reviewerNames,
+        revieweeName: revieweeMap.get(t.taskNo) ?? null,
         findingCount: counts.total,
         majorCount: counts.major,
         phase: phaseMap.get(t.taskNo) ?? null,
+        sizeByUnit,
+        reviewManHours,
+        reviewDensity: this.calc.calcReviewDensity(reviewManHours, sizeForDensity),
+        defectDensity: this.calc.calcDefectDensity(counts.total, sizeForDensity),
       });
     }
     return items;
+  }
+
+  private async getTaskManHoursSingle(
+    wbsId: number,
+    taskNo: string,
+  ): Promise<number | null> {
+    const r = await this.readRepo.getTaskManHours([{ wbsId, taskNo }]);
+    return r[0]?.totalHours ?? null;
   }
 
   async listFindings(targetId: number): Promise<QualityFinding[]> {
@@ -363,7 +393,6 @@ export class QualityApplicationService implements IQualityApplicationService {
   async getWbsSummary(
     wbsId: number,
     sizeUnit: QualitySizeUnit | 'MAN_HOUR',
-    thresholds?: QualityThresholds,
   ): Promise<WbsQualitySummary> {
     const targets = await this.targetRepo.findByWbs(wbsId, { isActive: true });
 
@@ -426,188 +455,61 @@ export class QualityApplicationService implements IQualityApplicationService {
       totalFindingCount,
       totalMajorCount,
       reviewedTargetCount,
-      reviewDensity: {
-        value: reviewDensityValue,
-        status: this.calc.evaluateStatus(
-          reviewDensityValue,
-          thresholds?.reviewDensity ?? null,
-        ),
-      },
-      defectDensity: {
-        value: defectDensityValue,
-        status: this.calc.evaluateStatus(
-          defectDensityValue,
-          thresholds?.defectDensity ?? null,
-        ),
-      },
-      majorDefectDensity: {
-        value: majorDefectDensityValue,
-        status: this.calc.evaluateStatus(
-          majorDefectDensityValue,
-          thresholds?.majorDefectDensity ?? null,
-        ),
-      },
-      reviewCompletionRate: {
-        value: reviewCompletionRateValue,
-        status: this.calc.evaluateStatus(reviewCompletionRateValue, null),
-      },
+      reviewDensity: { value: reviewDensityValue, status: null },
+      defectDensity: { value: defectDensityValue, status: null },
+      majorDefectDensity: { value: majorDefectDensityValue, status: null },
+      reviewCompletionRate: { value: reviewCompletionRateValue, status: null },
     };
   }
 
-  async getAggregated(
+  async getFindingsByReviewee(
     wbsId: number,
-    axis: AggregationAxis,
-    sizeUnit: QualitySizeUnit | 'MAN_HOUR',
-  ): Promise<AggregatedQualityRow[]> {
+  ): Promise<FindingsByReviewee[]> {
     const targets = await this.targetRepo.findByWbs(wbsId, { isActive: true });
     if (targets.length === 0) return [];
 
-    const phaseMap = await this.taskRepo.findPhasesByTaskNos(
+    const revieweeMap = await this.taskRepo.findAssigneesByTaskNos(
       wbsId,
       targets.map((t) => t.taskNo),
     );
+    const findings = await this.findingRepo.findByTargetIds(
+      targets.map((t) => t.id!),
+    );
+    const targetById = new Map(targets.map((t) => [t.id!, t]));
 
-    type Bucket = {
-      key: string;
-      label: string;
-      targetIds: Set<number>;
-      totalSize: number;
-      totalReviewManHours: number;
-      findingCount: number;
-      majorCount: number;
-    };
-    const buckets = new Map<string, Bucket>();
-    const ensureBucket = (key: string, label: string): Bucket => {
-      let b = buckets.get(key);
-      if (!b) {
-        b = {
-          key,
-          label,
-          targetIds: new Set(),
-          totalSize: 0,
-          totalReviewManHours: 0,
-          findingCount: 0,
-          majorCount: 0,
-        };
-        buckets.set(key, b);
-      }
-      return b;
-    };
-
-    for (const t of targets) {
-      const { total: fTotal, major: fMajor } =
-        await this.findingRepo.countByTarget(t.id!);
-
-      let size = 0;
-      if (sizeUnit === 'MAN_HOUR') {
-        const mh = await this.readRepo.getTaskManHours([
-          { wbsId: t.wbsId, taskNo: t.taskNo },
-        ]);
-        size = mh[0]?.totalHours ?? 0;
-      } else {
-        const metrics = await this.sizeRepo.findByTarget(t.id!);
-        const m = metrics.find((x) => x.unit === sizeUnit);
-        size = m?.value ?? 0;
-      }
-
-      const reviewers = await this.reviewerRepo.findByTarget(t.id!);
-      let reviewHours = 0;
-      if (reviewers.length > 0) {
-        const rh = await this.readRepo.getReviewManHours(
-          reviewers.map((r) => ({ wbsId: t.wbsId, taskNo: r.reviewTaskNo })),
-        );
-        reviewHours = rh.reduce((sum, x) => sum + x.totalHours, 0);
-      }
-
-      if (axis === 'target') {
-        const b = ensureBucket(t.taskNo, t.name);
-        b.targetIds.add(t.id!);
-        b.totalSize += size;
-        b.totalReviewManHours += reviewHours;
-        b.findingCount += fTotal;
-        b.majorCount += fMajor;
-      } else if (axis === 'phase') {
-        const phase = phaseMap.get(t.taskNo) ?? null;
-        const key = phase ?? '__none__';
-        const label = phase ?? '(未割当)';
-        const b = ensureBucket(key, label);
-        b.targetIds.add(t.id!);
-        b.totalSize += size;
-        b.totalReviewManHours += reviewHours;
-        b.findingCount += fTotal;
-        b.majorCount += fMajor;
-      } else if (axis === 'reviewer') {
-        if (reviewers.length === 0) {
-          const b = ensureBucket('__none__', '(レビュアー未割当)');
-          b.targetIds.add(t.id!);
-          b.totalSize += size;
-          b.findingCount += fTotal;
-          b.majorCount += fMajor;
-        } else {
-          const perReviewer = reviewers.length;
-          const rh = await this.readRepo.getReviewManHours(
-            reviewers.map((r) => ({ wbsId: t.wbsId, taskNo: r.reviewTaskNo })),
-          );
-          const hoursByTaskNo = new Map(
-            rh.map((x) => [x.taskNo, x.totalHours]),
-          );
-          for (const r of reviewers) {
-            const b = ensureBucket(r.reviewerUserId, r.reviewerUserId);
-            b.targetIds.add(t.id!);
-            b.totalSize += size / perReviewer;
-            b.totalReviewManHours += hoursByTaskNo.get(r.reviewTaskNo) ?? 0;
-            b.findingCount += fTotal / perReviewer;
-            b.majorCount += fMajor / perReviewer;
-          }
-        }
-      } else if (axis === 'date') {
-        const findings = await this.findingRepo.findByTarget(t.id!);
-        for (const f of findings) {
-          const dateKey = f.foundAt.toISOString().split('T')[0];
-          const b = ensureBucket(dateKey, dateKey);
-          b.targetIds.add(t.id!);
-          b.findingCount += 1;
-          if (f.severity === QualitySeverity.MAJOR) b.majorCount += 1;
-        }
-        if (reviewers.length > 0) {
-          const rtk = reviewers.map((r) => ({
-            wbsId: t.wbsId,
-            taskNo: r.reviewTaskNo,
-          }));
-          const dailyHours = await this.readRepo.getDailyReviewManHours(rtk);
-          for (const dh of dailyHours) {
-            const dateKey = dh.date.toISOString().split('T')[0];
-            const b = ensureBucket(dateKey, dateKey);
-            b.targetIds.add(t.id!);
-            b.totalReviewManHours += dh.totalHours;
-          }
-        }
-      }
+    const buckets = new Map<string, FindingsByReviewee>();
+    for (const f of findings) {
+      const target = targetById.get(f.targetId);
+      if (!target) continue;
+      const reviewee = revieweeMap.get(target.taskNo) ?? null;
+      const label = reviewee ?? '未割当';
+      const b = buckets.get(label) ?? { revieweeName: label, count: 0, majorCount: 0 };
+      b.count += 1;
+      if (f.severity === QualitySeverity.MAJOR) b.majorCount += 1;
+      buckets.set(label, b);
     }
+    return Array.from(buckets.values()).sort((a, b) => b.count - a.count);
+  }
 
-    const rows: AggregatedQualityRow[] = Array.from(buckets.values())
-      .sort((a, b) => a.key.localeCompare(b.key))
-      .map((b) => ({
-        axis,
-        key: b.key,
-        label: b.label,
-        targetCount: b.targetIds.size,
-        totalSize: b.totalSize,
-        totalReviewManHours: b.totalReviewManHours,
-        findingCount: b.findingCount,
-        majorCount: b.majorCount,
-        reviewDensity: this.calc.calcReviewDensity(
-          b.totalReviewManHours,
-          b.totalSize,
-        ),
-        defectDensity: this.calc.calcDefectDensity(b.findingCount, b.totalSize),
-        majorDefectDensity: this.calc.calcMajorDefectDensity(
-          b.majorCount,
-          b.totalSize,
-        ),
-        majorRatio: this.calc.calcMajorRatio(b.majorCount, b.findingCount),
-      }));
-    return rows;
+  async getFindingsByCategory(
+    wbsId: number,
+  ): Promise<FindingsByCategory[]> {
+    const targets = await this.targetRepo.findByWbs(wbsId, { isActive: true });
+    if (targets.length === 0) return [];
+
+    const findings = await this.findingRepo.findByTargetIds(
+      targets.map((t) => t.id!),
+    );
+
+    const buckets = new Map<string, FindingsByCategory>();
+    for (const f of findings) {
+      const label = f.category?.trim() ? f.category : '未分類';
+      const b = buckets.get(label) ?? { category: label, count: 0, majorCount: 0 };
+      b.count += 1;
+      if (f.severity === QualitySeverity.MAJOR) b.majorCount += 1;
+      buckets.set(label, b);
+    }
+    return Array.from(buckets.values()).sort((a, b) => b.count - a.count);
   }
 
   async getTrend(input: GetTrendInput): Promise<QualityTrendPoint[]> {

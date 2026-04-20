@@ -1,41 +1,45 @@
 import {
   getQualityTargets,
-  getQualityThresholds,
   getWbsQualitySummary,
   getQualityTrend,
   getWbsAllFindings,
+  getQualityFindingsByReviewee,
+  getQualityFindingsByCategory,
 } from "@/app/wbs/[id]/actions/quality-actions";
 import { QualityDashboard } from "@/components/quality/quality-dashboard";
 
 interface QualityTabContentProps {
   wbsId: number;
-  projectId: string;
 }
 
 export async function QualityTabContent({
   wbsId,
-  projectId,
 }: QualityTabContentProps) {
-  const [targets, thresholds] = await Promise.all([
-    getQualityTargets(wbsId),
-    getQualityThresholds(projectId),
-  ]);
-
-  const [initialSummary, initialTrend, initialFindings] = await Promise.all([
-    getWbsQualitySummary(wbsId, "MAN_HOUR", thresholds),
+  const [
+    targets,
+    initialSummary,
+    initialTrend,
+    initialFindings,
+    initialRevieweeFindings,
+    initialCategoryFindings,
+  ] = await Promise.all([
+    getQualityTargets(wbsId, "MAN_HOUR"),
+    getWbsQualitySummary(wbsId, "MAN_HOUR"),
     getQualityTrend(wbsId, "MAN_HOUR"),
     getWbsAllFindings(wbsId),
+    getQualityFindingsByReviewee(wbsId),
+    getQualityFindingsByCategory(wbsId),
   ]);
 
   return (
     <QualityDashboard
       wbsId={wbsId}
-      projectId={projectId}
       initialTargets={targets}
-      initialThresholds={thresholds}
       initialSummary={initialSummary}
       initialTrend={initialTrend}
       initialFindings={initialFindings}
+      initialRevieweeFindings={initialRevieweeFindings}
+      initialCategoryFindings={initialCategoryFindings}
     />
   );
 }

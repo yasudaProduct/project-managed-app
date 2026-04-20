@@ -19,12 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, ListChecks, Ruler, AlertCircle } from "lucide-react";
+import { RefreshCw, ListChecks, Ruler, AlertCircle, Download } from "lucide-react";
 import { QualitySizeUnit, QualitySeverity } from "@/domains/quality/value-objects/quality-enums";
 import type {
   QualityTargetListItem,
   WbsQualitySummary,
   QualityTrendPoint,
+  FindingsByReviewee,
+  FindingsByCategory,
 } from "@/applications/quality/quality-application.service";
 import {
   syncQualityTargets,
@@ -32,14 +34,16 @@ import {
   getQualityTrend,
   getQualityTargets,
   getWbsAllFindings,
+  getQualityFindingsByReviewee,
+  getQualityFindingsByCategory,
 } from "@/app/wbs/[id]/actions/quality-actions";
 import { toast } from "@/hooks/use-toast";
 import { QualityTargetDetailModal } from "./quality-target-detail-modal";
 import { QualityImportExport } from "./quality-import-export";
-import { QualityThresholdSettings } from "./quality-threshold-settings";
 import { QualityIndicatorCards } from "./quality-indicator-cards";
 import { QualityTrendChart } from "./quality-trend-chart";
-import type { QualityThresholds } from "@/domains/quality/value-objects/quality-threshold";
+import { QualityRevieweeFindingsChart } from "./quality-reviewee-findings-chart";
+import { QualityCategoryFindingsChart } from "./quality-category-findings-chart";
 
 type SizeUnitOption = QualitySizeUnit | "MAN_HOUR";
 
@@ -66,33 +70,86 @@ type FindingRow = Awaited<ReturnType<typeof getWbsAllFindings>>[number];
 
 interface QualityDashboardProps {
   wbsId: number;
-  projectId: string;
   initialTargets: QualityTargetListItem[];
-  initialThresholds: QualityThresholds;
   initialSummary: WbsQualitySummary;
   initialTrend: QualityTrendPoint[];
   initialFindings?: FindingRow[];
+  initialRevieweeFindings?: FindingsByReviewee[];
+  initialCategoryFindings?: FindingsByCategory[];
+}
+
+const TARGET_TSV_HEADERS = [
+  "タスクNo.",
+  "タスク名",
+  "フェーズ",
+  "レビューイ",
+  "レビューアー",
+  "ページ",
+  "ステップ",
+  "テストケース",
+  "工数(人時)",
+  "レビュー密度",
+  "指摘",
+  "Major",
+  "指摘密度",
+  "状態",
+];
+
+const FINDING_TSV_HEADERS = [
+  "タスクNo.",
+  "タスク名",
+  "フェーズ",
+  "重大度",
+  "カテゴリ",
+  "内容",
+  "発見日",
+];
+
+function formatNumber(n: number | null, digits = 3): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return "-";
+  return n.toFixed(digits);
+}
+
+function downloadTsv(filename: string, headers: string[], rows: (string | number | null | undefined)[][]) {
+  const normalize = (v: string | number | null | undefined): string => {
+    if (v === null || v === undefined) return "";
+    const s = String(v);
+    if (s === "-") return "";
+    return s.replace(/\t/g, " ").replace(/\r?\n/g, " ");
+  };
+  const lines = [headers.join("\t"), ...rows.map((r) => r.map(normalize).join("\t"))];
+  const text = lines.join("\n");
+  const blob = new Blob([text], { type: "text/tab-separated-values;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export function QualityDashboard({
   wbsId,
-  projectId,
   initialTargets,
-  initialThresholds,
   initialSummary,
   initialTrend,
   initialFindings = [],
+  initialRevieweeFindings = [],
+  initialCategoryFindings = [],
 }: QualityDashboardProps) {
   const [targets, setTargets] = useState<QualityTargetListItem[]>(initialTargets);
   const [summary, setSummary] = useState<WbsQualitySummary>(initialSummary);
   const [trend, setTrend] = useState<QualityTrendPoint[]>(initialTrend);
   const [findings, setFindings] = useState<FindingRow[]>(initialFindings);
+  const [revieweeFindings, setRevieweeFindings] =
+    useState<FindingsByReviewee[]>(initialRevieweeFindings);
+  const [categoryFindings, setCategoryFindings] =
+    useState<FindingsByCategory[]>(initialCategoryFindings);
   const [sizeUnit, setSizeUnit] = useState<SizeUnitOption>("MAN_HOUR");
   const [selectedPhase, setSelectedPhase] = useState<string>("");
   const [selectedTarget, setSelectedTarget] = useState<QualityTargetListItem | null>(null);
   const [trendFrom, setTrendFrom] = useState("");
   const [trendTo, setTrendTo] = useState("");
-  const thresholds = initialThresholds;
   const [isSyncing, startSyncTransition] = useTransition();
   const [isRefreshing, startRefreshTransition] = useTransition();
 
@@ -116,16 +173,21 @@ export function QualityDashboard({
 
   const refreshAll = (unit: SizeUnitOption, from: string, to: string, phase: string) => {
     startRefreshTransition(async () => {
-      const [newSummary, newTrend, newTargets, newFindings] = await Promise.all([
-        getWbsQualitySummary(wbsId, unit, thresholds),
-        getQualityTrend(wbsId, unit, from || undefined, to || undefined, phase || undefined),
-        getQualityTargets(wbsId),
-        getWbsAllFindings(wbsId),
-      ]);
+      const [newSummary, newTrend, newTargets, newFindings, newReviewee, newCategory] =
+        await Promise.all([
+          getWbsQualitySummary(wbsId, unit),
+          getQualityTrend(wbsId, unit, from || undefined, to || undefined, phase || undefined),
+          getQualityTargets(wbsId, unit),
+          getWbsAllFindings(wbsId),
+          getQualityFindingsByReviewee(wbsId),
+          getQualityFindingsByCategory(wbsId),
+        ]);
       setSummary(newSummary);
       setTrend(newTrend);
       setTargets(newTargets);
       setFindings(newFindings);
+      setRevieweeFindings(newReviewee);
+      setCategoryFindings(newCategory);
     });
   };
 
@@ -179,9 +241,41 @@ export function QualityDashboard({
     });
   };
 
+  const exportTargetsTsv = () => {
+    const rows = filteredTargets.map((t) => [
+      t.taskNo,
+      t.name,
+      t.phase ?? "",
+      t.revieweeName ?? "",
+      t.reviewerNames.join(", "),
+      t.sizeByUnit.PAGE ?? "",
+      t.sizeByUnit.LINES_OF_CODE ?? "",
+      t.sizeByUnit.TEST_CASE ?? "",
+      t.sizeByUnit.MAN_HOUR ?? "",
+      formatNumber(t.reviewDensity),
+      t.findingCount,
+      t.majorCount,
+      formatNumber(t.defectDensity),
+      t.isActive ? "有効" : "無効",
+    ]);
+    downloadTsv(`quality-targets-wbs${wbsId}.tsv`, TARGET_TSV_HEADERS, rows);
+  };
+
+  const exportFindingsTsv = () => {
+    const rows = filteredFindings.map((f) => [
+      f.taskNo,
+      f.targetName,
+      f.phase ?? "",
+      SEVERITY_LABEL[f.severity as QualitySeverity] ?? f.severity,
+      f.category ?? "",
+      f.description ?? "",
+      new Date(f.foundAt).toLocaleDateString("ja-JP"),
+    ]);
+    downloadTsv(`quality-findings-wbs${wbsId}.tsv`, FINDING_TSV_HEADERS, rows);
+  };
+
   return (
     <div className="space-y-4">
-      {/* ① フェーズ選択 + インポート/エクスポート ボタン行 */}
       <div className="flex items-center gap-2 flex-wrap">
         <Select
           value={selectedPhase || "__all__"}
@@ -200,7 +294,7 @@ export function QualityDashboard({
 
         <div className="h-5 border-l border-gray-200 mx-1" />
 
-        <QualityImportExport wbsId={wbsId} sizeUnit={sizeUnit} />
+        <QualityImportExport wbsId={wbsId} />
 
         <div className="h-5 border-l border-gray-200 mx-1" />
 
@@ -224,12 +318,10 @@ export function QualityDashboard({
         </div>
       </div>
 
-      {/* ② 指標ミニマム表示 */}
       <QualityIndicatorCards summary={summary} />
 
-      {/* ③ 評価対象一覧 */}
       <Card>
-        <CardHeader className="py-3 px-4">
+        <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-sm flex items-center gap-2">
             <ListChecks className="h-4 w-4" />
             評価対象一覧
@@ -238,8 +330,18 @@ export function QualityDashboard({
             )}
             {isRefreshing && <span className="text-xs text-gray-400 font-normal">更新中…</span>}
           </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={exportTargetsTsv}
+            disabled={filteredTargets.length === 0}
+          >
+            <Download className="h-3.5 w-3.5 mr-1" />
+            TSV出力
+          </Button>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           {filteredTargets.length === 0 ? (
             <p className="text-center py-6 text-sm text-gray-500">
               評価対象がありません。WBSから同期するか、フィルタを見直してください。
@@ -251,9 +353,16 @@ export function QualityDashboard({
                   <TableHead className="text-xs">タスクNo.</TableHead>
                   <TableHead className="text-xs">タスク名</TableHead>
                   <TableHead className="text-xs">フェーズ</TableHead>
-                  <TableHead className="text-xs text-right">レビュアー</TableHead>
+                  <TableHead className="text-xs">レビューイ</TableHead>
+                  <TableHead className="text-xs">レビューアー</TableHead>
+                  <TableHead className="text-xs text-right">ページ</TableHead>
+                  <TableHead className="text-xs text-right">ステップ</TableHead>
+                  <TableHead className="text-xs text-right">テストケース</TableHead>
+                  <TableHead className="text-xs text-right">工数(人時)</TableHead>
+                  <TableHead className="text-xs text-right">レビュー密度</TableHead>
                   <TableHead className="text-xs text-right">指摘</TableHead>
                   <TableHead className="text-xs text-right">Major</TableHead>
+                  <TableHead className="text-xs text-right">指摘密度</TableHead>
                   <TableHead className="text-xs">状態</TableHead>
                   <TableHead className="text-xs text-right" />
                 </TableRow>
@@ -264,12 +373,33 @@ export function QualityDashboard({
                     <TableCell className="font-mono text-xs py-2">{t.taskNo}</TableCell>
                     <TableCell className="text-xs py-2">{t.name}</TableCell>
                     <TableCell className="text-xs text-gray-500 py-2">{t.phase ?? "-"}</TableCell>
-                    <TableCell className="text-xs text-right py-2">{t.reviewerCount}</TableCell>
+                    <TableCell className="text-xs py-2">{t.revieweeName ?? "-"}</TableCell>
+                    <TableCell className="text-xs py-2">
+                      {t.reviewerNames.length > 0 ? t.reviewerNames.join(", ") : "-"}
+                    </TableCell>
+                    <TableCell className="text-xs text-right py-2">
+                      {t.sizeByUnit.PAGE ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-xs text-right py-2">
+                      {t.sizeByUnit.LINES_OF_CODE ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-xs text-right py-2">
+                      {t.sizeByUnit.TEST_CASE ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-xs text-right py-2">
+                      {t.sizeByUnit.MAN_HOUR ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-xs text-right py-2">
+                      {formatNumber(t.reviewDensity)}
+                    </TableCell>
                     <TableCell className="text-xs text-right py-2">{t.findingCount}</TableCell>
                     <TableCell className="text-xs text-right py-2">
                       {t.majorCount > 0 ? (
                         <span className="text-red-600 font-semibold">{t.majorCount}</span>
                       ) : t.majorCount}
+                    </TableCell>
+                    <TableCell className="text-xs text-right py-2">
+                      {formatNumber(t.defectDensity)}
                     </TableCell>
                     <TableCell className="py-2">
                       {t.isActive ? (
@@ -297,18 +427,20 @@ export function QualityDashboard({
         </CardContent>
       </Card>
 
-      {/* ④ 日次推移 (日付フィルタ内包) */}
       <QualityTrendChart
         data={trend}
-        thresholds={thresholds}
         fromDate={trendFrom}
         toDate={trendTo}
         onDateChange={handleDateChange}
       />
 
-      {/* ⑤ 指摘一覧 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <QualityRevieweeFindingsChart data={revieweeFindings} />
+        <QualityCategoryFindingsChart data={categoryFindings} />
+      </div>
+
       <Card>
-        <CardHeader className="py-3 px-4">
+        <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-sm flex items-center gap-2">
             <AlertCircle className="h-4 w-4" />
             指摘一覧
@@ -317,6 +449,16 @@ export function QualityDashboard({
             )}
             <span className="text-xs text-gray-400 font-normal ml-1">{filteredFindings.length}件</span>
           </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={exportFindingsTsv}
+            disabled={filteredFindings.length === 0}
+          >
+            <Download className="h-3.5 w-3.5 mr-1" />
+            TSV出力
+          </Button>
         </CardHeader>
         <CardContent className="p-0">
           {filteredFindings.length === 0 ? (
@@ -356,15 +498,10 @@ export function QualityDashboard({
         </CardContent>
       </Card>
 
-      {/* 閾値設定 */}
-      <QualityThresholdSettings projectId={projectId} initialThresholds={initialThresholds} />
-
       {selectedTarget && (
         <QualityTargetDetailModal
           wbsId={wbsId}
           target={selectedTarget}
-          sizeUnit={sizeUnit}
-          thresholds={thresholds}
           onClose={() => setSelectedTarget(null)}
           onChanged={(updated) => {
             setTargets((prev) =>

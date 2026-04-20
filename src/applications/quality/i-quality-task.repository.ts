@@ -18,4 +18,9 @@ export interface IQualityTaskRepository {
     wbsId: number,
     taskNos: string[],
   ): Promise<Map<string, string | null>>;
+  findAssigneesByTaskNos(
+    wbsId: number,
+    taskNos: string[],
+  ): Promise<Map<string, string | null>>;
+  findUserNamesByIds(userIds: string[]): Promise<Map<string, string>>;
 }

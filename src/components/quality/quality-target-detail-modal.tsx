@@ -25,24 +25,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { QualitySizeUnit, QualitySeverity } from "@/domains/quality/value-objects/quality-enums";
-import type {
-  QualityMetricsSummary,
-  QualityTargetListItem,
-} from "@/applications/quality/quality-application.service";
-import type { QualityThresholds } from "@/domains/quality/value-objects/quality-threshold";
+import type { QualityTargetListItem } from "@/applications/quality/quality-application.service";
 import {
   getQualityFindings,
   getQualitySizeMetrics,
-  getQualitySummary,
   registerQualityFinding,
   deleteQualityFinding,
   registerQualitySizeMetric,
   deleteQualitySizeMetric,
 } from "@/app/wbs/[id]/actions/quality-actions";
 import { toast } from "@/hooks/use-toast";
-import { QualityStatus } from "@/domains/quality/value-objects/quality-status";
-
-type SizeUnitOption = QualitySizeUnit | "MAN_HOUR";
 
 const SEVERITY_LABELS: Record<QualitySeverity, string> = {
   [QualitySeverity.MAJOR]: "重大",
@@ -77,41 +69,18 @@ interface SizeMetricRow {
 interface Props {
   wbsId: number;
   target: QualityTargetListItem;
-  sizeUnit: SizeUnitOption;
-  thresholds?: QualityThresholds;
   onClose: () => void;
   onChanged: (updated: QualityTargetListItem) => void;
-}
-
-function formatNumber(n: number | null, digits = 3): string {
-  if (n === null || Number.isNaN(n)) return "-";
-  return n.toFixed(digits);
-}
-
-function statusBadge(status: QualityStatus | null) {
-  if (!status) return <Badge variant="secondary">-</Badge>;
-  switch (status) {
-    case QualityStatus.NORMAL:
-      return <Badge className="bg-green-500">正常</Badge>;
-    case QualityStatus.WARNING:
-      return <Badge className="bg-yellow-500">警告</Badge>;
-    case QualityStatus.DANGER:
-      return <Badge className="bg-red-500">危険</Badge>;
-  }
 }
 
 export function QualityTargetDetailModal({
   wbsId,
   target,
-  sizeUnit,
-  thresholds,
   onClose,
   onChanged,
 }: Props) {
-  const [summary, setSummary] = useState<QualityMetricsSummary | null>(null);
   const [findings, setFindings] = useState<FindingRow[]>([]);
   const [sizeMetrics, setSizeMetrics] = useState<SizeMetricRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [, startTransition] = useTransition();
 
   const [newFinding, setNewFinding] = useState({
@@ -129,22 +98,18 @@ export function QualityTargetDetailModal({
   });
 
   const reload = async () => {
-    setLoading(true);
-    const [s, f, m] = await Promise.all([
-      getQualitySummary(target.id, sizeUnit, thresholds),
+    const [f, m] = await Promise.all([
       getQualityFindings(target.id),
       getQualitySizeMetrics(target.id),
     ]);
-    setSummary(s);
     setFindings(f);
     setSizeMetrics(m);
-    setLoading(false);
   };
 
   useEffect(() => {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target.id, sizeUnit, thresholds]);
+  }, [target.id]);
 
   const handleAddFinding = () => {
     startTransition(async () => {
@@ -249,42 +214,11 @@ export function QualityTargetDetailModal({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="summary" className="mt-4">
+        <Tabs defaultValue="findings" className="mt-4">
           <TabsList>
-            <TabsTrigger value="summary">サマリ</TabsTrigger>
             <TabsTrigger value="findings">指摘</TabsTrigger>
             <TabsTrigger value="size">規模</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="summary" className="space-y-4">
-            {loading || !summary ? (
-              <p className="text-gray-500">読み込み中...</p>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <MetricCard label="規模" value={`${formatNumber(summary.size, 2)} ${summary.sizeUnit === "MAN_HOUR" ? "人時" : UNIT_LABELS[summary.sizeUnit]}`} />
-                <MetricCard label="レビュー工数" value={`${formatNumber(summary.reviewManHours, 2)} 人時`} />
-                <MetricCard label="指摘件数" value={`${summary.findingCount} 件`} />
-                <MetricCard label="重大指摘件数" value={`${summary.majorCount} 件`} />
-                <MetricCard label="レビュー密度" value={formatNumber(summary.reviewDensity)} />
-                <MetricCard label="指摘密度" value={formatNumber(summary.defectDensity)} />
-                <MetricCard label="重大指摘密度" value={formatNumber(summary.majorDefectDensity)} />
-                <MetricCard
-                  label="重大指摘比率"
-                  value={
-                    summary.majorRatio !== null
-                      ? `${(summary.majorRatio * 100).toFixed(1)}%`
-                      : "-"
-                  }
-                />
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xs text-gray-600">ステータス</CardTitle>
-                  </CardHeader>
-                  <CardContent>{statusBadge(summary.status)}</CardContent>
-                </Card>
-              </div>
-            )}
-          </TabsContent>
 
           <TabsContent value="findings" className="space-y-4">
             <Card>
@@ -494,18 +428,5 @@ export function QualityTargetDetailModal({
         </Tabs>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xs text-gray-600">{label}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-lg font-semibold">{value}</p>
-      </CardContent>
-    </Card>
   );
 }

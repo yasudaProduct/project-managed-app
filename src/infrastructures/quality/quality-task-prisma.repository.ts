@@ -60,4 +60,30 @@ export class QualityTaskPrismaRepository implements IQualityTaskRepository {
     });
     return new Map(tasks.map((t) => [t.taskNo, t.phase?.name ?? null]));
   }
+
+  async findAssigneesByTaskNos(
+    wbsId: number,
+    taskNos: string[],
+  ): Promise<Map<string, string | null>> {
+    if (taskNos.length === 0) return new Map();
+    const tasks = await prisma.wbsTask.findMany({
+      where: { wbsId, taskNo: { in: taskNos } },
+      select: {
+        taskNo: true,
+        assignee: { select: { assignee: { select: { name: true } } } },
+      },
+    });
+    return new Map(
+      tasks.map((t) => [t.taskNo, t.assignee?.assignee?.name ?? null]),
+    );
+  }
+
+  async findUserNamesByIds(userIds: string[]): Promise<Map<string, string>> {
+    if (userIds.length === 0) return new Map();
+    const users = await prisma.users.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true },
+    });
+    return new Map(users.map((u) => [u.id, u.name]));
+  }
 }
