@@ -72,6 +72,7 @@ describe('GetWbsSummaryHandler monthlyPhaseSummary (server-side pre-aggregation)
     wbsRepo = {
       getWbsTasks: jest.fn().mockResolvedValue(tasks),
       getPhases: jest.fn().mockResolvedValue(phases),
+      getTaskActualHoursByMonth: jest.fn().mockResolvedValue([]),
     };
     holidayRepo = {
       findAll: jest.fn().mockResolvedValue([]),

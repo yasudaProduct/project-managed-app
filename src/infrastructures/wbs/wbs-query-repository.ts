@@ -1,6 +1,6 @@
 import { injectable } from "inversify";
 import prisma from "@/lib/prisma/prisma";
-import { IWbsQueryRepository, WbsTaskData, PhaseData } from "@/applications/wbs/query/wbs-query-repository";
+import { IWbsQueryRepository, WbsTaskData, PhaseData, TaskActualMonthly } from "@/applications/wbs/query/wbs-query-repository";
 
 @injectable()
 export class WbsQueryRepository implements IWbsQueryRepository {
@@ -104,6 +104,37 @@ export class WbsQueryRepository implements IWbsQueryRepository {
       jissekiKosu: task.jissekiKosu ? Number(task.jissekiKosu) : null,
       progressRate: task.progressRate ? Number(task.progressRate) : null,
     }))
+  }
+
+  async getTaskActualHoursByMonth(wbsId: number): Promise<TaskActualMonthly[]> {
+    const rows = await prisma.$queryRaw<Array<{
+      taskId: string;
+      userId: string;
+      userDisplayName: string;
+      yearMonth: string;
+      hoursWorked: unknown;
+    }>>`
+      SELECT
+        wr."taskId"::text            AS "taskId",
+        wr."userId"                  AS "userId",
+        u."displayName"              AS "userDisplayName",
+        TO_CHAR(wr.date, 'YYYY/MM')  AS "yearMonth",
+        SUM(wr.hours_worked)         AS "hoursWorked"
+      FROM "work_records" wr
+      JOIN "wbs_task" t ON wr."taskId" = t.id
+      JOIN "users" u    ON wr."userId" = u.id
+      WHERE t."wbsId" = ${Number(wbsId)}
+        AND wr."taskId" IS NOT NULL
+      GROUP BY wr."taskId", wr."userId", u."displayName", TO_CHAR(wr.date, 'YYYY/MM')
+    `;
+
+    return rows.map(r => ({
+      taskId: r.taskId,
+      userId: r.userId,
+      userDisplayName: r.userDisplayName,
+      yearMonth: r.yearMonth,
+      hoursWorked: Number(r.hoursWorked),
+    }));
   }
 
   async getPhases(wbsId: number): Promise<PhaseData[]> {
