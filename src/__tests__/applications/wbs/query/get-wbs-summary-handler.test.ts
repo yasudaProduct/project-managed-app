@@ -86,6 +86,7 @@ describe('GetWbsSummaryHandler', () => {
     mockWbsQueryRepository = {
       getWbsTasks: jest.fn(),
       getPhases: jest.fn(),
+      getTaskActualHoursByMonth: jest.fn().mockResolvedValue([]),
     } as jest.Mocked<IWbsQueryRepository>;
 
     mockCompanyHolidayRepository = {
@@ -116,6 +117,7 @@ describe('GetWbsSummaryHandler', () => {
     // デフォルトのモック設定
     mockWbsQueryRepository.getWbsTasks.mockResolvedValue(mockTasks);
     mockWbsQueryRepository.getPhases.mockResolvedValue(mockPhases);
+    mockWbsQueryRepository.getTaskActualHoursByMonth.mockResolvedValue([]);
     mockCompanyHolidayRepository.findAll.mockResolvedValue([]);
     mockUserScheduleRepository.findByUserIdAndDateRange.mockResolvedValue([]);
     mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([]);
@@ -264,14 +266,151 @@ describe('GetWbsSummaryHandler', () => {
           yoteiStart: null
         }
       ];
-      
+
       mockWbsQueryRepository.getWbsTasks.mockResolvedValue(tasksWithoutStartDate);
-      
+
       const query = new GetWbsSummaryQuery('project-1', 1);
       const result = await handler.execute(query);
 
-      // 開始日がないタスクは月別担当者別集計から除外される
+      // 開始日がないタスクは月別担当者別集計から除外される（work_records が無い場合）
       expect(result.monthlyAssigneeSummary.data).toHaveLength(0);
+    });
+
+    describe('work_records based actual hours aggregation', () => {
+      it('実績工数は work_records の作業月に計上される（タスク予定開始月ではない）', async () => {
+        // Task 1: yoteiStart = 2024/01/15, yoteiEnd = 2024/01/20
+        // work_records: 2024/03 に 35 時間作業
+        mockWbsQueryRepository.getTaskActualHoursByMonth.mockResolvedValue([
+          {
+            taskId: '1',
+            userId: '1',
+            userDisplayName: 'John Doe',
+            yearMonth: '2024/03',
+            hoursWorked: 35,
+          },
+        ]);
+        // タスクを 1 件に絞る
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue([mockTasks[0]]);
+
+        const query = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.START_DATE_BASED);
+        const result = await handler.execute(query);
+
+        // 予定開始月(2024/01)ではなく、作業月(2024/03)に実績が計上される
+        const john0124 = result.monthlyAssigneeSummary.data.find(
+          d => d.assignee === 'John Doe' && d.month === '2024/01'
+        );
+        expect(john0124?.actualHours ?? 0).toBe(0);
+
+        const john0324 = result.monthlyAssigneeSummary.data.find(
+          d => d.assignee === 'John Doe' && d.month === '2024/03'
+        );
+        expect(john0324?.actualHours).toBe(35);
+      });
+
+      it('タスク予定期間外の月に work_records がある場合、その月が集計表に追加される', async () => {
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue([mockTasks[0]]);
+        mockWbsQueryRepository.getTaskActualHoursByMonth.mockResolvedValue([
+          {
+            taskId: '1',
+            userId: '1',
+            userDisplayName: 'John Doe',
+            yearMonth: '2024/05',
+            hoursWorked: 10,
+          },
+        ]);
+
+        const query = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.START_DATE_BASED);
+        const result = await handler.execute(query);
+
+        expect(result.monthlyAssigneeSummary.months).toContain('2024/05');
+        const may = result.monthlyAssigneeSummary.monthlyTotals['2024/05'];
+        expect(may?.actualHours).toBe(10);
+      });
+
+      it('実績工数は work_records の実作業者に紐付く（タスク担当者ではない）', async () => {
+        // Task 1 は John Doe に割当られているが、実際に作業したのは別のユーザー
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue([mockTasks[0]]);
+        mockWbsQueryRepository.getTaskActualHoursByMonth.mockResolvedValue([
+          {
+            taskId: '1',
+            userId: '99',
+            userDisplayName: 'Helper User',
+            yearMonth: '2024/01',
+            hoursWorked: 8,
+          },
+        ]);
+
+        const query = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.START_DATE_BASED);
+        const result = await handler.execute(query);
+
+        // John Doe の 1 月: 予定 40h / 実績 0h（タスク担当だが実作業せず）
+        const john = result.monthlyAssigneeSummary.data.find(
+          d => d.assignee === 'John Doe' && d.month === '2024/01'
+        );
+        expect(john?.plannedHours).toBe(40);
+        expect(john?.actualHours).toBe(0);
+
+        // Helper User の 1 月: 予定 0h / 実績 8h
+        const helper = result.monthlyAssigneeSummary.data.find(
+          d => d.assignee === 'Helper User' && d.month === '2024/01'
+        );
+        expect(helper?.plannedHours ?? 0).toBe(0);
+        expect(helper?.actualHours).toBe(8);
+      });
+
+      it('月別・工程別集計でも work_records ベースで実績が計上される', async () => {
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue([mockTasks[0]]);
+        mockWbsQueryRepository.getTaskActualHoursByMonth.mockResolvedValue([
+          {
+            taskId: '1',
+            userId: '1',
+            userDisplayName: 'John Doe',
+            yearMonth: '2024/04',
+            hoursWorked: 25,
+          },
+        ]);
+
+        const query = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.START_DATE_BASED);
+        const result = await handler.execute(query);
+
+        // Task 1 は Phase 1。予定開始月 2024/01、作業月 2024/04
+        const phase1Apr = result.monthlyPhaseSummary!.data.find(
+          d => d.phase === 'Phase 1' && d.month === '2024/04'
+        );
+        expect(phase1Apr?.actualHours).toBe(25);
+
+        const phase1Jan = result.monthlyPhaseSummary!.data.find(
+          d => d.phase === 'Phase 1' && d.month === '2024/01'
+        );
+        expect(phase1Jan?.actualHours ?? 0).toBe(0);
+      });
+
+      it('yoteiStart が null のタスクでも work_records があれば集計に含まれる', async () => {
+        const tasksWithoutStartDate = [
+          {
+            ...mockTasks[0],
+            yoteiStart: null,
+            yoteiEnd: null,
+          }
+        ];
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue(tasksWithoutStartDate);
+        mockWbsQueryRepository.getTaskActualHoursByMonth.mockResolvedValue([
+          {
+            taskId: '1',
+            userId: '1',
+            userDisplayName: 'John Doe',
+            yearMonth: '2024/06',
+            hoursWorked: 12,
+          },
+        ]);
+
+        const query = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.START_DATE_BASED);
+        const result = await handler.execute(query);
+
+        expect(result.monthlyAssigneeSummary.months).toContain('2024/06');
+        const jun = result.monthlyAssigneeSummary.monthlyTotals['2024/06'];
+        expect(jun?.actualHours).toBe(12);
+      });
     });
   });
 });

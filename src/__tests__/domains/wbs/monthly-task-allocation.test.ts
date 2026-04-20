@@ -27,7 +27,8 @@ describe('MonthlyTaskAllocation', () => {
       const detail = allocation.getAllocation('2025/01');
       expect(detail).toBeDefined();
       expect(detail!.plannedHours).toBe(10.0);
-      expect(detail!.actualHours).toBe(8.0);
+      // 実績工数は work_records から Handler 層で別経路集計されるため、ここでは常に 0
+      expect(detail!.actualHours).toBe(0);
       expect(detail!.workingDays).toBe(1);
       expect(detail!.availableHours).toBe(7.5);
       expect(detail!.allocationRatio).toBe(1.0);
@@ -85,12 +86,12 @@ describe('MonthlyTaskAllocation', () => {
       expect(allocation.task).toBe(task);
       expect(allocation.getMonths()).toEqual(['2025/01', '2025/02', '2025/03']);
 
-      // 開始月の実績工数は計上される
+      // 実績工数は work_records から Handler 層で別経路集計されるため、
+      // ここでは全ての月で 0 になる
       const jan = allocation.getAllocation('2025/01');
       expect(jan!.plannedHours).toBe(10.0);
-      expect(jan!.actualHours).toBe(10.0); // 開始月のみ実績工数が計上
+      expect(jan!.actualHours).toBe(0);
 
-      // その他の月の実績工数は0
       const feb = allocation.getAllocation('2025/02');
       expect(feb!.plannedHours).toBe(15.0);
       expect(feb!.actualHours).toBe(0);
@@ -100,7 +101,7 @@ describe('MonthlyTaskAllocation', () => {
       expect(mar!.actualHours).toBe(0);
     });
 
-    it('実績工数は開始月のみに計上される（ビジネスルール）', () => {
+    it('実績工数は MonthlyTaskAllocation では常に 0（work_records 経路で集計するため）', () => {
       const task: TaskForAllocation = {
         wbsId: 1,
         taskId: 'task-1',
@@ -129,8 +130,8 @@ describe('MonthlyTaskAllocation', () => {
 
       const allocation = MonthlyTaskAllocation.createMultiMonth(task, allocatedHours, period);
 
-      // 開始月（2025/02）のみ実績工数が計上される
-      expect(allocation.getAllocation('2025/02')!.actualHours).toBe(12.0);
+      // MonthlyTaskAllocation は実績を持たない（すべて 0）
+      expect(allocation.getAllocation('2025/02')!.actualHours).toBe(0);
       expect(allocation.getAllocation('2025/03')!.actualHours).toBe(0);
       expect(allocation.getAllocation('2025/04')!.actualHours).toBe(0);
     });
@@ -265,8 +266,8 @@ describe('MonthlyTaskAllocation', () => {
 
       const allocation = MonthlyTaskAllocation.createMultiMonth(task, allocatedHours, period);
 
-      // 実績工数は開始月のみに計上されるため、合計は12.0
-      expect(allocation.getTotalActualHours()).toBe(12.0);
+      // 実績工数は MonthlyTaskAllocation では持たないため、合計は 0
+      expect(allocation.getTotalActualHours()).toBe(0);
     });
   });
 });
