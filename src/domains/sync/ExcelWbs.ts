@@ -14,6 +14,7 @@ export interface ExcelWbs {
   ACTIVITY: string;
   TASK: string;
   TANTO: string | null;
+  TANTO_REV: string | null;
   KIJUN_START_DATE: Date | null;
   KIJUN_END_DATE: Date | null;
   YOTEI_START_DATE: Date | null;
