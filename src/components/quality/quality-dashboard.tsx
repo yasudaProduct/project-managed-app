@@ -115,11 +115,11 @@ export function QualityDashboard({
     return findings.filter((f) => f.phase === selectedPhase);
   }, [findings, selectedPhase]);
 
-  const refreshAll = (unit: SizeUnitOption, from: string, to: string) => {
+  const refreshAll = (unit: SizeUnitOption, from: string, to: string, phase: string) => {
     startRefreshTransition(async () => {
       const [newSummary, newTrend, newTargets, newFindings] = await Promise.all([
         getWbsQualitySummary(wbsId, unit, thresholds),
-        getQualityTrend(wbsId, unit, from || undefined, to || undefined),
+        getQualityTrend(wbsId, unit, from || undefined, to || undefined, phase || undefined),
         getQualityTargets(wbsId),
         getWbsAllFindings(wbsId),
       ]);
@@ -133,14 +133,34 @@ export function QualityDashboard({
   const handleSizeUnitChange = (v: string) => {
     const unit = v as SizeUnitOption;
     setSizeUnit(unit);
-    refreshAll(unit, trendFrom, trendTo);
+    refreshAll(unit, trendFrom, trendTo, selectedPhase);
   };
 
   const handleDateChange = (from: string, to: string) => {
     setTrendFrom(from);
     setTrendTo(to);
     startRefreshTransition(async () => {
-      const newTrend = await getQualityTrend(wbsId, sizeUnit, from || undefined, to || undefined);
+      const newTrend = await getQualityTrend(
+        wbsId,
+        sizeUnit,
+        from || undefined,
+        to || undefined,
+        selectedPhase || undefined,
+      );
+      setTrend(newTrend);
+    });
+  };
+
+  const handlePhaseChange = (phase: string) => {
+    setSelectedPhase(phase);
+    startRefreshTransition(async () => {
+      const newTrend = await getQualityTrend(
+        wbsId,
+        sizeUnit,
+        trendFrom || undefined,
+        trendTo || undefined,
+        phase || undefined,
+      );
       setTrend(newTrend);
     });
   };
@@ -153,7 +173,7 @@ export function QualityDashboard({
           title: "同期完了",
           description: `新規: ${result.data.created}件 / 更新: ${result.data.updated}件 / 無効化: ${result.data.deactivated}件`,
         });
-        refreshAll(sizeUnit, trendFrom, trendTo);
+        refreshAll(sizeUnit, trendFrom, trendTo, selectedPhase);
       } else {
         toast({ title: "同期に失敗しました", description: result.error, variant: "destructive" });
       }
@@ -166,7 +186,7 @@ export function QualityDashboard({
       <div className="flex items-center gap-2 flex-wrap">
         <Select
           value={selectedPhase || "__all__"}
-          onValueChange={(v) => setSelectedPhase(v === "__all__" ? "" : v)}
+          onValueChange={(v) => handlePhaseChange(v === "__all__" ? "" : v)}
         >
           <SelectTrigger className="w-[160px] h-8 text-xs">
             <SelectValue placeholder="すべてのフェーズ" />
@@ -351,7 +371,7 @@ export function QualityDashboard({
             setTargets((prev) =>
               prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)),
             );
-            refreshAll(sizeUnit, trendFrom, trendTo);
+            refreshAll(sizeUnit, trendFrom, trendTo, selectedPhase);
           }}
         />
       )}

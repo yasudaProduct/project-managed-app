@@ -94,6 +94,7 @@ export interface GetTrendInput {
   sizeUnit: QualitySizeUnit | 'MAN_HOUR';
   fromDate?: Date;
   toDate?: Date;
+  phase?: string;
 }
 
 export type AggregationAxis = 'target' | 'phase' | 'reviewer' | 'date';
@@ -610,9 +611,19 @@ export class QualityApplicationService implements IQualityApplicationService {
   }
 
   async getTrend(input: GetTrendInput): Promise<QualityTrendPoint[]> {
-    const { wbsId, sizeUnit, fromDate, toDate } = input;
-    const targets = await this.targetRepo.findByWbs(wbsId, { isActive: true });
-    if (targets.length === 0) return [];
+    const { wbsId, sizeUnit, fromDate, toDate, phase } = input;
+    const allTargets = await this.targetRepo.findByWbs(wbsId, { isActive: true });
+    if (allTargets.length === 0) return [];
+
+    let targets = allTargets;
+    if (phase) {
+      const phaseMap = await this.taskRepo.findPhasesByTaskNos(
+        wbsId,
+        allTargets.map((t) => t.taskNo),
+      );
+      targets = allTargets.filter((t) => phaseMap.get(t.taskNo) === phase);
+      if (targets.length === 0) return [];
+    }
 
     const targetIds = targets.map((t) => t.id!).filter((id) => id != null);
     const findingsByDate = await this.readRepo.getDailyFindingCounts(

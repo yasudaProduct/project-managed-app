@@ -65,12 +65,14 @@ export async function getQualityTrend(
   sizeUnit: QualitySizeUnit | "MAN_HOUR",
   fromDate?: string,
   toDate?: string,
+  phase?: string,
 ): Promise<QualityTrendPoint[]> {
   return toQualityAppService().getTrend({
     wbsId,
     sizeUnit,
     fromDate: fromDate ? new Date(fromDate) : undefined,
     toDate: toDate ? new Date(toDate) : undefined,
+    phase: phase || undefined,
   });
 }
 
