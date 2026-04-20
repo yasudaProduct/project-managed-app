@@ -30,6 +30,7 @@ export class ExcelWbsRepository implements IExcelWbsRepository {
       ACTIVITY: record.ACTIVITY as string,
       TASK: record.TASK as string,
       TANTO: record.TANTO as string | null,
+      TANTO_REV: (record as unknown as { TANTO_REV?: string | null }).TANTO_REV ?? null,
       KIJUN_START_DATE: record.KIJUN_START_DATE as Date | null,
       KIJUN_END_DATE: record.KIJUN_END_DATE as Date | null,
       YOTEI_START_DATE: record.YOTEI_START_DATE as Date | null,

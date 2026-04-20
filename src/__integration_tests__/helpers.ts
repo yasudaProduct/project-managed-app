@@ -115,6 +115,11 @@ export async function seedTestProject(prisma: PrismaClient) {
 
 // テスト後のクリーンアップ用の関数
 export async function cleanupTestData(prisma: PrismaClient) {
+  if (testIds.wbsId) {
+    // 品質メトリクス関連の論理結合データは wbsId 単位で明示的に掃除する
+    // （FKが無いため CASCADE されない）
+    await cleanupQualityDataByWbs(prisma, testIds.wbsId);
+  }
   if (testIds.taskId) {
     await prisma.wbsTask.delete({ where: { id: testIds.taskId } }).catch(() => { });
   }
@@ -129,6 +134,20 @@ export async function cleanupTestData(prisma: PrismaClient) {
   }
 
   testIds.reset();
+}
+
+export async function cleanupQualityDataByWbs(prisma: PrismaClient, wbsId: number) {
+  const targets = await prisma.qualityReviewTarget.findMany({
+    where: { wbsId },
+    select: { id: true },
+  });
+  const targetIds = targets.map((t) => t.id);
+  if (targetIds.length > 0) {
+    await prisma.qualityReviewer.deleteMany({ where: { targetId: { in: targetIds } } }).catch(() => {});
+    await prisma.qualitySizeMetric.deleteMany({ where: { targetId: { in: targetIds } } }).catch(() => {});
+    await prisma.qualityFinding.deleteMany({ where: { targetId: { in: targetIds } } }).catch(() => {});
+    await prisma.qualityReviewTarget.deleteMany({ where: { wbsId } }).catch(() => {});
+  }
 }
 
 // リクエストデータを取得して指定秒数待機する関数
