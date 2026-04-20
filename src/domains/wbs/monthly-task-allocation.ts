@@ -57,7 +57,8 @@ export class MonthlyTaskAllocation {
     allocations.set(yearMonth, {
       baselineHours: task.kijunKosu || 0,
       plannedHours: task.yoteiKosu,
-      actualHours: task.jissekiKosu || 0,
+      // 実績工数は work_records から Handler 層で別経路集計するため、このクラスでは常に 0
+      actualHours: 0,
       forecastHours: task.forecastKosu || 0,
       workingDays: 1,
       availableHours: 7.5, // デフォルト値
@@ -84,7 +85,6 @@ export class MonthlyTaskAllocation {
     allocatedForecastHours?: Map<string, number>
   ): MonthlyTaskAllocation {
     const allocations = new Map<string, MonthlyAllocationDetail>();
-    const startYearMonth = formatYearMonth(task.yoteiStart);
     const businessDaysByMonth = yoteiPeriod.getBusinessDaysByMonth();
     const availableHoursByMonth = yoteiPeriod.getAvailableHoursByMonth();
     const totalAvailableHours = Array.from(availableHoursByMonth.values())
@@ -104,15 +104,11 @@ export class MonthlyTaskAllocation {
       // 見通し工数は独立した按分結果から取得（なければ0）
       const forecastHours = allocatedForecastHours?.get(yearMonth) || 0;
 
-      // ビジネスルール: 実績工数は開始月のみ計上
-      const actualHours = yearMonth === startYearMonth
-        ? (task.jissekiKosu || 0)
-        : 0;
-
+      // 実績工数は work_records から Handler 層で別経路集計するため、このクラスでは常に 0
       allocations.set(yearMonth, {
         baselineHours,
         plannedHours,
-        actualHours,
+        actualHours: 0,
         forecastHours,
         workingDays,
         availableHours,
