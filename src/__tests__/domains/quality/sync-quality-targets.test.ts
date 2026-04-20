@@ -1,5 +1,10 @@
 import { SyncQualityTargetsService } from '@/applications/quality/sync-quality-targets.service';
 import { ExcelWbs } from '@/domains/sync/ExcelWbs';
+import type {
+  IQualityReviewTargetRepository,
+  IQualityReviewerRepository,
+} from '@/applications/quality/i-quality-review-target.repository';
+import type { IQualityTaskRepository } from '@/applications/quality/i-quality-task.repository';
 
 function buildExcelRow(overrides: Partial<ExcelWbs> = {}): ExcelWbs {
   return {
@@ -51,9 +56,9 @@ describe('SyncQualityTargetsService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     service = new SyncQualityTargetsService(
-      mockTargetRepo as any,
-      mockReviewerRepo as any,
-      mockTaskRepo as any,
+      mockTargetRepo as unknown as IQualityReviewTargetRepository,
+      mockReviewerRepo as unknown as IQualityReviewerRepository,
+      mockTaskRepo as unknown as IQualityTaskRepository,
     );
   });
 

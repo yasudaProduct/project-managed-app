@@ -1,4 +1,5 @@
 import { injectable } from 'inversify';
+import type { $Enums } from '@prisma/client';
 import prisma from '@/lib/prisma/prisma';
 import type { IQualityReviewTargetRepository, IQualityReviewerRepository, TargetFilter } from '@/applications/quality/i-quality-review-target.repository';
 import { QualityReviewTarget } from '@/domains/quality/quality-review-target';
@@ -43,8 +44,8 @@ export class QualityReviewTargetPrismaRepository implements IQualityReviewTarget
       where: {
         wbsId,
         ...(filter?.isActive !== undefined ? { isActive: filter.isActive } : {}),
-        ...(filter?.documentType ? { documentType: filter.documentType as any } : {}),
-        ...(filter?.reviewType ? { reviewType: filter.reviewType as any } : {}),
+        ...(filter?.documentType ? { documentType: filter.documentType as $Enums.QualityDocumentType } : {}),
+        ...(filter?.reviewType ? { reviewType: filter.reviewType as $Enums.QualityReviewType } : {}),
       },
       orderBy: { taskNo: 'asc' },
     });
@@ -65,14 +66,14 @@ export class QualityReviewTargetPrismaRepository implements IQualityReviewTarget
         wbsId: target.wbsId,
         taskNo: target.taskNo,
         name: target.name,
-        documentType: target.documentType as any,
-        reviewType: target.reviewType as any,
+        documentType: target.documentType as $Enums.QualityDocumentType,
+        reviewType: target.reviewType as $Enums.QualityReviewType,
         isActive: target.isActive,
       },
       update: {
         name: target.name,
-        documentType: target.documentType as any,
-        reviewType: target.reviewType as any,
+        documentType: target.documentType as $Enums.QualityDocumentType,
+        reviewType: target.reviewType as $Enums.QualityReviewType,
         isActive: target.isActive,
       },
     });

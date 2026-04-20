@@ -1,4 +1,5 @@
 import { injectable } from 'inversify';
+import type { $Enums } from '@prisma/client';
 import prisma from '@/lib/prisma/prisma';
 import type {
   IQualitySizeMetricRepository,
@@ -41,10 +42,10 @@ export class QualitySizeMetricPrismaRepository implements IQualitySizeMetricRepo
 
   async upsert(metric: QualitySizeMetric): Promise<QualitySizeMetric> {
     const row = await prisma.qualitySizeMetric.upsert({
-      where: { targetId_unit: { targetId: metric.targetId, unit: metric.unit as any } },
+      where: { targetId_unit: { targetId: metric.targetId, unit: metric.unit as $Enums.QualitySizeUnit } },
       create: {
         targetId: metric.targetId,
-        unit: metric.unit as any,
+        unit: metric.unit as $Enums.QualitySizeUnit,
         value: metric.value,
         measuredAt: metric.measuredAt,
         note: metric.note,
@@ -72,7 +73,7 @@ export class QualitySizeMetricPrismaRepository implements IQualitySizeMetricRepo
   }
 
   async deleteByTargetAndUnit(targetId: number, unit: QualitySizeUnit): Promise<void> {
-    await prisma.qualitySizeMetric.deleteMany({ where: { targetId, unit: unit as any } });
+    await prisma.qualitySizeMetric.deleteMany({ where: { targetId, unit: unit as $Enums.QualitySizeUnit } });
   }
 }
 
@@ -82,7 +83,7 @@ export class QualityFindingPrismaRepository implements IQualityFindingRepository
     const rows = await prisma.qualityFinding.findMany({
       where: {
         targetId,
-        ...(filter?.severity ? { severity: filter.severity as any } : {}),
+        ...(filter?.severity ? { severity: filter.severity as $Enums.QualitySeverity } : {}),
         ...(filter?.fromDate || filter?.toDate
           ? {
               foundAt: {
@@ -132,7 +133,7 @@ export class QualityFindingPrismaRepository implements IQualityFindingRepository
     const row = await prisma.qualityFinding.create({
       data: {
         targetId: finding.targetId,
-        severity: finding.severity as any,
+        severity: finding.severity as $Enums.QualitySeverity,
         category: finding.category,
         description: finding.description,
         foundAt: finding.foundAt,
@@ -154,7 +155,7 @@ export class QualityFindingPrismaRepository implements IQualityFindingRepository
     const row = await prisma.qualityFinding.update({
       where: { id: finding.id! },
       data: {
-        severity: finding.severity as any,
+        severity: finding.severity as $Enums.QualitySeverity,
         category: finding.category,
         description: finding.description,
         foundAt: finding.foundAt,
