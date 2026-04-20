@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   List,
   Loader2,
+  ShieldCheck,
   Table,
   Trello,
   Users,
@@ -28,6 +29,7 @@ import WbsImportJobButtons from "@/components/wbs/wbs-import-job-buttons";
 import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { EvmDashboard } from "@/components/evm/evm-dashboard";
 import { WbsTagInput } from "@/components/wbs/wbs-tag-input";
+import { QualityTabContent } from "@/components/quality/quality-tab-content";
 import type { ProjectStatus, WbsTask, Milestone } from "@/types/wbs";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 
@@ -54,6 +56,7 @@ type WbsManagementContentProps = {
   defaultTab?: string;
   showEvm?: boolean;
   showTags?: boolean;
+  showQuality?: boolean;
   defaultProgressMethod?: ProgressMeasurementMethod;
 };
 
@@ -69,6 +72,7 @@ export function WbsManagementContent({
   defaultTab,
   showEvm = true,
   showTags = true,
+  showQuality = true,
   defaultProgressMethod,
 }: WbsManagementContentProps) {
   return (
@@ -159,6 +163,11 @@ export function WbsManagementContent({
                 <TrendingUp className="h-4 w-4" />
               </TabsTrigger>
             )}
+            {showQuality && (
+              <TabsTrigger value="quality" className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4" />
+              </TabsTrigger>
+            )}
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
             </TabsTrigger>
@@ -218,6 +227,11 @@ export function WbsManagementContent({
                 wbsId={wbsId}
                 defaultProgressMethod={defaultProgressMethod}
               />
+            </TabsContent>
+          )}
+          {showQuality && (
+            <TabsContent value="quality">
+              <QualityTabContent wbsId={wbsId} projectId={project.id} />
             </TabsContent>
           )}
         </Tabs>

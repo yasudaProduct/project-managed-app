@@ -198,6 +198,7 @@ erDiagram
   ProgressMeasurementMethod progressMeasurementMethod
   ForecastCalculationMethod forecastCalculationMethod
   Json evmExcludeSettings
+  Json qualityThresholds "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -258,6 +259,45 @@ erDiagram
   String level
   DateTime recordedAt
 }
+"quality_review_target" {
+  Int id PK
+  Int wbsId
+  String taskNo
+  String name
+  QualityDocumentType documentType
+  QualityReviewType reviewType
+  Boolean isActive
+  DateTime createdAt
+  DateTime updatedAt
+}
+"quality_reviewer" {
+  Int id PK
+  Int targetId FK
+  String reviewerUserId
+  String reviewTaskNo
+  DateTime createdAt
+  DateTime updatedAt
+}
+"quality_size_metric" {
+  Int id PK
+  Int targetId FK
+  QualitySizeUnit unit
+  Decimal value
+  DateTime measuredAt
+  String note "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"quality_finding" {
+  Int id PK
+  Int targetId FK
+  QualitySeverity severity
+  String category "nullable"
+  String description "nullable"
+  DateTime foundAt
+  DateTime createdAt
+  DateTime updatedAt
+}
 "system_settings" {
   Int id PK
   Float standardWorkingHours
@@ -295,6 +335,9 @@ erDiagram
 "import_jobs" }o--o| "users" : user
 "import_jobs" }o--o| "wbs" : wbs
 "import_job_progress" }o--|| "import_jobs" : job
+"quality_reviewer" }o--|| "quality_review_target" : target
+"quality_size_metric" }o--|| "quality_review_target" : target
+"quality_finding" }o--|| "quality_review_target" : target
 ```
 
 ### `projects`
@@ -529,6 +572,7 @@ erDiagram
   - `progressMeasurementMethod`: 
   - `forecastCalculationMethod`: 
   - `evmExcludeSettings`: 
+  - `qualityThresholds`: 
   - `createdAt`: 
   - `updatedAt`: 
 
@@ -598,6 +642,53 @@ erDiagram
   - `detail`: 
   - `level`: 
   - `recordedAt`: 
+
+### `quality_review_target`
+
+**Properties**
+  - `id`: 
+  - `wbsId`: 
+  - `taskNo`: 
+  - `name`: 
+  - `documentType`: 
+  - `reviewType`: 
+  - `isActive`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `quality_reviewer`
+
+**Properties**
+  - `id`: 
+  - `targetId`: 
+  - `reviewerUserId`: 
+  - `reviewTaskNo`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `quality_size_metric`
+
+**Properties**
+  - `id`: 
+  - `targetId`: 
+  - `unit`: 
+  - `value`: 
+  - `measuredAt`: 
+  - `note`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `quality_finding`
+
+**Properties**
+  - `id`: 
+  - `targetId`: 
+  - `severity`: 
+  - `category`: 
+  - `description`: 
+  - `foundAt`: 
+  - `createdAt`: 
+  - `updatedAt`: 
 
 ### `system_settings`
 

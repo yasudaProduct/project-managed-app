@@ -94,6 +94,16 @@ export const SYMBOL = {
     IWbsCrossQueryRepository: Symbol.for('IWbsCrossQueryRepository'),
     WbsAnalyticsHandler: Symbol.for('WbsAnalyticsHandler'),
 
+    // 定量品質管理
+    IQualityApplicationService: Symbol.for('IQualityApplicationService'),
+    IQualityReviewTargetRepository: Symbol.for('IQualityReviewTargetRepository'),
+    IQualityReviewerRepository: Symbol.for('IQualityReviewerRepository'),
+    IQualitySizeMetricRepository: Symbol.for('IQualitySizeMetricRepository'),
+    IQualityFindingRepository: Symbol.for('IQualityFindingRepository'),
+    IQualityMetricsReadRepository: Symbol.for('IQualityMetricsReadRepository'),
+    IQualityTaskRepository: Symbol.for('IQualityTaskRepository'),
+    SyncQualityTargetsService: Symbol.for('SyncQualityTargetsService'),
+
     // Infrastructure
     PrismaClient: Symbol.for('PrismaClient'),
 }
