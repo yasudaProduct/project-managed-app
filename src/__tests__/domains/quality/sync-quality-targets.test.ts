@@ -1,5 +1,4 @@
 import { SyncQualityTargetsService } from '@/applications/quality/sync-quality-targets.service';
-import { QualityDocumentType, QualityReviewType } from '@/domains/quality/value-objects/quality-enums';
 import { ExcelWbs } from '@/domains/sync/ExcelWbs';
 
 function buildExcelRow(overrides: Partial<ExcelWbs> = {}): ExcelWbs {

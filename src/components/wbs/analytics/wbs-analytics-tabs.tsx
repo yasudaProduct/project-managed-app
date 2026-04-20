@@ -3,7 +3,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CoefficientTable } from "./coefficient-table";
 import { ProportionTable } from "./proportion-table";
-import { WbsPhase } from "@/types/wbs";
 
 type PhaseTemplate = {
     id: number;

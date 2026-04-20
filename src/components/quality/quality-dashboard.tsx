@@ -25,7 +25,6 @@ import type {
   QualityTargetListItem,
   WbsQualitySummary,
   QualityTrendPoint,
-  WbsFindingItem,
 } from "@/applications/quality/quality-application.service";
 import {
   syncQualityTargets,
