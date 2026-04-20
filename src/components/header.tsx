@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AuthHeader } from "./auth/auth-header";
 import { NotificationCenter } from "./notification/NotificationCenter";
+import { UnlinkedWorkRecordsBadge } from "./header/UnlinkedWorkRecordsBadge";
 import { useAuth } from "@/hooks/use-auth";
 
 interface ProjectInfo {
@@ -17,6 +18,7 @@ interface WbsTasksSummary {
   taskKosu: number;
   taskJisseki: number;
   kijunKosu: number;
+  unlinkedWorkRecordsCount: number;
 }
 
 export function Header() {
@@ -154,6 +156,9 @@ export function Header() {
                           : "0.0%"}
                       </span>
                     </div>
+                    <UnlinkedWorkRecordsBadge
+                      count={tasksSummary.unlinkedWorkRecordsCount}
+                    />
                   </div>
                 </>
               )}
