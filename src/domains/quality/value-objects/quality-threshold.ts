@@ -8,5 +8,4 @@ export interface QualityThreshold {
 export interface QualityThresholds {
   reviewDensity?: QualityThreshold;
   defectDensity?: QualityThreshold;
-  majorDefectDensity?: QualityThreshold;
 }

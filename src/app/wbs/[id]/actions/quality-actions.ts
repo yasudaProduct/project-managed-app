@@ -8,24 +8,21 @@ import type {
   RegisterFindingInput,
   RegisterSizeMetricInput,
   UpdateFindingInput,
-  QualityMetricsSummary,
   QualityTargetListItem,
   WbsQualitySummary,
   QualityTrendPoint,
-  AggregationAxis,
+  FindingsByReviewee,
+  FindingsByCategory,
 } from "@/applications/quality/quality-application.service";
 import { SyncQualityTargetsService, SyncResult } from "@/applications/quality/sync-quality-targets.service";
 import { QualitySizeUnit, QualitySeverity } from "@/domains/quality/value-objects/quality-enums";
-import type { QualityThresholds } from "@/domains/quality/value-objects/quality-threshold";
 import {
   FindingCsvRow,
   SizeCsvRow,
   parseFindingRows,
   parseSizeRows,
-  toTsv,
 } from "@/applications/quality/quality-io.service";
 import type { IQualityReviewTargetRepository } from "@/applications/quality/i-quality-review-target.repository";
-import prisma from "@/lib/prisma/prisma";
 
 export interface QualityActionResult<T = unknown> {
   success: boolean;
@@ -39,25 +36,17 @@ function toQualityAppService(): IQualityApplicationService {
 
 export async function getQualityTargets(
   wbsId: number,
+  sizeUnit: QualitySizeUnit | "MAN_HOUR" = "MAN_HOUR",
   isActive?: boolean,
 ): Promise<QualityTargetListItem[]> {
-  return toQualityAppService().listTargetsByWbs(wbsId, isActive);
-}
-
-export async function getQualitySummary(
-  targetId: number,
-  sizeUnit: QualitySizeUnit | "MAN_HOUR",
-  thresholds?: QualityThresholds,
-): Promise<QualityMetricsSummary> {
-  return toQualityAppService().getSummary(targetId, sizeUnit, thresholds);
+  return toQualityAppService().listTargetsByWbs(wbsId, sizeUnit, isActive);
 }
 
 export async function getWbsQualitySummary(
   wbsId: number,
   sizeUnit: QualitySizeUnit | "MAN_HOUR",
-  thresholds?: QualityThresholds,
 ): Promise<WbsQualitySummary> {
-  return toQualityAppService().getWbsSummary(wbsId, sizeUnit, thresholds);
+  return toQualityAppService().getWbsSummary(wbsId, sizeUnit);
 }
 
 export async function getQualityTrend(
@@ -82,6 +71,18 @@ export async function getWbsAllFindings(wbsId: number) {
     ...f,
     foundAt: f.foundAt.toISOString(),
   }));
+}
+
+export async function getQualityFindingsByReviewee(
+  wbsId: number,
+): Promise<FindingsByReviewee[]> {
+  return toQualityAppService().getFindingsByReviewee(wbsId);
+}
+
+export async function getQualityFindingsByCategory(
+  wbsId: number,
+): Promise<FindingsByCategory[]> {
+  return toQualityAppService().getFindingsByCategory(wbsId);
 }
 
 export async function getQualityFindings(targetId: number) {
@@ -312,165 +313,4 @@ export async function importQualitySizeMetricsCsv(
   const res = await app.importSizeMetrics(items, mode);
   revalidatePath(`/wbs/${wbsId}/quality`);
   return { success: errors.length === 0, created: res.created, errors };
-}
-
-export async function exportQualityFindingsTsv(wbsId: number): Promise<string> {
-  const app = toQualityAppService();
-  const targets = await app.listTargetsByWbs(wbsId);
-  const header = ["taskNo", "name", "severity", "category", "description", "foundAt"];
-  const rows: (string | number | null | undefined)[][] = [header];
-
-  for (const t of targets) {
-    const findings = await app.listFindings(t.id);
-    for (const f of findings) {
-      rows.push([
-        t.taskNo,
-        t.name,
-        f.severity,
-        f.category ?? "",
-        f.description ?? "",
-        f.foundAt.toISOString(),
-      ]);
-    }
-  }
-  return toTsv(rows);
-}
-
-export async function exportQualitySizeMetricsTsv(wbsId: number): Promise<string> {
-  const app = toQualityAppService();
-  const targets = await app.listTargetsByWbs(wbsId);
-  const header = ["taskNo", "name", "unit", "value", "measuredAt", "note"];
-  const rows: (string | number | null | undefined)[][] = [header];
-
-  for (const t of targets) {
-    const metrics = await app.listSizeMetrics(t.id);
-    for (const m of metrics) {
-      rows.push([
-        t.taskNo,
-        t.name,
-        m.unit,
-        m.value,
-        m.measuredAt.toISOString(),
-        m.note ?? "",
-      ]);
-    }
-  }
-  return toTsv(rows);
-}
-
-export async function exportQualitySummaryTsv(
-  wbsId: number,
-  sizeUnit: QualitySizeUnit | "MAN_HOUR",
-): Promise<string> {
-  const app = toQualityAppService();
-  const targets = await app.listTargetsByWbs(wbsId, true);
-  const header = [
-    "taskNo",
-    "name",
-    "sizeUnit",
-    "size",
-    "reviewManHours",
-    "reviewDensity",
-    "findingCount",
-    "majorCount",
-    "defectDensity",
-    "majorDefectDensity",
-    "majorRatio",
-  ];
-  const rows: (string | number | null | undefined)[][] = [header];
-
-  for (const t of targets) {
-    const s = await app.getSummary(t.id, sizeUnit);
-    rows.push([
-      t.taskNo,
-      t.name,
-      s.sizeUnit,
-      s.size ?? "",
-      s.reviewManHours,
-      s.reviewDensity ?? "",
-      s.findingCount,
-      s.majorCount,
-      s.defectDensity ?? "",
-      s.majorDefectDensity ?? "",
-      s.majorRatio ?? "",
-    ]);
-  }
-  return toTsv(rows);
-}
-
-export async function exportQualityAggregatedTsv(
-  wbsId: number,
-  axis: AggregationAxis,
-  sizeUnit: QualitySizeUnit | "MAN_HOUR",
-): Promise<string> {
-  const app = toQualityAppService();
-  const rows = await app.getAggregated(wbsId, axis, sizeUnit);
-
-  const axisLabel: Record<AggregationAxis, string> = {
-    target: "対象",
-    phase: "フェーズ",
-    reviewer: "担当者",
-    date: "日付",
-  };
-  const header = [
-    axisLabel[axis],
-    "対象数",
-    "sizeUnit",
-    "size",
-    "reviewManHours",
-    "reviewDensity",
-    "findingCount",
-    "majorCount",
-    "defectDensity",
-    "majorDefectDensity",
-    "majorRatio",
-  ];
-  const body: (string | number | null | undefined)[][] = [header];
-  for (const r of rows) {
-    body.push([
-      r.label,
-      r.targetCount,
-      sizeUnit,
-      Number.isFinite(r.totalSize) ? Number(r.totalSize.toFixed(4)) : "",
-      Number.isFinite(r.totalReviewManHours)
-        ? Number(r.totalReviewManHours.toFixed(4))
-        : "",
-      r.reviewDensity ?? "",
-      Number(r.findingCount.toFixed(4)),
-      Number(r.majorCount.toFixed(4)),
-      r.defectDensity ?? "",
-      r.majorDefectDensity ?? "",
-      r.majorRatio ?? "",
-    ]);
-  }
-  return toTsv(body);
-}
-
-export async function getQualityThresholds(
-  projectId: string,
-): Promise<QualityThresholds> {
-  const settings = await prisma.projectSettings.findUnique({ where: { projectId } });
-  if (!settings?.qualityThresholds) return {};
-  return settings.qualityThresholds as unknown as QualityThresholds;
-}
-
-export async function updateQualityThresholds(
-  projectId: string,
-  thresholds: QualityThresholds,
-): Promise<QualityActionResult> {
-  try {
-    await prisma.projectSettings.upsert({
-      where: { projectId },
-      create: {
-        projectId,
-        qualityThresholds: thresholds as never,
-      },
-      update: {
-        qualityThresholds: thresholds as never,
-      },
-    });
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "閾値の保存に失敗しました" };
-  }
 }

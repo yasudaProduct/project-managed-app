@@ -33,16 +33,6 @@ describe('QualityMetricsCalculator', () => {
     });
   });
 
-  describe('calcMajorDefectDensity', () => {
-    it('Major指摘件数を規模で割った値を返す', () => {
-      expect(calc.calcMajorDefectDensity(2, 10)).toBeCloseTo(0.2);
-    });
-
-    it('規模が0の場合はnullを返す', () => {
-      expect(calc.calcMajorDefectDensity(2, 0)).toBeNull();
-    });
-  });
-
   describe('calcMajorRatio', () => {
     it('Major件数を全指摘件数で割った割合を返す', () => {
       expect(calc.calcMajorRatio(3, 10)).toBeCloseTo(0.3);

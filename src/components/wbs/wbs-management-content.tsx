@@ -231,7 +231,7 @@ export function WbsManagementContent({
           )}
           {showQuality && (
             <TabsContent value="quality">
-              <QualityTabContent wbsId={wbsId} projectId={project.id} />
+              <QualityTabContent wbsId={wbsId} />
             </TabsContent>
           )}
         </Tabs>

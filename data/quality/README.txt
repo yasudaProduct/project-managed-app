@@ -2,15 +2,17 @@
 
 ■ MySQL wbs（品質評価対象の同期元）
   - ファイル: mysql-wbs-quality-eval-sample.tsv
-  - WBS インポート完了後、API から SyncQualityTargetsService.syncFromExcelRows が
-    MySQL の wbs 行を読み、TANTO_REV が入っている行だけを評価対象の元にします。
+  - WBS インポート完了後、API から SyncQualityTargetsService.syncForWbs が
+    PostgreSQL に取り込まれた WbsTask を読み、tantoRev が入っている
+    タスクを評価対象（1 タスク = 1 評価対象）として登録します。
+  - レビュータスクは、taskNo が「{評価対象taskNo}-R...」の形式で前方一致する
+    別の WbsTask として扱います。そのレビュータスクの担当者 (TANTO) が
+    レビュアー（reviewerUserId = Users.id）になります。担当者が設定されていない
+    レビュータスクはスキップされます。
   - ExcelWbsRepository.findByWbsName の実装では、引数 wbsName に対して
     MySQL の PROJECT_ID 列で一致検索しています。そのため PostgreSQL 側の
     WBS 名（prisma/mock-data の「新規機能開発A」など）と MySQL の PROJECT_ID を
     同じ文字列にしてください。
-  - 同一 TASK 名の複数行は 1 評価対象にまとまり、代表の taskNo は WBS_ID の
-    辞書順で最小の行になります。各行の (TANTO_REV, WBS_ID) がレビュアーと
-    レビュー工数を集計するタスク番号になります。
 
 ■ 品質画面の CSV インポート（指摘・規模）
   - quality-findings-import-sample.csv … 評価対象の taskNo に紐づく指摘

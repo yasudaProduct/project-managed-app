@@ -157,6 +157,7 @@ model WbsTask {
   phaseId          Int?
   name             String
   assigneeId       Int?
+  tantoRev         String?
   status           TaskStatus       @default(NOT_STARTED)
   progressRate     Decimal?         @default(0) // 進捗率（0-100）
   wbs              Wbs              @relation(fields: [wbsId], references: [id])

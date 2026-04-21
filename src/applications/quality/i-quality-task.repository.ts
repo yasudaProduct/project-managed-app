@@ -1,21 +1,19 @@
-export interface ReviewTaskInfo {
+export interface QualitySyncTaskRow {
   taskNo: string;
-  tanto: string;
-}
-
-export interface TaskWithReviewInfo {
-  taskNo: string;
-  wbsId: number;
   name: string;
   tantoRev: string | null;
-  reviewTasks: ReviewTaskInfo[];
+  assigneeUserId: string | null;
 }
 
 export interface IQualityTaskRepository {
-  findByWbsIdWithReviewInfo(wbsId: number): Promise<TaskWithReviewInfo[]>;
-  resolveUserIdByName(wbsId: number, name: string): Promise<string | null>;
+  findAllForQualitySync(wbsId: number): Promise<QualitySyncTaskRow[]>;
   findPhasesByTaskNos(
     wbsId: number,
     taskNos: string[],
   ): Promise<Map<string, string | null>>;
+  findAssigneesByTaskNos(
+    wbsId: number,
+    taskNos: string[],
+  ): Promise<Map<string, string | null>>;
+  findUserNamesByIds(userIds: string[]): Promise<Map<string, string>>;
 }

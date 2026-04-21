@@ -4,12 +4,6 @@ import { useRef, useState, useTransition } from "react";
 import { parse } from "csv-parse/sync";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -17,27 +11,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Download, Upload } from "lucide-react";
-import { QualitySizeUnit } from "@/domains/quality/value-objects/quality-enums";
 import {
   importQualityFindingsCsv,
   importQualitySizeMetricsCsv,
-  exportQualityFindingsTsv,
-  exportQualitySizeMetricsTsv,
-  exportQualitySummaryTsv,
-  exportQualityAggregatedTsv,
 } from "@/app/wbs/[id]/actions/quality-actions";
-import type { AggregationAxis } from "@/applications/quality/quality-application.service";
 import { toast } from "@/hooks/use-toast";
-
-type SizeUnitOption = QualitySizeUnit | "MAN_HOUR";
 
 interface Props {
   wbsId: number;
-  sizeUnit: SizeUnitOption;
 }
 
-function downloadText(filename: string, text: string) {
-  const blob = new Blob([text], { type: "text/tab-separated-values;charset=utf-8" });
+function downloadText(filename: string, text: string, mime: string) {
+  const blob = new Blob([text], { type: `${mime};charset=utf-8` });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -45,6 +30,9 @@ function downloadText(filename: string, text: string) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+const FINDING_CSV_HEADER = "taskNo,severity,category,description,foundAt";
+const SIZE_CSV_HEADER = "taskNo,unit,value,measuredAt,note";
 
 async function readFileAsText(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();
@@ -57,7 +45,7 @@ async function readFileAsText(file: File): Promise<string> {
   }
 }
 
-export function QualityImportExport({ wbsId, sizeUnit }: Props) {
+export function QualityImportExport({ wbsId }: Props) {
   const [importMode, setImportMode] = useState<"merge" | "replace">("merge");
   const [isWorking, startTransition] = useTransition();
   const findingInputRef = useRef<HTMLInputElement>(null);
@@ -105,39 +93,6 @@ export function QualityImportExport({ wbsId, sizeUnit }: Props) {
     });
   };
 
-  const handleExport = async (kind: "findings" | "size" | "summary") => {
-    startTransition(async () => {
-      try {
-        let tsv: string;
-        let filename: string;
-        if (kind === "findings") {
-          tsv = await exportQualityFindingsTsv(wbsId);
-          filename = `quality-findings-wbs${wbsId}.tsv`;
-        } else if (kind === "size") {
-          tsv = await exportQualitySizeMetricsTsv(wbsId);
-          filename = `quality-size-wbs${wbsId}.tsv`;
-        } else {
-          tsv = await exportQualitySummaryTsv(wbsId, sizeUnit);
-          filename = `quality-summary-wbs${wbsId}.tsv`;
-        }
-        downloadText(filename, tsv);
-      } catch (err) {
-        toast({ title: "エクスポート失敗", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
-      }
-    });
-  };
-
-  const handleAggregatedExport = async (axis: AggregationAxis) => {
-    startTransition(async () => {
-      try {
-        const tsv = await exportQualityAggregatedTsv(wbsId, axis, sizeUnit);
-        downloadText(`quality-aggregated-${axis}-wbs${wbsId}.tsv`, tsv);
-      } catch (err) {
-        toast({ title: "集計エクスポート失敗", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
-      }
-    });
-  };
-
   return (
     <>
       <input
@@ -177,40 +132,29 @@ export function QualityImportExport({ wbsId, sizeUnit }: Props) {
         <Upload className="h-3.5 w-3.5 mr-1" />
         指摘CSV
       </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => downloadText("quality-findings-template.csv", FINDING_CSV_HEADER + "\n", "text/csv")}
+        disabled={isWorking}
+      >
+        <Download className="h-3.5 w-3.5 mr-1" />
+        指摘テンプレート
+      </Button>
 
       <Button variant="outline" size="sm" onClick={() => sizeInputRef.current?.click()} disabled={isWorking}>
         <Upload className="h-3.5 w-3.5 mr-1" />
         規模CSV
       </Button>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" disabled={isWorking}>
-            <Download className="h-3.5 w-3.5 mr-1" />
-            TSV出力
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem onClick={() => handleExport("summary")}>対象別サマリ</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleExport("findings")}>指摘一覧</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleExport("size")}>規模一覧</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" disabled={isWorking}>
-            <Download className="h-3.5 w-3.5 mr-1" />
-            集計TSV
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem onClick={() => handleAggregatedExport("target")}>対象別</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAggregatedExport("phase")}>フェーズ別</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAggregatedExport("reviewer")}>担当者別</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAggregatedExport("date")}>日付別</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => downloadText("quality-size-template.csv", SIZE_CSV_HEADER + "\n", "text/csv")}
+        disabled={isWorking}
+      >
+        <Download className="h-3.5 w-3.5 mr-1" />
+        規模テンプレート
+      </Button>
     </>
   );
 }
