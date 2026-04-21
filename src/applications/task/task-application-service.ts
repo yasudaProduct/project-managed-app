@@ -69,9 +69,9 @@ export class TaskApplicationService implements ITaskApplicationService {
             yoteiStart: task.getYoteiStart(),
             yoteiEnd: task.getYoteiEnd(),
             yoteiKosu: task.getYoteiKosus(),
-            jissekiStart: task.getJissekiStart(),
-            jissekiEnd: task.getJissekiEnd(),
-            jissekiKosu: task.getJissekiKosus(),
+            // jissekiStart: task.getJissekiStart(),
+            // jissekiEnd: task.getJissekiEnd(),
+            // jissekiKosu: task.getJissekiKosus(),
             createdAt: task.createdAt,
             updatedAt: task.updatedAt,
         };

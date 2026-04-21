@@ -43,14 +43,12 @@
             "docker compose up notification-cron"
           ]
         }
-      ]
-    ],
-    "mysql": [
+      ],
       {
         "name": "mysql",
         "autoExecuteCommands": true,
-        "icon": "browser",
-        "color": "terminal.ansiBlue",
+        "icon": "database",
+        "color": "terminal.ansiGreen",
         "commands": [
           "echo npm run mysql:setup",
           "docker compose -f compose.mysql.yml up -d db-test"

@@ -92,7 +92,7 @@ export function TaskTableViewPage({
 }: TaskTableViewPageProps): React.ReactNode {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
+    [],
   );
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -112,7 +112,7 @@ export function TaskTableViewPage({
       }
       if (grouping[0] !== key) setGrouping([key]);
     },
-    [grouping]
+    [grouping],
   );
 
   const columns = React.useMemo<ColumnDef<TaskTableViewProp>[]>(
@@ -346,7 +346,7 @@ export function TaskTableViewPage({
           const { row } = ctx;
           const task = row.original as TaskTableViewProp;
           const originalTask = wbsTasks.find(
-            (t) => t.taskNo === task.id
+            (t) => t.taskNo === task.id,
           ) as WbsTask;
 
           return (
@@ -399,7 +399,7 @@ export function TaskTableViewPage({
         },
       },
     ],
-    [grouping, wbsTasks]
+    [grouping, wbsTasks],
   );
 
   const tableData = React.useMemo<TaskTableViewProp[]>(
@@ -411,9 +411,9 @@ export function TaskTableViewPage({
             yoteiStart: wbsTask.yoteiStart,
             yoteiEnd: wbsTask.yoteiEnd,
             yoteiKosu: wbsTask.yoteiKosu,
-            jissekiStart: wbsTask.jissekiStart,
-            jissekiEnd: wbsTask.jissekiEnd,
-            jissekiKosu: wbsTask.jissekiKosu,
+            // jissekiStart: wbsTask.jissekiStart,
+            // jissekiEnd: wbsTask.jissekiEnd,
+            // jissekiKosu: wbsTask.jissekiKosu,
             status: wbsTask.status,
             assigneeId: String(wbsTask.assigneeId ?? ""),
             assignee: wbsTask.assignee?.displayName ?? "未設定",
@@ -421,7 +421,7 @@ export function TaskTableViewPage({
             phase: wbsTask.phase?.name ?? "未設定",
           }))
         : [],
-    [wbsTasks]
+    [wbsTasks],
   );
 
   const table = useReactTable({
@@ -536,7 +536,7 @@ export function TaskTableViewPage({
                           ? null
                           : flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                       </TableHead>
                     );
@@ -557,7 +557,7 @@ export function TaskTableViewPage({
                         <TableCell key={cell.id}>
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </TableCell>
                       ))}
