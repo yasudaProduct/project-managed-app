@@ -41,6 +41,7 @@ type Cell = {
   plannedHours: number;
   actualHours: number;
   difference: number;
+  baselineHours: number;
   forecastHours: number;
 };
 
@@ -81,6 +82,7 @@ export function MonthlyPhaseSummary({
           plannedHours: entry.plannedHours,
           actualHours: entry.actualHours,
           difference: entry.difference,
+          baselineHours: entry.baselineHours || 0,
           forecastHours: entry.forecastHours || 0,
         });
       }
@@ -117,6 +119,7 @@ export function MonthlyPhaseSummary({
         plannedHours: monthlyData.grandTotal.plannedHours,
         actualHours: monthlyData.grandTotal.actualHours,
         difference: monthlyData.grandTotal.difference,
+        baselineHours: monthlyData.grandTotal.baselineHours,
         forecastHours: monthlyData.grandTotal.forecastHours,
       };
 
@@ -315,13 +318,14 @@ export function MonthlyPhaseSummary({
                 plannedHours: 0,
                 actualHours: 0,
                 difference: 0,
+                baselineHours: 0,
                 forecastHours: 0,
               };
               return {
                 plannedHours: cell.plannedHours,
                 actualHours: cell.actualHours,
                 difference: cell.difference,
-                baselineHours: 0,
+                baselineHours: cell.baselineHours,
                 forecastHours: cell.forecastHours,
               } as SummaryCell;
             }}
