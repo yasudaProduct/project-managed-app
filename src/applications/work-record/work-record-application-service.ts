@@ -6,7 +6,12 @@ import { SYMBOL } from '@/types/symbol'
 export interface IWorkRecordApplicationService {
   bulkCreate(workRecords: WorkRecord[]): Promise<void>
   bulkUpsert(workRecords: WorkRecord[]): Promise<{ created: number; updated: number }>
-  deleteByUserAndDateRange(userIds: string[], startDate: Date, endDate: Date): Promise<number>
+  deleteByUserAndDateRange(
+    userIds: string[],
+    startDate: Date,
+    endDate: Date,
+    wbsIds: number[]
+  ): Promise<number>
 }
 
 @injectable()
@@ -25,8 +30,13 @@ export class WorkRecordApplicationService implements IWorkRecordApplicationServi
     return await this.workRecordRepository.bulkUpsert(workRecords)
   }
 
-  async deleteByUserAndDateRange(userIds: string[], startDate: Date, endDate: Date): Promise<number> {
-    if (userIds.length === 0) return 0
-    return await this.workRecordRepository.deleteByUserAndDateRange(userIds, startDate, endDate)
+  async deleteByUserAndDateRange(
+    userIds: string[],
+    startDate: Date,
+    endDate: Date,
+    wbsIds: number[]
+  ): Promise<number> {
+    if (userIds.length === 0 || wbsIds.length === 0) return 0
+    return await this.workRecordRepository.deleteByUserAndDateRange(userIds, startDate, endDate, wbsIds)
   }
 }

@@ -23,10 +23,6 @@ class MockTaskRepository implements ITaskRepository {
     return this.tasks.find(task => task.id === id) || null;
   }
 
-  async findByAssigneeId(assigneeId: string): Promise<Task[]> {
-    return this.tasks.filter(task => task.assigneeId === assigneeId);
-  }
-
   async create(task: Task): Promise<Task> {
     this.tasks.push(task);
     return task;
