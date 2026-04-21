@@ -33,7 +33,6 @@ const mockTaskRepository: jest.Mocked<ITaskRepository> = {
     delete: jest.fn(),
     findById: jest.fn(),
     findAll: jest.fn(),
-    findByAssigneeId: jest.fn(),
 };
 
 describe("DashboardApplicationService", () => {
