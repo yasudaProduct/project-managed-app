@@ -395,6 +395,8 @@ model ProjectSettings {
   roundToQuarter            Boolean                    @default(false)
   progressMeasurementMethod ProgressMeasurementMethod  @default(SELF_REPORTED)
   forecastCalculationMethod ForecastCalculationMethod  @default(REALISTIC)
+  deadlineAlertDays         Int                        @default(1)    // 期限間近アラートの日数
+  costOverrunThresholdPct   Int                        @default(100)  // 工数超過アラートの閾値(%)
   evmExcludeSettings        Json                       @default("{}") // EVM除外設定 (enabled, task_names 等)
   qualityThresholds         Json?                                      // 品質指標の閾値設定
   createdAt                 DateTime                   @default(now()) @db.Timestamptz

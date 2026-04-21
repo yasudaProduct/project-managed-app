@@ -18,7 +18,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { ProjectSettings } from "@/components/wbs/project-settings";
-import { TaskDependencyModal } from "@/components/wbs/task-dependency-modal";
 import { ProjectInfoCard } from "@/components/wbs/project-info-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GanttV2Wrapper from "@/components/ganttv2/gantt-v2-wrapper";
@@ -58,6 +57,8 @@ type WbsManagementContentProps = {
   showTags?: boolean;
   showQuality?: boolean;
   defaultProgressMethod?: ProgressMeasurementMethod;
+  deadlineAlertDays?: number;
+  costOverrunThresholdPct?: number;
 };
 
 export function WbsManagementContent({
@@ -74,6 +75,8 @@ export function WbsManagementContent({
   showTags = true,
   showQuality = true,
   defaultProgressMethod,
+  deadlineAlertDays = 1,
+  costOverrunThresholdPct = 100,
 }: WbsManagementContentProps) {
   return (
     <>
@@ -107,19 +110,18 @@ export function WbsManagementContent({
             <CalendarCheck className="h-4 w-4" />
           </Button>
         </TaskModal>
-        <TaskDependencyModal
+        {/* <TaskDependencyModal
           wbsId={wbsId}
           tasks={tasks.map((task) => ({
             id: task.id,
             taskNo: task.taskNo || "",
             name: task.name,
           }))}
-        />
+        /> */}
         <WbsImportJobButtons wbsId={wbsId} wbsName={wbsName} />
         <Link href={`/wbs/${wbsId}/task-scheduling`}>
           <Button className="bg-white text-black ml-2">
             <Calendar className="h-4 w-4" />
-            スケジュール計算
           </Button>
         </Link>
       </div>
@@ -143,10 +145,7 @@ export function WbsManagementContent({
             <TabsTrigger value="gantt" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
             </TabsTrigger>
-            <TabsTrigger
-              value="milestone"
-              className="flex items-center gap-2"
-            >
+            <TabsTrigger value="milestone" className="flex items-center gap-2">
               <CalendarCheck className="h-4 w-4" />
             </TabsTrigger>
             <TabsTrigger value="table" className="flex items-center gap-2">
@@ -186,11 +185,12 @@ export function WbsManagementContent({
                 phases={phases}
                 assignees={assignees || []}
                 buffers={buffers}
+                tasks={tasks}
+                milestones={milestones}
+                deadlineAlertDays={deadlineAlertDays}
+                costOverrunThresholdPct={costOverrunThresholdPct}
               />
             </div>
-          </TabsContent>
-          <TabsContent value="settings">
-            <ProjectSettings projectId={project.id} />
           </TabsContent>
           <TabsContent value="list">
             <TaskTableViewPage wbsTasks={tasks} wbsId={wbsId} />
@@ -210,10 +210,7 @@ export function WbsManagementContent({
             />
           </TabsContent>
           <TabsContent value="milestone">
-            <MilestoneManagement
-              wbsId={wbsId}
-              initialMilestones={milestones}
-            />
+            <MilestoneManagement wbsId={wbsId} initialMilestones={milestones} />
           </TabsContent>
           <TabsContent value="table">
             <WbsSummaryTables projectId={project.id} wbsId={wbsId} />
@@ -234,6 +231,9 @@ export function WbsManagementContent({
               <QualityTabContent wbsId={wbsId} />
             </TabsContent>
           )}
+          <TabsContent value="settings">
+            <ProjectSettings projectId={project.id} />
+          </TabsContent>
         </Tabs>
       </Suspense>
     </>

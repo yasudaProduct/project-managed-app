@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { getProjectById } from "../actions";
-import { getLatestWbsByProjectId, getWbsBuffers } from "@/app/wbs/[id]/actions/wbs-actions";
+import {
+  getLatestWbsByProjectId,
+  getWbsBuffers,
+} from "@/app/wbs/[id]/actions/wbs-actions";
 import { getWbsPhases } from "@/app/wbs/[id]/actions/wbs-phase-actions";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
 import { getTaskAll } from "@/app/wbs/[id]/actions/wbs-task-actions";
@@ -97,45 +100,6 @@ export default async function ProjectPage({
 
   return (
     <div className="container mx-auto mt-2">
-      {/* パンくずリスト */}
-      <div className="flex items-center gap-2 mb-4">
-        <Link
-          href="/projects"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <Link
-          href="/projects"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          プロジェクト一覧
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <span className="font-medium">{project.name}</span>
-      </div>
-
-      {/* ヘッダー */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold">{project.name}</h1>
-          <Badge
-            variant={project.status === "ACTIVE" ? "default" : "secondary"}
-            className="text-xs"
-          >
-            {getProjectStatusName(project.status)}
-          </Badge>
-        </div>
-
-        <Link href={`/projects/${project.id}/edit`}>
-          <Button size="sm" className="gap-2">
-            <Edit className="h-4 w-4" />
-            プロジェクト編集
-          </Button>
-        </Link>
-      </div>
-
       <WbsManagementContent
         wbsId={latestWbs.id}
         wbsName={latestWbs.name}
@@ -149,6 +113,8 @@ export default async function ProjectPage({
         showEvm={true}
         showTags={false}
         defaultProgressMethod={settings.progressMeasurementMethod}
+        deadlineAlertDays={settings.deadlineAlertDays ?? 1}
+        costOverrunThresholdPct={settings.costOverrunThresholdPct ?? 100}
       />
     </div>
   );
