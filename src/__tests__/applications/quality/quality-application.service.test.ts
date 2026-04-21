@@ -42,8 +42,7 @@ const readRepo = {
 };
 
 const taskRepo = {
-  findByWbsIdWithReviewInfo: jest.fn(),
-  resolveUserIdByName: jest.fn(),
+  findAllForQualitySync: jest.fn(),
   findPhasesByTaskNos: jest.fn(),
   findAssigneesByTaskNos: jest.fn(),
   findUserNamesByIds: jest.fn(),

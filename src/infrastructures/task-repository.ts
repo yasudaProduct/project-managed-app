@@ -236,6 +236,7 @@ export class TaskRepository implements ITaskRepository {
                 name: task.name,
                 wbsId: task.wbsId,
                 assigneeId: task.assigneeId ?? undefined,
+                tantoRev: task.tantoRev ?? null,
                 phaseId: task.phaseId ?? undefined,
                 status: task.status.status,
                 progressRate: task.progressRate,
