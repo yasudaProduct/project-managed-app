@@ -1,7 +1,7 @@
 import { QualityApplicationService } from '@/applications/quality/quality-application.service';
 import { QualityReviewTarget } from '@/domains/quality/quality-review-target';
 import { QualityReviewer } from '@/domains/quality/quality-reviewer';
-import { QualityDocumentType, QualityReviewType, QualitySeverity, QualitySizeUnit } from '@/domains/quality/value-objects/quality-enums';
+import { QualityDocumentType, QualityReviewType, QualitySeverity } from '@/domains/quality/value-objects/quality-enums';
 import { QualityFinding } from '@/domains/quality/quality-finding';
 
 const targetRepo = {
