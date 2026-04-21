@@ -1,7 +1,6 @@
 export interface QualitySyncTaskRow {
   taskNo: string;
   name: string;
-  tantoRev: string | null;
   assigneeUserId: string | null;
 }
 

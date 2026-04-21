@@ -248,11 +248,6 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
     const name = task.name as string;
     const status = new TaskStatus({ status: task.status as ReturnType<TaskStatus['getStatus']> });
 
-    const tantoRev =
-      typeof excelWbs.TANTO_REV === 'string' && excelWbs.TANTO_REV.trim() !== ''
-        ? excelWbs.TANTO_REV.trim()
-        : null;
-
     return Task.create({
       taskNo,
       wbsId,
@@ -260,7 +255,6 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       status,
       phaseId,
       assigneeId,
-      tantoRev,
       periods,
       progressRate: task.progressRate as number | undefined,
     });

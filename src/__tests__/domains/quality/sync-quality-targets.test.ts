@@ -32,7 +32,6 @@ function row(partial: Partial<QualitySyncTaskRow>): QualitySyncTaskRow {
   return {
     taskNo: partial.taskNo ?? 'T-000',
     name: partial.name ?? 'タスク',
-    tantoRev: partial.tantoRev ?? null,
     assigneeUserId: partial.assigneeUserId ?? null,
   };
 }
@@ -52,10 +51,10 @@ describe('SyncQualityTargetsService.syncForWbs', () => {
     mockReviewerRepo.replaceForTarget.mockResolvedValue(undefined);
   });
 
-  it('tantoRevが非空のタスクを評価対象として登録する', async () => {
+  it('-R付きレビュータスクが存在するタスクを評価対象として登録する', async () => {
     mockTaskRepo.findAllForQualitySync.mockResolvedValue([
-      row({ taskNo: 'W-010', name: '設計書A', tantoRev: 'reviewer-user-id', assigneeUserId: 'author-user-id' }),
-      row({ taskNo: 'W-010-R', name: '設計書A', tantoRev: null, assigneeUserId: 'reviewer-user-id' }),
+      row({ taskNo: 'W-010', name: '設計書A', assigneeUserId: 'author-user-id' }),
+      row({ taskNo: 'W-010-R', name: '設計書A', assigneeUserId: 'reviewer-user-id' }),
     ]);
     mockTargetRepo.upsert.mockImplementation(async (t) => ({ ...t, id: 100 }));
 
@@ -73,9 +72,9 @@ describe('SyncQualityTargetsService.syncForWbs', () => {
 
   it('同一評価対象に複数のレビュータスクがある場合、全員をレビュアーとして登録する', async () => {
     mockTaskRepo.findAllForQualitySync.mockResolvedValue([
-      row({ taskNo: 'W-012', name: '設計書C', tantoRev: 'someone', assigneeUserId: 'author-id' }),
-      row({ taskNo: 'W-012-R1', name: '設計書C', tantoRev: null, assigneeUserId: 'reviewer-1' }),
-      row({ taskNo: 'W-012-R2', name: '設計書C', tantoRev: null, assigneeUserId: 'reviewer-2' }),
+      row({ taskNo: 'W-012', name: '設計書C', assigneeUserId: 'author-id' }),
+      row({ taskNo: 'W-012-R1', name: '設計書C', assigneeUserId: 'reviewer-1' }),
+      row({ taskNo: 'W-012-R2', name: '設計書C', assigneeUserId: 'reviewer-2' }),
     ]);
     mockTargetRepo.upsert.mockImplementation(async (t) => ({ ...t, id: 200 }));
 
@@ -91,8 +90,8 @@ describe('SyncQualityTargetsService.syncForWbs', () => {
 
   it('レビュータスクに担当者(assignee)がいない場合はQualityReviewerを作成しない', async () => {
     mockTaskRepo.findAllForQualitySync.mockResolvedValue([
-      row({ taskNo: 'W-020', name: '設計書X', tantoRev: 'some', assigneeUserId: 'author' }),
-      row({ taskNo: 'W-020-R', name: '設計書X', tantoRev: null, assigneeUserId: null }),
+      row({ taskNo: 'W-020', name: '設計書X', assigneeUserId: 'author' }),
+      row({ taskNo: 'W-020-R', name: '設計書X', assigneeUserId: null }),
     ]);
     mockTargetRepo.upsert.mockImplementation(async (t) => ({ ...t, id: 300 }));
 
@@ -103,24 +102,9 @@ describe('SyncQualityTargetsService.syncForWbs', () => {
     expect(reviewersArg).toHaveLength(0);
   });
 
-  it('tantoRevがあるがマッチするレビュータスクがない場合は評価対象のみ作成する', async () => {
+  it('レビュータスクが存在しないタスクは評価対象にしない', async () => {
     mockTaskRepo.findAllForQualitySync.mockResolvedValue([
-      row({ taskNo: 'W-030', name: '設計書Y', tantoRev: 'some', assigneeUserId: 'author' }),
-    ]);
-    mockTargetRepo.upsert.mockImplementation(async (t) => ({ ...t, id: 400 }));
-
-    await service.syncForWbs(1);
-
-    expect(mockTargetRepo.upsert).toHaveBeenCalledTimes(1);
-    const reviewersArg = mockReviewerRepo.replaceForTarget.mock.calls[0][1];
-    expect(reviewersArg).toHaveLength(0);
-  });
-
-  it('tantoRevが空文字/空白のみのタスクは評価対象にしない', async () => {
-    mockTaskRepo.findAllForQualitySync.mockResolvedValue([
-      row({ taskNo: 'W-040', tantoRev: '' }),
-      row({ taskNo: 'W-041', tantoRev: '   ' }),
-      row({ taskNo: 'W-042', tantoRev: null }),
+      row({ taskNo: 'W-030', name: '設計書Y', assigneeUserId: 'author' }),
     ]);
 
     const result = await service.syncForWbs(1);
@@ -134,7 +118,8 @@ describe('SyncQualityTargetsService.syncForWbs', () => {
     const existing = { id: 1, wbsId: 1, taskNo: 'W-010', name: '設計書A' };
     mockTargetRepo.findByWbsAndTaskNo.mockResolvedValue(existing);
     mockTaskRepo.findAllForQualitySync.mockResolvedValue([
-      row({ taskNo: 'W-010', name: '設計書A', tantoRev: 'r', assigneeUserId: 'a' }),
+      row({ taskNo: 'W-010', name: '設計書A', assigneeUserId: 'author' }),
+      row({ taskNo: 'W-010-R', name: '設計書A', assigneeUserId: 'reviewer' }),
     ]);
     mockTargetRepo.upsert.mockImplementation(async (t) => ({ ...t, id: 1 }));
 
@@ -156,16 +141,34 @@ describe('SyncQualityTargetsService.syncForWbs', () => {
 
   it('taskNoの前方一致は"-R"で始まる必要があり、"-R"以外の接尾辞タスクを巻き込まない', async () => {
     mockTaskRepo.findAllForQualitySync.mockResolvedValue([
-      row({ taskNo: 'W-010', tantoRev: 'r', assigneeUserId: 'author' }),
-      row({ taskNo: 'W-0101', tantoRev: null, assigneeUserId: 'other' }),
-      row({ taskNo: 'W-010-R', tantoRev: null, assigneeUserId: 'reviewer' }),
+      row({ taskNo: 'W-010', assigneeUserId: 'author' }),
+      row({ taskNo: 'W-0101', assigneeUserId: 'other' }),
+      row({ taskNo: 'W-010-R', assigneeUserId: 'reviewer' }),
     ]);
     mockTargetRepo.upsert.mockImplementation(async (t) => ({ ...t, id: 500 }));
 
     await service.syncForWbs(1);
 
+    expect(mockTargetRepo.upsert).toHaveBeenCalledTimes(1);
+    const upsertArg = mockTargetRepo.upsert.mock.calls[0][0];
+    expect(upsertArg.taskNo).toBe('W-010');
+
     const reviewersArg = mockReviewerRepo.replaceForTarget.mock.calls[0][1];
     expect(reviewersArg).toHaveLength(1);
     expect(reviewersArg[0].reviewTaskNo).toBe('W-010-R');
+  });
+
+  it('W-010-R 自身は評価対象にならない(自己一致を避ける)', async () => {
+    mockTaskRepo.findAllForQualitySync.mockResolvedValue([
+      row({ taskNo: 'W-010', assigneeUserId: 'author' }),
+      row({ taskNo: 'W-010-R', assigneeUserId: 'reviewer' }),
+    ]);
+    mockTargetRepo.upsert.mockImplementation(async (t) => ({ ...t, id: 600 }));
+
+    await service.syncForWbs(1);
+
+    expect(mockTargetRepo.upsert).toHaveBeenCalledTimes(1);
+    const upsertArg = mockTargetRepo.upsert.mock.calls[0][0];
+    expect(upsertArg.taskNo).toBe('W-010');
   });
 });

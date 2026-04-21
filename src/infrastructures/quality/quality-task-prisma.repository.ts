@@ -13,14 +13,12 @@ export class QualityTaskPrismaRepository implements IQualityTaskRepository {
       select: {
         taskNo: true,
         name: true,
-        tantoRev: true,
         assignee: { select: { assigneeId: true } },
       },
     });
     return rows.map((r) => ({
       taskNo: r.taskNo,
       name: r.name,
-      tantoRev: r.tantoRev,
       assigneeUserId: r.assignee?.assigneeId ?? null,
     }));
   }

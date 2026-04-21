@@ -91,7 +91,6 @@ erDiagram
   Int phaseId FK "nullable"
   String name
   Int assigneeId FK "nullable"
-  String tantoRev "nullable"
   TaskStatus status
   Decimal progressRate "nullable"
   DateTime createdAt
@@ -446,7 +445,6 @@ erDiagram
   - `phaseId`: 
   - `name`: 
   - `assigneeId`: 
-  - `tantoRev`: 
   - `status`: 
   - `progressRate`: 
   - `createdAt`: 
