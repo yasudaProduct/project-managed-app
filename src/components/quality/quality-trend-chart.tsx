@@ -101,16 +101,6 @@ export function QualityTrendChart({
                   connectNulls
                 />
                 <Line
-                  yAxisId="density"
-                  type="monotone"
-                  dataKey="majorDefectDensity"
-                  name="Major指摘密度"
-                  stroke="#b91c1c"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  connectNulls
-                />
-                <Line
                   yAxisId="review"
                   type="monotone"
                   dataKey="reviewDensity"

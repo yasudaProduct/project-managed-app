@@ -38,7 +38,6 @@ export interface QualityMetricsSummary {
   majorCount: number;
   reviewDensity: number | null;
   defectDensity: number | null;
-  majorDefectDensity: number | null;
   majorRatio: number | null;
   status: QualityStatus | null;
 }
@@ -96,7 +95,6 @@ export interface WbsQualitySummary {
   reviewedTargetCount: number;
   reviewDensity: QualityIndicator;
   defectDensity: QualityIndicator;
-  majorDefectDensity: QualityIndicator;
   reviewCompletionRate: QualityIndicator;
 }
 
@@ -109,7 +107,6 @@ export interface QualityTrendPoint {
   cumulativeMajor: number;
   cumulativeReviewManHours: number;
   defectDensity: number | null;
-  majorDefectDensity: number | null;
   reviewDensity: number | null;
 }
 
@@ -437,10 +434,6 @@ export class QualityApplicationService implements IQualityApplicationService {
       totalFindingCount,
       totalSize,
     );
-    const majorDefectDensityValue = this.calc.calcMajorDefectDensity(
-      totalMajorCount,
-      totalSize,
-    );
     const reviewCompletionRateValue = this.calc.calcReviewCompletionRate(
       reviewedTargetCount,
       targets.length,
@@ -457,7 +450,6 @@ export class QualityApplicationService implements IQualityApplicationService {
       reviewedTargetCount,
       reviewDensity: { value: reviewDensityValue, status: null },
       defectDensity: { value: defectDensityValue, status: null },
-      majorDefectDensity: { value: majorDefectDensityValue, status: null },
       reviewCompletionRate: { value: reviewCompletionRateValue, status: null },
     };
   }
@@ -602,10 +594,6 @@ export class QualityApplicationService implements IQualityApplicationService {
         cumulativeMajor,
         cumulativeReviewManHours,
         defectDensity: this.calc.calcDefectDensity(cumulativeFindings, totalSize),
-        majorDefectDensity: this.calc.calcMajorDefectDensity(
-          cumulativeMajor,
-          totalSize,
-        ),
         reviewDensity: this.calc.calcReviewDensity(
           cumulativeReviewManHours,
           totalSize,

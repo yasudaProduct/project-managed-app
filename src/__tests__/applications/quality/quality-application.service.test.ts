@@ -186,7 +186,6 @@ describe('QualityApplicationService', () => {
       expect(summary.totalReviewManHours).toBe(2);
       expect(summary.reviewedTargetCount).toBe(1);
       expect(summary.defectDensity.value).toBeCloseTo(5 / 30);
-      expect(summary.majorDefectDensity.value).toBeCloseTo(1 / 30);
       expect(summary.reviewDensity.value).toBeCloseTo(2 / 30);
       expect(summary.reviewCompletionRate.value).toBeCloseTo(0.5);
       expect(summary.defectDensity.status).toBeNull();

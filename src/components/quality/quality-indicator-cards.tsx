@@ -42,11 +42,6 @@ export function QualityIndicatorCards({ summary }: QualityIndicatorCardsProps) {
       hint: `${summary.totalFindingCount}件 / ${summary.totalSize.toFixed(1)}`,
     },
     {
-      label: "Major指摘密度",
-      value: formatDensity(summary.majorDefectDensity.value, summary.sizeUnit),
-      hint: `Major ${summary.totalMajorCount}件`,
-    },
-    {
       label: "レビュー実施率",
       value: formatPercent(summary.reviewCompletionRate.value),
       hint: `${summary.reviewedTargetCount} / ${summary.targetCount} 対象`,

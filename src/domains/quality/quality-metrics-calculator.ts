@@ -12,11 +12,6 @@ export class QualityMetricsCalculator {
     return defectCount / size;
   }
 
-  calcMajorDefectDensity(majorCount: number, size: number): number | null {
-    if (size === 0) return null;
-    return majorCount / size;
-  }
-
   calcMajorRatio(majorCount: number, totalCount: number): number | null {
     if (totalCount === 0) return null;
     return majorCount / totalCount;
