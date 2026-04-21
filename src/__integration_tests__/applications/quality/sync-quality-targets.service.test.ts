@@ -47,7 +47,6 @@ async function createTask(
     taskNo: string;
     name: string;
     phaseId: number;
-    tantoRev?: string | null;
     assigneeId?: number | null;
   },
 ): Promise<number> {
@@ -57,7 +56,6 @@ async function createTask(
       taskNo: args.taskNo,
       name: args.name,
       phaseId: args.phaseId,
-      tantoRev: args.tantoRev ?? null,
       assigneeId: args.assigneeId ?? null,
       status: 'NOT_STARTED',
     },
@@ -101,31 +99,31 @@ describe('SyncQualityTargetsService Integration Tests', () => {
   });
 
   describe('syncForWbs', () => {
-    it('tantoRev が非空の WbsTask のみ評価対象として作成される', async () => {
+    it('-R付きレビュータスクが存在する WbsTask のみ評価対象として作成される', async () => {
       const authorAssigneeId = await ensureAssignee(global.prisma, testIds.wbsId, 'author-1');
+      const reviewer1AssigneeId = await ensureAssignee(global.prisma, testIds.wbsId, 'reviewer-1');
 
+      // 評価対象 (W-001): -R付きレビュータスクあり
       await createTask(global.prisma, {
         wbsId: testIds.wbsId,
         taskNo: 'W-001',
         name: '設計書A',
         phaseId: testIds.phaseId,
-        tantoRev: 'reviewer-1',
         assigneeId: authorAssigneeId,
       });
+      await createTask(global.prisma, {
+        wbsId: testIds.wbsId,
+        taskNo: 'W-001-R',
+        name: '設計書A レビュー',
+        phaseId: testIds.phaseId,
+        assigneeId: reviewer1AssigneeId,
+      });
+      // 評価対象外 (W-002): レビュータスクなし
       await createTask(global.prisma, {
         wbsId: testIds.wbsId,
         taskNo: 'W-002',
         name: 'コーディングB',
         phaseId: testIds.phaseId,
-        tantoRev: null,
-        assigneeId: authorAssigneeId,
-      });
-      await createTask(global.prisma, {
-        wbsId: testIds.wbsId,
-        taskNo: 'W-003',
-        name: '設計書C',
-        phaseId: testIds.phaseId,
-        tantoRev: '   ',
         assigneeId: authorAssigneeId,
       });
 
@@ -150,7 +148,6 @@ describe('SyncQualityTargetsService Integration Tests', () => {
         taskNo: 'W-010',
         name: '設計書X',
         phaseId: testIds.phaseId,
-        tantoRev: 'gate',
         assigneeId: authorAssigneeId,
       });
       await createTask(global.prisma, {
@@ -178,7 +175,7 @@ describe('SyncQualityTargetsService Integration Tests', () => {
       expect(reviewers.map((r) => r.reviewTaskNo).sort()).toEqual(['W-010-R1', 'W-010-R2']);
     });
 
-    it('レビュータスクに assignee がない場合はスキップされる', async () => {
+    it('レビュータスクに assignee がない場合はレビュアー登録をスキップする', async () => {
       const authorAssigneeId = await ensureAssignee(global.prisma, testIds.wbsId, 'author-1');
 
       await createTask(global.prisma, {
@@ -186,7 +183,6 @@ describe('SyncQualityTargetsService Integration Tests', () => {
         taskNo: 'W-020',
         name: '設計書Y',
         phaseId: testIds.phaseId,
-        tantoRev: 'gate',
         assigneeId: authorAssigneeId,
       });
       await createTask(global.prisma, {
@@ -205,54 +201,59 @@ describe('SyncQualityTargetsService Integration Tests', () => {
       expect(reviewers).toHaveLength(0);
     });
 
-    it('マッチするレビュータスクが無くても評価対象は作成される', async () => {
+    it('レビュータスクが存在しないタスクは評価対象にならない', async () => {
       const authorAssigneeId = await ensureAssignee(global.prisma, testIds.wbsId, 'author-1');
       await createTask(global.prisma, {
         wbsId: testIds.wbsId,
         taskNo: 'W-030',
         name: '設計書Z',
         phaseId: testIds.phaseId,
-        tantoRev: 'gate',
         assigneeId: authorAssigneeId,
       });
 
       const result = await service.syncForWbs(testIds.wbsId);
 
-      expect(result.created).toBe(1);
+      expect(result.created).toBe(0);
       const target = await targetRepo.findByWbsAndTaskNo(testIds.wbsId, 'W-030');
-      expect(target).not.toBeNull();
-      const reviewers = await reviewerRepo.findByTarget(target!.id!);
-      expect(reviewers).toHaveLength(0);
+      expect(target).toBeNull();
     });
 
-    it('再同期で tantoRev が外れたタスクは isActive=false 化される', async () => {
+    it('再同期でレビュータスクが削除されたタスクは isActive=false 化される', async () => {
       const authorAssigneeId = await ensureAssignee(global.prisma, testIds.wbsId, 'author-1');
+      const reviewer1AssigneeId = await ensureAssignee(global.prisma, testIds.wbsId, 'reviewer-1');
 
-      const firstIds = [
-        await createTask(global.prisma, {
-          wbsId: testIds.wbsId,
-          taskNo: 'W-040',
-          name: '設計書P',
-          phaseId: testIds.phaseId,
-          tantoRev: 'gate',
-          assigneeId: authorAssigneeId,
-        }),
-        await createTask(global.prisma, {
-          wbsId: testIds.wbsId,
-          taskNo: 'W-041',
-          name: '設計書Q',
-          phaseId: testIds.phaseId,
-          tantoRev: 'gate',
-          assigneeId: authorAssigneeId,
-        }),
-      ];
+      await createTask(global.prisma, {
+        wbsId: testIds.wbsId,
+        taskNo: 'W-040',
+        name: '設計書P',
+        phaseId: testIds.phaseId,
+        assigneeId: authorAssigneeId,
+      });
+      await createTask(global.prisma, {
+        wbsId: testIds.wbsId,
+        taskNo: 'W-040-R',
+        name: '設計書P レビュー',
+        phaseId: testIds.phaseId,
+        assigneeId: reviewer1AssigneeId,
+      });
+      await createTask(global.prisma, {
+        wbsId: testIds.wbsId,
+        taskNo: 'W-041',
+        name: '設計書Q',
+        phaseId: testIds.phaseId,
+        assigneeId: authorAssigneeId,
+      });
+      const w041ReviewId = await createTask(global.prisma, {
+        wbsId: testIds.wbsId,
+        taskNo: 'W-041-R',
+        name: '設計書Q レビュー',
+        phaseId: testIds.phaseId,
+        assigneeId: reviewer1AssigneeId,
+      });
       await service.syncForWbs(testIds.wbsId);
 
-      // W-041 から tantoRev を外す
-      await global.prisma.wbsTask.update({
-        where: { id: firstIds[1] },
-        data: { tantoRev: null },
-      });
+      // W-041 のレビュータスクを削除
+      await global.prisma.wbsTask.delete({ where: { id: w041ReviewId } });
 
       const result = await service.syncForWbs(testIds.wbsId);
 
@@ -265,13 +266,20 @@ describe('SyncQualityTargetsService Integration Tests', () => {
 
     it('再同期時は既存の評価対象IDが保持される', async () => {
       const authorAssigneeId = await ensureAssignee(global.prisma, testIds.wbsId, 'author-1');
+      const reviewer1AssigneeId = await ensureAssignee(global.prisma, testIds.wbsId, 'reviewer-1');
       await createTask(global.prisma, {
         wbsId: testIds.wbsId,
         taskNo: 'W-050',
         name: '設計書R',
         phaseId: testIds.phaseId,
-        tantoRev: 'gate',
         assigneeId: authorAssigneeId,
+      });
+      await createTask(global.prisma, {
+        wbsId: testIds.wbsId,
+        taskNo: 'W-050-R',
+        name: '設計書R レビュー',
+        phaseId: testIds.phaseId,
+        assigneeId: reviewer1AssigneeId,
       });
 
       await service.syncForWbs(testIds.wbsId);
@@ -294,7 +302,6 @@ describe('SyncQualityTargetsService Integration Tests', () => {
         taskNo: 'W-060',
         name: '設計書S',
         phaseId: testIds.phaseId,
-        tantoRev: 'gate',
         assigneeId: authorAssigneeId,
       });
       const reviewTaskId = await createTask(global.prisma, {
@@ -321,7 +328,7 @@ describe('SyncQualityTargetsService Integration Tests', () => {
       expect(after[0].reviewerUserId).toBe('reviewer-2');
     });
 
-    it('"-R"プレフィックスは"-R"でない接尾辞タスク(例:W-0101)を巻き込まない', async () => {
+    it('"-R"プレフィックスは"-R"でない接尾辞タスク(例:W-0701)を巻き込まない', async () => {
       const authorAssigneeId = await ensureAssignee(global.prisma, testIds.wbsId, 'author-1');
       const reviewer1AssigneeId = await ensureAssignee(global.prisma, testIds.wbsId, 'reviewer-1');
 
@@ -330,7 +337,6 @@ describe('SyncQualityTargetsService Integration Tests', () => {
         taskNo: 'W-070',
         name: '設計書T',
         phaseId: testIds.phaseId,
-        tantoRev: 'gate',
         assigneeId: authorAssigneeId,
       });
       await createTask(global.prisma, {
@@ -351,9 +357,14 @@ describe('SyncQualityTargetsService Integration Tests', () => {
       await service.syncForWbs(testIds.wbsId);
 
       const target = await targetRepo.findByWbsAndTaskNo(testIds.wbsId, 'W-070');
+      expect(target).not.toBeNull();
       const reviewers = await reviewerRepo.findByTarget(target!.id!);
       expect(reviewers).toHaveLength(1);
       expect(reviewers[0].reviewTaskNo).toBe('W-070-R');
+
+      // W-0701 が誤って評価対象にならないこと
+      const adjacentTarget = await targetRepo.findByWbsAndTaskNo(testIds.wbsId, 'W-0701');
+      expect(adjacentTarget).toBeNull();
     });
   });
 });

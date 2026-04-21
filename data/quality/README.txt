@@ -3,12 +3,14 @@
 ■ MySQL wbs（品質評価対象の同期元）
   - ファイル: mysql-wbs-quality-eval-sample.tsv
   - WBS インポート完了後、API から SyncQualityTargetsService.syncForWbs が
-    PostgreSQL に取り込まれた WbsTask を読み、tantoRev が入っている
+    PostgreSQL に取り込まれた WbsTask を読み、同一 WBS 内に taskNo が
+    「{自taskNo}-R...」の形式で前方一致する別の WbsTask が 1 件以上存在する
     タスクを評価対象（1 タスク = 1 評価対象）として登録します。
-  - レビュータスクは、taskNo が「{評価対象taskNo}-R...」の形式で前方一致する
-    別の WbsTask として扱います。そのレビュータスクの担当者 (TANTO) が
-    レビュアー（reviewerUserId = Users.id）になります。担当者が設定されていない
-    レビュータスクはスキップされます。
+  - レビュータスク = 上記前方一致で抽出された別の WbsTask。そのレビュータスクの
+    担当者 (TANTO) がレビュアー（reviewerUserId = Users.id）になります。
+    担当者が設定されていないレビュータスクはスキップされます。
+  - 評価対象の正は「-R レビュータスクが存在するか」のみで判定します。
+    WbsTask 側に評価対象フラグとなる列は存在しません。
   - ExcelWbsRepository.findByWbsName の実装では、引数 wbsName に対して
     MySQL の PROJECT_ID 列で一致検索しています。そのため PostgreSQL 側の
     WBS 名（prisma/mock-data の「新規機能開発A」など）と MySQL の PROJECT_ID を

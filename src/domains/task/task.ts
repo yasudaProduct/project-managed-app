@@ -19,7 +19,6 @@ export class Task {
     public phase?: Phase;
     public assigneeId?: number;
     public assignee?: Assignee;
-    public tantoRev?: string | null;
     public periods?: Period[];
     public workRecords?: WorkRecord[];
     public progressRate?: number;
@@ -32,7 +31,6 @@ export class Task {
         wbsId: number;
         name: string;
         assigneeId?: number;
-        tantoRev?: string | null;
         status: TaskStatus;
         phaseId?: number;
         phase?: Phase;
@@ -48,7 +46,6 @@ export class Task {
         this.wbsId = args.wbsId;
         this.name = args.name;
         this.assigneeId = args.assigneeId;
-        this.tantoRev = args.tantoRev;
         this.status = args.status;
         this.phaseId = args.phaseId;
         this.phase = args.phase;
@@ -66,7 +63,6 @@ export class Task {
         name: string;
         phaseId?: number;
         assigneeId?: number;
-        tantoRev?: string | null;
         status: TaskStatus;
         periods?: Period[];
         progressRate?: number;
@@ -83,7 +79,6 @@ export class Task {
             status: TaskStatus;
             assigneeId?: number;
             assignee?: Assignee;
-            tantoRev?: string | null;
             phaseId?: number;
             phase?: Phase;
             periods?: Period[];

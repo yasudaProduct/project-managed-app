@@ -371,7 +371,6 @@ describe('TaskRepository', () => {
           wbsId: wbsId,
           phaseId: 1,
           assigneeId: 1,
-          tantoRev: null,
           status: 'NOT_STARTED',
           progressRate: undefined,
         }

@@ -25,7 +25,8 @@ export class SyncQualityTargetsService {
   /**
    * PostgreSQLに取り込まれたWbsTaskを起点に定量品質評価データを同期する。
    *
-   * - 評価対象 = tantoRev が非空の WbsTask（1タスク=1評価対象）
+   * - 評価対象 = 同一 WBS 内に `^{自taskNo}-R.*$` にマッチするレビュータスクが
+   *   1件以上存在する WbsTask（1タスク=1評価対象）
    * - レビュータスク = taskNo が `^{評価対象taskNo}-R.*$` にマッチする WbsTask
    * - reviewerUserId = レビュータスクの assignee から解決した Users.id
    *   （assignee 未設定のレビュータスクはスキップする）
@@ -33,23 +34,23 @@ export class SyncQualityTargetsService {
   async syncForWbs(wbsId: number): Promise<SyncResult> {
     const tasks = await this.taskRepo.findAllForQualitySync(wbsId);
 
-    const reviewTargetTasks = tasks.filter(
-      (t) => typeof t.tantoRev === 'string' && t.tantoRev.trim() !== '',
+    const targetTasks = tasks.filter((t) =>
+      tasks.some((r) => r !== t && r.taskNo.startsWith(`${t.taskNo}-R`)),
     );
 
     let created = 0;
     let updated = 0;
     const activeTaskNos: string[] = [];
 
-    for (const task of reviewTargetTasks) {
-      activeTaskNos.push(task.taskNo);
+    for (const target of targetTasks) {
+      activeTaskNos.push(target.taskNo);
 
-      const existing = await this.targetRepo.findByWbsAndTaskNo(wbsId, task.taskNo);
+      const existing = await this.targetRepo.findByWbsAndTaskNo(wbsId, target.taskNo);
 
-      const target = existing
-        ?? QualityReviewTarget.create({ wbsId, taskNo: task.taskNo, name: task.name });
+      const targetEntity = existing
+        ?? QualityReviewTarget.create({ wbsId, taskNo: target.taskNo, name: target.name });
 
-      const saved = await this.targetRepo.upsert(target);
+      const saved = await this.targetRepo.upsert(targetEntity);
 
       if (existing) {
         updated++;
@@ -57,8 +58,9 @@ export class SyncQualityTargetsService {
         created++;
       }
 
-      const reviewTaskPrefix = `${task.taskNo}-R`;
-      const reviewTasks = tasks.filter((t) => t.taskNo.startsWith(reviewTaskPrefix));
+      const reviewTasks = tasks.filter(
+        (t) => t !== target && t.taskNo.startsWith(`${target.taskNo}-R`),
+      );
 
       const reviewers = reviewTasks
         .filter((rt) => !!rt.assigneeUserId)
