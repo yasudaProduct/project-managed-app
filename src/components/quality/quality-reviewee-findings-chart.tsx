@@ -52,7 +52,6 @@ export function QualityRevieweeFindingsChart({ data }: Props) {
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="count" name="指摘数" fill="#2563eb" />
-                <Bar dataKey="majorCount" name="Major" fill="#b91c1c" />
               </BarChart>
             </ResponsiveContainer>
           </div>

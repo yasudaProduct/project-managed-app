@@ -12,14 +12,14 @@ import type {
 } from '@/applications/quality/i-quality-metrics.repository';
 import { QualitySizeMetric } from '@/domains/quality/quality-size-metric';
 import { QualityFinding } from '@/domains/quality/quality-finding';
-import { QualitySizeUnit, QualitySeverity } from '@/domains/quality/value-objects/quality-enums';
+import { QualitySizeUnit, FindingSource } from '@/domains/quality/value-objects/quality-enums';
 
 function toSizeUnit(val: string): QualitySizeUnit {
   return QualitySizeUnit[val as keyof typeof QualitySizeUnit];
 }
 
-function toSeverity(val: string): QualitySeverity {
-  return QualitySeverity[val as keyof typeof QualitySeverity];
+function toFindingSource(val: string): FindingSource {
+  return FindingSource[val as keyof typeof FindingSource] ?? FindingSource.REVIEW;
 }
 
 @injectable()
@@ -83,7 +83,7 @@ export class QualityFindingPrismaRepository implements IQualityFindingRepository
     const rows = await prisma.qualityFinding.findMany({
       where: {
         targetId,
-        ...(filter?.severity ? { severity: filter.severity as $Enums.QualitySeverity } : {}),
+        ...(filter?.source ? { source: filter.source as $Enums.FindingSource } : {}),
         ...(filter?.fromDate || filter?.toDate
           ? {
               foundAt: {
@@ -99,7 +99,7 @@ export class QualityFindingPrismaRepository implements IQualityFindingRepository
       QualityFinding.reconstruct({
         id: r.id,
         targetId: r.targetId,
-        severity: toSeverity(r.severity),
+        source: toFindingSource(r.source),
         category: r.category ?? undefined,
         description: r.description ?? undefined,
         foundAt: r.foundAt,
@@ -119,7 +119,7 @@ export class QualityFindingPrismaRepository implements IQualityFindingRepository
       QualityFinding.reconstruct({
         id: r.id,
         targetId: r.targetId,
-        severity: toSeverity(r.severity),
+        source: toFindingSource(r.source),
         category: r.category ?? undefined,
         description: r.description ?? undefined,
         foundAt: r.foundAt,
@@ -133,7 +133,7 @@ export class QualityFindingPrismaRepository implements IQualityFindingRepository
     const row = await prisma.qualityFinding.create({
       data: {
         targetId: finding.targetId,
-        severity: finding.severity as $Enums.QualitySeverity,
+        source: finding.source as $Enums.FindingSource,
         category: finding.category,
         description: finding.description,
         foundAt: finding.foundAt,
@@ -142,7 +142,7 @@ export class QualityFindingPrismaRepository implements IQualityFindingRepository
     return QualityFinding.reconstruct({
       id: row.id,
       targetId: row.targetId,
-      severity: toSeverity(row.severity),
+      source: toFindingSource(row.source),
       category: row.category ?? undefined,
       description: row.description ?? undefined,
       foundAt: row.foundAt,
@@ -155,7 +155,7 @@ export class QualityFindingPrismaRepository implements IQualityFindingRepository
     const row = await prisma.qualityFinding.update({
       where: { id: finding.id! },
       data: {
-        severity: finding.severity as $Enums.QualitySeverity,
+        source: finding.source as $Enums.FindingSource,
         category: finding.category,
         description: finding.description,
         foundAt: finding.foundAt,
@@ -164,7 +164,7 @@ export class QualityFindingPrismaRepository implements IQualityFindingRepository
     return QualityFinding.reconstruct({
       id: row.id,
       targetId: row.targetId,
-      severity: toSeverity(row.severity),
+      source: toFindingSource(row.source),
       category: row.category ?? undefined,
       description: row.description ?? undefined,
       foundAt: row.foundAt,
@@ -177,12 +177,13 @@ export class QualityFindingPrismaRepository implements IQualityFindingRepository
     await prisma.qualityFinding.delete({ where: { id } });
   }
 
-  async countByTarget(targetId: number): Promise<{ total: number; major: number }> {
-    const [total, major] = await Promise.all([
-      prisma.qualityFinding.count({ where: { targetId } }),
-      prisma.qualityFinding.count({ where: { targetId, severity: 'MAJOR' } }),
-    ]);
-    return { total, major };
+  async countByTarget(targetId: number, source?: FindingSource): Promise<{ total: number }> {
+    const where = {
+      targetId,
+      ...(source ? { source: source as $Enums.FindingSource } : {}),
+    };
+    const total = await prisma.qualityFinding.count({ where });
+    return { total };
   }
 
   async deleteByTargetId(targetId: number): Promise<number> {
@@ -262,22 +263,19 @@ export class QualityMetricsReadPrismaRepository implements IQualityMetricsReadRe
             }
           : {}),
       },
-      select: { foundAt: true, severity: true },
+      select: { foundAt: true },
       orderBy: { foundAt: 'asc' },
     });
 
-    const byDate = new Map<string, { total: number; major: number }>();
+    const byDate = new Map<string, number>();
     for (const row of rows) {
       const key = row.foundAt.toISOString().split('T')[0];
-      const cur = byDate.get(key) ?? { total: 0, major: 0 };
-      cur.total++;
-      if (row.severity === 'MAJOR') cur.major++;
-      byDate.set(key, cur);
+      byDate.set(key, (byDate.get(key) ?? 0) + 1);
     }
 
-    return Array.from(byDate.entries()).map(([dateStr, counts]) => ({
+    return Array.from(byDate.entries()).map(([dateStr, total]) => ({
       date: new Date(dateStr),
-      ...counts,
+      total,
     }));
   }
 

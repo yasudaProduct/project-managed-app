@@ -15,7 +15,7 @@ import type {
   FindingsByCategory,
 } from "@/applications/quality/quality-application.service";
 import { SyncQualityTargetsService, SyncResult } from "@/applications/quality/sync-quality-targets.service";
-import { QualitySizeUnit, QualitySeverity } from "@/domains/quality/value-objects/quality-enums";
+import { QualitySizeUnit, FindingSource } from "@/domains/quality/value-objects/quality-enums";
 import {
   FindingCsvRow,
   SizeCsvRow,
@@ -90,7 +90,7 @@ export async function getQualityFindings(targetId: number) {
   return findings.map((f) => ({
     id: f.id!,
     targetId: f.targetId,
-    severity: f.severity,
+    source: f.source,
     category: f.category ?? null,
     description: f.description ?? null,
     foundAt: f.foundAt.toISOString(),
@@ -113,7 +113,7 @@ export async function registerQualityFinding(
   wbsId: number,
   input: {
     targetId: number;
-    severity: QualitySeverity;
+    source?: FindingSource;
     category?: string;
     description?: string;
     foundAt: string;
@@ -122,7 +122,7 @@ export async function registerQualityFinding(
   try {
     const finding = await toQualityAppService().registerFinding({
       targetId: input.targetId,
-      severity: input.severity,
+      source: input.source,
       category: input.category,
       description: input.description,
       foundAt: new Date(input.foundAt),
@@ -139,7 +139,7 @@ export async function updateQualityFinding(
   input: {
     id: number;
     targetId: number;
-    severity: QualitySeverity;
+    source?: FindingSource;
     category?: string;
     description?: string;
     foundAt: string;
@@ -149,7 +149,7 @@ export async function updateQualityFinding(
     await toQualityAppService().updateFinding({
       id: input.id,
       targetId: input.targetId,
-      severity: input.severity,
+      source: input.source,
       category: input.category,
       description: input.description,
       foundAt: new Date(input.foundAt),
@@ -270,7 +270,7 @@ export async function importQualityFindingsCsv(
     const res = await app.importFindings(
       targetId,
       items.map((x) => ({
-        severity: x.severity,
+        source: x.source,
         category: x.category,
         description: x.description,
         foundAt: x.foundAt,

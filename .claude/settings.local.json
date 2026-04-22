@@ -25,7 +25,11 @@
       "Bash(npx eslint:*)",
       "Bash(npx prisma migrate:*)",
       "Bash(git add:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(npx jest:*)",
+      "Bash(npx prisma:*)",
+      "WebFetch(domain:www.ipa.go.jp)",
+      "Bash(pdftotext:*)"
     ],
     "deny": [],
     "additionalDirectories": [

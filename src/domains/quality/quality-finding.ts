@@ -1,9 +1,9 @@
-import { QualitySeverity } from './value-objects/quality-enums';
+import { FindingSource } from './value-objects/quality-enums';
 
 export class QualityFinding {
   public readonly id?: number;
   public readonly targetId: number;
-  public readonly severity: QualitySeverity;
+  public readonly source: FindingSource;
   public readonly category?: string;
   public readonly description?: string;
   public readonly foundAt: Date;
@@ -13,7 +13,7 @@ export class QualityFinding {
   private constructor(args: {
     id?: number;
     targetId: number;
-    severity: QualitySeverity;
+    source: FindingSource;
     category?: string;
     description?: string;
     foundAt: Date;
@@ -22,7 +22,7 @@ export class QualityFinding {
   }) {
     this.id = args.id;
     this.targetId = args.targetId;
-    this.severity = args.severity;
+    this.source = args.source;
     this.category = args.category;
     this.description = args.description;
     this.foundAt = args.foundAt;
@@ -32,7 +32,7 @@ export class QualityFinding {
 
   public static create(args: {
     targetId: number;
-    severity: QualitySeverity;
+    source?: FindingSource;
     category?: string;
     description?: string;
     foundAt: Date;
@@ -41,7 +41,7 @@ export class QualityFinding {
 
     return new QualityFinding({
       targetId: args.targetId,
-      severity: args.severity,
+      source: args.source ?? FindingSource.REVIEW,
       category: args.category,
       description: args.description,
       foundAt: args.foundAt,
@@ -51,17 +51,16 @@ export class QualityFinding {
   public static reconstruct(args: {
     id: number;
     targetId: number;
-    severity: QualitySeverity;
+    source?: FindingSource;
     category?: string;
     description?: string;
     foundAt: Date;
     createdAt?: Date;
     updatedAt?: Date;
   }): QualityFinding {
-    return new QualityFinding(args);
-  }
-
-  public isMajor(): boolean {
-    return this.severity === QualitySeverity.MAJOR;
+    return new QualityFinding({
+      ...args,
+      source: args.source ?? FindingSource.REVIEW,
+    });
   }
 }

@@ -52,7 +52,6 @@ export function QualityCategoryFindingsChart({ data }: Props) {
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="count" name="指摘数" fill="#16a34a" />
-                <Bar dataKey="majorCount" name="Major" fill="#b91c1c" />
               </BarChart>
             </ResponsiveContainer>
           </div>

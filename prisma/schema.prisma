@@ -587,7 +587,7 @@ model QualitySizeMetric {
 model QualityFinding {
   id          Int                  @id @default(autoincrement())
   targetId    Int
-  severity    QualitySeverity      @default(MINOR)
+  source      FindingSource        @default(REVIEW)
   category    String?
   description String?
   foundAt     DateTime             @db.Date
@@ -596,7 +596,7 @@ model QualityFinding {
   target      QualityReviewTarget  @relation(fields: [targetId], references: [id], onDelete: Cascade)
 
   @@index([targetId, foundAt])
-  @@index([severity])
+  @@index([source])
   @@map("quality_finding")
 }
 
@@ -620,10 +620,9 @@ enum QualitySizeUnit {
   TEST_CASE
 }
 
-enum QualitySeverity {
-  MAJOR
-  MINOR
-  INFO
+enum FindingSource {
+  REVIEW
+  TEST
 }
 
 // システム全体設定（シングルトン）

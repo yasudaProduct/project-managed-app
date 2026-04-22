@@ -13,9 +13,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { QualityTrendPoint } from "@/applications/quality/quality-application.service";
+import { QualitySizeUnit } from "@/domains/quality/value-objects/quality-enums";
+import { getMetricDefinitions } from "@/domains/quality/value-objects/metric-definition";
+
+const LINE_COLORS = ["#ef4444", "#2563eb", "#10b981", "#f59e0b"];
 
 interface QualityTrendChartProps {
   data: QualityTrendPoint[];
+  sizeUnit?: QualitySizeUnit | "MAN_HOUR";
   fromDate?: string;
   toDate?: string;
   onDateChange?: (fromDate: string, toDate: string) => void;
@@ -23,10 +28,24 @@ interface QualityTrendChartProps {
 
 export function QualityTrendChart({
   data,
+  sizeUnit = "MAN_HOUR",
   fromDate = "",
   toDate = "",
   onDateChange,
 }: QualityTrendChartProps) {
+  const definitions = getMetricDefinitions(sizeUnit);
+
+  // Flatten metrics for Recharts (it doesn't support nested dataKey well)
+  const flatData = data.map((point) => {
+    const flat: Record<string, unknown> = { ...point };
+    if (point.metrics) {
+      for (const [key, value] of Object.entries(point.metrics)) {
+        flat[`metric_${key}`] = value;
+      }
+    }
+    return flat;
+  });
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 flex-wrap gap-2">
@@ -57,31 +76,23 @@ export function QualityTrendChart({
         ) : (
           <div className="w-full h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data}>
+              <LineChart data={flatData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis
-                  yAxisId="density"
-                  orientation="left"
-                  tick={{ fontSize: 11 }}
-                  label={{
-                    value: "指摘密度",
-                    angle: -90,
-                    position: "insideLeft",
-                    style: { fontSize: 11, fill: "#6b7280" },
-                  }}
-                />
-                <YAxis
-                  yAxisId="review"
-                  orientation="right"
-                  tick={{ fontSize: 11 }}
-                  label={{
-                    value: "レビュー密度",
-                    angle: 90,
-                    position: "insideRight",
-                    style: { fontSize: 11, fill: "#6b7280" },
-                  }}
-                />
+                {definitions.map((def, i) => (
+                  <YAxis
+                    key={def.key}
+                    yAxisId={def.key}
+                    orientation={i === 0 ? "left" : "right"}
+                    tick={{ fontSize: 11 }}
+                    label={{
+                      value: def.label,
+                      angle: i === 0 ? -90 : 90,
+                      position: i === 0 ? "insideLeft" : "insideRight",
+                      style: { fontSize: 11, fill: "#6b7280" },
+                    }}
+                  />
+                ))}
                 <Tooltip
                   formatter={(value) => {
                     if (value === null || value === undefined) return "-";
@@ -90,26 +101,19 @@ export function QualityTrendChart({
                   }}
                 />
                 <Legend />
-                <Line
-                  yAxisId="density"
-                  type="monotone"
-                  dataKey="defectDensity"
-                  name="指摘密度"
-                  stroke="#ef4444"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  connectNulls
-                />
-                <Line
-                  yAxisId="review"
-                  type="monotone"
-                  dataKey="reviewDensity"
-                  name="レビュー密度"
-                  stroke="#2563eb"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  connectNulls
-                />
+                {definitions.map((def, i) => (
+                  <Line
+                    key={def.key}
+                    yAxisId={def.key}
+                    type="monotone"
+                    dataKey={`metric_${def.key}`}
+                    name={def.label}
+                    stroke={LINE_COLORS[i % LINE_COLORS.length]}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    connectNulls
+                  />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           </div>

@@ -293,7 +293,7 @@ erDiagram
 "quality_finding" {
   Int id PK
   Int targetId FK
-  QualitySeverity severity
+  FindingSource source
   String category "nullable"
   String description "nullable"
   DateTime foundAt
@@ -687,7 +687,7 @@ erDiagram
 **Properties**
   - `id`: 
   - `targetId`: 
-  - `severity`: 
+  - `source`: 
   - `category`: 
   - `description`: 
   - `foundAt`: 

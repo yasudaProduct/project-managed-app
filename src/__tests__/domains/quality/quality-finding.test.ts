@@ -1,19 +1,17 @@
 import { QualityFinding } from '@/domains/quality/quality-finding';
-import { QualitySeverity } from '@/domains/quality/value-objects/quality-enums';
+import { FindingSource } from '@/domains/quality/value-objects/quality-enums';
 
 describe('QualityFinding', () => {
   describe('create', () => {
     it('有効なパラメータで指摘を作成できる', () => {
       const finding = QualityFinding.create({
         targetId: 1,
-        severity: QualitySeverity.MAJOR,
         category: '論理誤り',
         description: '条件分岐の誤り',
         foundAt: new Date('2026-04-01'),
       });
 
       expect(finding.targetId).toBe(1);
-      expect(finding.severity).toBe(QualitySeverity.MAJOR);
       expect(finding.category).toBe('論理誤り');
       expect(finding.foundAt).toEqual(new Date('2026-04-01'));
     });
@@ -21,7 +19,6 @@ describe('QualityFinding', () => {
     it('カテゴリと説明は省略可能', () => {
       const finding = QualityFinding.create({
         targetId: 1,
-        severity: QualitySeverity.MINOR,
         foundAt: new Date('2026-04-01'),
       });
 
@@ -31,28 +28,46 @@ describe('QualityFinding', () => {
 
     it('targetIdは必須', () => {
       expect(() =>
-        QualityFinding.create({ targetId: 0, severity: QualitySeverity.MINOR, foundAt: new Date() })
+        QualityFinding.create({ targetId: 0, foundAt: new Date() })
       ).toThrow('targetIdは必須です');
+    });
+
+    it('sourceを省略した場合デフォルトでREVIEWになる', () => {
+      const finding = QualityFinding.create({
+        targetId: 1,
+        foundAt: new Date('2026-04-01'),
+      });
+      expect(finding.source).toBe(FindingSource.REVIEW);
+    });
+
+    it('sourceにTESTを指定できる', () => {
+      const finding = QualityFinding.create({
+        targetId: 1,
+        source: FindingSource.TEST,
+        foundAt: new Date('2026-04-01'),
+      });
+      expect(finding.source).toBe(FindingSource.TEST);
     });
   });
 
-  describe('isMajor', () => {
-    it('重大度がMAJORの場合trueを返す', () => {
-      const finding = QualityFinding.create({
+  describe('reconstruct', () => {
+    it('sourceを省略した場合デフォルトでREVIEWになる', () => {
+      const finding = QualityFinding.reconstruct({
+        id: 1,
         targetId: 1,
-        severity: QualitySeverity.MAJOR,
         foundAt: new Date(),
       });
-      expect(finding.isMajor()).toBe(true);
+      expect(finding.source).toBe(FindingSource.REVIEW);
     });
 
-    it('重大度がMAJOR以外の場合falseを返す', () => {
-      const finding = QualityFinding.create({
+    it('sourceにTESTを指定できる', () => {
+      const finding = QualityFinding.reconstruct({
+        id: 1,
         targetId: 1,
-        severity: QualitySeverity.MINOR,
+        source: FindingSource.TEST,
         foundAt: new Date(),
       });
-      expect(finding.isMajor()).toBe(false);
+      expect(finding.source).toBe(FindingSource.TEST);
     });
   });
 });

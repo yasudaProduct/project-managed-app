@@ -1,27 +1,19 @@
 "use client";
 
 import type { WbsQualitySummary } from "@/applications/quality/quality-application.service";
-import { QualitySizeUnit } from "@/domains/quality/value-objects/quality-enums";
+import { getMetricDefinitions, shouldShowReviewCompletionRate } from "@/domains/quality/value-objects/metric-definition";
 
 interface QualityIndicatorCardsProps {
   summary: WbsQualitySummary;
 }
 
-const DENSITY_SUFFIX: Record<QualitySizeUnit | "MAN_HOUR", string> = {
-  MAN_HOUR: "/h",
-  [QualitySizeUnit.PAGE]: "/page",
-  [QualitySizeUnit.LINES_OF_CODE]: "/KLOC",
-  [QualitySizeUnit.TEST_CASE]: "/TC",
-};
-
 function formatDensity(
   value: number | null,
-  sizeUnit: QualitySizeUnit | "MAN_HOUR",
+  def: { scaleFactor: number; unitSuffix: string },
 ): string {
   if (value === null) return "-";
-  const suffix = DENSITY_SUFFIX[sizeUnit];
-  const scaled = sizeUnit === QualitySizeUnit.LINES_OF_CODE ? value * 1000 : value;
-  return `${scaled.toFixed(3)} ${suffix}`;
+  const scaled = def.scaleFactor !== 1 ? value : value;
+  return `${scaled.toFixed(3)} ${def.unitSuffix}`;
 }
 
 function formatPercent(value: number | null): string {
@@ -30,23 +22,26 @@ function formatPercent(value: number | null): string {
 }
 
 export function QualityIndicatorCards({ summary }: QualityIndicatorCardsProps) {
-  const items = [
-    {
-      label: "レビュー密度",
-      value: formatDensity(summary.reviewDensity.value, summary.sizeUnit),
-      hint: `${summary.totalReviewManHours.toFixed(1)}h / ${summary.totalSize.toFixed(1)}`,
-    },
-    {
-      label: "指摘密度",
-      value: formatDensity(summary.defectDensity.value, summary.sizeUnit),
-      hint: `${summary.totalFindingCount}件 / ${summary.totalSize.toFixed(1)}`,
-    },
-    {
+  const definitions = getMetricDefinitions(summary.sizeUnit);
+
+  const items = definitions.map((def) => {
+    const indicator = summary.metrics[def.key];
+    return {
+      label: def.label,
+      value: formatDensity(indicator?.value ?? null, def),
+      hint: def.numerator.source === 'reviewManHours'
+        ? `${summary.totalReviewManHours.toFixed(1)}h / ${summary.totalSize.toFixed(1)}`
+        : `${summary.totalFindingCount}件 / ${summary.totalSize.toFixed(1)}`,
+    };
+  });
+
+  if (shouldShowReviewCompletionRate(summary.sizeUnit) && summary.reviewCompletionRate) {
+    items.push({
       label: "レビュー実施率",
       value: formatPercent(summary.reviewCompletionRate.value),
       hint: `${summary.reviewedTargetCount} / ${summary.targetCount} 対象`,
-    },
-  ];
+    });
+  }
 
   return (
     <div className="flex flex-wrap gap-6 px-1 py-2 border-b border-gray-100">

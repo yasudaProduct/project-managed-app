@@ -1,7 +1,7 @@
 import { QualityApplicationService } from '@/applications/quality/quality-application.service';
 import { QualityReviewTarget } from '@/domains/quality/quality-review-target';
 import { QualityReviewer } from '@/domains/quality/quality-reviewer';
-import { QualityDocumentType, QualityReviewType, QualitySeverity } from '@/domains/quality/value-objects/quality-enums';
+import { QualityDocumentType, QualityReviewType } from '@/domains/quality/value-objects/quality-enums';
 import { QualityFinding } from '@/domains/quality/quality-finding';
 
 const targetRepo = {
@@ -80,7 +80,7 @@ describe('QualityApplicationService', () => {
   });
 
   describe('listTargetsByWbs', () => {
-    it('レビューアー名・レビューイ名・規模・密度を算出して返す', async () => {
+    it('レビューアー名・レビューイ名・規模・密度をmetrics形式で返す', async () => {
       targetRepo.findByWbs.mockResolvedValue([
         sampleTarget(1, 1, 'T-001'),
         sampleTarget(2, 1, 'T-002'),
@@ -113,9 +113,7 @@ describe('QualityApplicationService', () => {
           }),
         ])
         .mockResolvedValueOnce([]);
-      findingRepo.countByTarget
-        .mockResolvedValueOnce({ total: 5, major: 2 })
-        .mockResolvedValueOnce({ total: 0, major: 0 });
+      findingRepo.countByTarget.mockResolvedValue({ total: 5 });
       readRepo.getTaskManHours.mockResolvedValue([
         { wbsId: 1, taskNo: 'T-001', totalHours: 10 },
         { wbsId: 1, taskNo: 'T-002', totalHours: 0 },
@@ -134,30 +132,26 @@ describe('QualityApplicationService', () => {
         reviewerNames: ['山田花子', '鈴木一郎'],
         revieweeName: '田中太郎',
         findingCount: 5,
-        majorCount: 2,
         phase: '設計',
       });
       expect(list[0].sizeByUnit.MAN_HOUR).toBe(10);
-      expect(list[0].defectDensity).toBeCloseTo(5 / 10);
-      expect(list[0].reviewDensity).toBeCloseTo(2 / 10);
+      expect(list[0].metrics['defectDensity']).toBeCloseTo(5 / 10);
+      expect(list[0].metrics['reviewDensity']).toBeCloseTo(2 / 10);
       expect(list[1]).toMatchObject({
         id: 2,
         reviewerCount: 0,
         reviewerNames: [],
         revieweeName: null,
-        findingCount: 0,
-        majorCount: 0,
+        findingCount: 5,
       });
     });
   });
 
   describe('getWbsSummary', () => {
-    it('有効な評価対象全体で4指標を集計する', async () => {
+    it('有効な評価対象全体でmetrics形式の指標を集計する', async () => {
       const targets = [sampleTarget(1, 1, 'T-001'), sampleTarget(2, 1, 'T-002')];
       targetRepo.findByWbs.mockResolvedValue(targets);
-      findingRepo.countByTarget
-        .mockResolvedValueOnce({ total: 3, major: 1 })
-        .mockResolvedValueOnce({ total: 2, major: 0 });
+      findingRepo.countByTarget.mockResolvedValue({ total: 3 });
       readRepo.getTaskManHours
         .mockResolvedValueOnce([{ wbsId: 1, taskNo: 'T-001', totalHours: 10 }])
         .mockResolvedValueOnce([{ wbsId: 1, taskNo: 'T-002', totalHours: 20 }]);
@@ -180,19 +174,18 @@ describe('QualityApplicationService', () => {
 
       expect(summary.targetCount).toBe(2);
       expect(summary.totalSize).toBe(30);
-      expect(summary.totalFindingCount).toBe(5);
-      expect(summary.totalMajorCount).toBe(1);
+      expect(summary.totalFindingCount).toBe(6);
       expect(summary.totalReviewManHours).toBe(2);
       expect(summary.reviewedTargetCount).toBe(1);
-      expect(summary.defectDensity.value).toBeCloseTo(5 / 30);
-      expect(summary.reviewDensity.value).toBeCloseTo(2 / 30);
-      expect(summary.reviewCompletionRate.value).toBeCloseTo(0.5);
-      expect(summary.defectDensity.status).toBeNull();
+      expect(summary.metrics['defectDensity'].value).toBeCloseTo(6 / 30);
+      expect(summary.metrics['reviewDensity'].value).toBeCloseTo(2 / 30);
+      expect(summary.reviewCompletionRate!.value).toBeCloseTo(0.5);
+      expect(summary.metrics['defectDensity'].status).toBeNull();
     });
 
     it('規模が0の場合は密度指標はnullになる', async () => {
       targetRepo.findByWbs.mockResolvedValue([sampleTarget(1, 1, 'T-001')]);
-      findingRepo.countByTarget.mockResolvedValue({ total: 0, major: 0 });
+      findingRepo.countByTarget.mockResolvedValue({ total: 0 });
       readRepo.getTaskManHours.mockResolvedValue([
         { wbsId: 1, taskNo: 'T-001', totalHours: 0 },
       ]);
@@ -200,17 +193,17 @@ describe('QualityApplicationService', () => {
 
       const summary = await service.getWbsSummary(1, 'MAN_HOUR');
 
-      expect(summary.defectDensity.value).toBeNull();
-      expect(summary.reviewDensity.value).toBeNull();
+      expect(summary.metrics['defectDensity'].value).toBeNull();
+      expect(summary.metrics['reviewDensity'].value).toBeNull();
     });
   });
 
   describe('getTrend', () => {
-    it('日次の指摘件数とレビュー工数から累積値と指標を返す', async () => {
+    it('日次の指摘件数とレビュー工数から累積値とmetrics形式の指標を返す', async () => {
       targetRepo.findByWbs.mockResolvedValue([sampleTarget(1, 1, 'T-001')]);
       readRepo.getDailyFindingCounts.mockResolvedValue([
-        { date: new Date('2026-04-01'), total: 2, major: 1 },
-        { date: new Date('2026-04-02'), total: 1, major: 0 },
+        { date: new Date('2026-04-01'), total: 2 },
+        { date: new Date('2026-04-02'), total: 1 },
       ]);
       reviewerRepo.findByTarget.mockResolvedValue([
         QualityReviewer.reconstruct({
@@ -230,12 +223,11 @@ describe('QualityApplicationService', () => {
       expect(points).toHaveLength(2);
       expect(points[0].date).toBe('2026-04-01');
       expect(points[0].cumulativeFindings).toBe(2);
-      expect(points[0].cumulativeMajor).toBe(1);
       expect(points[0].cumulativeReviewManHours).toBe(1);
       expect(points[1].cumulativeFindings).toBe(3);
       expect(points[1].cumulativeReviewManHours).toBe(3);
-      expect(points[1].defectDensity).toBeCloseTo(3 / 20);
-      expect(points[1].reviewDensity).toBeCloseTo(3 / 20);
+      expect(points[1].metrics['defectDensity']).toBeCloseTo(3 / 20);
+      expect(points[1].metrics['reviewDensity']).toBeCloseTo(3 / 20);
     });
 
     it('評価対象が無い場合は空配列', async () => {
@@ -256,25 +248,17 @@ describe('QualityApplicationService', () => {
         ]),
       );
       findingRepo.findByTargetIds.mockResolvedValue([
-        QualityFinding.reconstruct({
-          id: 1, targetId: 1, severity: QualitySeverity.MAJOR, foundAt: new Date(),
-        }),
-        QualityFinding.reconstruct({
-          id: 2, targetId: 1, severity: QualitySeverity.MINOR, foundAt: new Date(),
-        }),
-        QualityFinding.reconstruct({
-          id: 3, targetId: 2, severity: QualitySeverity.MINOR, foundAt: new Date(),
-        }),
+        QualityFinding.reconstruct({ id: 1, targetId: 1, foundAt: new Date() }),
+        QualityFinding.reconstruct({ id: 2, targetId: 1, foundAt: new Date() }),
+        QualityFinding.reconstruct({ id: 3, targetId: 2, foundAt: new Date() }),
       ]);
 
       const result = await service.getFindingsByReviewee(1);
 
       const tanaka = result.find((r) => r.revieweeName === '田中太郎')!;
       expect(tanaka.count).toBe(2);
-      expect(tanaka.majorCount).toBe(1);
       const unassigned = result.find((r) => r.revieweeName === '未割当')!;
       expect(unassigned.count).toBe(1);
-      expect(unassigned.majorCount).toBe(0);
     });
   });
 
@@ -284,16 +268,13 @@ describe('QualityApplicationService', () => {
       targetRepo.findByWbs.mockResolvedValue(targets);
       findingRepo.findByTargetIds.mockResolvedValue([
         QualityFinding.reconstruct({
-          id: 1, targetId: 1, severity: QualitySeverity.MAJOR,
-          category: 'ロジック', foundAt: new Date(),
+          id: 1, targetId: 1, category: 'ロジック', foundAt: new Date(),
         }),
         QualityFinding.reconstruct({
-          id: 2, targetId: 1, severity: QualitySeverity.MINOR,
-          category: 'ロジック', foundAt: new Date(),
+          id: 2, targetId: 1, category: 'ロジック', foundAt: new Date(),
         }),
         QualityFinding.reconstruct({
-          id: 3, targetId: 1, severity: QualitySeverity.INFO,
-          foundAt: new Date(),
+          id: 3, targetId: 1, foundAt: new Date(),
         }),
       ]);
 
@@ -301,7 +282,6 @@ describe('QualityApplicationService', () => {
 
       const logic = result.find((r) => r.category === 'ロジック')!;
       expect(logic.count).toBe(2);
-      expect(logic.majorCount).toBe(1);
       const unclassified = result.find((r) => r.category === '未分類')!;
       expect(unclassified.count).toBe(1);
     });
@@ -315,8 +295,8 @@ describe('QualityApplicationService', () => {
       const { created } = await service.importFindings(
         5,
         [
-          { severity: QualitySeverity.MAJOR, foundAt: new Date() },
-          { severity: QualitySeverity.MINOR, foundAt: new Date() },
+          { foundAt: new Date() },
+          { foundAt: new Date() },
         ],
         'replace',
       );
@@ -331,7 +311,7 @@ describe('QualityApplicationService', () => {
 
       await service.importFindings(
         5,
-        [{ severity: QualitySeverity.INFO, foundAt: new Date() }],
+        [{ foundAt: new Date() }],
         'merge',
       );
 

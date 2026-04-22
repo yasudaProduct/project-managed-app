@@ -6,8 +6,9 @@ import type { IQualityTaskRepository } from './i-quality-task.repository';
 import { QualitySizeMetric } from '@/domains/quality/quality-size-metric';
 import { QualityFinding } from '@/domains/quality/quality-finding';
 import { QualityMetricsCalculator } from '@/domains/quality/quality-metrics-calculator';
-import { QualitySizeUnit, QualitySeverity } from '@/domains/quality/value-objects/quality-enums';
+import { QualitySizeUnit, FindingSource } from '@/domains/quality/value-objects/quality-enums';
 import { QualityStatus } from '@/domains/quality/value-objects/quality-status';
+import { getMetricDefinitions, shouldShowReviewCompletionRate, type MetricDefinition } from '@/domains/quality/value-objects/metric-definition';
 
 export interface RegisterSizeMetricInput {
   targetId: number;
@@ -19,7 +20,7 @@ export interface RegisterSizeMetricInput {
 
 export interface RegisterFindingInput {
   targetId: number;
-  severity: QualitySeverity;
+  source?: FindingSource;
   category?: string;
   description?: string;
   foundAt: Date;
@@ -27,19 +28,6 @@ export interface RegisterFindingInput {
 
 export interface UpdateFindingInput extends RegisterFindingInput {
   id: number;
-}
-
-export interface QualityMetricsSummary {
-  targetId: number;
-  reviewManHours: number;
-  size: number | null;
-  sizeUnit: QualitySizeUnit | 'MAN_HOUR';
-  findingCount: number;
-  majorCount: number;
-  reviewDensity: number | null;
-  defectDensity: number | null;
-  majorRatio: number | null;
-  status: QualityStatus | null;
 }
 
 export interface QualityTargetSizeByUnit {
@@ -59,24 +47,20 @@ export interface QualityTargetListItem {
   reviewerNames: string[];
   revieweeName: string | null;
   findingCount: number;
-  majorCount: number;
   phase?: string | null;
   sizeByUnit: QualityTargetSizeByUnit;
   reviewManHours: number;
-  reviewDensity: number | null;
-  defectDensity: number | null;
+  metrics: Record<string, number | null>;
 }
 
 export interface FindingsByReviewee {
   revieweeName: string;
   count: number;
-  majorCount: number;
 }
 
 export interface FindingsByCategory {
   category: string;
   count: number;
-  majorCount: number;
 }
 
 export interface QualityIndicator {
@@ -91,23 +75,18 @@ export interface WbsQualitySummary {
   totalSize: number;
   totalReviewManHours: number;
   totalFindingCount: number;
-  totalMajorCount: number;
   reviewedTargetCount: number;
-  reviewDensity: QualityIndicator;
-  defectDensity: QualityIndicator;
-  reviewCompletionRate: QualityIndicator;
+  metrics: Record<string, QualityIndicator>;
+  reviewCompletionRate?: QualityIndicator;
 }
 
 export interface QualityTrendPoint {
   date: string; // YYYY-MM-DD
   findingCount: number;
-  majorCount: number;
   reviewManHours: number;
   cumulativeFindings: number;
-  cumulativeMajor: number;
   cumulativeReviewManHours: number;
-  defectDensity: number | null;
-  reviewDensity: number | null;
+  metrics: Record<string, number | null>;
 }
 
 export interface GetTrendInput {
@@ -124,7 +103,7 @@ export interface WbsFindingItem {
   taskNo: string;
   targetName: string;
   phase: string | null;
-  severity: QualitySeverity;
+  source: FindingSource;
   category: string | null;
   description: string | null;
   foundAt: Date;
@@ -192,7 +171,7 @@ export class QualityApplicationService implements IQualityApplicationService {
   async registerFinding(input: RegisterFindingInput): Promise<QualityFinding> {
     const finding = QualityFinding.create({
       targetId: input.targetId,
-      severity: input.severity,
+      source: input.source,
       category: input.category,
       description: input.description,
       foundAt: input.foundAt,
@@ -204,7 +183,7 @@ export class QualityApplicationService implements IQualityApplicationService {
     const finding = QualityFinding.reconstruct({
       id: input.id,
       targetId: input.targetId,
-      severity: input.severity,
+      source: input.source,
       category: input.category,
       description: input.description,
       foundAt: input.foundAt,
@@ -251,6 +230,38 @@ export class QualityApplicationService implements IQualityApplicationService {
     return { created };
   }
 
+  private resolveNumerator(
+    def: MetricDefinition,
+    ctx: {
+      reviewManHours: number;
+      findingCount: number;
+      findingCountBySource: Record<string, number>;
+      sizeByUnit: QualityTargetSizeByUnit;
+    },
+  ): number {
+    if (def.numerator.source === 'reviewManHours') return ctx.reviewManHours;
+    if (def.numerator.source === 'findingCount') {
+      const src = def.numerator.findingSource;
+      return src ? (ctx.findingCountBySource[src] ?? 0) : ctx.findingCount;
+    }
+    if (def.numerator.source === 'sizeMetric' && def.numerator.sizeUnit) {
+      return ctx.sizeByUnit[def.numerator.sizeUnit] ?? 0;
+    }
+    return 0;
+  }
+
+  private resolveDenominator(
+    def: MetricDefinition,
+    selectedSize: number,
+    sizeByUnit: QualityTargetSizeByUnit,
+  ): number {
+    if (def.denominator.source === 'selectedSize') return selectedSize;
+    if (def.denominator.source === 'sizeMetric' && def.denominator.sizeUnit) {
+      return sizeByUnit[def.denominator.sizeUnit] ?? 0;
+    }
+    return 0;
+  }
+
   async listTargetsByWbs(
     wbsId: number,
     sizeUnit: QualitySizeUnit | 'MAN_HOUR',
@@ -287,6 +298,7 @@ export class QualityApplicationService implements IQualityApplicationService {
       for (const r of mh) taskManHoursMap.set(r.taskNo, r.totalHours);
     }
 
+    const definitions = getMetricDefinitions(sizeUnit);
     const items: QualityTargetListItem[] = [];
     for (const t of targets) {
       const reviewers = perTargetReviewers.get(t.id!) ?? [];
@@ -295,17 +307,17 @@ export class QualityApplicationService implements IQualityApplicationService {
         .filter((n): n is string => !!n);
 
       const counts = await this.findingRepo.countByTarget(t.id!);
-      const metrics = await this.sizeRepo.findByTarget(t.id!);
+      const sizeMetrics = await this.sizeRepo.findByTarget(t.id!);
       const sizeByUnit: QualityTargetSizeByUnit = {
         MAN_HOUR:
           sizeUnit === 'MAN_HOUR'
             ? taskManHoursMap.get(t.taskNo) ?? null
             : await this.getTaskManHoursSingle(t.wbsId, t.taskNo),
-        PAGE: metrics.find((m) => m.unit === QualitySizeUnit.PAGE)?.value ?? null,
+        PAGE: sizeMetrics.find((m) => m.unit === QualitySizeUnit.PAGE)?.value ?? null,
         LINES_OF_CODE:
-          metrics.find((m) => m.unit === QualitySizeUnit.LINES_OF_CODE)?.value ?? null,
+          sizeMetrics.find((m) => m.unit === QualitySizeUnit.LINES_OF_CODE)?.value ?? null,
         TEST_CASE:
-          metrics.find((m) => m.unit === QualitySizeUnit.TEST_CASE)?.value ?? null,
+          sizeMetrics.find((m) => m.unit === QualitySizeUnit.TEST_CASE)?.value ?? null,
       };
 
       let reviewManHours = 0;
@@ -316,14 +328,26 @@ export class QualityApplicationService implements IQualityApplicationService {
         reviewManHours = rh.reduce((sum, x) => sum + x.totalHours, 0);
       }
 
-      const sizeForDensity =
-        sizeUnit === 'MAN_HOUR'
-          ? sizeByUnit.MAN_HOUR ?? 0
-          : sizeUnit === QualitySizeUnit.PAGE
-            ? sizeByUnit.PAGE ?? 0
-            : sizeUnit === QualitySizeUnit.LINES_OF_CODE
-              ? sizeByUnit.LINES_OF_CODE ?? 0
-              : sizeByUnit.TEST_CASE ?? 0;
+      const selectedSize = this.getSelectedSize(sizeUnit, sizeByUnit);
+
+      const reviewCounts = await this.findingRepo.countByTarget(t.id!, FindingSource.REVIEW);
+      const testCounts = await this.findingRepo.countByTarget(t.id!, FindingSource.TEST);
+      const findingCountBySource: Record<string, number> = {
+        [FindingSource.REVIEW]: reviewCounts.total,
+        [FindingSource.TEST]: testCounts.total,
+      };
+
+      const metrics: Record<string, number | null> = {};
+      for (const def of definitions) {
+        const num = this.resolveNumerator(def, {
+          reviewManHours,
+          findingCount: counts.total,
+          findingCountBySource,
+          sizeByUnit,
+        });
+        const den = this.resolveDenominator(def, selectedSize, sizeByUnit);
+        metrics[def.key] = this.calc.calcDensity(num, den, def.scaleFactor);
+      }
 
       items.push({
         id: t.id!,
@@ -335,15 +359,21 @@ export class QualityApplicationService implements IQualityApplicationService {
         reviewerNames,
         revieweeName: revieweeMap.get(t.taskNo) ?? null,
         findingCount: counts.total,
-        majorCount: counts.major,
         phase: phaseMap.get(t.taskNo) ?? null,
         sizeByUnit,
         reviewManHours,
-        reviewDensity: this.calc.calcReviewDensity(reviewManHours, sizeForDensity),
-        defectDensity: this.calc.calcDefectDensity(counts.total, sizeForDensity),
+        metrics,
       });
     }
     return items;
+  }
+
+  private getSelectedSize(
+    sizeUnit: QualitySizeUnit | 'MAN_HOUR',
+    sizeByUnit: QualityTargetSizeByUnit,
+  ): number {
+    if (sizeUnit === 'MAN_HOUR') return sizeByUnit.MAN_HOUR ?? 0;
+    return sizeByUnit[sizeUnit] ?? 0;
   }
 
   private async getTaskManHoursSingle(
@@ -375,7 +405,7 @@ export class QualityApplicationService implements IQualityApplicationService {
         taskNo: target.taskNo,
         targetName: target.name,
         phase: phaseMap.get(target.taskNo) ?? null,
-        severity: f.severity,
+        source: f.source,
         category: f.category ?? null,
         description: f.description ?? null,
         foundAt: f.foundAt,
@@ -396,23 +426,49 @@ export class QualityApplicationService implements IQualityApplicationService {
     let totalSize = 0;
     let totalReviewManHours = 0;
     let totalFindingCount = 0;
-    let totalMajorCount = 0;
     let reviewedTargetCount = 0;
+    const totalFindingBySource: Record<string, number> = {
+      [FindingSource.REVIEW]: 0,
+      [FindingSource.TEST]: 0,
+    };
+    const totalSizeByUnit: QualityTargetSizeByUnit = {
+      MAN_HOUR: 0,
+      PAGE: 0,
+      LINES_OF_CODE: 0,
+      TEST_CASE: 0,
+    };
 
     for (const t of targets) {
-      const { total: f, major: m } = await this.findingRepo.countByTarget(t.id!);
+      const { total: f } = await this.findingRepo.countByTarget(t.id!);
       totalFindingCount += f;
-      totalMajorCount += m;
+
+      const reviewCounts = await this.findingRepo.countByTarget(t.id!, FindingSource.REVIEW);
+      const testCounts = await this.findingRepo.countByTarget(t.id!, FindingSource.TEST);
+      totalFindingBySource[FindingSource.REVIEW] += reviewCounts.total;
+      totalFindingBySource[FindingSource.TEST] += testCounts.total;
 
       if (sizeUnit === 'MAN_HOUR') {
         const mh = await this.readRepo.getTaskManHours([
           { wbsId: t.wbsId, taskNo: t.taskNo },
         ]);
-        totalSize += mh[0]?.totalHours ?? 0;
+        const hours = mh[0]?.totalHours ?? 0;
+        totalSize += hours;
+        totalSizeByUnit.MAN_HOUR = (totalSizeByUnit.MAN_HOUR ?? 0) + hours;
       } else {
         const metrics = await this.sizeRepo.findByTarget(t.id!);
         const metric = metrics.find((x) => x.unit === sizeUnit);
         totalSize += metric?.value ?? 0;
+        for (const m of metrics) {
+          const key = m.unit as keyof QualityTargetSizeByUnit;
+          totalSizeByUnit[key] = (totalSizeByUnit[key] ?? 0) + m.value;
+        }
+      }
+
+      if (sizeUnit !== 'MAN_HOUR') {
+        const mhResult = await this.readRepo.getTaskManHours([
+          { wbsId: t.wbsId, taskNo: t.taskNo },
+        ]);
+        totalSizeByUnit.MAN_HOUR = (totalSizeByUnit.MAN_HOUR ?? 0) + (mhResult[0]?.totalHours ?? 0);
       }
 
       const reviewers = await this.reviewerRepo.findByTarget(t.id!);
@@ -426,32 +482,41 @@ export class QualityApplicationService implements IQualityApplicationService {
       }
     }
 
-    const reviewDensityValue = this.calc.calcReviewDensity(
-      totalReviewManHours,
-      totalSize,
-    );
-    const defectDensityValue = this.calc.calcDefectDensity(
-      totalFindingCount,
-      totalSize,
-    );
-    const reviewCompletionRateValue = this.calc.calcReviewCompletionRate(
-      reviewedTargetCount,
-      targets.length,
-    );
+    const definitions = getMetricDefinitions(sizeUnit);
+    const metrics: Record<string, QualityIndicator> = {};
+    for (const def of definitions) {
+      const num = this.resolveNumerator(def, {
+        reviewManHours: totalReviewManHours,
+        findingCount: totalFindingCount,
+        findingCountBySource: totalFindingBySource,
+        sizeByUnit: totalSizeByUnit,
+      });
+      const den = this.resolveDenominator(def, totalSize, totalSizeByUnit);
+      metrics[def.key] = {
+        value: this.calc.calcDensity(num, den, def.scaleFactor),
+        status: null,
+      };
+    }
 
-    return {
+    const result: WbsQualitySummary = {
       wbsId,
       sizeUnit,
       targetCount: targets.length,
       totalSize,
       totalReviewManHours,
       totalFindingCount,
-      totalMajorCount,
       reviewedTargetCount,
-      reviewDensity: { value: reviewDensityValue, status: null },
-      defectDensity: { value: defectDensityValue, status: null },
-      reviewCompletionRate: { value: reviewCompletionRateValue, status: null },
+      metrics,
     };
+
+    if (shouldShowReviewCompletionRate(sizeUnit)) {
+      result.reviewCompletionRate = {
+        value: this.calc.calcReviewCompletionRate(reviewedTargetCount, targets.length),
+        status: null,
+      };
+    }
+
+    return result;
   }
 
   async getFindingsByReviewee(
@@ -475,9 +540,8 @@ export class QualityApplicationService implements IQualityApplicationService {
       if (!target) continue;
       const reviewee = revieweeMap.get(target.taskNo) ?? null;
       const label = reviewee ?? '未割当';
-      const b = buckets.get(label) ?? { revieweeName: label, count: 0, majorCount: 0 };
+      const b = buckets.get(label) ?? { revieweeName: label, count: 0 };
       b.count += 1;
-      if (f.severity === QualitySeverity.MAJOR) b.majorCount += 1;
       buckets.set(label, b);
     }
     return Array.from(buckets.values()).sort((a, b) => b.count - a.count);
@@ -496,9 +560,8 @@ export class QualityApplicationService implements IQualityApplicationService {
     const buckets = new Map<string, FindingsByCategory>();
     for (const f of findings) {
       const label = f.category?.trim() ? f.category : '未分類';
-      const b = buckets.get(label) ?? { category: label, count: 0, majorCount: 0 };
+      const b = buckets.get(label) ?? { category: label, count: 0 };
       b.count += 1;
-      if (f.severity === QualitySeverity.MAJOR) b.majorCount += 1;
       buckets.set(label, b);
     }
     return Array.from(buckets.values()).sort((a, b) => b.count - a.count);
@@ -540,16 +603,28 @@ export class QualityApplicationService implements IQualityApplicationService {
     );
 
     let totalSize = 0;
+    const totalSizeByUnit: QualityTargetSizeByUnit = {
+      MAN_HOUR: 0,
+      PAGE: 0,
+      LINES_OF_CODE: 0,
+      TEST_CASE: 0,
+    };
     for (const t of targets) {
       if (sizeUnit === 'MAN_HOUR') {
         const mh = await this.readRepo.getTaskManHours([
           { wbsId: t.wbsId, taskNo: t.taskNo },
         ]);
-        totalSize += mh[0]?.totalHours ?? 0;
+        const hours = mh[0]?.totalHours ?? 0;
+        totalSize += hours;
+        totalSizeByUnit.MAN_HOUR = (totalSizeByUnit.MAN_HOUR ?? 0) + hours;
       } else {
         const metrics = await this.sizeRepo.findByTarget(t.id!);
         const metric = metrics.find((x) => x.unit === sizeUnit);
         totalSize += metric?.value ?? 0;
+        for (const m of metrics) {
+          const key = m.unit as keyof QualityTargetSizeByUnit;
+          totalSizeByUnit[key] = (totalSizeByUnit[key] ?? 0) + m.value;
+        }
       }
     }
 
@@ -570,34 +645,41 @@ export class QualityApplicationService implements IQualityApplicationService {
     );
 
     let cumulativeFindings = 0;
-    let cumulativeMajor = 0;
     let cumulativeReviewManHours = 0;
 
+    const definitions = getMetricDefinitions(sizeUnit);
     const points: QualityTrendPoint[] = [];
     for (const date of sortedDates) {
       const f = findingsMap.get(date);
       const h = hoursMap.get(date);
       const dailyFindings = f?.total ?? 0;
-      const dailyMajor = f?.major ?? 0;
       const dailyHours = h?.totalHours ?? 0;
 
       cumulativeFindings += dailyFindings;
-      cumulativeMajor += dailyMajor;
       cumulativeReviewManHours += dailyHours;
+
+      const metrics: Record<string, number | null> = {};
+      for (const def of definitions) {
+        const num = this.resolveNumerator(def, {
+          reviewManHours: cumulativeReviewManHours,
+          findingCount: cumulativeFindings,
+          findingCountBySource: {
+            [FindingSource.REVIEW]: cumulativeFindings,
+            [FindingSource.TEST]: cumulativeFindings,
+          },
+          sizeByUnit: totalSizeByUnit,
+        });
+        const den = this.resolveDenominator(def, totalSize, totalSizeByUnit);
+        metrics[def.key] = this.calc.calcDensity(num, den, def.scaleFactor);
+      }
 
       points.push({
         date,
         findingCount: dailyFindings,
-        majorCount: dailyMajor,
         reviewManHours: dailyHours,
         cumulativeFindings,
-        cumulativeMajor,
         cumulativeReviewManHours,
-        defectDensity: this.calc.calcDefectDensity(cumulativeFindings, totalSize),
-        reviewDensity: this.calc.calcReviewDensity(
-          cumulativeReviewManHours,
-          totalSize,
-        ),
+        metrics,
       });
     }
 

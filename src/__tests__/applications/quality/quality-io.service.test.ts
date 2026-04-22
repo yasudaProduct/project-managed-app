@@ -1,5 +1,5 @@
 import { parseFindingRows, parseSizeRows, toTsv, escapeTsv } from '@/applications/quality/quality-io.service';
-import { QualitySeverity, QualitySizeUnit } from '@/domains/quality/value-objects/quality-enums';
+import { QualitySizeUnit, FindingSource } from '@/domains/quality/value-objects/quality-enums';
 
 describe('quality-io.service', () => {
   describe('parseFindingRows', () => {
@@ -7,7 +7,6 @@ describe('quality-io.service', () => {
       const result = parseFindingRows([
         {
           taskNo: 'T-001',
-          severity: 'MAJOR',
           category: 'bug',
           description: '致命的バグ',
           foundAt: '2026-04-19',
@@ -16,35 +15,49 @@ describe('quality-io.service', () => {
 
       expect(result.errors).toHaveLength(0);
       expect(result.rows).toHaveLength(1);
-      expect(result.rows[0].severity).toBe(QualitySeverity.MAJOR);
       expect(result.rows[0].taskNo).toBe('T-001');
+      expect(result.rows[0].source).toBe(FindingSource.REVIEW);
     });
 
-    it('日本語のseverityも許容する', () => {
+    it('sourceを指定できる（英語）', () => {
       const result = parseFindingRows([
-        { taskNo: 'T-001', severity: '重大', foundAt: '2026-04-19' },
+        { taskNo: 'T-001', source: 'TEST', foundAt: '2026-04-19' },
       ]);
-      expect(result.rows[0].severity).toBe(QualitySeverity.MAJOR);
+      expect(result.rows[0].source).toBe(FindingSource.TEST);
+    });
+
+    it('sourceを指定できる（日本語）', () => {
+      const result = parseFindingRows([
+        { taskNo: 'T-001', source: 'テスト', foundAt: '2026-04-19' },
+      ]);
+      expect(result.rows[0].source).toBe(FindingSource.TEST);
+    });
+
+    it('sourceを指定できる（レビュー日本語）', () => {
+      const result = parseFindingRows([
+        { taskNo: 'T-001', source: 'レビュー', foundAt: '2026-04-19' },
+      ]);
+      expect(result.rows[0].source).toBe(FindingSource.REVIEW);
+    });
+
+    it('source省略時はデフォルトREVIEW', () => {
+      const result = parseFindingRows([
+        { taskNo: 'T-001', foundAt: '2026-04-19' },
+      ]);
+      expect(result.rows[0].source).toBe(FindingSource.REVIEW);
     });
 
     it('taskNoが無いとエラー', () => {
       const result = parseFindingRows([
-        { taskNo: '', severity: 'MAJOR', foundAt: '2026-04-19' },
+        { taskNo: '', foundAt: '2026-04-19' },
       ]);
       expect(result.errors).toHaveLength(1);
       expect(result.rows).toHaveLength(0);
     });
 
-    it('不正なseverityはエラー', () => {
-      const result = parseFindingRows([
-        { taskNo: 'T-001', severity: 'XXX', foundAt: '2026-04-19' },
-      ]);
-      expect(result.errors).toHaveLength(1);
-    });
-
     it('不正な日付はエラー', () => {
       const result = parseFindingRows([
-        { taskNo: 'T-001', severity: 'MAJOR', foundAt: 'invalid' },
+        { taskNo: 'T-001', foundAt: 'invalid' },
       ]);
       expect(result.errors).toHaveLength(1);
     });

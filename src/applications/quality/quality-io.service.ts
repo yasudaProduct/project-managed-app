@@ -1,8 +1,8 @@
-import { QualitySeverity, QualitySizeUnit } from '@/domains/quality/value-objects/quality-enums';
+import { QualitySizeUnit, FindingSource } from '@/domains/quality/value-objects/quality-enums';
 
 export interface FindingCsvRow {
   taskNo: string;
-  severity: string;
+  source?: string;
   category?: string;
   description?: string;
   foundAt: string;
@@ -18,7 +18,7 @@ export interface SizeCsvRow {
 
 export interface ParsedFinding {
   taskNo: string;
-  severity: QualitySeverity;
+  source: FindingSource;
   category?: string;
   description?: string;
   foundAt: Date;
@@ -37,12 +37,12 @@ export interface ParseResult<T> {
   errors: { line: number; message: string }[];
 }
 
-function normalizeSeverity(raw: string): QualitySeverity | null {
+function normalizeSource(raw: string | undefined): FindingSource {
+  if (!raw) return FindingSource.REVIEW;
   const v = raw.trim().toUpperCase();
-  if (v === 'MAJOR' || v === '重大') return QualitySeverity.MAJOR;
-  if (v === 'MINOR' || v === '軽微') return QualitySeverity.MINOR;
-  if (v === 'INFO' || v === '情報') return QualitySeverity.INFO;
-  return null;
+  if (v === 'TEST' || v === 'テスト') return FindingSource.TEST;
+  if (v === 'REVIEW' || v === 'レビュー') return FindingSource.REVIEW;
+  return FindingSource.REVIEW;
 }
 
 function normalizeUnit(raw: string): QualitySizeUnit | null {
@@ -70,19 +70,15 @@ export function parseFindingRows(rows: FindingCsvRow[]): ParseResult<ParsedFindi
       result.errors.push({ line, message: 'taskNoが必須です' });
       return;
     }
-    const severity = normalizeSeverity(row.severity ?? '');
-    if (!severity) {
-      result.errors.push({ line, message: `severityが不正: ${row.severity}` });
-      return;
-    }
     const foundAt = parseDate(row.foundAt ?? '');
     if (!foundAt) {
       result.errors.push({ line, message: `foundAtが不正: ${row.foundAt}` });
       return;
     }
+    const source = normalizeSource(row.source);
     result.rows.push({
       taskNo,
-      severity,
+      source,
       category: row.category?.trim() || undefined,
       description: row.description?.trim() || undefined,
       foundAt,

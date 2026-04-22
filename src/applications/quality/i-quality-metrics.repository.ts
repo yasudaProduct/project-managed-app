@@ -1,6 +1,6 @@
 import { QualitySizeMetric } from '@/domains/quality/quality-size-metric';
 import { QualityFinding } from '@/domains/quality/quality-finding';
-import { QualitySizeUnit, QualitySeverity } from '@/domains/quality/value-objects/quality-enums';
+import { QualitySizeUnit, FindingSource } from '@/domains/quality/value-objects/quality-enums';
 
 export interface IQualitySizeMetricRepository {
   findByTarget(targetId: number): Promise<QualitySizeMetric[]>;
@@ -10,7 +10,7 @@ export interface IQualitySizeMetricRepository {
 }
 
 export interface FindingFilter {
-  severity?: QualitySeverity;
+  source?: FindingSource;
   fromDate?: Date;
   toDate?: Date;
 }
@@ -21,7 +21,7 @@ export interface IQualityFindingRepository {
   create(finding: QualityFinding): Promise<QualityFinding>;
   update(finding: QualityFinding): Promise<QualityFinding>;
   delete(id: number): Promise<void>;
-  countByTarget(targetId: number): Promise<{ total: number; major: number }>;
+  countByTarget(targetId: number, source?: FindingSource): Promise<{ total: number }>;
   deleteByTargetId(targetId: number): Promise<number>;
 }
 
@@ -34,7 +34,6 @@ export interface ReviewManHoursResult {
 export interface DailyFindingCount {
   date: Date;
   total: number;
-  major: number;
 }
 
 export interface DailyManHours {

@@ -5,6 +5,24 @@ import { QualityThreshold } from '@/domains/quality/value-objects/quality-thresh
 describe('QualityMetricsCalculator', () => {
   const calc = new QualityMetricsCalculator();
 
+  describe('calcDensity', () => {
+    it('分子を分母で割った値を返す', () => {
+      expect(calc.calcDensity(10, 20)).toBeCloseTo(0.5);
+    });
+
+    it('scaleFactorを適用する', () => {
+      expect(calc.calcDensity(5, 1000, 1000)).toBeCloseTo(5);
+    });
+
+    it('分母が0の場合はnullを返す', () => {
+      expect(calc.calcDensity(10, 0)).toBeNull();
+    });
+
+    it('分子が0でも分母が正であれば0を返す', () => {
+      expect(calc.calcDensity(0, 10)).toBe(0);
+    });
+  });
+
   describe('calcReviewDensity', () => {
     it('規模が正の場合、レビュー工数を規模で割った値を返す', () => {
       expect(calc.calcReviewDensity(10, 20)).toBeCloseTo(0.5);
@@ -33,20 +51,6 @@ describe('QualityMetricsCalculator', () => {
     });
   });
 
-  describe('calcMajorRatio', () => {
-    it('Major件数を全指摘件数で割った割合を返す', () => {
-      expect(calc.calcMajorRatio(3, 10)).toBeCloseTo(0.3);
-    });
-
-    it('全指摘が0件の場合はnullを返す', () => {
-      expect(calc.calcMajorRatio(0, 0)).toBeNull();
-    });
-
-    it('Major件数が0でも全指摘が正であれば0を返す', () => {
-      expect(calc.calcMajorRatio(0, 5)).toBe(0);
-    });
-  });
-
   describe('calcReviewCompletionRate', () => {
     it('レビュー完了対象数を総対象数で割った割合を返す', () => {
       expect(calc.calcReviewCompletionRate(8, 10)).toBeCloseTo(0.8);
@@ -63,7 +67,6 @@ describe('QualityMetricsCalculator', () => {
 
   describe('evaluateStatus', () => {
     it('値が正常範囲内ならNORMALを返す', () => {
-      // higherIsBetter=false: warn=1.0, danger=3.0 → 0.5は正常範囲
       const threshold: QualityThreshold = { warnThreshold: 1.0, dangerThreshold: 3.0, higherIsBetter: false };
       expect(calc.evaluateStatus(0.5, threshold)).toBe(QualityStatus.NORMAL);
     });

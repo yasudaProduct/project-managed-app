@@ -2,19 +2,17 @@ import { QualityStatus } from './value-objects/quality-status';
 import { QualityThreshold } from './value-objects/quality-threshold';
 
 export class QualityMetricsCalculator {
+  calcDensity(numerator: number, denominator: number, scaleFactor: number = 1): number | null {
+    if (denominator === 0) return null;
+    return (numerator / denominator) * scaleFactor;
+  }
+
   calcReviewDensity(reviewManHours: number, size: number): number | null {
-    if (size === 0) return null;
-    return reviewManHours / size;
+    return this.calcDensity(reviewManHours, size);
   }
 
   calcDefectDensity(defectCount: number, size: number): number | null {
-    if (size === 0) return null;
-    return defectCount / size;
-  }
-
-  calcMajorRatio(majorCount: number, totalCount: number): number | null {
-    if (totalCount === 0) return null;
-    return majorCount / totalCount;
+    return this.calcDensity(defectCount, size);
   }
 
   calcReviewCompletionRate(completedCount: number, totalCount: number): number | null {

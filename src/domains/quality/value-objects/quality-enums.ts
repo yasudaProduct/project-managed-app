@@ -18,8 +18,7 @@ export enum QualitySizeUnit {
   TEST_CASE = 'TEST_CASE',
 }
 
-export enum QualitySeverity {
-  MAJOR = 'MAJOR',
-  MINOR = 'MINOR',
-  INFO = 'INFO',
+export enum FindingSource {
+  REVIEW = 'REVIEW',
+  TEST = 'TEST',
 }

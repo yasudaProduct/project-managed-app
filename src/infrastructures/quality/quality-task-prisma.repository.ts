@@ -44,11 +44,11 @@ export class QualityTaskPrismaRepository implements IQualityTaskRepository {
       where: { wbsId, taskNo: { in: taskNos } },
       select: {
         taskNo: true,
-        assignee: { select: { assignee: { select: { name: true } } } },
+        assignee: { select: { assignee: { select: { displayName: true } } } },
       },
     });
     return new Map(
-      tasks.map((t) => [t.taskNo, t.assignee?.assignee?.name ?? null]),
+      tasks.map((t) => [t.taskNo, t.assignee?.assignee?.displayName ?? null]),
     );
   }
 
@@ -56,8 +56,8 @@ export class QualityTaskPrismaRepository implements IQualityTaskRepository {
     if (userIds.length === 0) return new Map();
     const users = await prisma.users.findMany({
       where: { id: { in: userIds } },
-      select: { id: true, name: true },
+      select: { id: true, displayName: true },
     });
-    return new Map(users.map((u) => [u.id, u.name]));
+    return new Map(users.map((u) => [u.id, u.displayName]));
   }
 }

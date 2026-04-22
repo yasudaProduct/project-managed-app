@@ -1,3 +1,5 @@
+import type { MetricKey } from './metric-definition';
+
 export interface QualityThreshold {
   warnThreshold: number;
   dangerThreshold: number;
@@ -5,7 +7,4 @@ export interface QualityThreshold {
   higherIsBetter: boolean;
 }
 
-export interface QualityThresholds {
-  reviewDensity?: QualityThreshold;
-  defectDensity?: QualityThreshold;
-}
+export type QualityThresholds = Record<MetricKey, QualityThreshold | undefined>;

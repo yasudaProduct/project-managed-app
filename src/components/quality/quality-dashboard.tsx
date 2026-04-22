@@ -20,7 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RefreshCw, ListChecks, Ruler, AlertCircle, Download } from "lucide-react";
-import { QualitySizeUnit, QualitySeverity } from "@/domains/quality/value-objects/quality-enums";
+import { QualitySizeUnit } from "@/domains/quality/value-objects/quality-enums";
+import { getMetricDefinitions } from "@/domains/quality/value-objects/metric-definition";
 import type {
   QualityTargetListItem,
   WbsQualitySummary,
@@ -54,16 +55,9 @@ const SIZE_UNIT_LABELS: Record<SizeUnitOption, string> = {
   [QualitySizeUnit.TEST_CASE]: "テストケース数",
 };
 
-const SEVERITY_LABEL: Record<QualitySeverity, string> = {
-  [QualitySeverity.MAJOR]: "Major",
-  [QualitySeverity.MINOR]: "Minor",
-  [QualitySeverity.INFO]: "Info",
-};
-
-const SEVERITY_CLASS: Record<QualitySeverity, string> = {
-  [QualitySeverity.MAJOR]: "text-red-600 font-semibold",
-  [QualitySeverity.MINOR]: "text-yellow-600",
-  [QualitySeverity.INFO]: "text-gray-500",
+const SOURCE_LABEL: Record<string, string> = {
+  REVIEW: "レビュー",
+  TEST: "テスト",
 };
 
 type FindingRow = Awaited<ReturnType<typeof getWbsAllFindings>>[number];
@@ -77,33 +71,6 @@ interface QualityDashboardProps {
   initialRevieweeFindings?: FindingsByReviewee[];
   initialCategoryFindings?: FindingsByCategory[];
 }
-
-const TARGET_TSV_HEADERS = [
-  "タスクNo.",
-  "タスク名",
-  "フェーズ",
-  "レビューイ",
-  "レビューアー",
-  "ページ",
-  "ステップ",
-  "テストケース",
-  "工数(人時)",
-  "レビュー密度",
-  "指摘",
-  "Major",
-  "指摘密度",
-  "状態",
-];
-
-const FINDING_TSV_HEADERS = [
-  "タスクNo.",
-  "タスク名",
-  "フェーズ",
-  "重大度",
-  "カテゴリ",
-  "内容",
-  "発見日",
-];
 
 function formatNumber(n: number | null, digits = 3): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return "-";
@@ -152,6 +119,8 @@ export function QualityDashboard({
   const [trendTo, setTrendTo] = useState("");
   const [isSyncing, startSyncTransition] = useTransition();
   const [isRefreshing, startRefreshTransition] = useTransition();
+
+  const definitions = useMemo(() => getMetricDefinitions(sizeUnit), [sizeUnit]);
 
   const phases = useMemo(() => {
     const set = new Set<string>();
@@ -242,6 +211,21 @@ export function QualityDashboard({
   };
 
   const exportTargetsTsv = () => {
+    const baseHeaders = [
+      "タスクNo.",
+      "タスク名",
+      "フェーズ",
+      "レビューイ",
+      "レビューアー",
+      "ページ",
+      "ステップ",
+      "テストケース",
+      "工数(人時)",
+    ];
+    const metricHeaders = definitions.map((d) => d.label);
+    const trailingHeaders = ["指摘", "状態"];
+    const headers = [...baseHeaders, ...metricHeaders, ...trailingHeaders];
+
     const rows = filteredTargets.map((t) => [
       t.taskNo,
       t.name,
@@ -252,21 +236,29 @@ export function QualityDashboard({
       t.sizeByUnit.LINES_OF_CODE ?? "",
       t.sizeByUnit.TEST_CASE ?? "",
       t.sizeByUnit.MAN_HOUR ?? "",
-      formatNumber(t.reviewDensity),
+      ...definitions.map((d) => formatNumber(t.metrics[d.key])),
       t.findingCount,
-      t.majorCount,
-      formatNumber(t.defectDensity),
       t.isActive ? "有効" : "無効",
     ]);
-    downloadTsv(`quality-targets-wbs${wbsId}.tsv`, TARGET_TSV_HEADERS, rows);
+    downloadTsv(`quality-targets-wbs${wbsId}.tsv`, headers, rows);
   };
+
+  const FINDING_TSV_HEADERS = [
+    "タスクNo.",
+    "タスク名",
+    "フェーズ",
+    "ソース",
+    "カテゴリ",
+    "内容",
+    "発見日",
+  ];
 
   const exportFindingsTsv = () => {
     const rows = filteredFindings.map((f) => [
       f.taskNo,
       f.targetName,
       f.phase ?? "",
-      SEVERITY_LABEL[f.severity as QualitySeverity] ?? f.severity,
+      SOURCE_LABEL[f.source] ?? f.source,
       f.category ?? "",
       f.description ?? "",
       new Date(f.foundAt).toLocaleDateString("ja-JP"),
@@ -359,10 +351,10 @@ export function QualityDashboard({
                   <TableHead className="text-xs text-right">ステップ</TableHead>
                   <TableHead className="text-xs text-right">テストケース</TableHead>
                   <TableHead className="text-xs text-right">工数(人時)</TableHead>
-                  <TableHead className="text-xs text-right">レビュー密度</TableHead>
+                  {definitions.map((d) => (
+                    <TableHead key={d.key} className="text-xs text-right">{d.label}</TableHead>
+                  ))}
                   <TableHead className="text-xs text-right">指摘</TableHead>
-                  <TableHead className="text-xs text-right">Major</TableHead>
-                  <TableHead className="text-xs text-right">指摘密度</TableHead>
                   <TableHead className="text-xs">状態</TableHead>
                   <TableHead className="text-xs text-right" />
                 </TableRow>
@@ -389,18 +381,12 @@ export function QualityDashboard({
                     <TableCell className="text-xs text-right py-2">
                       {t.sizeByUnit.MAN_HOUR ?? "-"}
                     </TableCell>
-                    <TableCell className="text-xs text-right py-2">
-                      {formatNumber(t.reviewDensity)}
-                    </TableCell>
+                    {definitions.map((d) => (
+                      <TableCell key={d.key} className="text-xs text-right py-2">
+                        {formatNumber(t.metrics[d.key])}
+                      </TableCell>
+                    ))}
                     <TableCell className="text-xs text-right py-2">{t.findingCount}</TableCell>
-                    <TableCell className="text-xs text-right py-2">
-                      {t.majorCount > 0 ? (
-                        <span className="text-red-600 font-semibold">{t.majorCount}</span>
-                      ) : t.majorCount}
-                    </TableCell>
-                    <TableCell className="text-xs text-right py-2">
-                      {formatNumber(t.defectDensity)}
-                    </TableCell>
                     <TableCell className="py-2">
                       {t.isActive ? (
                         <Badge variant="default" className="text-xs">有効</Badge>
@@ -429,6 +415,7 @@ export function QualityDashboard({
 
       <QualityTrendChart
         data={trend}
+        sizeUnit={sizeUnit}
         fromDate={trendFrom}
         toDate={trendTo}
         onDateChange={handleDateChange}
@@ -470,7 +457,7 @@ export function QualityDashboard({
                   <TableHead className="text-xs">タスクNo.</TableHead>
                   <TableHead className="text-xs">タスク名</TableHead>
                   <TableHead className="text-xs">フェーズ</TableHead>
-                  <TableHead className="text-xs">重大度</TableHead>
+                  <TableHead className="text-xs">ソース</TableHead>
                   <TableHead className="text-xs">カテゴリ</TableHead>
                   <TableHead className="text-xs">内容</TableHead>
                   <TableHead className="text-xs">発見日</TableHead>
@@ -482,8 +469,10 @@ export function QualityDashboard({
                     <TableCell className="font-mono text-xs py-2">{f.taskNo}</TableCell>
                     <TableCell className="text-xs py-2 max-w-[160px] truncate">{f.targetName}</TableCell>
                     <TableCell className="text-xs text-gray-500 py-2">{f.phase ?? "-"}</TableCell>
-                    <TableCell className={`text-xs py-2 ${SEVERITY_CLASS[f.severity as QualitySeverity]}`}>
-                      {SEVERITY_LABEL[f.severity as QualitySeverity] ?? f.severity}
+                    <TableCell className="text-xs py-2">
+                      <Badge variant="outline" className="text-xs">
+                        {SOURCE_LABEL[f.source] ?? f.source}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-xs py-2 text-gray-600">{f.category ?? "-"}</TableCell>
                     <TableCell className="text-xs py-2 max-w-[240px] truncate">{f.description ?? "-"}</TableCell>

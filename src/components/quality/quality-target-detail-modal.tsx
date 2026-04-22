@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { QualitySizeUnit, QualitySeverity } from "@/domains/quality/value-objects/quality-enums";
+import { QualitySizeUnit, FindingSource } from "@/domains/quality/value-objects/quality-enums";
 import type { QualityTargetListItem } from "@/applications/quality/quality-application.service";
 import {
   getQualityFindings,
@@ -36,10 +36,9 @@ import {
 } from "@/app/wbs/[id]/actions/quality-actions";
 import { toast } from "@/hooks/use-toast";
 
-const SEVERITY_LABELS: Record<QualitySeverity, string> = {
-  [QualitySeverity.MAJOR]: "重大",
-  [QualitySeverity.MINOR]: "軽微",
-  [QualitySeverity.INFO]: "情報",
+const SOURCE_LABELS: Record<FindingSource, string> = {
+  [FindingSource.REVIEW]: "レビュー",
+  [FindingSource.TEST]: "テスト",
 };
 
 const UNIT_LABELS: Record<QualitySizeUnit, string> = {
@@ -51,7 +50,7 @@ const UNIT_LABELS: Record<QualitySizeUnit, string> = {
 interface FindingRow {
   id: number;
   targetId: number;
-  severity: QualitySeverity;
+  source: FindingSource;
   category: string | null;
   description: string | null;
   foundAt: string;
@@ -84,7 +83,7 @@ export function QualityTargetDetailModal({
   const [, startTransition] = useTransition();
 
   const [newFinding, setNewFinding] = useState({
-    severity: QualitySeverity.MAJOR as QualitySeverity,
+    source: FindingSource.REVIEW as FindingSource,
     category: "",
     description: "",
     foundAt: new Date().toISOString().split("T")[0],
@@ -115,7 +114,7 @@ export function QualityTargetDetailModal({
     startTransition(async () => {
       const result = await registerQualityFinding(wbsId, {
         targetId: target.id,
-        severity: newFinding.severity,
+        source: newFinding.source,
         category: newFinding.category || undefined,
         description: newFinding.description || undefined,
         foundAt: new Date(newFinding.foundAt).toISOString(),
@@ -123,7 +122,7 @@ export function QualityTargetDetailModal({
       if (result.success) {
         toast({ title: "指摘を登録しました" });
         setNewFinding({
-          severity: QualitySeverity.MAJOR,
+          source: FindingSource.REVIEW,
           category: "",
           description: "",
           foundAt: new Date().toISOString().split("T")[0],
@@ -132,10 +131,6 @@ export function QualityTargetDetailModal({
         onChanged({
           ...target,
           findingCount: target.findingCount + 1,
-          majorCount:
-            newFinding.severity === QualitySeverity.MAJOR
-              ? target.majorCount + 1
-              : target.majorCount,
         });
       } else {
         toast({ title: "登録失敗", description: result.error, variant: "destructive" });
@@ -143,7 +138,7 @@ export function QualityTargetDetailModal({
     });
   };
 
-  const handleDeleteFinding = (id: number, severity: QualitySeverity) => {
+  const handleDeleteFinding = (id: number) => {
     startTransition(async () => {
       const result = await deleteQualityFinding(wbsId, id);
       if (result.success) {
@@ -152,10 +147,6 @@ export function QualityTargetDetailModal({
         onChanged({
           ...target,
           findingCount: Math.max(0, target.findingCount - 1),
-          majorCount:
-            severity === QualitySeverity.MAJOR
-              ? Math.max(0, target.majorCount - 1)
-              : target.majorCount,
         });
       } else {
         toast({ title: "削除失敗", description: result.error, variant: "destructive" });
@@ -228,18 +219,18 @@ export function QualityTargetDetailModal({
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>重大度</Label>
+                    <Label>ソース</Label>
                     <Select
-                      value={newFinding.severity}
+                      value={newFinding.source}
                       onValueChange={(v) =>
-                        setNewFinding({ ...newFinding, severity: v as QualitySeverity })
+                        setNewFinding({ ...newFinding, source: v as FindingSource })
                       }
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.entries(SEVERITY_LABELS).map(([value, label]) => (
+                        {Object.entries(SOURCE_LABELS).map(([value, label]) => (
                           <SelectItem key={value} value={value}>
                             {label}
                           </SelectItem>
@@ -293,7 +284,7 @@ export function QualityTargetDetailModal({
                   <TableHeader>
                     <TableRow>
                       <TableHead>発見日</TableHead>
-                      <TableHead>重大度</TableHead>
+                      <TableHead>ソース</TableHead>
                       <TableHead>カテゴリ</TableHead>
                       <TableHead>内容</TableHead>
                       <TableHead className="text-right">操作</TableHead>
@@ -304,10 +295,8 @@ export function QualityTargetDetailModal({
                       <TableRow key={f.id}>
                         <TableCell>{f.foundAt.split("T")[0]}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant={f.severity === QualitySeverity.MAJOR ? "destructive" : "secondary"}
-                          >
-                            {SEVERITY_LABELS[f.severity]}
+                          <Badge variant="outline" className="text-xs">
+                            {SOURCE_LABELS[f.source] ?? f.source}
                           </Badge>
                         </TableCell>
                         <TableCell>{f.category ?? "-"}</TableCell>
@@ -316,7 +305,7 @@ export function QualityTargetDetailModal({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteFinding(f.id, f.severity)}
+                            onClick={() => handleDeleteFinding(f.id)}
                           >
                             削除
                           </Button>
