@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AuthHeader } from "./auth/auth-header";
 import { NotificationCenter } from "./notification/NotificationCenter";
 import { UnlinkedWorkRecordsBadge } from "./header/UnlinkedWorkRecordsBadge";
+import { DocsButton } from "./header/docs-button";
 import { useAuth } from "@/hooks/use-auth";
 
 interface ProjectInfo {
@@ -173,8 +174,9 @@ export function Header() {
           )}
         </div>
 
-        {/* 右側 - 通知と認証ステータス */}
+        {/* 右側 - ドキュメント、通知、認証ステータス */}
         <div className="flex items-center space-x-2">
+          <DocsButton />
           {!authLoading && user && (
             <>
               <NotificationCenter />
