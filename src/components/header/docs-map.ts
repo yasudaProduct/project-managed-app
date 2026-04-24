@@ -12,6 +12,11 @@ export const DOCS_MAP: DocsMapEntry[] = [
     title: "ガントチャート",
   },
   {
+    pattern: /^\/projects\/[^/]+$/,
+    docId: "project-detail",
+    title: "プロジェクト詳細",
+  },
+  {
     pattern: /^\/$/,
     docId: "home",
     title: "ホーム",
