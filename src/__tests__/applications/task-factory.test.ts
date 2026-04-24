@@ -23,7 +23,6 @@ describe('TaskFactory', () => {
     taskRepository = {
       findById: jest.fn(),
       findAll: jest.fn(),
-      findByAssigneeId: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),

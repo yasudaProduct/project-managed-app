@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -8,6 +9,7 @@ import { useEffect, useState, useTransition } from "react";
 import {
   getProjectSettings,
   updateProjectSettings,
+  updateDashboardSettings,
 } from "@/app/wbs/[id]/project-settings-actions";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import {
@@ -30,6 +32,9 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
     useState<ProgressMeasurementMethod>("SELF_REPORTED");
   const [forecastCalculationMethod, setForecastCalculationMethod] =
     useState<ForecastCalculationMethod>("REALISTIC");
+  const [deadlineAlertDays, setDeadlineAlertDays] = useState<number>(1);
+  const [costOverrunThresholdPct, setCostOverrunThresholdPct] =
+    useState<number>(100);
   const [saving, startTransition] = useTransition();
 
   useEffect(() => {
@@ -43,6 +48,12 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         setForecastCalculationMethod(
           data?.forecastCalculationMethod || "REALISTIC"
         );
+        if ("deadlineAlertDays" in data) {
+          setDeadlineAlertDays(data.deadlineAlertDays as number);
+        }
+        if ("costOverrunThresholdPct" in data) {
+          setCostOverrunThresholdPct(data.costOverrunThresholdPct as number);
+        }
       } catch {}
     })();
   }, [projectId]);
@@ -261,6 +272,90 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
             onCheckedChange={onToggle}
             disabled={saving}
           />
+        </div>
+
+        {/* ダッシュボード設定 */}
+        <div className="space-y-4 pt-4 border-t">
+          <div>
+            <Label className="text-base font-medium">ダッシュボード設定</Label>
+            <div className="text-sm text-gray-500 mt-1">
+              サマリータブに表示するアラートの閾値を設定します。
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label
+                htmlFor="deadlineAlertDays"
+                className="text-sm font-medium"
+              >
+                期限間近アラート（日数）
+              </Label>
+              <div className="text-xs text-gray-500 mt-0.5">
+                予定終了日の何日前からタスクを表示するか
+              </div>
+            </div>
+            <Input
+              id="deadlineAlertDays"
+              type="number"
+              min={0}
+              max={365}
+              value={deadlineAlertDays}
+              onChange={(e) => {
+                const value = parseInt(e.target.value, 10);
+                if (isNaN(value) || value < 0) return;
+                setDeadlineAlertDays(value);
+              }}
+              onBlur={() => {
+                startTransition(async () => {
+                  await updateDashboardSettings(
+                    projectId,
+                    deadlineAlertDays,
+                    costOverrunThresholdPct
+                  );
+                });
+              }}
+              className="w-20 text-right"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label
+                htmlFor="costOverrunThresholdPct"
+                className="text-sm font-medium"
+              >
+                工数超過アラート（%）
+              </Label>
+              <div className="text-xs text-gray-500 mt-0.5">
+                予定工数の何%以上で超過タスクとして表示するか
+              </div>
+            </div>
+            <Input
+              id="costOverrunThresholdPct"
+              type="number"
+              min={0}
+              max={1000}
+              value={costOverrunThresholdPct}
+              onChange={(e) => {
+                const value = parseInt(e.target.value, 10);
+                if (isNaN(value) || value < 0) return;
+                setCostOverrunThresholdPct(value);
+              }}
+              onBlur={() => {
+                startTransition(async () => {
+                  await updateDashboardSettings(
+                    projectId,
+                    deadlineAlertDays,
+                    costOverrunThresholdPct
+                  );
+                });
+              }}
+              className="w-20 text-right"
+              disabled={saving}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

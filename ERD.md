@@ -197,6 +197,8 @@ erDiagram
   Boolean roundToQuarter
   ProgressMeasurementMethod progressMeasurementMethod
   ForecastCalculationMethod forecastCalculationMethod
+  Int deadlineAlertDays
+  Int costOverrunThresholdPct
   Json evmExcludeSettings
   Json qualityThresholds "nullable"
   DateTime createdAt
@@ -571,6 +573,8 @@ erDiagram
   - `roundToQuarter`: 
   - `progressMeasurementMethod`: 
   - `forecastCalculationMethod`: 
+  - `deadlineAlertDays`: 
+  - `costOverrunThresholdPct`: 
   - `evmExcludeSettings`: 
   - `qualityThresholds`: 
   - `createdAt`: 

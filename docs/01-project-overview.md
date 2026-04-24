@@ -53,8 +53,6 @@ project-managed-app/
    ├─> [Prisma] ──> [PostgreSQL]
    │
    └─> [Prisma] ──>[MySQL Readonly]
-                    ├─ WBS テーブル
-                    └─ Geppo テーブル
 ```
 
 ## テスト
@@ -71,6 +69,6 @@ project-managed-app/
 
 ## 前提/制約
 
-- 参照用MySQLは原則リードオンリー（本番接続での開発は可能だが注意）
+- 参照用MySQLはリードオンリー
 - テスト戦略は整備中（暫定は `README.md` のコマンド参照）
 - 詳細仕様は整備中

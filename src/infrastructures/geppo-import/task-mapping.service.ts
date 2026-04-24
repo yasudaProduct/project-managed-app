@@ -1,6 +1,17 @@
 import { injectable, inject } from 'inversify'
 import { SYMBOL } from '@/types/symbol'
 import type { ITaskRepository } from '@/applications/task/itask-repository'
+import { Task } from '@/domains/task/task'
+
+export type TaskMappingEntry = {
+  projectId: string
+  wbsNo: string
+  wbsId: number
+}
+
+export function buildTaskMapKey(projectId: string, wbsNo: string): string {
+  return `${projectId}::${wbsNo}`
+}
 
 @injectable()
 export class TaskMappingService {
@@ -8,25 +19,26 @@ export class TaskMappingService {
     @inject(SYMBOL.ITaskRepository) private taskRepository: ITaskRepository
   ) { }
 
-  async createTaskMap(geppoWbsNos: string[]): Promise<Map<string, number>> {
+  async createTaskMap(entries: TaskMappingEntry[]): Promise<Map<string, number>> {
     const taskMap = new Map<string, number>()
 
     try {
-      // 1. 既存タスクを取得
-      const existingTasks = await this.taskRepository.findAll()
+      const uniqueWbsIds = [...new Set(entries.map(e => e.wbsId))]
+      const tasksByWbsId = new Map<number, Task[]>()
+      for (const wbsId of uniqueWbsIds) {
+        tasksByWbsId.set(wbsId, await this.taskRepository.findByWbsId(wbsId))
+      }
 
-      // 2. geppo.WBS_NO と wbs_tasks.code でマッピング
-      for (const wbsNo of geppoWbsNos) {
-        if (!wbsNo) continue
+      for (const { projectId, wbsNo, wbsId } of entries) {
+        if (!projectId || !wbsNo) continue
 
-        const matchedTask = existingTasks.find(t =>
-          t.taskNo.getValue() === wbsNo
-        )
+        const tasks = tasksByWbsId.get(wbsId) ?? []
+        const matched = tasks.find(t => t.taskNo.getValue() === wbsNo)
 
-        if (matchedTask) {
-          taskMap.set(wbsNo, matchedTask.id!)
+        if (matched) {
+          taskMap.set(buildTaskMapKey(projectId, wbsNo), matched.id!)
         } else {
-          console.warn(`Task mapping not found: ${wbsNo}`)
+          console.warn(`Task mapping not found: projectId=${projectId} wbsNo=${wbsNo} wbsId=${wbsId}`)
         }
       }
 
@@ -37,29 +49,24 @@ export class TaskMappingService {
     }
   }
 
-  async validateTaskMapping(geppoWbsNos: string[]): Promise<{
+  async validateTaskMapping(entries: TaskMappingEntry[]): Promise<{
     totalTasks: number
     mappedTasks: number
     unmappedTasks: string[]
     mappingRate: number
   }> {
     try {
-      const filteredWbsNos = geppoWbsNos.filter(Boolean)
-      const taskMap = await this.createTaskMap(filteredWbsNos)
-      const unmappedTasks = filteredWbsNos.filter(wbs => !taskMap.has(wbs))
-
-      console.log("--validateTaskMapping--")
-      console.log("geppoWbsNos", geppoWbsNos)
-      console.log("filteredWbsNos", filteredWbsNos)
-      console.log("taskMap", taskMap)
-      console.log("unmappedTasks", unmappedTasks.length)
-      console.log("--------------------------------")
+      const filtered = entries.filter(e => e.projectId && e.wbsNo)
+      const taskMap = await this.createTaskMap(filtered)
+      const unmappedTasks = filtered
+        .filter(e => !taskMap.has(buildTaskMapKey(e.projectId, e.wbsNo)))
+        .map(e => e.wbsNo)
 
       return {
-        totalTasks: filteredWbsNos.length,
+        totalTasks: filtered.length,
         mappedTasks: taskMap.size,
         unmappedTasks,
-        mappingRate: filteredWbsNos.length > 0 ? taskMap.size / filteredWbsNos.length : 0
+        mappingRate: filtered.length > 0 ? taskMap.size / filtered.length : 0
       }
     } catch (error) {
       console.error('Failed to validate task mapping:', error)

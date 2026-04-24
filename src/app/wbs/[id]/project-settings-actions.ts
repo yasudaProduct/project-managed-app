@@ -10,7 +10,9 @@ export async function getProjectSettings(projectId: string) {
         projectId,
         roundToQuarter: false,
         progressMeasurementMethod: 'SELF_REPORTED' as ProgressMeasurementMethod,
-        forecastCalculationMethod: 'REALISTIC' as ForecastCalculationMethod
+        forecastCalculationMethod: 'REALISTIC' as ForecastCalculationMethod,
+        deadlineAlertDays: 1,
+        costOverrunThresholdPct: 100,
     };
 }
 
@@ -32,6 +34,25 @@ export async function updateProjectSettings(
             roundToQuarter,
             ...(progressMeasurementMethod && { progressMeasurementMethod }),
             ...(forecastCalculationMethod && { forecastCalculationMethod })
+        },
+    });
+}
+
+export async function updateDashboardSettings(
+    projectId: string,
+    deadlineAlertDays: number,
+    costOverrunThresholdPct: number,
+) {
+    await prisma.projectSettings.upsert({
+        where: { projectId },
+        create: {
+            projectId,
+            deadlineAlertDays,
+            costOverrunThresholdPct,
+        },
+        update: {
+            deadlineAlertDays,
+            costOverrunThresholdPct,
         },
     });
 }

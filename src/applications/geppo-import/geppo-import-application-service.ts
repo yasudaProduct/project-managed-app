@@ -13,7 +13,7 @@ import type { IGeppoRepository } from '@/applications/geppo/repositories/igeppo.
 import type { IWorkRecordApplicationService } from '@/applications/work-record/work-record-application-service'
 import { ProjectMappingService } from '@/infrastructures/geppo-import/project-mapping.service'
 import { UserMappingService } from '@/infrastructures/geppo-import/user-mapping.service'
-import { TaskMappingService } from '@/infrastructures/geppo-import/task-mapping.service'
+import { TaskMappingService, TaskMappingEntry, buildTaskMapKey } from '@/infrastructures/geppo-import/task-mapping.service'
 import { Geppo, GeppoSearchFilters } from '@/domains/geppo/types'
 
 export interface IGeppoImportApplicationService {
@@ -62,9 +62,11 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
       // 4. プロジェクトマッピング検証
       const projectMappingResult = await this.projectMappingService.validateProjectMapping(geppoRecords)
 
-      // 5. タスクマッピング検証
-      const uniqueWbsNos = [...new Set(geppoRecords.map(g => g.WBS_NO).filter((wbs): wbs is string => Boolean(wbs)))]
-      const taskMappingResult = await this.taskMappingService.validateTaskMapping(uniqueWbsNos)
+      // 5. タスクマッピング検証（PROJECT_ID + WBS_NO の複合キーで WBS スコープ内のみ照合）
+      const uniqueGeppoProjectIds = [...new Set(geppoRecords.map(g => g.PROJECT_ID).filter((p): p is string => Boolean(p)))]
+      const projectToWbsIdMap = await this.projectMappingService.createProjectMap(uniqueGeppoProjectIds)
+      const taskMappingEntries = this.buildTaskMappingEntries(geppoRecords, projectToWbsIdMap)
+      const taskMappingResult = await this.taskMappingService.validateTaskMapping(taskMappingEntries)
 
       // 6. エラー・警告の判定
       const errors: string[] = []
@@ -167,20 +169,30 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
 
       if (options.updateMode === 'replace') {
         // replaceモード: 既存データを削除してから新規作成
+        // 削除対象はインポート対象WBSに限定する（別WBSの実績を消さないため）
         const userIds = [...new Set(workRecords.map(wr => wr.userId!).filter(Boolean))]
+        const uniqueGeppoProjectIdsForDelete = [...new Set(geppoRecords.map(g => g.PROJECT_ID).filter((p): p is string => Boolean(p)))]
+        const projectToWbsIdMapForDelete = await this.projectMappingService.createProjectMap(uniqueGeppoProjectIdsForDelete)
+        const wbsIds = [...new Set(
+          [...projectToWbsIdMapForDelete.values()]
+            .map(v => Number(v))
+            .filter(v => Number.isFinite(v))
+        )]
 
-        if (options.targetMonth) {
-          // 特定月の場合は月単位で削除
-          const monthStart = new Date(`${options.targetMonth}-01`)
-          const monthEnd = new Date(`${options.targetMonth}-31`)
-          deletedCount = await this.workRecordService.deleteByUserAndDateRange(userIds, monthStart, monthEnd)
-        } else {
-          // 全期間の場合は、インポートされたデータの日付範囲で削除
-          const dates = workRecords.map(wr => wr.startDate!).filter(Boolean)
-          if (dates.length > 0) {
-            const minDate = new Date(Math.min(...dates.map(d => d.getTime())))
-            const maxDate = new Date(Math.max(...dates.map(d => d.getTime())))
-            deletedCount = await this.workRecordService.deleteByUserAndDateRange(userIds, minDate, maxDate)
+        if (userIds.length > 0 && wbsIds.length > 0) {
+          if (options.targetMonth) {
+            // 特定月の場合は月単位で削除
+            const monthStart = new Date(`${options.targetMonth}-01`)
+            const monthEnd = new Date(`${options.targetMonth}-31`)
+            deletedCount = await this.workRecordService.deleteByUserAndDateRange(userIds, monthStart, monthEnd, wbsIds)
+          } else {
+            // 全期間の場合は、インポートされたデータの日付範囲で削除
+            const dates = workRecords.map(wr => wr.startDate!).filter(Boolean)
+            if (dates.length > 0) {
+              const minDate = new Date(Math.min(...dates.map(d => d.getTime())))
+              const maxDate = new Date(Math.max(...dates.map(d => d.getTime())))
+              deletedCount = await this.workRecordService.deleteByUserAndDateRange(userIds, minDate, maxDate, wbsIds)
+            }
           }
         }
 
@@ -211,6 +223,32 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
     }
   }
 
+  private buildTaskMappingEntries(
+    geppoRecords: Geppo[],
+    projectToWbsIdMap: Map<string, string>
+  ): TaskMappingEntry[] {
+    const seen = new Set<string>()
+    const entries: TaskMappingEntry[] = []
+    for (const geppo of geppoRecords) {
+      const projectId = geppo.PROJECT_ID
+      const wbsNo = geppo.WBS_NO
+      if (!projectId || !wbsNo) continue
+
+      const wbsIdStr = projectToWbsIdMap.get(projectId)
+      if (!wbsIdStr) continue
+
+      const wbsId = Number(wbsIdStr)
+      if (!Number.isFinite(wbsId)) continue
+
+      const dedupKey = buildTaskMapKey(projectId, wbsNo)
+      if (seen.has(dedupKey)) continue
+      seen.add(dedupKey)
+
+      entries.push({ projectId, wbsNo, wbsId })
+    }
+    return entries
+  }
+
   private async getGeppoRecords(targetMonth?: string): Promise<Geppo[]> {
     const filters: GeppoSearchFilters = {}
 
@@ -236,10 +274,12 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
 
     // マッピングを事前に作成
     const uniqueMemberIds = [...new Set(geppoRecords.map(g => g.MEMBER_ID))]
-    const uniqueWbsNos = [...new Set(geppoRecords.map(g => g.WBS_NO).filter((wbs): wbs is string => Boolean(wbs)))]
+    const uniqueGeppoProjectIds = [...new Set(geppoRecords.map(g => g.PROJECT_ID).filter((p): p is string => Boolean(p)))]
 
     const userMap = await this.userMappingService.createUserMap(uniqueMemberIds)
-    const taskMap = await this.taskMappingService.createTaskMap(uniqueWbsNos)
+    const projectToWbsIdMap = await this.projectMappingService.createProjectMap(uniqueGeppoProjectIds)
+    const taskMappingEntries = this.buildTaskMappingEntries(geppoRecords, projectToWbsIdMap)
+    const taskMap = await this.taskMappingService.createTaskMap(taskMappingEntries)
 
     for (const geppo of geppoRecords) {
       const userId = userMap.get(geppo.MEMBER_ID)
@@ -249,7 +289,9 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
       }
 
 
-      const taskId = taskMap.get(geppo.WBS_NO || '')
+      const taskId = geppo.PROJECT_ID && geppo.WBS_NO
+        ? taskMap.get(buildTaskMapKey(geppo.PROJECT_ID, geppo.WBS_NO))
+        : undefined
 
       // 日次データに展開
       for (let day = 1; day <= 31; day++) {
