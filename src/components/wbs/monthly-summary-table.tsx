@@ -253,7 +253,7 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
 
                                 {showForecast && (
                                     <TableCell className="text-center text-sm border-r">
-                                        {forecast > 0 ? formatNumber(forecast) : formatNumber((total.actualHours || 0) > 0 ? total.actualHours || 0 : total.plannedHours || 0)}
+                                        {formatNumber(forecast)}
                                     </TableCell>
                                 )}
                             </React.Fragment>

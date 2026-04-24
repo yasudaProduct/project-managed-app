@@ -385,6 +385,77 @@ describe('GetWbsSummaryHandler', () => {
         expect(phase1Jan?.actualHours ?? 0).toBe(0);
       });
 
+      it('見通しが実績を下回らない（予定月と実績月がずれても各月で forecast >= actual）', async () => {
+        // Task 1: 予定 2024/01（40h）、実績は work_records により 2024/03 に 60h
+        // 実績 > 予定 のため、ForecastCalculationService は 実績と同水準以上を返す想定。
+        // 月別集計の 2024/03 の「見通し」が「実績(60)」以上で表示されること。
+        const taskWithOverrun: WbsTaskData = {
+          ...mockTasks[0],
+          jissekiKosu: 60,
+          progressRate: 100,
+          status: 'COMPLETED',
+        };
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue([taskWithOverrun]);
+        mockWbsQueryRepository.getTaskActualHoursByMonth.mockResolvedValue([
+          {
+            taskId: '1',
+            userId: '1',
+            userDisplayName: 'John Doe',
+            yearMonth: '2024/03',
+            hoursWorked: 60,
+          },
+        ]);
+
+        const query = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.START_DATE_BASED);
+        const result = await handler.execute(query);
+
+        // 2024/03 の実績(60)
+        const march = result.monthlyAssigneeSummary.monthlyTotals['2024/03'];
+        expect(march.actualHours).toBe(60);
+        // 2024/03 の見通し >= 実績 の不変条件
+        expect(march.forecastHours).toBeGreaterThanOrEqual(march.actualHours);
+
+        // 工程別集計でも同様
+        const phaseMarch = result.monthlyPhaseSummary!.monthlyTotals['2024/03'];
+        expect(phaseMarch.actualHours).toBe(60);
+        expect(phaseMarch.forecastHours).toBeGreaterThanOrEqual(phaseMarch.actualHours);
+      });
+
+      it('予定外の月に実績が発生した場合、その月の見通しも 0 ではなく実績以上になる', async () => {
+        // Task 1: 予定 2024/01（40h）、実績は 2024/01 に 20h + 2024/02 に 25h
+        const taskInProgress: WbsTaskData = {
+          ...mockTasks[0],
+          jissekiKosu: 45,
+          progressRate: 50,
+          status: 'IN_PROGRESS',
+        };
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue([taskInProgress]);
+        mockWbsQueryRepository.getTaskActualHoursByMonth.mockResolvedValue([
+          {
+            taskId: '1',
+            userId: '1',
+            userDisplayName: 'John Doe',
+            yearMonth: '2024/01',
+            hoursWorked: 20,
+          },
+          {
+            taskId: '1',
+            userId: '1',
+            userDisplayName: 'John Doe',
+            yearMonth: '2024/02',
+            hoursWorked: 25,
+          },
+        ]);
+
+        const query = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.START_DATE_BASED);
+        const result = await handler.execute(query);
+
+        // 2024/02 は予定外だが実績あり → 見通しも実績以上
+        const feb = result.monthlyAssigneeSummary.monthlyTotals['2024/02'];
+        expect(feb.actualHours).toBe(25);
+        expect(feb.forecastHours).toBeGreaterThanOrEqual(25);
+      });
+
       it('yoteiStart が null のタスクでも work_records があれば集計に含まれる', async () => {
         const tasksWithoutStartDate = [
           {
