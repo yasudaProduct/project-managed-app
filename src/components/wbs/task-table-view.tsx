@@ -411,9 +411,9 @@ export function TaskTableViewPage({
             yoteiStart: wbsTask.yoteiStart,
             yoteiEnd: wbsTask.yoteiEnd,
             yoteiKosu: wbsTask.yoteiKosu,
-            // jissekiStart: wbsTask.jissekiStart,
-            // jissekiEnd: wbsTask.jissekiEnd,
-            // jissekiKosu: wbsTask.jissekiKosu,
+            jissekiStart: wbsTask.jissekiStart,
+            jissekiEnd: wbsTask.jissekiEnd,
+            jissekiKosu: wbsTask.jissekiKosu,
             status: wbsTask.status,
             assigneeId: String(wbsTask.assigneeId ?? ""),
             assignee: wbsTask.assignee?.displayName ?? "未設定",
@@ -555,10 +555,18 @@ export function TaskTableViewPage({
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
+                          {cell.getIsPlaceholder()
+                            ? null
+                            : cell.getIsAggregated()
+                              ? flexRender(
+                                  cell.column.columnDef.aggregatedCell ??
+                                    cell.column.columnDef.cell,
+                                  cell.getContext(),
+                                )
+                              : flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext(),
+                                )}
                         </TableCell>
                       ))}
                     </TableRow>
