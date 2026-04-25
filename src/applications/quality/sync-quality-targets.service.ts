@@ -1,8 +1,9 @@
 import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
-import { QualityReviewTarget } from '@/domains/quality/quality-review-target';
-import { QualityReviewer } from '@/domains/quality/quality-reviewer';
-import type { IQualityReviewTargetRepository, IQualityReviewerRepository } from './i-quality-review-target.repository';
+import { QualityTarget } from '@/domains/quality/entities/quality-target';
+import { QualityReviewer } from '@/domains/quality/entities/quality-reviewer';
+import type { IQualityTargetRepository } from './repositories/i-quality-target.repository';
+import type { IQualityReviewerRepository } from './repositories/i-quality-reviewer.repository';
 import type { IQualityTaskRepository } from './i-quality-task.repository';
 
 export interface SyncResult {
@@ -14,23 +15,14 @@ export interface SyncResult {
 @injectable()
 export class SyncQualityTargetsService {
   constructor(
-    @inject(SYMBOL.IQualityReviewTargetRepository)
-    private readonly targetRepo: IQualityReviewTargetRepository,
+    @inject(SYMBOL.IQualityTargetRepository)
+    private readonly targetRepo: IQualityTargetRepository,
     @inject(SYMBOL.IQualityReviewerRepository)
     private readonly reviewerRepo: IQualityReviewerRepository,
     @inject(SYMBOL.IQualityTaskRepository)
     private readonly taskRepo: IQualityTaskRepository,
   ) { }
 
-  /**
-   * PostgreSQLに取り込まれたWbsTaskを起点に定量品質評価データを同期する。
-   *
-   * - 評価対象 = 同一 WBS 内に `^{自taskNo}-R.*$` にマッチするレビュータスクが
-   *   1件以上存在する WbsTask（1タスク=1評価対象）
-   * - レビュータスク = taskNo が `^{評価対象taskNo}-R.*$` にマッチする WbsTask
-   * - reviewerUserId = レビュータスクの assignee から解決した Users.id
-   *   （assignee 未設定のレビュータスクはスキップする）
-   */
   async syncForWbs(wbsId: number): Promise<SyncResult> {
     const tasks = await this.taskRepo.findAllForQualitySync(wbsId);
 
@@ -48,7 +40,7 @@ export class SyncQualityTargetsService {
       const existing = await this.targetRepo.findByWbsAndTaskNo(wbsId, target.taskNo);
 
       const targetEntity = existing
-        ?? QualityReviewTarget.create({ wbsId, taskNo: target.taskNo, name: target.name });
+        ?? QualityTarget.create({ wbsId, taskNo: target.taskNo, name: target.name });
 
       const saved = await this.targetRepo.upsert(targetEntity);
 

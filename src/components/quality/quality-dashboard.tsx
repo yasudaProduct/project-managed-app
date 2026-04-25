@@ -1,505 +1,219 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, ListChecks, Ruler, AlertCircle, Download } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { QualitySizeUnit } from "@/domains/quality/value-objects/quality-enums";
-import { getMetricDefinitions } from "@/domains/quality/value-objects/metric-definition";
-import type {
-  QualityTargetListItem,
-  WbsQualitySummary,
-  QualityTrendPoint,
-  FindingsByReviewee,
-  FindingsByCategory,
-} from "@/applications/quality/quality-application.service";
+import { IPA_METRIC_DEFINITIONS } from "@/domains/quality/value-objects/metric-definition";
+import type { WbsSummary } from "@/applications/quality/quality-metrics.service";
 import {
-  syncQualityTargets,
-  getWbsQualitySummary,
-  getQualityTrend,
   getQualityTargets,
+  getWbsQualitySummary,
   getWbsAllFindings,
-  getQualityFindingsByReviewee,
-  getQualityFindingsByCategory,
+  syncQualityTargets,
 } from "@/app/wbs/[id]/actions/quality-actions";
-import { toast } from "@/hooks/use-toast";
-import { QualityTargetDetailModal } from "./quality-target-detail-modal";
-import { QualityImportExport } from "./quality-import-export";
-import { QualityIndicatorCards } from "./quality-indicator-cards";
-import { QualityTrendChart } from "./quality-trend-chart";
-import { QualityRevieweeFindingsChart } from "./quality-reviewee-findings-chart";
-import { QualityCategoryFindingsChart } from "./quality-category-findings-chart";
+import type { QualityTargetItem, QualityFindingItem } from "@/app/wbs/[id]/actions/quality-actions";
+import { QualityKpiCards } from "./quality-kpi-cards";
+import { ScatterPlotChart } from "./charts/scatter-plot-chart";
+import { PbCurveChart } from "./charts/pb-curve-chart";
+import { ParetoChart } from "./charts/pareto-chart";
+import { QualityImportDialog } from "./quality-import-dialog";
 
-type SizeUnitOption = QualitySizeUnit | "MAN_HOUR";
-
-const SIZE_UNIT_LABELS: Record<SizeUnitOption, string> = {
-  MAN_HOUR: "工数 (人時)",
-  [QualitySizeUnit.PAGE]: "ページ数",
-  [QualitySizeUnit.LINES_OF_CODE]: "ステップ数",
-  [QualitySizeUnit.TEST_CASE]: "テストケース数",
-};
-
-const SOURCE_LABEL: Record<string, string> = {
-  REVIEW: "レビュー",
-  TEST: "テスト",
-};
-
-type FindingRow = Awaited<ReturnType<typeof getWbsAllFindings>>[number];
-
-interface QualityDashboardProps {
+interface Props {
   wbsId: number;
-  initialTargets: QualityTargetListItem[];
-  initialSummary: WbsQualitySummary;
-  initialTrend: QualityTrendPoint[];
-  initialFindings?: FindingRow[];
-  initialRevieweeFindings?: FindingsByReviewee[];
-  initialCategoryFindings?: FindingsByCategory[];
+  initialTargets: QualityTargetItem[];
+  initialSummary: WbsSummary;
+  initialFindings: QualityFindingItem[];
 }
 
-function formatNumber(n: number | null, digits = 3): string {
-  if (n === null || n === undefined || !Number.isFinite(n)) return "-";
-  return n.toFixed(digits);
-}
+const sizeUnitOptions: { value: QualitySizeUnit; label: string }[] = [
+  { value: QualitySizeUnit.PAGE, label: "PAGE" },
+  { value: QualitySizeUnit.LOC, label: "LOC (KLOC)" },
+  { value: QualitySizeUnit.FP, label: "FP" },
+  { value: QualitySizeUnit.TEST_CASE, label: "テストケース" },
+];
 
-function downloadTsv(filename: string, headers: string[], rows: (string | number | null | undefined)[][]) {
-  const normalize = (v: string | number | null | undefined): string => {
-    if (v === null || v === undefined) return "";
-    const s = String(v);
-    if (s === "-") return "";
-    return s.replace(/\t/g, " ").replace(/\r?\n/g, " ");
-  };
-  const lines = [headers.join("\t"), ...rows.map((r) => r.map(normalize).join("\t"))];
-  const text = lines.join("\n");
-  const blob = new Blob([text], { type: "text/tab-separated-values;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+export function QualityDashboard({ wbsId, initialTargets, initialSummary, initialFindings }: Props) {
+  const [sizeUnit, setSizeUnit] = useState<QualitySizeUnit>(QualitySizeUnit.PAGE);
+  const [targets, setTargets] = useState<QualityTargetItem[]>(initialTargets);
+  const [summary, setSummary] = useState<WbsSummary>(initialSummary);
+  const [findings, setFindings] = useState<QualityFindingItem[]>(initialFindings);
+  const [isPending, startTransition] = useTransition();
 
-export function QualityDashboard({
-  wbsId,
-  initialTargets,
-  initialSummary,
-  initialTrend,
-  initialFindings = [],
-  initialRevieweeFindings = [],
-  initialCategoryFindings = [],
-}: QualityDashboardProps) {
-  const [targets, setTargets] = useState<QualityTargetListItem[]>(initialTargets);
-  const [summary, setSummary] = useState<WbsQualitySummary>(initialSummary);
-  const [trend, setTrend] = useState<QualityTrendPoint[]>(initialTrend);
-  const [findings, setFindings] = useState<FindingRow[]>(initialFindings);
-  const [revieweeFindings, setRevieweeFindings] =
-    useState<FindingsByReviewee[]>(initialRevieweeFindings);
-  const [categoryFindings, setCategoryFindings] =
-    useState<FindingsByCategory[]>(initialCategoryFindings);
-  const [sizeUnit, setSizeUnit] = useState<SizeUnitOption>("MAN_HOUR");
-  const [selectedPhase, setSelectedPhase] = useState<string>("");
-  const [selectedTarget, setSelectedTarget] = useState<QualityTargetListItem | null>(null);
-  const [trendFrom, setTrendFrom] = useState("");
-  const [trendTo, setTrendTo] = useState("");
-  const [isSyncing, startSyncTransition] = useTransition();
-  const [isRefreshing, startRefreshTransition] = useTransition();
-
-  const definitions = useMemo(() => getMetricDefinitions(sizeUnit), [sizeUnit]);
-
-  const phases = useMemo(() => {
-    const set = new Set<string>();
-    for (const t of targets) {
-      if (t.phase) set.add(t.phase);
-    }
-    return Array.from(set).sort();
-  }, [targets]);
-
-  const filteredTargets = useMemo(() => {
-    if (!selectedPhase) return targets;
-    return targets.filter((t) => t.phase === selectedPhase);
-  }, [targets, selectedPhase]);
-
-  const filteredFindings = useMemo(() => {
-    if (!selectedPhase) return findings;
-    return findings.filter((f) => f.phase === selectedPhase);
-  }, [findings, selectedPhase]);
-
-  const refreshAll = (unit: SizeUnitOption, from: string, to: string, phase: string) => {
-    startRefreshTransition(async () => {
-      const [newSummary, newTrend, newTargets, newFindings, newReviewee, newCategory] =
-        await Promise.all([
-          getWbsQualitySummary(wbsId, unit),
-          getQualityTrend(wbsId, unit, from || undefined, to || undefined, phase || undefined),
-          getQualityTargets(wbsId, unit),
-          getWbsAllFindings(wbsId),
-          getQualityFindingsByReviewee(wbsId),
-          getQualityFindingsByCategory(wbsId),
-        ]);
-      setSummary(newSummary);
-      setTrend(newTrend);
+  const refresh = useCallback(() => {
+    startTransition(async () => {
+      const [newTargets, newSummary, newFindings] = await Promise.all([
+        getQualityTargets(wbsId, sizeUnit, true),
+        getWbsQualitySummary(wbsId, sizeUnit),
+        getWbsAllFindings(wbsId),
+      ]);
       setTargets(newTargets);
+      setSummary(newSummary);
       setFindings(newFindings);
-      setRevieweeFindings(newReviewee);
-      setCategoryFindings(newCategory);
     });
-  };
+  }, [wbsId, sizeUnit]);
 
-  const handleSizeUnitChange = (v: string) => {
-    const unit = v as SizeUnitOption;
-    setSizeUnit(unit);
-    refreshAll(unit, trendFrom, trendTo, selectedPhase);
-  };
-
-  const handleDateChange = (from: string, to: string) => {
-    setTrendFrom(from);
-    setTrendTo(to);
-    startRefreshTransition(async () => {
-      const newTrend = await getQualityTrend(
-        wbsId,
-        sizeUnit,
-        from || undefined,
-        to || undefined,
-        selectedPhase || undefined,
-      );
-      setTrend(newTrend);
-    });
-  };
-
-  const handlePhaseChange = (phase: string) => {
-    setSelectedPhase(phase);
-    startRefreshTransition(async () => {
-      const newTrend = await getQualityTrend(
-        wbsId,
-        sizeUnit,
-        trendFrom || undefined,
-        trendTo || undefined,
-        phase || undefined,
-      );
-      setTrend(newTrend);
-    });
-  };
+  useEffect(() => {
+    refresh();
+  }, [sizeUnit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSync = () => {
-    startSyncTransition(async () => {
-      const result = await syncQualityTargets(wbsId);
-      if (result.success && result.data) {
-        toast({
-          title: "同期完了",
-          description: `新規: ${result.data.created}件 / 更新: ${result.data.updated}件 / 無効化: ${result.data.deactivated}件`,
-        });
-        refreshAll(sizeUnit, trendFrom, trendTo, selectedPhase);
-      } else {
-        toast({ title: "同期に失敗しました", description: result.error, variant: "destructive" });
-      }
+    startTransition(async () => {
+      await syncQualityTargets(wbsId);
+      refresh();
     });
   };
 
-  const exportTargetsTsv = () => {
-    const baseHeaders = [
-      "タスクNo.",
-      "タスク名",
-      "フェーズ",
-      "レビューイ",
-      "レビューアー",
-      "ページ",
-      "ステップ",
-      "テストケース",
-      "工数(人時)",
-    ];
-    const metricHeaders = definitions.map((d) => d.label);
-    const trailingHeaders = ["指摘", "状態"];
-    const headers = [...baseHeaders, ...metricHeaders, ...trailingHeaders];
-
-    const rows = filteredTargets.map((t) => [
-      t.taskNo,
-      t.name,
-      t.phase ?? "",
-      t.revieweeName ?? "",
-      t.reviewerNames.join(", "),
-      t.sizeByUnit.PAGE ?? "",
-      t.sizeByUnit.LINES_OF_CODE ?? "",
-      t.sizeByUnit.TEST_CASE ?? "",
-      t.sizeByUnit.MAN_HOUR ?? "",
-      ...definitions.map((d) => formatNumber(t.metrics[d.key])),
-      t.findingCount,
-      t.isActive ? "有効" : "無効",
-    ]);
-    downloadTsv(`quality-targets-wbs${wbsId}.tsv`, headers, rows);
-  };
-
-  const FINDING_TSV_HEADERS = [
-    "タスクNo.",
-    "タスク名",
-    "フェーズ",
-    "ソース",
-    "カテゴリ",
-    "内容",
-    "発見日",
-  ];
-
-  const exportFindingsTsv = () => {
-    const rows = filteredFindings.map((f) => [
-      f.taskNo,
-      f.targetName,
-      f.phase ?? "",
-      SOURCE_LABEL[f.source] ?? f.source,
-      f.category ?? "",
-      f.description ?? "",
-      new Date(f.foundAt).toLocaleDateString("ja-JP"),
-    ]);
-    downloadTsv(`quality-findings-wbs${wbsId}.tsv`, FINDING_TSV_HEADERS, rows);
-  };
+  const metricKeys = Object.keys(IPA_METRIC_DEFINITIONS) as (keyof typeof IPA_METRIC_DEFINITIONS)[];
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 flex-wrap">
-        <Select
-          value={selectedPhase || "__all__"}
-          onValueChange={(v) => handlePhaseChange(v === "__all__" ? "" : v)}
-        >
-          <SelectTrigger className="w-[160px] h-8 text-xs">
-            <SelectValue placeholder="すべてのフェーズ" />
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Select value={sizeUnit} onValueChange={(v) => setSizeUnit(v as QualitySizeUnit)}>
+          <SelectTrigger className="w-[150px] h-8 text-xs">
+            <SelectValue placeholder="規模単位" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">すべて</SelectItem>
-            {phases.map((p) => (
-              <SelectItem key={p} value={p}>{p}</SelectItem>
+            {sizeUnitOptions.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-
-        <div className="h-5 border-l border-gray-200 mx-1" />
-
-        <QualityImportExport wbsId={wbsId} />
-
-        <div className="h-5 border-l border-gray-200 mx-1" />
-
-        <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing}>
-          <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isSyncing ? "animate-spin" : ""}`} />
-          WBSから同期
+        <QualityImportDialog wbsId={wbsId} onImported={refresh} />
+        <Button variant="outline" size="sm" onClick={handleSync} disabled={isPending}>
+          <RefreshCw className={`h-4 w-4 mr-1 ${isPending ? "animate-spin" : ""}`} />
+          同期
         </Button>
-
-        <div className="flex items-center gap-1 ml-auto">
-          <Ruler className="h-3.5 w-3.5 text-gray-400" />
-          <Select value={sizeUnit} onValueChange={handleSizeUnitChange}>
-            <SelectTrigger className="w-[150px] h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(SIZE_UNIT_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
-      <QualityIndicatorCards summary={summary} />
+      {/* KPI Cards */}
+      <QualityKpiCards summary={summary} sizeUnit={sizeUnit} />
 
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-sm">散布図</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <ScatterPlotChart wbsId={wbsId} sizeUnit={sizeUnit} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-sm">PB曲線</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <PbCurveChart
+              targets={targets.map((t) => ({ id: t.id, name: t.name, taskNo: t.taskNo }))}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Pareto */}
       <Card>
-        <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <ListChecks className="h-4 w-4" />
-            評価対象一覧
-            {selectedPhase && (
-              <Badge variant="secondary" className="text-xs">{selectedPhase}</Badge>
-            )}
-            {isRefreshing && <span className="text-xs text-gray-400 font-normal">更新中…</span>}
-          </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={exportTargetsTsv}
-            disabled={filteredTargets.length === 0}
-          >
-            <Download className="h-3.5 w-3.5 mr-1" />
-            TSV出力
-          </Button>
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm">パレート図</CardTitle>
         </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
-          {filteredTargets.length === 0 ? (
-            <p className="text-center py-6 text-sm text-gray-500">
-              評価対象がありません。WBSから同期するか、フィルタを見直してください。
-            </p>
-          ) : (
+        <CardContent className="px-4 pb-4">
+          <ParetoChart wbsId={wbsId} />
+        </CardContent>
+      </Card>
+
+      {/* Target Table */}
+      <Card>
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm">評価対象一覧</CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">タスクNo.</TableHead>
-                  <TableHead className="text-xs">タスク名</TableHead>
-                  <TableHead className="text-xs">フェーズ</TableHead>
-                  <TableHead className="text-xs">レビューイ</TableHead>
-                  <TableHead className="text-xs">レビューアー</TableHead>
-                  <TableHead className="text-xs text-right">ページ</TableHead>
-                  <TableHead className="text-xs text-right">ステップ</TableHead>
-                  <TableHead className="text-xs text-right">テストケース</TableHead>
-                  <TableHead className="text-xs text-right">工数(人時)</TableHead>
-                  {definitions.map((d) => (
-                    <TableHead key={d.key} className="text-xs text-right">{d.label}</TableHead>
+                  <TableHead className="text-xs">タスクNo</TableHead>
+                  <TableHead className="text-xs">名称</TableHead>
+                  <TableHead className="text-xs">SS</TableHead>
+                  <TableHead className="text-xs">工程</TableHead>
+                  {metricKeys.map((key) => (
+                    <TableHead key={key} className="text-xs text-right">
+                      {IPA_METRIC_DEFINITIONS[key].label}
+                    </TableHead>
                   ))}
-                  <TableHead className="text-xs text-right">指摘</TableHead>
-                  <TableHead className="text-xs">状態</TableHead>
-                  <TableHead className="text-xs text-right" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTargets.map((t) => (
-                  <TableRow key={t.id} className={!t.isActive ? "opacity-50" : undefined}>
-                    <TableCell className="font-mono text-xs py-2">{t.taskNo}</TableCell>
-                    <TableCell className="text-xs py-2">{t.name}</TableCell>
-                    <TableCell className="text-xs text-gray-500 py-2">{t.phase ?? "-"}</TableCell>
-                    <TableCell className="text-xs py-2">{t.revieweeName ?? "-"}</TableCell>
-                    <TableCell className="text-xs py-2">
-                      {t.reviewerNames.length > 0 ? t.reviewerNames.join(", ") : "-"}
-                    </TableCell>
-                    <TableCell className="text-xs text-right py-2">
-                      {t.sizeByUnit.PAGE ?? "-"}
-                    </TableCell>
-                    <TableCell className="text-xs text-right py-2">
-                      {t.sizeByUnit.LINES_OF_CODE ?? "-"}
-                    </TableCell>
-                    <TableCell className="text-xs text-right py-2">
-                      {t.sizeByUnit.TEST_CASE ?? "-"}
-                    </TableCell>
-                    <TableCell className="text-xs text-right py-2">
-                      {t.sizeByUnit.MAN_HOUR ?? "-"}
-                    </TableCell>
-                    {definitions.map((d) => (
-                      <TableCell key={d.key} className="text-xs text-right py-2">
-                        {formatNumber(t.metrics[d.key])}
+                {targets.map((t) => (
+                  <TableRow key={t.id}>
+                    <TableCell className="text-xs font-mono">{t.taskNo}</TableCell>
+                    <TableCell className="text-xs">{t.name}</TableCell>
+                    <TableCell className="text-xs">{t.subsystem ?? "-"}</TableCell>
+                    <TableCell className="text-xs">{t.phaseCode ?? "-"}</TableCell>
+                    {metricKeys.map((key) => (
+                      <TableCell key={key} className="text-xs text-right font-mono">
+                        {t.metrics[key] !== null ? t.metrics[key]!.toFixed(3) : "-"}
                       </TableCell>
                     ))}
-                    <TableCell className="text-xs text-right py-2">{t.findingCount}</TableCell>
-                    <TableCell className="py-2">
-                      {t.isActive ? (
-                        <Badge variant="default" className="text-xs">有効</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">無効</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right py-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs"
-                        onClick={() => setSelectedTarget(t)}
-                        disabled={!t.isActive}
-                      >
-                        詳細
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 ))}
+                {targets.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4 + metricKeys.length} className="text-center text-muted-foreground text-xs py-8">
+                      評価対象がありません。「同期」で WBS タスクから自動作成してください。
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
-          )}
+          </div>
         </CardContent>
       </Card>
 
-      <QualityTrendChart
-        data={trend}
-        sizeUnit={sizeUnit}
-        fromDate={trendFrom}
-        toDate={trendTo}
-        onDateChange={handleDateChange}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <QualityRevieweeFindingsChart data={revieweeFindings} />
-        <QualityCategoryFindingsChart data={categoryFindings} />
-      </div>
-
+      {/* Findings Table */}
       <Card>
-        <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <AlertCircle className="h-4 w-4" />
-            指摘一覧
-            {selectedPhase && (
-              <Badge variant="secondary" className="text-xs">{selectedPhase}</Badge>
-            )}
-            <span className="text-xs text-gray-400 font-normal ml-1">{filteredFindings.length}件</span>
-          </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={exportFindingsTsv}
-            disabled={filteredFindings.length === 0}
-          >
-            <Download className="h-3.5 w-3.5 mr-1" />
-            TSV出力
-          </Button>
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm">指摘一覧 ({findings.length}件)</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          {filteredFindings.length === 0 ? (
-            <p className="text-center py-6 text-sm text-gray-500">指摘がありません。</p>
-          ) : (
+        <CardContent className="px-4 pb-4">
+          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">タスクNo.</TableHead>
-                  <TableHead className="text-xs">タスク名</TableHead>
-                  <TableHead className="text-xs">フェーズ</TableHead>
                   <TableHead className="text-xs">ソース</TableHead>
+                  <TableHead className="text-xs">混入工程</TableHead>
+                  <TableHead className="text-xs">事象</TableHead>
+                  <TableHead className="text-xs">原因</TableHead>
                   <TableHead className="text-xs">カテゴリ</TableHead>
-                  <TableHead className="text-xs">内容</TableHead>
-                  <TableHead className="text-xs">発見日</TableHead>
+                  <TableHead className="text-xs">説明</TableHead>
+                  <TableHead className="text-xs">検出日</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredFindings.map((f) => (
+                {findings.slice(0, 100).map((f) => (
                   <TableRow key={f.id}>
-                    <TableCell className="font-mono text-xs py-2">{f.taskNo}</TableCell>
-                    <TableCell className="text-xs py-2 max-w-[160px] truncate">{f.targetName}</TableCell>
-                    <TableCell className="text-xs text-gray-500 py-2">{f.phase ?? "-"}</TableCell>
-                    <TableCell className="text-xs py-2">
-                      <Badge variant="outline" className="text-xs">
-                        {SOURCE_LABEL[f.source] ?? f.source}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs py-2 text-gray-600">{f.category ?? "-"}</TableCell>
-                    <TableCell className="text-xs py-2 max-w-[240px] truncate">{f.description ?? "-"}</TableCell>
-                    <TableCell className="text-xs py-2 text-gray-500">
-                      {new Date(f.foundAt).toLocaleDateString("ja-JP")}
-                    </TableCell>
+                    <TableCell className="text-xs">{f.source}</TableCell>
+                    <TableCell className="text-xs">{f.injectionPhase ?? "-"}</TableCell>
+                    <TableCell className="text-xs">{f.phenomenonType ?? "-"}</TableCell>
+                    <TableCell className="text-xs">{f.causeType ?? "-"}</TableCell>
+                    <TableCell className="text-xs">{f.category ?? "-"}</TableCell>
+                    <TableCell className="text-xs max-w-[200px] truncate">{f.description ?? "-"}</TableCell>
+                    <TableCell className="text-xs">{f.foundAt.slice(0, 10)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          )}
+          </div>
         </CardContent>
       </Card>
-
-      {selectedTarget && (
-        <QualityTargetDetailModal
-          wbsId={wbsId}
-          target={selectedTarget}
-          onClose={() => setSelectedTarget(null)}
-          onChanged={(updated) => {
-            setTargets((prev) =>
-              prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)),
-            );
-            refreshAll(sizeUnit, trendFrom, trendTo, selectedPhase);
-          }}
-        />
-      )}
     </div>
   );
 }

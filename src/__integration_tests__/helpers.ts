@@ -137,17 +137,19 @@ export async function cleanupTestData(prisma: PrismaClient) {
 }
 
 export async function cleanupQualityDataByWbs(prisma: PrismaClient, wbsId: number) {
-  const targets = await prisma.qualityReviewTarget.findMany({
+  const targets = await prisma.qualityTarget.findMany({
     where: { wbsId },
     select: { id: true },
   });
   const targetIds = targets.map((t) => t.id);
   if (targetIds.length > 0) {
+    await prisma.qualityTestProgress.deleteMany({ where: { targetId: { in: targetIds } } }).catch(() => {});
     await prisma.qualityReviewer.deleteMany({ where: { targetId: { in: targetIds } } }).catch(() => {});
     await prisma.qualitySizeMetric.deleteMany({ where: { targetId: { in: targetIds } } }).catch(() => {});
     await prisma.qualityFinding.deleteMany({ where: { targetId: { in: targetIds } } }).catch(() => {});
-    await prisma.qualityReviewTarget.deleteMany({ where: { wbsId } }).catch(() => {});
+    await prisma.qualityTarget.deleteMany({ where: { wbsId } }).catch(() => {});
   }
+  await prisma.qualityThresholdConfig.deleteMany({ where: { wbsId } }).catch(() => {});
 }
 
 // リクエストデータを取得して指定秒数待機する関数

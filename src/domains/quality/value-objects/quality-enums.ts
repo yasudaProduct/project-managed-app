@@ -1,20 +1,7 @@
-export enum QualityDocumentType {
-  DESIGN = 'DESIGN',
-  CODE = 'CODE',
-  TEST = 'TEST',
-  OTHER = 'OTHER',
-}
-
-export enum QualityReviewType {
-  PEER = 'PEER',
-  FORMAL = 'FORMAL',
-  INSPECTION = 'INSPECTION',
-  OTHER = 'OTHER',
-}
-
 export enum QualitySizeUnit {
   PAGE = 'PAGE',
-  LINES_OF_CODE = 'LINES_OF_CODE',
+  LOC = 'LOC',
+  FP = 'FP',
   TEST_CASE = 'TEST_CASE',
 }
 

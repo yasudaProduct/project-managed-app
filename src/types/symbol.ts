@@ -94,14 +94,17 @@ export const SYMBOL = {
     IWbsCrossQueryRepository: Symbol.for('IWbsCrossQueryRepository'),
     WbsAnalyticsHandler: Symbol.for('WbsAnalyticsHandler'),
 
-    // 定量品質管理
-    IQualityApplicationService: Symbol.for('IQualityApplicationService'),
-    IQualityReviewTargetRepository: Symbol.for('IQualityReviewTargetRepository'),
+    // 定量品質管理（IPA準拠 再構築）
+    IQualityTargetRepository: Symbol.for('IQualityTargetRepository'),
     IQualityReviewerRepository: Symbol.for('IQualityReviewerRepository'),
     IQualitySizeMetricRepository: Symbol.for('IQualitySizeMetricRepository'),
     IQualityFindingRepository: Symbol.for('IQualityFindingRepository'),
-    IQualityMetricsReadRepository: Symbol.for('IQualityMetricsReadRepository'),
+    IQualityTestProgressRepository: Symbol.for('IQualityTestProgressRepository'),
+    IQualityThresholdConfigRepository: Symbol.for('IQualityThresholdConfigRepository'),
     IQualityTaskRepository: Symbol.for('IQualityTaskRepository'),
+    QualityTargetService: Symbol.for('QualityTargetService'),
+    QualityMetricsService: Symbol.for('QualityMetricsService'),
+    QualityChartService: Symbol.for('QualityChartService'),
     SyncQualityTargetsService: Symbol.for('SyncQualityTargetsService'),
 
     // Infrastructure

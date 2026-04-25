@@ -129,15 +129,24 @@ import type { IWbsCrossQueryRepository } from '@/applications/wbs/iwbs-cross-que
 import { WbsCrossQueryRepository } from '@/infrastructures/wbs/wbs-cross-query-repository';
 import { WbsAnalyticsHandler } from '@/applications/wbs/query/wbs-analytics-handler';
 
-// 定量品質管理関連
-import type { IQualityApplicationService } from '@/applications/quality/quality-application.service';
-import { QualityApplicationService } from '@/applications/quality/quality-application.service';
-import type { IQualityReviewTargetRepository, IQualityReviewerRepository } from '@/applications/quality/i-quality-review-target.repository';
-import { QualityReviewTargetPrismaRepository, QualityReviewerPrismaRepository } from '@/infrastructures/quality/quality-review-target-prisma.repository';
-import type { IQualitySizeMetricRepository, IQualityFindingRepository, IQualityMetricsReadRepository } from '@/applications/quality/i-quality-metrics.repository';
-import { QualitySizeMetricPrismaRepository, QualityFindingPrismaRepository, QualityMetricsReadPrismaRepository } from '@/infrastructures/quality/quality-metrics-prisma.repository';
+// 定量品質管理関連（IPA準拠 再構築）
+import type { IQualityTargetRepository } from '@/applications/quality/repositories/i-quality-target.repository';
+import { QualityTargetPrismaRepository } from '@/infrastructures/quality/quality-target-prisma.repository';
+import type { IQualityReviewerRepository } from '@/applications/quality/repositories/i-quality-reviewer.repository';
+import { QualityReviewerPrismaRepository } from '@/infrastructures/quality/quality-reviewer-prisma.repository';
+import type { IQualitySizeMetricRepository } from '@/applications/quality/repositories/i-quality-size-metric.repository';
+import { QualitySizeMetricPrismaRepository } from '@/infrastructures/quality/quality-size-metric-prisma.repository';
+import type { IQualityFindingRepository } from '@/applications/quality/repositories/i-quality-finding.repository';
+import { QualityFindingPrismaRepository } from '@/infrastructures/quality/quality-finding-prisma.repository';
+import type { IQualityTestProgressRepository } from '@/applications/quality/repositories/i-quality-test-progress.repository';
+import { QualityTestProgressPrismaRepository } from '@/infrastructures/quality/quality-test-progress-prisma.repository';
+import type { IQualityThresholdConfigRepository } from '@/applications/quality/repositories/i-quality-threshold-config.repository';
+import { QualityThresholdConfigPrismaRepository } from '@/infrastructures/quality/quality-threshold-config-prisma.repository';
 import type { IQualityTaskRepository } from '@/applications/quality/i-quality-task.repository';
 import { QualityTaskPrismaRepository } from '@/infrastructures/quality/quality-task-prisma.repository';
+import { QualityTargetService } from '@/applications/quality/quality-target.service';
+import { QualityMetricsService } from '@/applications/quality/quality-metrics.service';
+import { QualityChartService } from '@/applications/quality/quality-chart.service';
 import { SyncQualityTargetsService } from '@/applications/quality/sync-quality-targets.service';
 
 
@@ -200,14 +209,17 @@ container.bind<ISystemSettingsRepository>(SYMBOL.ISystemSettingsRepository).to(S
 container.bind<IWbsTagRepository>(SYMBOL.IWbsTagRepository).to(WbsTagRepository).inSingletonScope();
 container.bind<IWbsCrossQueryRepository>(SYMBOL.IWbsCrossQueryRepository).to(WbsCrossQueryRepository).inSingletonScope();
 
-// 定量品質管理
-container.bind<IQualityApplicationService>(SYMBOL.IQualityApplicationService).to(QualityApplicationService).inSingletonScope();
-container.bind<IQualityReviewTargetRepository>(SYMBOL.IQualityReviewTargetRepository).to(QualityReviewTargetPrismaRepository).inSingletonScope();
+// 定量品質管理（IPA準拠 再構築）
+container.bind<IQualityTargetRepository>(SYMBOL.IQualityTargetRepository).to(QualityTargetPrismaRepository).inSingletonScope();
 container.bind<IQualityReviewerRepository>(SYMBOL.IQualityReviewerRepository).to(QualityReviewerPrismaRepository).inSingletonScope();
 container.bind<IQualitySizeMetricRepository>(SYMBOL.IQualitySizeMetricRepository).to(QualitySizeMetricPrismaRepository).inSingletonScope();
 container.bind<IQualityFindingRepository>(SYMBOL.IQualityFindingRepository).to(QualityFindingPrismaRepository).inSingletonScope();
-container.bind<IQualityMetricsReadRepository>(SYMBOL.IQualityMetricsReadRepository).to(QualityMetricsReadPrismaRepository).inSingletonScope();
+container.bind<IQualityTestProgressRepository>(SYMBOL.IQualityTestProgressRepository).to(QualityTestProgressPrismaRepository).inSingletonScope();
+container.bind<IQualityThresholdConfigRepository>(SYMBOL.IQualityThresholdConfigRepository).to(QualityThresholdConfigPrismaRepository).inSingletonScope();
 container.bind<IQualityTaskRepository>(SYMBOL.IQualityTaskRepository).to(QualityTaskPrismaRepository).inSingletonScope();
+container.bind<QualityTargetService>(SYMBOL.QualityTargetService).to(QualityTargetService).inSingletonScope();
+container.bind<QualityMetricsService>(SYMBOL.QualityMetricsService).to(QualityMetricsService).inSingletonScope();
+container.bind<QualityChartService>(SYMBOL.QualityChartService).to(QualityChartService).inSingletonScope();
 container.bind<SyncQualityTargetsService>(SYMBOL.SyncQualityTargetsService).to(SyncQualityTargetsService).inSingletonScope();
 
 // Geppo Import関連サービス

@@ -261,13 +261,15 @@ erDiagram
   String level
   DateTime recordedAt
 }
-"quality_review_target" {
+"quality_target" {
   Int id PK
   Int wbsId
   String taskNo
   String name
-  QualityDocumentType documentType
-  QualityReviewType reviewType
+  String subsystem "nullable"
+  String featureGroup "nullable"
+  String phaseCode "nullable"
+  String assigneeId "nullable"
   Boolean isActive
   DateTime createdAt
   DateTime updatedAt
@@ -277,6 +279,7 @@ erDiagram
   Int targetId FK
   String reviewerUserId
   String reviewTaskNo
+  Decimal reviewHours "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -294,9 +297,39 @@ erDiagram
   Int id PK
   Int targetId FK
   FindingSource source
+  String injectionPhase "nullable"
+  String phenomenonType "nullable"
+  String causeType "nullable"
   String category "nullable"
   String description "nullable"
   DateTime foundAt
+  DateTime resolvedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"quality_test_progress" {
+  Int id PK
+  Int targetId FK
+  DateTime date
+  Int plannedTotal
+  Int executedTotal
+  Int passedTotal
+  Int failedTotal
+  Int blockedTotal
+  DateTime createdAt
+  DateTime updatedAt
+}
+"quality_threshold_config" {
+  Int id PK
+  Int wbsId
+  String metricKey
+  String phaseCode "nullable"
+  Decimal upperLimit "nullable"
+  Decimal lowerLimit "nullable"
+  Decimal warnThreshold "nullable"
+  Decimal dangerThreshold "nullable"
+  Decimal referenceValue "nullable"
+  String note "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -337,9 +370,10 @@ erDiagram
 "import_jobs" }o--o| "users" : user
 "import_jobs" }o--o| "wbs" : wbs
 "import_job_progress" }o--|| "import_jobs" : job
-"quality_reviewer" }o--|| "quality_review_target" : target
-"quality_size_metric" }o--|| "quality_review_target" : target
-"quality_finding" }o--|| "quality_review_target" : target
+"quality_reviewer" }o--|| "quality_target" : target
+"quality_size_metric" }o--|| "quality_target" : target
+"quality_finding" }o--|| "quality_target" : target
+"quality_test_progress" }o--|| "quality_target" : target
 ```
 
 ### `projects`
@@ -647,15 +681,17 @@ erDiagram
   - `level`: 
   - `recordedAt`: 
 
-### `quality_review_target`
+### `quality_target`
 
 **Properties**
   - `id`: 
   - `wbsId`: 
   - `taskNo`: 
   - `name`: 
-  - `documentType`: 
-  - `reviewType`: 
+  - `subsystem`: 
+  - `featureGroup`: 
+  - `phaseCode`: 
+  - `assigneeId`: 
   - `isActive`: 
   - `createdAt`: 
   - `updatedAt`: 
@@ -667,6 +703,7 @@ erDiagram
   - `targetId`: 
   - `reviewerUserId`: 
   - `reviewTaskNo`: 
+  - `reviewHours`: 
   - `createdAt`: 
   - `updatedAt`: 
 
@@ -688,9 +725,43 @@ erDiagram
   - `id`: 
   - `targetId`: 
   - `source`: 
+  - `injectionPhase`: 
+  - `phenomenonType`: 
+  - `causeType`: 
   - `category`: 
   - `description`: 
   - `foundAt`: 
+  - `resolvedAt`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `quality_test_progress`
+
+**Properties**
+  - `id`: 
+  - `targetId`: 
+  - `date`: 
+  - `plannedTotal`: 
+  - `executedTotal`: 
+  - `passedTotal`: 
+  - `failedTotal`: 
+  - `blockedTotal`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `quality_threshold_config`
+
+**Properties**
+  - `id`: 
+  - `wbsId`: 
+  - `metricKey`: 
+  - `phaseCode`: 
+  - `upperLimit`: 
+  - `lowerLimit`: 
+  - `warnThreshold`: 
+  - `dangerThreshold`: 
+  - `referenceValue`: 
+  - `note`: 
   - `createdAt`: 
   - `updatedAt`: 
 

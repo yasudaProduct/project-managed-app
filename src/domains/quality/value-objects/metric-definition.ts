@@ -1,119 +1,89 @@
-import { FindingSource, QualitySizeUnit } from './quality-enums';
+import { QualitySizeUnit } from './quality-enums';
 
-export type MetricKey = string;
+export type IpaMetricKey =
+  | 'reviewFindingDensity'
+  | 'reviewEffortDensity'
+  | 'reviewEfficiency'
+  | 'bugDensity'
+  | 'testDensity'
+  | 'testEfficiency';
 
-export interface MetricDefinition {
-  key: MetricKey;
+export type MetricNumerator =
+  | 'reviewFindingCount'
+  | 'reviewEffort'
+  | 'bugCount'
+  | 'testCaseCount';
+
+export type MetricDenominator =
+  | 'size'
+  | 'reviewEffort'
+  | 'testCaseCount';
+
+export interface IpaMetricDefinition {
+  key: IpaMetricKey;
   label: string;
-  unitSuffix: string;
-  numerator: {
-    source: 'reviewManHours' | 'findingCount' | 'sizeMetric';
-    findingSource?: FindingSource;
-    sizeUnit?: QualitySizeUnit;
-  };
-  denominator: {
-    source: 'selectedSize' | 'sizeMetric';
-    sizeUnit?: QualitySizeUnit;
-  };
-  scaleFactor: number;
-  higherIsBetter: boolean;
+  numerator: MetricNumerator;
+  denominator: MetricDenominator;
+  phase: 'review' | 'test';
 }
 
-const PAGE_DEFINITIONS: MetricDefinition[] = [
-  {
-    key: 'reviewDensity',
-    label: 'レビュー密度',
-    unitSuffix: '/page',
-    numerator: { source: 'reviewManHours' },
-    denominator: { source: 'selectedSize' },
-    scaleFactor: 1,
-    higherIsBetter: false,
+export const IPA_METRIC_DEFINITIONS: Record<IpaMetricKey, IpaMetricDefinition> = {
+  reviewFindingDensity: {
+    key: 'reviewFindingDensity',
+    label: 'レビュー指摘密度',
+    numerator: 'reviewFindingCount',
+    denominator: 'size',
+    phase: 'review',
   },
-  {
-    key: 'defectDensity',
-    label: '指摘密度',
-    unitSuffix: '/page',
-    numerator: { source: 'findingCount', findingSource: FindingSource.REVIEW },
-    denominator: { source: 'selectedSize' },
-    scaleFactor: 1,
-    higherIsBetter: false,
+  reviewEffortDensity: {
+    key: 'reviewEffortDensity',
+    label: 'レビュー工数密度',
+    numerator: 'reviewEffort',
+    denominator: 'size',
+    phase: 'review',
   },
-];
-
-const LOC_DEFINITIONS: MetricDefinition[] = [
-  {
-    key: 'reviewDensity',
-    label: 'レビュー密度',
-    unitSuffix: '/KLOC',
-    numerator: { source: 'reviewManHours' },
-    denominator: { source: 'selectedSize' },
-    scaleFactor: 1000,
-    higherIsBetter: false,
+  reviewEfficiency: {
+    key: 'reviewEfficiency',
+    label: 'レビュー指摘効率',
+    numerator: 'reviewFindingCount',
+    denominator: 'reviewEffort',
+    phase: 'review',
   },
-  {
-    key: 'defectDensity',
-    label: '指摘密度',
-    unitSuffix: '/KLOC',
-    numerator: { source: 'findingCount', findingSource: FindingSource.REVIEW },
-    denominator: { source: 'selectedSize' },
-    scaleFactor: 1000,
-    higherIsBetter: false,
-  },
-];
-
-const TEST_CASE_DEFINITIONS: MetricDefinition[] = [
-  {
+  bugDensity: {
     key: 'bugDensity',
     label: 'バグ密度',
-    unitSuffix: '/TC',
-    numerator: { source: 'findingCount', findingSource: FindingSource.TEST },
-    denominator: { source: 'selectedSize' },
-    scaleFactor: 1,
-    higherIsBetter: false,
+    numerator: 'bugCount',
+    denominator: 'size',
+    phase: 'test',
   },
-  {
+  testDensity: {
     key: 'testDensity',
     label: 'テスト密度',
-    unitSuffix: '/KLOC',
-    numerator: { source: 'sizeMetric', sizeUnit: QualitySizeUnit.TEST_CASE },
-    denominator: { source: 'sizeMetric', sizeUnit: QualitySizeUnit.LINES_OF_CODE },
-    scaleFactor: 1000,
-    higherIsBetter: true,
+    numerator: 'testCaseCount',
+    denominator: 'size',
+    phase: 'test',
   },
-];
-
-const MAN_HOUR_DEFINITIONS: MetricDefinition[] = [
-  {
-    key: 'reviewDensity',
-    label: 'レビュー密度',
-    unitSuffix: '/h',
-    numerator: { source: 'reviewManHours' },
-    denominator: { source: 'selectedSize' },
-    scaleFactor: 1,
-    higherIsBetter: false,
+  testEfficiency: {
+    key: 'testEfficiency',
+    label: 'テスト効率',
+    numerator: 'bugCount',
+    denominator: 'testCaseCount',
+    phase: 'test',
   },
-  {
-    key: 'defectDensity',
-    label: '指摘密度',
-    unitSuffix: '/h',
-    numerator: { source: 'findingCount', findingSource: FindingSource.REVIEW },
-    denominator: { source: 'selectedSize' },
-    scaleFactor: 1,
-    higherIsBetter: false,
-  },
-];
-
-export const METRIC_DEFINITIONS: Record<QualitySizeUnit | 'MAN_HOUR', MetricDefinition[]> = {
-  [QualitySizeUnit.PAGE]: PAGE_DEFINITIONS,
-  [QualitySizeUnit.LINES_OF_CODE]: LOC_DEFINITIONS,
-  [QualitySizeUnit.TEST_CASE]: TEST_CASE_DEFINITIONS,
-  MAN_HOUR: MAN_HOUR_DEFINITIONS,
 };
 
-export function getMetricDefinitions(sizeUnit: QualitySizeUnit | 'MAN_HOUR'): MetricDefinition[] {
-  return METRIC_DEFINITIONS[sizeUnit];
+export function getIpaMetricDefinition(key: IpaMetricKey): IpaMetricDefinition {
+  return IPA_METRIC_DEFINITIONS[key];
 }
 
-export function shouldShowReviewCompletionRate(sizeUnit: QualitySizeUnit | 'MAN_HOUR'): boolean {
-  return sizeUnit !== QualitySizeUnit.TEST_CASE;
+export function getReviewMetrics(): IpaMetricDefinition[] {
+  return Object.values(IPA_METRIC_DEFINITIONS).filter((d) => d.phase === 'review');
+}
+
+export function getTestMetrics(): IpaMetricDefinition[] {
+  return Object.values(IPA_METRIC_DEFINITIONS).filter((d) => d.phase === 'test');
+}
+
+export function getSizeScaleFactor(unit: QualitySizeUnit): number {
+  return unit === QualitySizeUnit.LOC ? 1000 : 1;
 }

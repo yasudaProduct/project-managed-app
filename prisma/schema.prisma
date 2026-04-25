@@ -528,95 +528,127 @@ model ImportJobProgress {
 }
 
 // =====================================================
-// 定量品質管理機能
+// 定量品質管理機能（IPA準拠 再構築）
 // =====================================================
 
 // 評価対象（WBSタスクと論理結合。FKは貼らず洗い替えインポートから保護）
-model QualityReviewTarget {
-  id            Int                    @id @default(autoincrement())
+model QualityTarget {
+  id            Int                      @id @default(autoincrement())
   wbsId         Int
   taskNo        String
   name          String
-  documentType  QualityDocumentType    @default(OTHER)
-  reviewType    QualityReviewType      @default(PEER)
-  isActive      Boolean                @default(true)
-  createdAt     DateTime               @default(now()) @db.Timestamptz
-  updatedAt     DateTime               @updatedAt @db.Timestamptz
+  subsystem     String?                  // サブシステム（散布図の集約軸）
+  featureGroup  String?                  // 機能グループ（散布図の集約軸）
+  phaseCode     String?                  // 工程コード（DD/CD/UT/IT等）
+  assigneeId    String?                  // 担当者ID（層別用）
+  isActive      Boolean                  @default(true)
+  createdAt     DateTime                 @default(now()) @db.Timestamptz
+  updatedAt     DateTime                 @updatedAt @db.Timestamptz
   reviewers     QualityReviewer[]
   sizeMetrics   QualitySizeMetric[]
   findings      QualityFinding[]
+  testProgress  QualityTestProgress[]
 
   @@unique([wbsId, taskNo])
   @@index([wbsId, isActive])
-  @@map("quality_review_target")
+  @@map("quality_target")
 }
 
 // レビュー担当者（1評価対象に複数人対応）
 model QualityReviewer {
-  id              Int                  @id @default(autoincrement())
+  id              Int                    @id @default(autoincrement())
   targetId        Int
   reviewerUserId  String
   reviewTaskNo    String
-  createdAt       DateTime             @default(now()) @db.Timestamptz
-  updatedAt       DateTime             @updatedAt @db.Timestamptz
-  target          QualityReviewTarget  @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  reviewHours     Decimal?               @db.Decimal(8, 2) // レビュー工数
+  createdAt       DateTime               @default(now()) @db.Timestamptz
+  updatedAt       DateTime               @updatedAt @db.Timestamptz
+  target          QualityTarget          @relation(fields: [targetId], references: [id], onDelete: Cascade)
 
   @@unique([targetId, reviewTaskNo])
   @@index([reviewerUserId])
   @@map("quality_reviewer")
 }
 
-// 規模データ（MAN_HOURは都度集計するため保存しない）
+// 規模データ
 model QualitySizeMetric {
-  id          Int                  @id @default(autoincrement())
+  id          Int                    @id @default(autoincrement())
   targetId    Int
   unit        QualitySizeUnit
-  value       Decimal              @db.Decimal(12, 2)
-  measuredAt  DateTime             @db.Date
+  value       Decimal                @db.Decimal(12, 2)
+  measuredAt  DateTime               @db.Date
   note        String?
-  createdAt   DateTime             @default(now()) @db.Timestamptz
-  updatedAt   DateTime             @updatedAt @db.Timestamptz
-  target      QualityReviewTarget  @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  createdAt   DateTime               @default(now()) @db.Timestamptz
+  updatedAt   DateTime               @updatedAt @db.Timestamptz
+  target      QualityTarget          @relation(fields: [targetId], references: [id], onDelete: Cascade)
 
   @@unique([targetId, unit])
   @@index([measuredAt])
   @@map("quality_size_metric")
 }
 
-// 指摘データ
+// 指摘/バグ統合データ
 model QualityFinding {
-  id          Int                  @id @default(autoincrement())
-  targetId    Int
-  source      FindingSource        @default(REVIEW)
-  category    String?
-  description String?
-  foundAt     DateTime             @db.Date
-  createdAt   DateTime             @default(now()) @db.Timestamptz
-  updatedAt   DateTime             @updatedAt @db.Timestamptz
-  target      QualityReviewTarget  @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  id              Int                  @id @default(autoincrement())
+  targetId        Int
+  source          FindingSource        @default(REVIEW)
+  injectionPhase  String?              // 混入工程（層別用：要件定義/基本設計/詳細設計/実装...）
+  phenomenonType  String?              // 事象分類（層別用：アベンド/誤出力/性能劣化...）
+  causeType       String?              // 原因分類（層別用：単純ミス/仕様齟齬/考慮漏れ...）
+  category        String?              // 自由分類
+  description     String?
+  foundAt         DateTime             @db.Date
+  resolvedAt      DateTime?            @db.Date
+  createdAt       DateTime             @default(now()) @db.Timestamptz
+  updatedAt       DateTime             @updatedAt @db.Timestamptz
+  target          QualityTarget        @relation(fields: [targetId], references: [id], onDelete: Cascade)
 
   @@index([targetId, foundAt])
   @@index([source])
   @@map("quality_finding")
 }
 
-enum QualityDocumentType {
-  DESIGN
-  CODE
-  TEST
-  OTHER
+// テスト進捗（PB曲線用）
+model QualityTestProgress {
+  id            Int                    @id @default(autoincrement())
+  targetId      Int
+  date          DateTime               @db.Date
+  plannedTotal  Int                    // テスト項目総数
+  executedTotal Int                    // 消化累計
+  passedTotal   Int                    // 合格累計
+  failedTotal   Int                    // 不合格累計（≒バグ検出累計）
+  blockedTotal  Int                    // ブロック累計
+  createdAt     DateTime               @default(now()) @db.Timestamptz
+  updatedAt     DateTime               @updatedAt @db.Timestamptz
+  target        QualityTarget          @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([targetId, date])
+  @@map("quality_test_progress")
 }
 
-enum QualityReviewType {
-  PEER
-  FORMAL
-  INSPECTION
-  OTHER
+// 基準値/閾値設定
+model QualityThresholdConfig {
+  id              Int                  @id @default(autoincrement())
+  wbsId           Int
+  metricKey       String               // IPA指標キー
+  phaseCode       String?              // 工程コード（工程別設定可能）
+  upperLimit      Decimal?             @db.Decimal(12, 4) // 散布図ゾーン上限
+  lowerLimit      Decimal?             @db.Decimal(12, 4) // 散布図ゾーン下限
+  warnThreshold   Decimal?             @db.Decimal(12, 4) // 警告閾値
+  dangerThreshold Decimal?             @db.Decimal(12, 4) // 危険閾値
+  referenceValue  Decimal?             @db.Decimal(12, 4) // 参考値
+  note            String?
+  createdAt       DateTime             @default(now()) @db.Timestamptz
+  updatedAt       DateTime             @updatedAt @db.Timestamptz
+
+  @@unique([wbsId, metricKey, phaseCode])
+  @@map("quality_threshold_config")
 }
 
 enum QualitySizeUnit {
   PAGE
-  LINES_OF_CODE
+  LOC
+  FP
   TEST_CASE
 }
 
