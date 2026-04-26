@@ -29,7 +29,8 @@
       "Bash(npx jest:*)",
       "Bash(npx prisma:*)",
       "WebFetch(domain:www.ipa.go.jp)",
-      "Bash(pdftotext:*)"
+      "Bash(pdftotext:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "additionalDirectories": [
