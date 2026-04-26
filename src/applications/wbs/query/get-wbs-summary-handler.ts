@@ -18,6 +18,7 @@ import { MonthlyPhaseSummaryAccumulator } from "./monthly-phase-summary-accumula
 import { ForecastCalculationService } from "@/domains/forecast/forecast-calculation.service";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import { toForecastMethodOption } from "@/types/forecast-calculation-method";
+import { distributeForecastAcrossMonths } from "./monthly-forecast-distributor";
 import prisma from "@/lib/prisma/prisma";
 
 @injectable()
@@ -249,7 +250,6 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       // 予定開始日がない場合は按分スキップ。ただし work_records による実績があれば集計に含める
       let allocation: import("@/domains/wbs/monthly-task-allocation").MonthlyTaskAllocation | null = null;
       let totalForecastHours = 0;
-      let totalPlannedHoursForForecast = 0;
 
       if (task.yoteiStart) {
         // 担当者のWbsAssigneeを取得（担当者未割当またはWbsAssignee未登録時はundefined）
@@ -288,7 +288,6 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           progressMeasurementMethod
         });
         totalForecastHours = forecastResult.forecastHours;
-        totalPlannedHoursForForecast = allocation.getTotalPlannedHours();
       }
 
       // work_records を月別に集計（taskDetail 構築用）
@@ -297,10 +296,24 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         actualByMonth.set(a.yearMonth, (actualByMonth.get(a.yearMonth) ?? 0) + a.hoursWorked);
       }
 
+      // 月別の見通し工数を算出（実績発生月を考慮して配分）
+      const plannedByMonth = new Map<string, number>();
+      if (allocation) {
+        for (const m of allocation.getMonths()) {
+          plannedByMonth.set(m, allocation.getAllocation(m)!.plannedHours);
+        }
+      }
+      const forecastByMonth = distributeForecastAcrossMonths(
+        totalForecastHours,
+        plannedByMonth,
+        actualByMonth
+      );
+
       // タスク詳細を構築（予定月 ∪ 実績月）
       const taskDetail = buildTaskDetail(task, taskAssigneeName, allocation, actualByMonth);
 
       // 月 × 担当者の合流マップを構築（予定はタスク担当者、実績は work_records の実作業者）
+      // 見通しは予定月ではタスク担当者へ、予定がなく実績のみの月では実作業者へ計上する。
       const rowsA = new Map<string, {
         assignee: string;
         yearMonth: string;
@@ -312,9 +325,6 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       if (allocation) {
         for (const m of allocation.getMonths()) {
           const d = allocation.getAllocation(m)!;
-          const monthForecast = totalPlannedHoursForForecast > 0
-            ? (d.plannedHours / totalPlannedHoursForForecast) * totalForecastHours
-            : 0;
           const key = `${m}:${taskAssigneeName}`;
           rowsA.set(key, {
             assignee: taskAssigneeName,
@@ -322,7 +332,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
             plannedHours: d.plannedHours,
             actualHours: 0,
             baselineHours: d.baselineHours,
-            forecastHours: monthForecast,
+            forecastHours: forecastByMonth.get(m) ?? 0,
           });
         }
       }
@@ -340,6 +350,18 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
             baselineHours: 0,
             forecastHours: 0,
           });
+        }
+      }
+      // 予定外の月に発生した実績については、その月の見通しを実作業者行に割り当てる
+      // （タスク担当者行には計上されない）。
+      for (const [m, forecast] of forecastByMonth.entries()) {
+        if (allocation?.getAllocation(m)) continue; // 予定あり月は既に処理済み
+        const actualRowsInMonth = Array.from(rowsA.values()).filter(r => r.yearMonth === m);
+        const totalActualInMonth = actualRowsInMonth.reduce((s, r) => s + r.actualHours, 0);
+        if (totalActualInMonth > 0) {
+          for (const row of actualRowsInMonth) {
+            row.forecastHours = forecast * (row.actualHours / totalActualInMonth);
+          }
         }
       }
       for (const row of rowsA.values()) {
@@ -365,15 +387,12 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       if (allocation) {
         for (const m of allocation.getMonths()) {
           const d = allocation.getAllocation(m)!;
-          const monthForecast = totalPlannedHoursForForecast > 0
-            ? (d.plannedHours / totalPlannedHoursForForecast) * totalForecastHours
-            : 0;
           rowsP.set(m, {
             yearMonth: m,
             plannedHours: d.plannedHours,
             actualHours: 0,
             baselineHours: d.baselineHours,
-            forecastHours: monthForecast,
+            forecastHours: forecastByMonth.get(m) ?? 0,
           });
         }
       }
@@ -387,7 +406,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
             plannedHours: 0,
             actualHours: hours,
             baselineHours: 0,
-            forecastHours: 0,
+            forecastHours: forecastByMonth.get(m) ?? 0,
           });
         }
       }
@@ -469,7 +488,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
 
       // 予定開始月（yoteiStart があれば）
       let plannedYearMonth: string | null = null;
-      let plannedForecastHours = 0;
+      let totalForecastHours = 0;
       if (task.yoteiStart) {
         const date = new Date(task.yoteiStart);
         plannedYearMonth = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -478,7 +497,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           method: forecastMethodOption,
           progressMeasurementMethod
         });
-        plannedForecastHours = forecastResult.forecastHours;
+        totalForecastHours = forecastResult.forecastHours;
       }
 
       // work_records を月別に集計
@@ -486,6 +505,17 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       for (const a of actuals) {
         actualByMonth.set(a.yearMonth, (actualByMonth.get(a.yearMonth) ?? 0) + a.hoursWorked);
       }
+
+      // 月別の見通し工数を算出（開始日基準では予定は単月）
+      const plannedByMonth = new Map<string, number>();
+      if (plannedYearMonth) {
+        plannedByMonth.set(plannedYearMonth, Number(task.yoteiKosu || 0));
+      }
+      const forecastByMonth = distributeForecastAcrossMonths(
+        totalForecastHours,
+        plannedByMonth,
+        actualByMonth
+      );
 
       // タスク詳細を構築
       const taskDetail = buildTaskDetailForStartDateBased(
@@ -496,6 +526,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
       );
 
       // 月 × 担当者の合流マップ
+      // 見通しは予定月ではタスク担当者へ、予定外の実績月では実作業者へ計上する。
       const rowsA = new Map<string, {
         assignee: string;
         yearMonth: string;
@@ -511,7 +542,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           plannedHours: Number(task.yoteiKosu || 0),
           actualHours: 0,
           baselineHours: Number(task.kijunKosu || 0),
-          forecastHours: plannedForecastHours,
+          forecastHours: forecastByMonth.get(plannedYearMonth) ?? 0,
         });
       }
       for (const a of actuals) {
@@ -528,6 +559,17 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
             baselineHours: 0,
             forecastHours: 0,
           });
+        }
+      }
+      // 予定外月の見通し工数を実作業者行へ実績比で割り当て
+      for (const [m, forecast] of forecastByMonth.entries()) {
+        if (m === plannedYearMonth) continue;
+        const actualRowsInMonth = Array.from(rowsA.values()).filter(r => r.yearMonth === m);
+        const totalActualInMonth = actualRowsInMonth.reduce((s, r) => s + r.actualHours, 0);
+        if (totalActualInMonth > 0) {
+          for (const row of actualRowsInMonth) {
+            row.forecastHours = forecast * (row.actualHours / totalActualInMonth);
+          }
         }
       }
       for (const row of rowsA.values()) {
@@ -556,7 +598,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           plannedHours: Number(task.yoteiKosu || 0),
           actualHours: 0,
           baselineHours: Number(task.kijunKosu || 0),
-          forecastHours: plannedForecastHours,
+          forecastHours: forecastByMonth.get(plannedYearMonth) ?? 0,
         });
       }
       for (const [m, hours] of actualByMonth.entries()) {
@@ -569,7 +611,7 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
             plannedHours: 0,
             actualHours: hours,
             baselineHours: 0,
-            forecastHours: 0,
+            forecastHours: forecastByMonth.get(m) ?? 0,
           });
         }
       }
