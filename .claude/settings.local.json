@@ -25,7 +25,9 @@
       "Bash(npx eslint:*)",
       "Bash(npx prisma migrate:*)",
       "Bash(git add:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(rm -rf /home/user/project-managed-app/.claude/plans)",
+      "Bash(git -C /home/user/project-managed-app status)"
     ],
     "deny": [],
     "additionalDirectories": [
