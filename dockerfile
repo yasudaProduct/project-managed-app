@@ -37,7 +37,7 @@ RUN set -a && \
     [ -f .env.development ] && . ./.env.development && \
     set +a && \
     npx prisma migrate deploy --schema=./prisma/schema.prisma && \
-    npm run build
+    NODE_ENV=production npm run build
 
 
 # 実行ステージ
