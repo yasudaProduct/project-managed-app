@@ -28,7 +28,7 @@ RUN npx prisma generate --schema=./prisma/schema.prisma && \
 
 # ビルドステージ
 FROM deps-full AS builder
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 
 # SWC のダウンロードを無効化
 # ENV NEXT_DISABLE_SWC_DOWNLOAD=1
