@@ -239,21 +239,29 @@ interface MonthlyAssigneeData {
     plannedHours: number;
     actualHours: number;
     difference: number;
+    baselineHours?: number;
+    forecastHours?: number;
   }>;
   monthlyTotals: Record<string, {
     plannedHours: number;
     actualHours: number;
     difference: number;
+    baselineHours?: number;
+    forecastHours?: number;
   }>;
   assigneeTotals: Record<string, {
     plannedHours: number;
     actualHours: number;
     difference: number;
+    baselineHours?: number;
+    forecastHours?: number;
   }>;
   grandTotal: {
     plannedHours: number;
     actualHours: number;
     difference: number;
+    baselineHours?: number;
+    forecastHours?: number;
   };
 }
 
@@ -267,12 +275,20 @@ export async function copyMonthlyAssigneeSummaryToClipboard(
   unit: HoursUnit = 'hours'
 ): Promise<void> {
   const unitSuffix = getUnitSuffix(unit);
+  const fmt = (v: number) =>
+    convertHours(v, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const headers = [
     '担当者',
-    ...data.months.flatMap(month => [`${month}_予定(${unitSuffix})`, `${month}_実績(${unitSuffix})`, `${month}_差分`]),
+    ...data.months.flatMap(month => [
+      `${month}_基準(${unitSuffix})`,
+      `${month}_予定(${unitSuffix})`,
+      `${month}_実績(${unitSuffix})`,
+      `${month}_見通し(${unitSuffix})`,
+    ]),
+    `合計_基準(${unitSuffix})`,
     `合計_予定(${unitSuffix})`,
     `合計_実績(${unitSuffix})`,
-    '合計_差分'
+    `合計_見通し(${unitSuffix})`,
   ];
 
   const rows = [
@@ -282,17 +298,19 @@ export async function copyMonthlyAssigneeSummaryToClipboard(
       data.months.forEach(month => {
         const monthData = data.data.find(d => d.month === month && d.assignee === assignee);
         row.push(
-          convertHours(monthData?.plannedHours || 0, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-          convertHours(monthData?.actualHours || 0, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-          convertHours(monthData?.difference || 0, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+          fmt(monthData?.baselineHours || 0),
+          fmt(monthData?.plannedHours || 0),
+          fmt(monthData?.actualHours || 0),
+          fmt(monthData?.forecastHours || 0)
         );
       });
 
       const assigneeTotal = data.assigneeTotals[assignee];
       row.push(
-        convertHours(assigneeTotal.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-        convertHours(assigneeTotal.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-        convertHours(assigneeTotal.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+        fmt(assigneeTotal?.baselineHours || 0),
+        fmt(assigneeTotal?.plannedHours || 0),
+        fmt(assigneeTotal?.actualHours || 0),
+        fmt(assigneeTotal?.forecastHours || 0)
       );
 
       return row;
@@ -302,14 +320,16 @@ export async function copyMonthlyAssigneeSummaryToClipboard(
       ...data.months.flatMap(month => {
         const total = data.monthlyTotals[month];
         return [
-          convertHours(total.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-          convertHours(total.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-          convertHours(total.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+          fmt(total?.baselineHours || 0),
+          fmt(total?.plannedHours || 0),
+          fmt(total?.actualHours || 0),
+          fmt(total?.forecastHours || 0),
         ];
       }),
-      convertHours(data.grandTotal.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-      convertHours(data.grandTotal.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-      convertHours(data.grandTotal.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+      fmt(data.grandTotal.baselineHours || 0),
+      fmt(data.grandTotal.plannedHours),
+      fmt(data.grandTotal.actualHours),
+      fmt(data.grandTotal.forecastHours || 0),
     ]
   ];
 
@@ -330,10 +350,16 @@ export function exportMonthlyAssigneeSummary(
   const unitSuffix = getUnitSuffix(unit);
   const headers = [
     '担当者',
-    ...data.months.flatMap(month => [`${month}_予定(${unitSuffix})`, `${month}_実績(${unitSuffix})`, `${month}_差分`]),
+    ...data.months.flatMap(month => [
+      `${month}_基準(${unitSuffix})`,
+      `${month}_予定(${unitSuffix})`,
+      `${month}_実績(${unitSuffix})`,
+      `${month}_見通し(${unitSuffix})`,
+    ]),
+    `合計_基準(${unitSuffix})`,
     `合計_予定(${unitSuffix})`,
     `合計_実績(${unitSuffix})`,
-    '合計_差分'
+    `合計_見通し(${unitSuffix})`,
   ];
 
   const rows = [
@@ -343,17 +369,19 @@ export function exportMonthlyAssigneeSummary(
       data.months.forEach(month => {
         const monthData = data.data.find(d => d.month === month && d.assignee === assignee);
         row.push(
+          convertHours(monthData?.baselineHours || 0, unit),
           convertHours(monthData?.plannedHours || 0, unit),
           convertHours(monthData?.actualHours || 0, unit),
-          convertHours(monthData?.difference || 0, unit)
+          convertHours(monthData?.forecastHours || 0, unit)
         );
       });
 
       const assigneeTotal = data.assigneeTotals[assignee];
       row.push(
-        convertHours(assigneeTotal.plannedHours, unit),
-        convertHours(assigneeTotal.actualHours, unit),
-        convertHours(assigneeTotal.difference, unit)
+        convertHours(assigneeTotal?.baselineHours || 0, unit),
+        convertHours(assigneeTotal?.plannedHours || 0, unit),
+        convertHours(assigneeTotal?.actualHours || 0, unit),
+        convertHours(assigneeTotal?.forecastHours || 0, unit)
       );
 
       return row;
@@ -363,14 +391,16 @@ export function exportMonthlyAssigneeSummary(
       ...data.months.flatMap(month => {
         const total = data.monthlyTotals[month];
         return [
-          convertHours(total.plannedHours, unit),
-          convertHours(total.actualHours, unit),
-          convertHours(total.difference, unit)
+          convertHours(total?.baselineHours || 0, unit),
+          convertHours(total?.plannedHours || 0, unit),
+          convertHours(total?.actualHours || 0, unit),
+          convertHours(total?.forecastHours || 0, unit),
         ];
       }),
+      convertHours(data.grandTotal.baselineHours || 0, unit),
       convertHours(data.grandTotal.plannedHours, unit),
       convertHours(data.grandTotal.actualHours, unit),
-      convertHours(data.grandTotal.difference, unit)
+      convertHours(data.grandTotal.forecastHours || 0, unit)
     ]
   ];
 
@@ -386,6 +416,8 @@ interface MonthlyPhaseDataCell {
   plannedHours: number;
   actualHours: number;
   difference: number;
+  baselineHours?: number;
+  forecastHours?: number;
 }
 
 export interface MonthlyPhaseSummaryExportInput {
@@ -419,12 +451,20 @@ export async function copyMonthlyPhaseSummaryToClipboard(
   unit: HoursUnit = 'hours'
 ): Promise<void> {
   const unitSuffix = getUnitSuffix(unit);
+  const fmt = (v: number) =>
+    convertHours(v, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const headers = [
     '工程',
-    ...data.months.flatMap(month => [`${month}_予定(${unitSuffix})`, `${month}_実績(${unitSuffix})`, `${month}_差分`]),
+    ...data.months.flatMap(month => [
+      `${month}_基準(${unitSuffix})`,
+      `${month}_予定(${unitSuffix})`,
+      `${month}_実績(${unitSuffix})`,
+      `${month}_見通し(${unitSuffix})`,
+    ]),
+    `合計_基準(${unitSuffix})`,
     `合計_予定(${unitSuffix})`,
     `合計_実績(${unitSuffix})`,
-    '合計_差分'
+    `合計_見通し(${unitSuffix})`,
   ];
 
   const rows = [
@@ -433,16 +473,18 @@ export async function copyMonthlyPhaseSummaryToClipboard(
       data.months.forEach(month => {
         const cell = getCellFromContainer(data.cells, `${month}|${phase}`);
         row.push(
-          convertHours(cell?.plannedHours || 0, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-          convertHours(cell?.actualHours || 0, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-          convertHours(cell?.difference || 0, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+          fmt(cell?.baselineHours || 0),
+          fmt(cell?.plannedHours || 0),
+          fmt(cell?.actualHours || 0),
+          fmt(cell?.forecastHours || 0)
         );
       });
       const total = data.phaseTotals[phase];
       row.push(
-        convertHours(total?.plannedHours || 0, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-        convertHours(total?.actualHours || 0, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-        convertHours(total?.difference || 0, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+        fmt(total?.baselineHours || 0),
+        fmt(total?.plannedHours || 0),
+        fmt(total?.actualHours || 0),
+        fmt(total?.forecastHours || 0)
       );
       return row;
     }),
@@ -451,14 +493,16 @@ export async function copyMonthlyPhaseSummaryToClipboard(
       ...data.months.flatMap(month => {
         const total = data.monthlyTotals[month];
         return [
-          convertHours(total?.plannedHours || 0, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-          convertHours(total?.actualHours || 0, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-          convertHours(total?.difference || 0, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+          fmt(total?.baselineHours || 0),
+          fmt(total?.plannedHours || 0),
+          fmt(total?.actualHours || 0),
+          fmt(total?.forecastHours || 0),
         ];
       }),
-      convertHours(data.grandTotal.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-      convertHours(data.grandTotal.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-      convertHours(data.grandTotal.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+      fmt(data.grandTotal.baselineHours || 0),
+      fmt(data.grandTotal.plannedHours),
+      fmt(data.grandTotal.actualHours),
+      fmt(data.grandTotal.forecastHours || 0)
     ]
   ];
 
@@ -479,10 +523,16 @@ export function exportMonthlyPhaseSummary(
   const unitSuffix = getUnitSuffix(unit);
   const headers = [
     '工程',
-    ...data.months.flatMap(month => [`${month}_予定(${unitSuffix})`, `${month}_実績(${unitSuffix})`, `${month}_差分`]),
+    ...data.months.flatMap(month => [
+      `${month}_基準(${unitSuffix})`,
+      `${month}_予定(${unitSuffix})`,
+      `${month}_実績(${unitSuffix})`,
+      `${month}_見通し(${unitSuffix})`,
+    ]),
+    `合計_基準(${unitSuffix})`,
     `合計_予定(${unitSuffix})`,
     `合計_実績(${unitSuffix})`,
-    '合計_差分'
+    `合計_見通し(${unitSuffix})`,
   ];
 
   const rows = [
@@ -491,16 +541,18 @@ export function exportMonthlyPhaseSummary(
       data.months.forEach(month => {
         const cell = getCellFromContainer(data.cells, `${month}|${phase}`);
         row.push(
+          convertHours(cell?.baselineHours || 0, unit),
           convertHours(cell?.plannedHours || 0, unit),
           convertHours(cell?.actualHours || 0, unit),
-          convertHours(cell?.difference || 0, unit)
+          convertHours(cell?.forecastHours || 0, unit)
         );
       });
       const total = data.phaseTotals[phase];
       row.push(
+        convertHours(total?.baselineHours || 0, unit),
         convertHours(total?.plannedHours || 0, unit),
         convertHours(total?.actualHours || 0, unit),
-        convertHours(total?.difference || 0, unit)
+        convertHours(total?.forecastHours || 0, unit)
       );
       return row;
     }),
@@ -509,14 +561,16 @@ export function exportMonthlyPhaseSummary(
       ...data.months.flatMap(month => {
         const total = data.monthlyTotals[month];
         return [
+          convertHours(total?.baselineHours || 0, unit),
           convertHours(total?.plannedHours || 0, unit),
           convertHours(total?.actualHours || 0, unit),
-          convertHours(total?.difference || 0, unit)
+          convertHours(total?.forecastHours || 0, unit),
         ];
       }),
+      convertHours(data.grandTotal.baselineHours || 0, unit),
       convertHours(data.grandTotal.plannedHours, unit),
       convertHours(data.grandTotal.actualHours, unit),
-      convertHours(data.grandTotal.difference, unit)
+      convertHours(data.grandTotal.forecastHours || 0, unit)
     ]
   ];
 

@@ -71,13 +71,24 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
         });
     };
 
+    const formatSignedDifference = (diff: number) => {
+        const converted = convertHours(diff, hoursUnit);
+        const abs = Math.abs(converted).toLocaleString("ja-JP", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+        if (converted > 0) return `+${abs}`;
+        if (converted < 0) return `-${abs}`;
+        return `±${abs}`;
+    };
+
     const getDifferenceColor = (difference: number) => {
         if (difference > 0) return "text-red-600"; // 実績が予定超過
         if (difference === 0) return "text-green-600"; // 完全一致
         return "text-blue-600"; // 実績が予定未達
     };
 
-    const monthColSpan = (showBaseline ? 1 : 0) + 2 + (showDifference ? 1 : 0) + (showForecast ? 1 : 0);
+    const monthColSpan = (showBaseline ? 1 : 0) + 2 /* 予定 + 実績 */ + (showForecast ? 1 : 0);
 
     // スタイル：先頭列固定幅
     const firstColStyle = (() => {
@@ -113,7 +124,7 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
                             {m}
                         </TableHead>
                     ))}
-                    <TableHead className="text-center font-semibold min-w-[200px]" colSpan={3}>
+                    <TableHead className="text-center font-semibold min-w-[200px]" colSpan={monthColSpan}>
                         合計
                     </TableHead>
                 </TableRow>
@@ -129,22 +140,30 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
                             )}
                             <TableHead className="text-center text-xs min-w-[60px]">予定({getUnitSuffix(hoursUnit)})</TableHead>
                             <TableHead
-                                className={`text-center text-xs min-w-[60px] ${!showDifference && !showForecast ? "border-r" : ""}`}
+                                className={`text-center text-xs min-w-[60px] ${!showForecast ? "border-r" : ""}`}
                             >
-                                実績({getUnitSuffix(hoursUnit)})
+                                {showDifference ? `実績(差分)(${getUnitSuffix(hoursUnit)})` : `実績(${getUnitSuffix(hoursUnit)})`}
                             </TableHead>
-                            {showDifference && (
-                                <TableHead className={`text-center text-xs min-w-[60px] ${!showForecast ? "border-r" : ""}`}>差分</TableHead>
-                            )}
                             {showForecast && (
-                                <TableHead className="text-center text-xs min-w-[60px] border-r">見通({getUnitSuffix(hoursUnit)})</TableHead>
+                                <TableHead className="text-center text-xs min-w-[60px] border-r">
+                                    {showDifference ? `見通(差分)(${getUnitSuffix(hoursUnit)})` : `見通(${getUnitSuffix(hoursUnit)})`}
+                                </TableHead>
                             )}
                         </React.Fragment>
                     ))}
                     <React.Fragment key="grand">
+                        {showBaseline && (
+                            <TableHead className="text-center text-xs min-w-[60px]">基準({getUnitSuffix(hoursUnit)})</TableHead>
+                        )}
                         <TableHead className="text-center text-xs min-w-[60px]">予定({getUnitSuffix(hoursUnit)})</TableHead>
-                        <TableHead className="text-center text-xs min-w-[60px]">実績({getUnitSuffix(hoursUnit)})</TableHead>
-                        <TableHead className="text-center text-xs min-w-[60px]">差分</TableHead>
+                        <TableHead className="text-center text-xs min-w-[60px]">
+                            {showDifference ? `実績(差分)(${getUnitSuffix(hoursUnit)})` : `実績(${getUnitSuffix(hoursUnit)})`}
+                        </TableHead>
+                        {showForecast && (
+                            <TableHead className="text-center text-xs min-w-[60px]">
+                                {showDifference ? `見通(差分)(${getUnitSuffix(hoursUnit)})` : `見通(${getUnitSuffix(hoursUnit)})`}
+                            </TableHead>
+                        )}
                     </React.Fragment>
                 </TableRow>
             </TableHeader>
@@ -177,6 +196,7 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
                                 const diff = cell?.difference || 0;
                                 const baseline = cell?.baselineHours || 0;
                                 const forecast = cell?.forecastHours || 0;
+                                const forecastDiff = forecast - planned;
                                 return (
                                     <React.Fragment key={m}>
                                         {showBaseline && (
@@ -188,36 +208,72 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
                                             {planned > 0 ? formatNumber(planned) : "-"}
                                         </TableCell>
                                         <TableCell
-                                            className={`text-center text-sm min-w-[60px] ${!showDifference && !showForecast ? "border-r" : ""}`}
+                                            className={`text-center text-sm min-w-[60px] ${!showForecast ? "border-r" : ""}`}
                                         >
-                                            {actual > 0 ? formatNumber(actual) : "-"}
+                                            {planned > 0 || actual > 0 ? (
+                                                <>
+                                                    {formatNumber(actual)}
+                                                    {showDifference && (
+                                                        <span className={`ml-1 ${getDifferenceColor(diff)}`}>
+                                                            ({formatSignedDifference(diff)})
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                "-"
+                                            )}
                                         </TableCell>
-                                        {showDifference && (
-                                            <TableCell
-                                                className={`text-center text-sm min-w-[60px] ${getDifferenceColor(diff)} ${!showForecast ? "border-r" : ""}`}
-                                            >
-                                                {planned > 0 || actual > 0 ? formatNumber(diff) : "-"}
-                                            </TableCell>
-                                        )}
                                         {showForecast && (
                                             <TableCell className="text-center text-sm min-w-[60px] border-r">
-                                                {forecast > 0 ? formatNumber(forecast) : "-"}
+                                                {forecast > 0 ? (
+                                                    <>
+                                                        {formatNumber(forecast)}
+                                                        {showDifference && (
+                                                            <span className={`ml-1 ${getDifferenceColor(forecastDiff)}`}>
+                                                                ({formatSignedDifference(forecastDiff)})
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    "-"
+                                                )}
                                             </TableCell>
                                         )}
                                     </React.Fragment>
                                 );
                             })}
+                            {showBaseline && (
+                                <TableCell className="text-center text-sm font-semibold bg-gray-50">
+                                    {(total?.baselineHours || 0) > 0 ? formatNumber(total?.baselineHours || 0) : "-"}
+                                </TableCell>
+                            )}
                             <TableCell className="text-center text-sm font-semibold bg-gray-50">
                                 {formatNumber(total?.plannedHours || 0)}
                             </TableCell>
                             <TableCell className="text-center text-sm font-semibold bg-gray-50">
                                 {formatNumber(total?.actualHours || 0)}
+                                {showDifference && (
+                                    <span className={`ml-1 font-normal ${getDifferenceColor(total?.difference || 0)}`}>
+                                        ({formatSignedDifference(total?.difference || 0)})
+                                    </span>
+                                )}
                             </TableCell>
-                            <TableCell
-                                className={`text-center text-sm font-semibold bg-gray-50 ${getDifferenceColor(total?.difference || 0)}`}
-                            >
-                                {formatNumber(total?.difference || 0)}
-                            </TableCell>
+                            {showForecast && (
+                                <TableCell className="text-center text-sm font-semibold bg-gray-50">
+                                    {(total?.forecastHours || 0) > 0 ? (
+                                        <>
+                                            {formatNumber(total?.forecastHours || 0)}
+                                            {showDifference && (
+                                                <span className={`ml-1 font-normal ${getDifferenceColor((total?.forecastHours || 0) - (total?.plannedHours || 0))}`}>
+                                                    ({formatSignedDifference((total?.forecastHours || 0) - (total?.plannedHours || 0))})
+                                                </span>
+                                            )}
+                                        </>
+                                    ) : (
+                                        "-"
+                                    )}
+                                </TableCell>
+                            )}
                         </TableRow>
                     );
                 })}
@@ -228,49 +284,76 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
                         const total = monthlyTotals[m] || ({} as SummaryCell);
                         const baseline = total.baselineHours || 0;
                         const forecast = total.forecastHours || 0;
+                        const planned = total.plannedHours || 0;
+                        const actual = total.actualHours || 0;
+                        const diff = total.difference || 0;
+                        const forecastDiff = forecast - planned;
                         return (
                             <React.Fragment key={m}>
                                 {showBaseline && (
-                                    <TableCell className={`text-center text-sm ${!showForecast ? "border-r" : ""}`}>
+                                    <TableCell className="text-center text-sm">
                                         {baseline > 0 ? formatNumber(baseline) : "-"}
                                     </TableCell>
                                 )}
                                 <TableCell className="text-center text-sm">
-                                    {formatNumber(total.plannedHours || 0)}
+                                    {formatNumber(planned)}
                                 </TableCell>
                                 <TableCell
-                                    className={`text-center text-sm ${!showDifference && !showBaseline && !showForecast ? "border-r" : ""}`}
+                                    className={`text-center text-sm ${!showForecast ? "border-r" : ""}`}
                                 >
-                                    {formatNumber(total.actualHours || 0)}
+                                    {formatNumber(actual)}
+                                    {showDifference && (
+                                        <span className={`ml-1 font-normal ${getDifferenceColor(diff)}`}>
+                                            ({formatSignedDifference(diff)})
+                                        </span>
+                                    )}
                                 </TableCell>
-                                {showDifference && (
-                                    <TableCell
-                                        className={`text-center text-sm ${getDifferenceColor(total.difference || 0)} ${!showBaseline && !showForecast ? "border-r" : ""}`}
-                                    >
-                                        {formatNumber(total.difference || 0)}
-                                    </TableCell>
-                                )}
-
                                 {showForecast && (
                                     <TableCell className="text-center text-sm border-r">
                                         {formatNumber(forecast)}
+                                        {showDifference && (
+                                            <span className={`ml-1 font-normal ${getDifferenceColor(forecastDiff)}`}>
+                                                ({formatSignedDifference(forecastDiff)})
+                                            </span>
+                                        )}
                                     </TableCell>
                                 )}
                             </React.Fragment>
                         );
                     })}
                     {/* 全体合計 */}
+                    {showBaseline && (
+                        <TableCell className="text-center text-sm bg-gray-200">
+                            {(grandTotal.baselineHours || 0) > 0 ? formatNumber(grandTotal.baselineHours || 0) : "-"}
+                        </TableCell>
+                    )}
                     <TableCell className="text-center text-sm bg-gray-200">
                         {formatNumber(grandTotal.plannedHours)}
                     </TableCell>
                     <TableCell className="text-center text-sm bg-gray-200">
                         {formatNumber(grandTotal.actualHours)}
+                        {showDifference && (
+                            <span className={`ml-1 font-normal ${getDifferenceColor(grandTotal.difference)}`}>
+                                ({formatSignedDifference(grandTotal.difference)})
+                            </span>
+                        )}
                     </TableCell>
-                    <TableCell
-                        className={`text-center text-sm bg-gray-200 ${getDifferenceColor(grandTotal.difference)}`}
-                    >
-                        {formatNumber(grandTotal.difference)}
-                    </TableCell>
+                    {showForecast && (
+                        <TableCell className="text-center text-sm bg-gray-200">
+                            {(grandTotal.forecastHours || 0) > 0 ? (
+                                <>
+                                    {formatNumber(grandTotal.forecastHours || 0)}
+                                    {showDifference && (
+                                        <span className={`ml-1 font-normal ${getDifferenceColor((grandTotal.forecastHours || 0) - grandTotal.plannedHours)}`}>
+                                            ({formatSignedDifference((grandTotal.forecastHours || 0) - grandTotal.plannedHours)})
+                                        </span>
+                                    )}
+                                </>
+                            ) : (
+                                "-"
+                            )}
+                        </TableCell>
+                    )}
                 </TableRow>
             </TableBody>
         </Table>

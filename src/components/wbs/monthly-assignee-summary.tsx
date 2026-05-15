@@ -320,6 +320,8 @@ export function MonthlyAssigneeSummary({
                     difference: monthlyData.assigneeTotals[a].difference,
                     baselineHours:
                       monthlyData.assigneeTotals[a].baselineHours || 0,
+                    forecastHours:
+                      monthlyData.assigneeTotals[a].forecastHours || 0,
                   },
                 ])
               )}

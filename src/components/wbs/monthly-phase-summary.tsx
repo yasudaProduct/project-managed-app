@@ -96,6 +96,7 @@ export function MonthlyPhaseSummary({
             plannedHours: monthlyData.monthlyTotals[m]?.plannedHours || 0,
             actualHours: monthlyData.monthlyTotals[m]?.actualHours || 0,
             difference: monthlyData.monthlyTotals[m]?.difference || 0,
+            baselineHours: monthlyData.monthlyTotals[m]?.baselineHours || 0,
             forecastHours: monthlyData.monthlyTotals[m]?.forecastHours || 0,
           },
         ])
@@ -109,6 +110,7 @@ export function MonthlyPhaseSummary({
             plannedHours: monthlyData.phaseTotals[p.key]?.plannedHours || 0,
             actualHours: monthlyData.phaseTotals[p.key]?.actualHours || 0,
             difference: monthlyData.phaseTotals[p.key]?.difference || 0,
+            baselineHours: monthlyData.phaseTotals[p.key]?.baselineHours || 0,
             forecastHours: monthlyData.phaseTotals[p.key]?.forecastHours || 0,
           },
         ])
