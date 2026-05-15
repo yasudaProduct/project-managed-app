@@ -5,6 +5,9 @@ FROM node:22-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
+# SWC のダウンロードを無効化
+ENV NEXT_DISABLE_SWC_DOWNLOAD=1
+
 # package.json と package-lock.json のみをコピー（キャッシュ効率化）
 COPY package.json package-lock.json ./
 RUN npm ci --only=production && npm cache clean --force
@@ -25,6 +28,27 @@ RUN npx prisma generate --schema=./prisma/schema.prisma && \
 
 # ビルドステージ
 FROM deps-full AS builder
+ENV NODE_ENV=production
+
+# SWC のダウンロードを無効化
+# ENV NEXT_DISABLE_SWC_DOWNLOAD=1
+
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+
+ENV HTTP_PROXY=$HTTP_PROXY \
+    HTTPS_PROXY=$HTTPS_PROXY
+
+# 疎通確認ツールを入れる
+# RUN apk add --no-cache curl bind-tools wget
+
+# デバッグ: 環境変数と疎通
+# RUN env | grep -i proxy || true
+# RUN curl -Is https://registry.npmjs.org/next || true
+# RUN curl -Is https://registry.npmjs.org/@next/swc-linux-x64-musl || true
+# RUN nslookup registry.npmjs.org || true
+
+
 WORKDIR /app
 COPY . .
 COPY --from=prisma-gen /app/node_modules/.prisma ./node_modules/.prisma
@@ -44,7 +68,7 @@ RUN set -a && \
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 ENV TZ=Asia/Tokyo
 
 # 非rootユーザーの作成
@@ -66,4 +90,4 @@ COPY --chown=nextjs:nodejs package.json ./
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "start"]
