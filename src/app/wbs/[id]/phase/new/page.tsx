@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { notFound } from "next/navigation";
 import { getWbsById } from "@/app/wbs/[id]/actions/wbs-actions";
 import { NewWbsPhaseForm } from "./new-wbs-phase-form";

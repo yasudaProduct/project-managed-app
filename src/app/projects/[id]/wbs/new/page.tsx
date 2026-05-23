@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { notFound } from "next/navigation";
 import { WbsForm } from "@/components/wbs/wbs-form";
 import { getProjectById } from "@/app/projects/actions";

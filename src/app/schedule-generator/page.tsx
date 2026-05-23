@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { ScheduleGenerator } from "@/app/schedule-generator/schedule-generator";
 import { getProjects } from "./action";
 

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { notFound } from "next/navigation";
 import { getWbsBuffers, getWbsById } from "@/app/wbs/[id]/actions/wbs-actions";
 import prisma from "@/lib/prisma/prisma";

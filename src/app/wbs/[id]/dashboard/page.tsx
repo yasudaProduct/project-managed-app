@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { notFound } from "next/navigation";
 import { getAssignees, getWbsById } from "@/app/wbs/[id]/actions/wbs-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getWbsById } from "@/app/wbs/[id]/actions/wbs-actions";

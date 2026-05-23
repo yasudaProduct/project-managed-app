@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getSystemSettings } from "@/app/settings/system/system-settings-actions";
 import { UserForm } from "../user-form";
 
