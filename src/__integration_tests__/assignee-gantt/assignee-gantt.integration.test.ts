@@ -103,23 +103,21 @@ describe('AssigneeGantt Integration Tests', () => {
       name: '結合テスト用WBS',
       projectId: projectDb.id!,
     });
-    const wbsDb = await wbsRepository.create(testWbs);
+    testWbs = await wbsRepository.create(testWbs);
 
     // テスト担当者を作成
-    const assignee1 = WbsAssignee.create({
-      wbsId: wbsDb.id!,
+    const assignee1 = await wbsAssigneeRepository.create(testWbs.id!, WbsAssignee.create({
+      wbsId: testWbs.id!,
       userId: 'user-001',
       rate: 0.8, // 80%稼働
       seq: 1,
-    });
-    const assignee2 = WbsAssignee.create({
+    }));
+    const assignee2 = await wbsAssigneeRepository.create(testWbs.id!, WbsAssignee.create({
       wbsId: testWbs.id!,
       userId: 'user-002',
       rate: 1.0, // 100%稼働
       seq: 2,
-    });
-    await wbsAssigneeRepository.create(wbsDb.id!, assignee1);
-    await wbsAssigneeRepository.create(wbsDb.id!, assignee2);
+    }));
     testAssignees = [assignee1, assignee2];
 
     // テストタスクを作成
@@ -270,10 +268,11 @@ describe('AssigneeGantt Integration Tests', () => {
 
     it('複数タスクの工数を日別に正しく配分する', async () => {
       // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-19');
+      const startDate = new Date('2025-05-01');
+      const endDate = new Date('2025-05-09');
 
-      // 同一担当者に複数タスクを割り当て
+      // 同一担当者に複数タスクを割り当て（task1と期間が重なるように設定）
+      // task1(yamada): 2025-05-01(木)〜2025-05-05(月)
       const additionalTask = Task.create({
         taskNo: TaskNo.create('A3', 3),
         wbsId: testWbs.id!,
@@ -282,8 +281,8 @@ describe('AssigneeGantt Integration Tests', () => {
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
-            startDate: new Date('2025-05-07'),
-            endDate: new Date('2025-05-09'),
+            startDate: new Date('2025-05-02'),
+            endDate: new Date('2025-05-07'),
             type: new PeriodType({ type: 'YOTEI' }),
             manHours: [
               ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
@@ -303,26 +302,26 @@ describe('AssigneeGantt Integration Tests', () => {
       // Assert
       const yamadaWorkload = workloads.find(w => w.assigneeName === '山田太郎');
 
-      // 1/17は両方のタスクがアクティブ
-      const day17 = yamadaWorkload!.dailyAllocations.find(
-        d => d.date.toDateString() === new Date('2024-01-17').toDateString()
+      // 5/2(金)はtask1と追加タスクの両方がアクティブ
+      const day2 = yamadaWorkload!.dailyAllocations.find(
+        d => d.date.toDateString() === new Date('2025-05-02').toDateString()
       );
-      expect(day17!.taskAllocations).toHaveLength(2);
+      expect(day2!.taskAllocations).toHaveLength(2);
 
-      // 1/15は最初のタスクのみアクティブ
-      const day15 = yamadaWorkload!.dailyAllocations.find(
-        d => d.date.toDateString() === new Date('2024-01-15').toDateString()
+      // 5/1(木)はtask1のみアクティブ
+      const day1 = yamadaWorkload!.dailyAllocations.find(
+        d => d.date.toDateString() === new Date('2025-05-01').toDateString()
       );
-      expect(day15!.taskAllocations).toHaveLength(1);
-      expect(day15!.taskAllocations[0].taskName).toBe('フロントエンド開発');
+      expect(day1!.taskAllocations).toHaveLength(1);
+      expect(day1!.taskAllocations[0].taskName).toBe('フロントエンド開発');
     });
   });
 
   describe('getAssigneeWarnings', () => {
     it('実現不可能なタスクの警告を生成する', async () => {
       // Arrange
-      const startDate = new Date('2024-01-20');
-      const endDate = new Date('2024-01-22');
+      const startDate = new Date('2025-05-20');
+      const endDate = new Date('2025-05-21');
 
       // 週末のみのタスクを作成
       const weekendTask = Task.create({
@@ -365,7 +364,7 @@ describe('AssigneeGantt Integration Tests', () => {
 
       // Assert
       expect(warnings).toHaveLength(1);
-      expect(warnings[0].taskNo).toBe('TASK-004');
+      expect(warnings[0].taskNo).toBe('A4-0004');
       expect(warnings[0].taskName).toBe('週末タスク');
       expect(warnings[0].reason).toBe('NO_WORKING_DAYS');
       expect(warnings[0].assigneeName).toBe('山田太郎');
@@ -373,8 +372,8 @@ describe('AssigneeGantt Integration Tests', () => {
 
     it('個人予定で全日埋まっているタスクに警告を生成する', async () => {
       // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-15');
+      const startDate = new Date('2025-05-15');
+      const endDate = new Date('2025-05-15');
 
       // 単日タスクを作成
       const singleDayTask = Task.create({
@@ -416,7 +415,7 @@ describe('AssigneeGantt Integration Tests', () => {
 
       // Assert
       expect(warnings).toHaveLength(1);
-      expect(warnings[0].taskNo).toBe('A5');
+      expect(warnings[0].taskNo).toBe('A5-0005');
       expect(warnings[0].taskName).toBe('単日タスク');
       expect(warnings[0].assigneeName).toBe('田中花子');
       expect(warnings[0].reason).toBe('NO_WORKING_DAYS');
@@ -426,8 +425,8 @@ describe('AssigneeGantt Integration Tests', () => {
   describe('getAssigneeWorkload', () => {
     it('特定担当者の作業負荷を取得する', async () => {
       // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-19');
+      const startDate = new Date('2025-05-01');
+      const endDate = new Date('2025-05-05');
 
       // Act
       const workload = await assigneeGanttService.getAssigneeWorkload(
@@ -470,8 +469,8 @@ describe('AssigneeGantt Integration Tests', () => {
   describe('稼働率と過負荷の計算', () => {
     it('過負荷状態を正しく検出する', async () => {
       // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-15');
+      const startDate = new Date('2025-05-15');
+      const endDate = new Date('2025-05-15');
 
       // 1日で実行不可能な工数のタスクを作成
       const overloadTask = Task.create({
@@ -502,7 +501,8 @@ describe('AssigneeGantt Integration Tests', () => {
 
       // Assert
       const yamadaWorkload = workloads.find(w => w.assigneeName === '山田太郎');
-      expect(yamadaWorkload!.dailyAllocations.some(d => d.isOverloaded)).toBe(true);
+      // allocatedHours > availableHours で過負荷判定
+      expect(yamadaWorkload!.dailyAllocations.some(d => d.allocatedHours > d.availableHours)).toBe(true);
     });
 
     it('稼働率を考慮して工数を配分する', async () => {

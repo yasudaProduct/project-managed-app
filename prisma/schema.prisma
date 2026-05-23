@@ -66,7 +66,7 @@ model Wbs {
   id        Int        @id @default(autoincrement())
   projectId String
   name      String
-  project   Projects   @relation(fields: [projectId], references: [id])
+  project   Projects   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   phases    WbsPhase[]
   tasks     WbsTask[]
   assignees WbsAssignee[]

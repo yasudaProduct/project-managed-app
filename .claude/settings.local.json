@@ -26,7 +26,8 @@
       "Bash(npx prisma migrate:*)",
       "Bash(git add:*)",
       "Bash(git diff:*)",
-      "Bash(npm audit:*)"
+      "Bash(npm audit:*)",
+      "Bash(npm run:*)"
     ],
     "deny": [],
     "additionalDirectories": [
