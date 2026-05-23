@@ -25,7 +25,8 @@
       "Bash(npx eslint:*)",
       "Bash(npx prisma migrate:*)",
       "Bash(git add:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(npm audit:*)"
     ],
     "deny": [],
     "additionalDirectories": [
