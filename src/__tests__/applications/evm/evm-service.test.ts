@@ -579,22 +579,247 @@ describe('EvmService', () => {
     });
   });
 
+  describe('getEvmTimeSeries - 予測モード', () => {
+    const createMockTask = (overrides?: Partial<{
+      taskId: number;
+      plannedStartDate: Date;
+      plannedEndDate: Date;
+      actualStartDate: Date | null;
+      plannedManHours: number;
+      status: TaskStatus;
+      progressRate: number;
+      costPerHour: number;
+    }>): TaskEvmData => {
+      return new TaskEvmData(
+        overrides?.taskId ?? 1,
+        'T001',
+        'Task1',
+        overrides?.plannedStartDate ?? new Date('2025-01-01'),
+        overrides?.plannedEndDate ?? new Date('2025-03-31'),
+        overrides?.plannedStartDate ?? new Date('2025-01-01'),
+        overrides?.plannedEndDate ?? new Date('2025-03-31'),
+        overrides?.actualStartDate ?? new Date('2025-01-01'),
+        null,
+        overrides?.plannedManHours ?? 100,
+        overrides?.plannedManHours ?? 100,
+        0,
+        overrides?.status ?? 'IN_PROGRESS',
+        overrides?.progressRate ?? 50,
+        overrides?.costPerHour ?? 5000,
+        overrides?.progressRate ?? 50
+      );
+    };
+
+    it('予測モードが有効な場合、未来日付にisPredicted=trueが設定される', async () => {
+      const now = new Date();
+      const futureDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 1週間後
+      const pastDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 1週間前
+
+      const tasks = [
+        createMockTask({
+          plannedStartDate: new Date('2025-01-01'),
+          plannedEndDate: new Date('2025-12-31'),
+          actualStartDate: new Date('2025-01-01'),
+          plannedManHours: 1000,
+          status: 'IN_PROGRESS',
+          progressRate: 50,
+        }),
+      ];
+
+      const wbsData = {
+        wbsId: 1,
+        projectId: 'proj-1',
+        projectName: 'Test',
+        totalPlannedManHours: 1000,
+        tasks,
+        buffers: [],
+        settings: null,
+      };
+
+      mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
+      mockRepository.getActualCostByDate.mockResolvedValue(new Map([['2025-01-01', 50]]));
+
+      const result = await evmService.getEvmTimeSeries(
+        1, pastDate, futureDate, 'weekly', 'hours', undefined, true
+      );
+
+      // 過去の日付はisPredicted=false
+      const pastMetrics = result.filter(m => m.date <= now);
+      pastMetrics.forEach(m => expect(m.isPredicted).toBe(false));
+
+      // 未来の日付はisPredicted=true
+      const futureMetrics = result.filter(m => m.date > now);
+      futureMetrics.forEach(m => expect(m.isPredicted).toBe(true));
+    });
+
+    it('予測モードが無効の場合、isPredicted=falseのまま', async () => {
+      const now = new Date();
+      const futureDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const pastDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      const tasks = [
+        createMockTask({
+          plannedStartDate: new Date('2025-01-01'),
+          plannedEndDate: new Date('2025-12-31'),
+          actualStartDate: new Date('2025-01-01'),
+          plannedManHours: 1000,
+          status: 'IN_PROGRESS',
+          progressRate: 50,
+        }),
+      ];
+
+      const wbsData = {
+        wbsId: 1,
+        projectId: 'proj-1',
+        projectName: 'Test',
+        totalPlannedManHours: 1000,
+        tasks,
+        buffers: [],
+        settings: null,
+      };
+
+      mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
+      mockRepository.getActualCostByDate.mockResolvedValue(new Map());
+
+      const result = await evmService.getEvmTimeSeries(
+        1, pastDate, futureDate, 'weekly', 'hours', undefined, false
+      );
+
+      result.forEach(m => expect(m.isPredicted).toBe(false));
+    });
+
+    it('予測EVはBACを超えない', async () => {
+      const now = new Date();
+      const futureDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      const tasks = [
+        createMockTask({
+          plannedStartDate: new Date('2025-01-01'),
+          plannedEndDate: new Date('2025-12-31'),
+          actualStartDate: new Date('2025-01-01'),
+          plannedManHours: 100,
+          status: 'IN_PROGRESS',
+          progressRate: 90, // 高進捗率
+        }),
+      ];
+
+      const wbsData = {
+        wbsId: 1,
+        projectId: 'proj-1',
+        projectName: 'Test',
+        totalPlannedManHours: 100,
+        tasks,
+        buffers: [],
+        settings: null,
+      };
+
+      mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
+      mockRepository.getActualCostByDate.mockResolvedValue(new Map([['2025-06-01', 80]]));
+
+      const result = await evmService.getEvmTimeSeries(
+        1, now, futureDate, 'weekly', 'hours', undefined, true
+      );
+
+      const futureMetrics = result.filter(m => m.isPredicted);
+      futureMetrics.forEach(m => {
+        expect(m.ev).toBeLessThanOrEqual(m.bac);
+      });
+    });
+  });
+
+  describe('calculateCurrentEvmMetrics - 追加エッジケース', () => {
+    it('複数タスクでcostPerHourが異なる場合のBAC計算（金額ベース）', async () => {
+      const evaluationDate = new Date('2025-01-15');
+      const tasks = [
+        new TaskEvmData(
+          1, 'T001', 'Task1',
+          new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), null,
+          100, 100, 0,
+          'IN_PROGRESS', 50, 3000, 50
+        ),
+        new TaskEvmData(
+          2, 'T002', 'Task2',
+          new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), null,
+          200, 200, 0,
+          'NOT_STARTED', 0, 8000, null
+        ),
+      ];
+
+      const wbsData = {
+        wbsId: 1,
+        projectId: 'proj-1',
+        projectName: 'Test',
+        totalPlannedManHours: 300,
+        tasks,
+        buffers: [],
+        settings: null,
+      };
+
+      mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
+      mockRepository.getActualCostByDate.mockResolvedValue(new Map());
+
+      const result = await evmService.calculateCurrentEvmMetrics(1, evaluationDate, 'cost');
+
+      // BAC: 100*3000 + 200*8000 = 300,000 + 1,600,000 = 1,900,000
+      expect(result.bac).toBe(1900000);
+    });
+
+    it('デフォルトの評価日はnew Date()（現在時刻）', async () => {
+      const tasks = [
+        new TaskEvmData(
+          1, 'T001', 'Task1',
+          new Date('2025-01-01'), new Date('2025-12-31'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
+          new Date('2025-01-01'), null,
+          100, 100, 0,
+          'IN_PROGRESS', 50, 5000, 50
+        ),
+      ];
+
+      const wbsData = {
+        wbsId: 1,
+        projectId: 'proj-1',
+        projectName: 'Test',
+        totalPlannedManHours: 100,
+        tasks,
+        buffers: [],
+        settings: null,
+      };
+
+      mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
+      mockRepository.getActualCostByDate.mockResolvedValue(new Map());
+
+      const before = new Date();
+      const result = await evmService.calculateCurrentEvmMetrics(1);
+      const after = new Date();
+
+      expect(result.date.getTime()).toBeGreaterThanOrEqual(before.getTime());
+      expect(result.date.getTime()).toBeLessThanOrEqual(after.getTime());
+    });
+  });
+
   describe('getTaskEvmDetails', () => {
     it('タスク別のEVMデータを取得する', async () => {
       const tasks = [
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-01-10'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
         new TaskEvmData(
           2, 'T002', 'Task2',
           new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-01-10'),
           null, null,
-          200, 0,
+          200, 200, 0,
           'COMPLETED', 100,
           5000, null
         ),
@@ -614,6 +839,7 @@ describe('EvmService', () => {
     it('healthy状態を正しく判定する', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 95,
         ac: 100,
@@ -628,6 +854,7 @@ describe('EvmService', () => {
     it('warning状態を正しく判定する', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 85,
         ac: 100,
@@ -642,6 +869,7 @@ describe('EvmService', () => {
     it('critical状態を正しく判定する', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
+        pv_base: 100,
         pv: 100,
         ev: 75,
         ac: 100,
