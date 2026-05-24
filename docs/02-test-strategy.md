@@ -86,7 +86,7 @@
 
 ## アサーションと失敗理由
 
-- アサーションは1テスト辺り1-3個程度にまとめ、意図が分かる説明変数や`describe/it`の日本語名を使用
+- 意図が分かる説明変数や`describe/it`の日本語名を使用
 - 失敗時に判別しやすい期待値・入力値をメッセージまたはテスト名に含める
 
 ## スナップショットの扱い
@@ -126,18 +126,20 @@ npm run test:coverage:all
 
 ```ts
 // src/domains/example/add.ts
-export function add(a: number, b: number): number { return a + b }
+export function add(a: number, b: number): number {
+  return a + b;
+}
 ```
 
 ```ts
 // src/__tests__/domains/example/add.test.ts
-import { add } from '@/domains/example/add'
+import { add } from "@/domains/example/add";
 
-describe('add', () => {
-  it('2つの数を加算して返す', () => {
-    expect(add(1, 2)).toBe(3)
-  })
-})
+describe("add", () => {
+  it("2つの数を加算して返す", () => {
+    expect(add(1, 2)).toBe(3);
+  });
+});
 ```
 
 - アプリケーションサービス（モック例）
@@ -145,56 +147,64 @@ describe('add', () => {
 ```ts
 // サービスはコンストラクタDIを想定
 class ProjectService {
-  constructor(private readonly repo: { findByName: (n: string) => Promise<null | { id: string }> }) {}
+  constructor(
+    private readonly repo: {
+      findByName: (n: string) => Promise<null | { id: string }>;
+    },
+  ) {}
   async create(name: string) {
-    const dup = await this.repo.findByName(name)
-    if (dup) return { success: false, error: '同様のプロジェクト名が存在します。' }
-    return { success: true, id: 'new-id' }
+    const dup = await this.repo.findByName(name);
+    if (dup)
+      return { success: false, error: "同様のプロジェクト名が存在します。" };
+    return { success: true, id: "new-id" };
   }
 }
 ```
 
 ```ts
 // src/__tests__/applications/project-service.test.ts
-import { jest } from '@jest/globals'
+import { jest } from "@jest/globals";
 
-describe('ProjectService', () => {
-  it('重複名のとき失敗を返す', async () => {
-    const repo = { findByName: jest.fn().mockResolvedValue({ id: 'x' }) }
-    const svc = new ProjectService(repo)
-    await expect(svc.create('A')).resolves.toEqual({ success: false, error: '同様のプロジェクト名が存在します。' })
-  })
-})
+describe("ProjectService", () => {
+  it("重複名のとき失敗を返す", async () => {
+    const repo = { findByName: jest.fn().mockResolvedValue({ id: "x" }) };
+    const svc = new ProjectService(repo);
+    await expect(svc.create("A")).resolves.toEqual({
+      success: false,
+      error: "同様のプロジェクト名が存在します。",
+    });
+  });
+});
 ```
 
 - Reactコンポーネント（RTL例）
 
 ```tsx
 // src/components/example/Counter.tsx
-'use client'
-import { useState } from 'react'
+"use client";
+import { useState } from "react";
 export function Counter() {
-  const [n, set] = useState(0)
+  const [n, set] = useState(0);
   return (
     <div>
       <p>count: {n}</p>
-      <button onClick={() => set(n+1)}>inc</button>
+      <button onClick={() => set(n + 1)}>inc</button>
     </div>
-  )
+  );
 }
 ```
 
 ```tsx
 // src/__tests__/components/example/Counter.test.tsx
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { Counter } from '@/components/example/Counter'
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { Counter } from "@/components/example/Counter";
 
-describe('Counter', () => {
-  it('クリックでカウントが増える', async () => {
-    render(<Counter />)
-    await userEvent.click(screen.getByRole('button', { name: /inc/i }))
-    expect(screen.getByText(/count: 1/)).toBeInTheDocument()
-  })
-})
+describe("Counter", () => {
+  it("クリックでカウントが増える", async () => {
+    render(<Counter />);
+    await userEvent.click(screen.getByRole("button", { name: /inc/i }));
+    expect(screen.getByText(/count: 1/)).toBeInTheDocument();
+  });
+});
 ```

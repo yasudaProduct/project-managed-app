@@ -21,6 +21,8 @@ const integrationJestConfig = {
   },
   testTimeout: 20000,
   verbose: true,
+  // integration テストは共有DBを使うため直列実行
+  runInBand: true,
   setupFiles: [
     path.resolve(__dirname, "./src/__integration_tests__/load-env.ts"),
   ],
