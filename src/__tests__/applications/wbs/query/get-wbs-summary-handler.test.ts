@@ -483,5 +483,116 @@ describe('GetWbsSummaryHandler', () => {
         expect(jun?.actualHours).toBe(12);
       });
     });
+
+    describe('BUSINESS_DAY_ALLOCATION モードの詳細テスト', () => {
+      it('月跨ぎタスクの予定工数が複数月に分散される', async () => {
+        // 月跨ぎタスク: 2024/01/15〜2024/02/10, yoteiKosu=40
+        const crossMonthTask: WbsTaskData[] = [{
+          ...mockTasks[0],
+          yoteiStart: new Date('2024-01-15'),
+          yoteiEnd: new Date('2024-02-10'),
+          yoteiKosu: 40,
+        }];
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue(crossMonthTask);
+        mockWbsQueryRepository.getPhases.mockResolvedValue([mockPhases[0]]);
+
+        const query = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.BUSINESS_DAY_ALLOCATION);
+        const result = await handler.execute(query);
+
+        // 2024/01 と 2024/02 の両方に分散される
+        const months = result.monthlyAssigneeSummary.months;
+        expect(months).toContain('2024/01');
+        expect(months).toContain('2024/02');
+
+        // 合計が元の yoteiKosu と一致
+        const totalPlanned = result.monthlyAssigneeSummary.grandTotal.plannedHours;
+        expect(totalPlanned).toBeCloseTo(40, 0);
+      });
+
+      it('BUSINESS_DAY_ALLOCATION と START_DATE_BASED で月跨ぎタスクの結果が異なることを確認する', async () => {
+        // 月跨ぎタスク: 2024/01/15〜2024/02/10, yoteiKosu=40
+        const crossMonthTask: WbsTaskData[] = [{
+          ...mockTasks[0],
+          yoteiStart: new Date('2024-01-15'),
+          yoteiEnd: new Date('2024-02-10'),
+          yoteiKosu: 40,
+        }];
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue(crossMonthTask);
+        mockWbsQueryRepository.getPhases.mockResolvedValue([mockPhases[0]]);
+
+        // START_DATE_BASED
+        const queryStart = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.START_DATE_BASED);
+        const resultStart = await handler.execute(queryStart);
+
+        // BUSINESS_DAY_ALLOCATION
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue(crossMonthTask);
+        mockWbsQueryRepository.getPhases.mockResolvedValue([mockPhases[0]]);
+        const queryBiz = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.BUSINESS_DAY_ALLOCATION);
+        const resultBiz = await handler.execute(queryBiz);
+
+        // START_DATE_BASED: 全工数が開始月(2024/01)に集中
+        const startJan = resultStart.monthlyAssigneeSummary.data.find(
+          d => d.assignee === 'John Doe' && d.month === '2024/01'
+        );
+        expect(startJan?.plannedHours).toBe(40);
+
+        // BUSINESS_DAY_ALLOCATION: 複数月に分散（2024/01の値は40未満）
+        const bizJan = resultBiz.monthlyAssigneeSummary.data.find(
+          d => d.assignee === 'John Doe' && d.month === '2024/01'
+        );
+        expect(bizJan?.plannedHours).toBeLessThan(40);
+        expect(bizJan?.plannedHours).toBeGreaterThan(0);
+      });
+    });
+
+    describe('baselineHours（kijunKosu）のフローテスト', () => {
+      it('START_DATE_BASED で kijunKosu が baselineHours として集計される', async () => {
+        const taskWithBaseline: WbsTaskData[] = [{
+          ...mockTasks[0],
+          kijunKosu: 50,
+        }];
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue(taskWithBaseline);
+        mockWbsQueryRepository.getPhases.mockResolvedValue([mockPhases[0]]);
+
+        const query = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.START_DATE_BASED);
+        const result = await handler.execute(query);
+
+        expect(result.monthlyAssigneeSummary.grandTotal.baselineHours).toBe(50);
+        expect(result.monthlyPhaseSummary!.grandTotal.baselineHours).toBe(50);
+      });
+
+      it('kijunKosu が null の場合 baselineHours は 0 として集計される', async () => {
+        const taskWithNullBaseline: WbsTaskData[] = [{
+          ...mockTasks[0],
+          kijunKosu: null,
+        }];
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue(taskWithNullBaseline);
+        mockWbsQueryRepository.getPhases.mockResolvedValue([mockPhases[0]]);
+
+        const query = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.START_DATE_BASED);
+        const result = await handler.execute(query);
+
+        expect(result.monthlyAssigneeSummary.grandTotal.baselineHours).toBe(0);
+        expect(result.monthlyPhaseSummary!.grandTotal.baselineHours).toBe(0);
+      });
+
+      it('BUSINESS_DAY_ALLOCATION で kijunKosu が baselineHours として集計される', async () => {
+        const taskWithBaseline: WbsTaskData[] = [{
+          ...mockTasks[0],
+          kijunKosu: 50,
+          kijunStart: new Date('2024-01-15'),
+          kijunEnd: new Date('2024-01-20'),
+        }];
+        mockWbsQueryRepository.getWbsTasks.mockResolvedValue(taskWithBaseline);
+        mockWbsQueryRepository.getPhases.mockResolvedValue([mockPhases[0]]);
+
+        const query = new GetWbsSummaryQuery('project-1', 1, AllocationCalculationMode.BUSINESS_DAY_ALLOCATION);
+        const result = await handler.execute(query);
+
+        // baselineHours の月別合計が kijunKosu と一致する
+        expect(result.monthlyAssigneeSummary.grandTotal.baselineHours).toBeCloseTo(50, 0);
+        expect(result.monthlyPhaseSummary!.grandTotal.baselineHours).toBeCloseTo(50, 0);
+      });
+    });
   });
 });
