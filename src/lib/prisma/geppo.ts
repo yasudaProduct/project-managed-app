@@ -1,7 +1,6 @@
 import { PrismaClient } from '.prisma/geppo-client'
 
 declare global {
-  // eslint-disable-next-line no-var
   var __geppo_prisma: PrismaClient | undefined
 }
 

@@ -164,7 +164,7 @@ describe('AssigneeGantt Integration Tests', () => {
         name: 'ag-テスト祝日',
         type: 'COMPANY',
       };
-      const created = await companyHolidayRepository.save(holiday);
+      await companyHolidayRepository.save(holiday);
       // saveの戻り値からIDを取得
       const found = await global.prisma.companyHoliday.findFirst({
         where: { name: 'ag-テスト祝日' },

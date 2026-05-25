@@ -7,7 +7,6 @@ dotenv.config({ path: path.resolve(__dirname, '.env.test') });
 
 // グローバル変数としてprismaクライアントを定義
 declare global {
-  // eslint-disable-next-line no-var
   var prisma: PrismaClient;
 }
 

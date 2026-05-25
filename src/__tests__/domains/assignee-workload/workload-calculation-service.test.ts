@@ -8,7 +8,7 @@ import { ManHour } from '@/domains/task/man-hour';
 import { ManHourType } from '@/domains/task/value-object/man-hour-type';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
-import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
+import { AssigneeWorkingCalendar, UserSchedule } from '@/domains/calendar/assignee-working-calendar';
 
 describe('WorkloadCalculationService', () => {
   let service: WorkloadCalculationService;
@@ -186,7 +186,6 @@ describe('WorkloadCalculationService', () => {
   describe('calculateTaskAllocationsForDate', () => {
     it('アクティブなタスクがない場合は空配列を返す', () => {
       const assignee = createAssignee(1.0);
-      const { AssigneeWorkingCalendar } = require('@/domains/calendar/assignee-working-calendar');
       const workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, []);
 
       const result = service.calculateTaskAllocationsForDate(
@@ -198,7 +197,6 @@ describe('WorkloadCalculationService', () => {
 
     it('availableHoursが0の場合は空配列を返す', () => {
       const assignee = createAssignee(1.0);
-      const { AssigneeWorkingCalendar } = require('@/domains/calendar/assignee-working-calendar');
       const workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, []);
       const task = createTask({
         startDate: new Date(2026, 4, 25),
@@ -215,7 +213,6 @@ describe('WorkloadCalculationService', () => {
 
     it('稼働可能時間に比例してタスク工数を配分する', () => {
       const assignee = createAssignee(1.0);
-      const { AssigneeWorkingCalendar } = require('@/domains/calendar/assignee-working-calendar');
       const workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, []);
 
       // タスク期間: 2026-05-25(月)〜2026-05-29(金) = 5日間
@@ -237,7 +234,6 @@ describe('WorkloadCalculationService', () => {
 
     it('複数タスクが同日にある場合はそれぞれ配分される', () => {
       const assignee = createAssignee(1.0);
-      const { AssigneeWorkingCalendar } = require('@/domains/calendar/assignee-working-calendar');
       const workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, []);
 
       // 2日間のタスク2つ (2026-05-25(月)〜2026-05-26(火))
@@ -269,7 +265,6 @@ describe('WorkloadCalculationService', () => {
 
     it('予定開始日・終了日がないタスクはスキップされる', () => {
       const assignee = createAssignee(1.0);
-      const { AssigneeWorkingCalendar } = require('@/domains/calendar/assignee-working-calendar');
       const workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, []);
 
       // periods が空のタスク
@@ -291,7 +286,6 @@ describe('WorkloadCalculationService', () => {
 
     it('タスク期間内の稼働可能時間が0の場合はスキップされる', () => {
       const assignee = createAssignee(0); // 稼働率0
-      const { AssigneeWorkingCalendar } = require('@/domains/calendar/assignee-working-calendar');
       const workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, []);
 
       const task = createTask({
@@ -310,7 +304,6 @@ describe('WorkloadCalculationService', () => {
 
     it('TaskAllocationにtaskId, taskName, totalHours, periodStart, periodEndが設定される', () => {
       const assignee = createAssignee(1.0);
-      const { AssigneeWorkingCalendar } = require('@/domains/calendar/assignee-working-calendar');
       const workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, []);
 
       const startDate = new Date(2026, 4, 25);

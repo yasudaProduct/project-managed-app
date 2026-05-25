@@ -2,6 +2,7 @@ import { WorkingHoursAllocationService, TaskForAllocation } from '@/domains/cale
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
+import { AllocationQuantizer } from '@/domains/wbs/allocation-quantizer';
 
 describe('WorkingHoursAllocationService', () => {
   let companyCalendar: CompanyCalendar;
@@ -334,7 +335,6 @@ describe('WorkingHoursAllocationService', () => {
     });
 
     it('量子化器適用時に予定工数が量子化される', () => {
-      const { AllocationQuantizer } = require('@/domains/wbs/allocation-quantizer');
       const quantizer = new AllocationQuantizer(0.25);
 
       const task = {
