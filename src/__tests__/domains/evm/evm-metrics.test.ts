@@ -267,6 +267,283 @@ describe('EvmMetrics', () => {
     });
   });
 
+  describe('SV/CV計算', () => {
+    it('SVを正しく計算する（EV > PV: スケジュール前倒し）', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 80,
+        ev: 100,
+        ac: 90,
+        bac: 200,
+      });
+
+      expect(metrics.sv).toBe(20); // EV - PV = 100 - 80 = 20
+    });
+
+    it('SVを正しく計算する（EV < PV: スケジュール遅延）', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 60,
+        ac: 90,
+        bac: 200,
+      });
+
+      expect(metrics.sv).toBe(-40); // EV - PV = 60 - 100 = -40
+    });
+
+    it('CVを正しく計算する（EV > AC: コスト効率良い）', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 100,
+        ac: 80,
+        bac: 200,
+      });
+
+      expect(metrics.cv).toBe(20); // EV - AC = 100 - 80 = 20
+    });
+
+    it('CVを正しく計算する（EV < AC: コスト超過）', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 80,
+        ac: 100,
+        bac: 200,
+      });
+
+      expect(metrics.cv).toBe(-20); // EV - AC = 80 - 100 = -20
+    });
+  });
+
+  describe('SPI/CPI計算', () => {
+    it('SPIを正しく計算する', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 90,
+        ac: 80,
+        bac: 200,
+      });
+
+      expect(metrics.spi).toBeCloseTo(0.9, 2); // EV / PV = 90 / 100
+    });
+
+    it('CPIを正しく計算する', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 90,
+        ac: 80,
+        bac: 200,
+      });
+
+      expect(metrics.cpi).toBeCloseTo(1.125, 3); // EV / AC = 90 / 80
+    });
+
+    it('SPI > 1 の場合（スケジュール前倒し）', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 80,
+        ev: 100,
+        ac: 90,
+        bac: 200,
+      });
+
+      expect(metrics.spi).toBeCloseTo(1.25, 2); // 100 / 80
+    });
+
+    it('CPI > 1 の場合（コスト効率良い）', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 100,
+        ac: 80,
+        bac: 200,
+      });
+
+      expect(metrics.cpi).toBeCloseTo(1.25, 2); // 100 / 80
+    });
+  });
+
+  describe('isPredictedフラグ', () => {
+    it('デフォルトではfalse', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 80,
+        ac: 90,
+        bac: 200,
+      });
+
+      expect(metrics.isPredicted).toBe(false);
+    });
+
+    it('trueを指定できる', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 80,
+        ac: 90,
+        bac: 200,
+        isPredicted: true,
+      });
+
+      expect(metrics.isPredicted).toBe(true);
+    });
+  });
+
+  describe('フォーマット（SV/CV/EAC/ETC）', () => {
+    it('工数ベースのSV/CVフォーマット', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 80,
+        ac: 90,
+        bac: 200,
+        calculationMode: 'hours',
+      });
+
+      expect(metrics.formattedSv).toBe('-20.0h');
+      expect(metrics.formattedCv).toBe('-10.0h');
+    });
+
+    it('金額ベースのSV/CVフォーマット', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 1000000,
+        pv: 1000000,
+        ev: 800000,
+        ac: 900000,
+        bac: 2000000,
+        calculationMode: 'cost',
+      });
+
+      expect(metrics.formattedSv).toBe('¥-200,000');
+      expect(metrics.formattedCv).toBe('¥-100,000');
+    });
+
+    it('工数ベースのEAC/ETCフォーマット', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 80,
+        ac: 90,
+        bac: 200,
+        calculationMode: 'hours',
+      });
+
+      // CPI = 80/90 ≈ 0.889
+      // ETC = (200-80) / (80/90) = 135
+      // EAC = 90 + 135 = 225
+      expect(metrics.formattedEtc).toMatch(/^\d+\.\dh$/);
+      expect(metrics.formattedEac).toMatch(/^\d+\.\dh$/);
+    });
+  });
+
+  describe('全値ゼロのエッジケース', () => {
+    it('すべてゼロの場合、SV/CVは0', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 0,
+        pv: 0,
+        ev: 0,
+        ac: 0,
+        bac: 0,
+      });
+
+      expect(metrics.sv).toBe(0);
+      expect(metrics.cv).toBe(0);
+      expect(metrics.spi).toBe(0);
+      expect(metrics.cpi).toBe(0);
+      expect(metrics.completionRate).toBe(0);
+    });
+  });
+
+  describe('健全性判定の境界値', () => {
+    it('SPI=0.9, CPI=0.9 はhealthy', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 90,
+        ac: 100,
+        bac: 200,
+      });
+
+      expect(metrics.spi).toBeCloseTo(0.9, 2);
+      expect(metrics.cpi).toBeCloseTo(0.9, 2);
+      expect(metrics.healthStatus).toBe('healthy');
+    });
+
+    it('SPI=0.89はwarning（healthyの境界を下回る）', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 89,
+        ac: 100,
+        bac: 200,
+      });
+
+      expect(metrics.healthStatus).toBe('warning');
+    });
+
+    it('SPI=0.8, CPI=0.8 はwarning', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 80,
+        ac: 100,
+        bac: 200,
+      });
+
+      expect(metrics.healthStatus).toBe('warning');
+    });
+
+    it('SPI=0.79はcritical（warningの境界を下回る）', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 79,
+        ac: 100,
+        bac: 200,
+      });
+
+      expect(metrics.healthStatus).toBe('critical');
+    });
+
+    it('CPI >= 0.9 でも SPI < 0.8 ならcritical', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 70,
+        ac: 70, // CPI = 1.0
+        bac: 200,
+      });
+
+      expect(metrics.spi).toBeCloseTo(0.7, 2);
+      expect(metrics.cpi).toBeCloseTo(1.0, 2);
+      expect(metrics.healthStatus).toBe('critical');
+    });
+  });
+
   describe('createファクトリメソッド', () => {
     it('必須パラメータでインスタンスを作成できる', () => {
       const metrics = EvmMetrics.create({

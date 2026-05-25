@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { DataTable } from "@/components/data-table";
 import { columns } from "@/app/work-records/columns";
 import { getWorkRecords } from "./actions";

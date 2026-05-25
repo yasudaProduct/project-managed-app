@@ -166,7 +166,7 @@ export class TaskRepository implements ITaskRepository {
             },
         });
 
-        task.periods?.forEach(async (period) => {
+        for (const period of task.periods ?? []) {
             const periodDb = await prisma.taskPeriod.create({
                 data: {
                     taskId: taskDb.id,
@@ -176,7 +176,7 @@ export class TaskRepository implements ITaskRepository {
                 },
             });
 
-            period.manHours.forEach(async (manHour) => {
+            for (const manHour of period.manHours) {
                 await prisma.taskKosu.create({
                     data: {
                         periodId: periodDb.id,
@@ -185,8 +185,8 @@ export class TaskRepository implements ITaskRepository {
                         wbsId: task.wbsId,
                     },
                 });
-            });
-        });
+            }
+        }
 
         console.log("taskDb", taskDb)
         return Task.createFromDb({
@@ -194,6 +194,7 @@ export class TaskRepository implements ITaskRepository {
             taskNo: TaskNo.reconstruct(taskDb.taskNo),
             name: taskDb.name,
             wbsId: taskDb.wbsId,
+            phaseId: taskDb.phaseId ?? undefined,
             assigneeId: taskDb.assigneeId ?? undefined,
             status: new TaskStatus({ status: taskDb.status }),
         });
@@ -213,7 +214,7 @@ export class TaskRepository implements ITaskRepository {
             },
         });
 
-        task.periods?.forEach(async (period) => {
+        for (const period of task.periods ?? []) {
             // 期間更新
             const periodDb = await prisma.taskPeriod.upsert({
                 where: {
@@ -229,11 +230,11 @@ export class TaskRepository implements ITaskRepository {
                     endDate: period.endDate,
                     type: period.type.type,
                 },
-            })
+            });
 
             // 工数更新
             const periodId = periodDb.id;
-            period.manHours.forEach(async (manHour) => {
+            for (const manHour of period.manHours) {
                 await prisma.taskKosu.upsert({
                     where: { id: manHour.id ?? 0 }, // undefinedの場合,エラーになるので0を設定
                     update: { kosu: manHour.kosu },
@@ -243,9 +244,9 @@ export class TaskRepository implements ITaskRepository {
                         kosu: Number(manHour.kosu),
                         type: manHour.type.type,
                     },
-                })
-            })
-        })
+                });
+            }
+        }
 
         return Task.createFromDb({
             id: taskDb.id,

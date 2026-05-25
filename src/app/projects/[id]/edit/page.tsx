@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { notFound } from "next/navigation";
 import { ProjectForm } from "../../project-form";
 import { getProjectById } from "../../actions";

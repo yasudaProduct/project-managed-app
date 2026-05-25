@@ -292,6 +292,219 @@ describe('MonthlySummaryAccumulator', () => {
     });
   });
 
+  describe('baselineHours の集計', () => {
+    it('baselineHours が addTaskAllocation で正しく累積される', () => {
+      const accumulator = new MonthlySummaryAccumulator();
+
+      const taskDetail1: TaskAllocationDetail = {
+        taskId: 'task-1',
+        taskName: 'タスク1',
+        assignee: '田中',
+        startDate: '2025-01-10',
+        endDate: '2025-01-20',
+        totalPlannedHours: 10.0,
+        totalActualHours: 8.0,
+        monthlyAllocations: []
+      };
+
+      const taskDetail2: TaskAllocationDetail = {
+        taskId: 'task-2',
+        taskName: 'タスク2',
+        assignee: '田中',
+        startDate: '2025-01-15',
+        endDate: '2025-01-25',
+        totalPlannedHours: 5.0,
+        totalActualHours: 4.0,
+        monthlyAllocations: []
+      };
+
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 10, taskDetail1);
+      accumulator.addTaskAllocation('田中', '2025/01', 5.0, 4.0, 15, taskDetail2);
+
+      const result = accumulator.getTotals();
+
+      expect(result.data[0].baselineHours).toBe(25);
+    });
+
+    it('baselineHours が月別合計・担当者別合計・全体合計に反映される', () => {
+      const accumulator = new MonthlySummaryAccumulator();
+
+      const createTaskDetail = (taskId: string, assignee: string): TaskAllocationDetail => ({
+        taskId,
+        taskName: `タスク${taskId}`,
+        assignee,
+        startDate: '2025-01-10',
+        endDate: '2025-01-20',
+        totalPlannedHours: 10.0,
+        totalActualHours: 8.0,
+        monthlyAllocations: []
+      });
+
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 10, createTaskDetail('1', '田中'));
+      accumulator.addTaskAllocation('佐藤', '2025/02', 5.0, 4.0, 20, createTaskDetail('2', '佐藤'));
+
+      const result = accumulator.getTotals();
+
+      expect(result.monthlyTotals['2025/01'].baselineHours).toBe(10);
+      expect(result.monthlyTotals['2025/02'].baselineHours).toBe(20);
+      expect(result.assigneeTotals['田中'].baselineHours).toBe(10);
+      expect(result.assigneeTotals['佐藤'].baselineHours).toBe(20);
+      expect(result.grandTotal.baselineHours).toBe(30);
+    });
+
+    it('baselineHours=0 の場合の集計動作を検証する', () => {
+      const accumulator = new MonthlySummaryAccumulator();
+
+      const createTaskDetail = (taskId: string, assignee: string): TaskAllocationDetail => ({
+        taskId,
+        taskName: `タスク${taskId}`,
+        assignee,
+        startDate: '2025-01-10',
+        endDate: '2025-01-20',
+        totalPlannedHours: 10.0,
+        totalActualHours: 8.0,
+        monthlyAllocations: []
+      });
+
+      // 田中に baselineHours=0、佐藤に baselineHours=5（同月）
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, createTaskDetail('1', '田中'));
+      accumulator.addTaskAllocation('佐藤', '2025/01', 5.0, 4.0, 5, createTaskDetail('2', '佐藤'));
+
+      const result = accumulator.getTotals();
+
+      // baselineHours=0 のデータも含め、合計は 0+5=5 であるべき
+      expect(result.monthlyTotals['2025/01'].baselineHours).toBe(5);
+      expect(result.grandTotal.baselineHours).toBe(5);
+    });
+  });
+
+  describe('assigneeSeqMap によるソート', () => {
+    it('assigneeSeqMap に基づいて担当者がソートされる', () => {
+      const assigneeSeqMap = new Map<string, number>([
+        ['佐藤', 1],
+        ['田中', 2],
+      ]);
+      const accumulator = new MonthlySummaryAccumulator(assigneeSeqMap);
+
+      const createTaskDetail = (taskId: string, assignee: string): TaskAllocationDetail => ({
+        taskId,
+        taskName: `タスク${taskId}`,
+        assignee,
+        startDate: '2025-01-10',
+        endDate: '2025-01-20',
+        totalPlannedHours: 10.0,
+        totalActualHours: 8.0,
+        monthlyAllocations: []
+      });
+
+      // 田中→佐藤の順で追加（逆順）
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, createTaskDetail('1', '田中'));
+      accumulator.addTaskAllocation('佐藤', '2025/01', 5.0, 4.0, 0, createTaskDetail('2', '佐藤'));
+
+      const result = accumulator.getTotals();
+
+      expect(result.assignees).toEqual([
+        { key: '佐藤', seq: 1 },
+        { key: '田中', seq: 2 },
+      ]);
+    });
+
+    it('同一 seq 値の担当者は名前の localeCompare でソートされる', () => {
+      const assigneeSeqMap = new Map<string, number>([
+        ['田中', 1],
+        ['佐藤', 1],
+      ]);
+      const accumulator = new MonthlySummaryAccumulator(assigneeSeqMap);
+
+      const createTaskDetail = (taskId: string, assignee: string): TaskAllocationDetail => ({
+        taskId,
+        taskName: `タスク${taskId}`,
+        assignee,
+        startDate: '2025-01-10',
+        endDate: '2025-01-20',
+        totalPlannedHours: 10.0,
+        totalActualHours: 8.0,
+        monthlyAllocations: []
+      });
+
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, createTaskDetail('1', '田中'));
+      accumulator.addTaskAllocation('佐藤', '2025/01', 5.0, 4.0, 0, createTaskDetail('2', '佐藤'));
+
+      const result = accumulator.getTotals();
+
+      // localeCompare 順で比較
+      const expectedOrder = ['田中', '佐藤'].sort((a, b) => a.localeCompare(b));
+      expect(result.assignees.map(a => a.key)).toEqual(expectedOrder);
+    });
+
+    it('assigneeSeqMap に登録されていない担当者は MAX_SAFE_INTEGER として末尾に配置される', () => {
+      const assigneeSeqMap = new Map<string, number>([
+        ['田中', 1],
+      ]);
+      const accumulator = new MonthlySummaryAccumulator(assigneeSeqMap);
+
+      const createTaskDetail = (taskId: string, assignee: string): TaskAllocationDetail => ({
+        taskId,
+        taskName: `タスク${taskId}`,
+        assignee,
+        startDate: '2025-01-10',
+        endDate: '2025-01-20',
+        totalPlannedHours: 10.0,
+        totalActualHours: 8.0,
+        monthlyAllocations: []
+      });
+
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, createTaskDetail('1', '田中'));
+      accumulator.addTaskAllocation('佐藤', '2025/01', 5.0, 4.0, 0, createTaskDetail('2', '佐藤'));
+
+      const result = accumulator.getTotals();
+
+      expect(result.assignees).toEqual([
+        { key: '田中', seq: 1 },
+        { key: '佐藤', seq: Number.MAX_SAFE_INTEGER },
+      ]);
+    });
+  });
+
+  describe('taskDetails の包含', () => {
+    it('getTotals の data に taskDetails の taskId/taskName が正しく含まれる', () => {
+      const accumulator = new MonthlySummaryAccumulator();
+
+      const taskDetail1: TaskAllocationDetail = {
+        taskId: 'task-A',
+        taskName: 'タスクA',
+        assignee: '田中',
+        startDate: '2025-01-10',
+        endDate: '2025-01-20',
+        totalPlannedHours: 10.0,
+        totalActualHours: 8.0,
+        monthlyAllocations: []
+      };
+
+      const taskDetail2: TaskAllocationDetail = {
+        taskId: 'task-B',
+        taskName: 'タスクB',
+        assignee: '田中',
+        startDate: '2025-01-15',
+        endDate: '2025-01-25',
+        totalPlannedHours: 5.0,
+        totalActualHours: 4.0,
+        monthlyAllocations: []
+      };
+
+      accumulator.addTaskAllocation('田中', '2025/01', 10.0, 8.0, 0, taskDetail1);
+      accumulator.addTaskAllocation('田中', '2025/01', 5.0, 4.0, 0, taskDetail2);
+
+      const result = accumulator.getTotals();
+
+      expect(result.data[0].taskDetails).toHaveLength(2);
+      expect(result.data[0].taskDetails![0].taskId).toBe('task-A');
+      expect(result.data[0].taskDetails![0].taskName).toBe('タスクA');
+      expect(result.data[0].taskDetails![1].taskId).toBe('task-B');
+      expect(result.data[0].taskDetails![1].taskName).toBe('タスクB');
+    });
+  });
+
   describe('見通し工数の集計', () => {
     it('見通し工数を追加できる', () => {
       const accumulator = new MonthlySummaryAccumulator();

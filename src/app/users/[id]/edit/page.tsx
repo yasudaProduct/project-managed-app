@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { notFound } from "next/navigation";
 import { UserForm } from "@/app/users/user-form";
 import { getUserById } from "@/app/users/actions";

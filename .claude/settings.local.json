@@ -25,7 +25,10 @@
       "Bash(npx eslint:*)",
       "Bash(npx prisma migrate:*)",
       "Bash(git add:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm run:*)",
+      "Bash(npx jest:*)"
     ],
     "deny": [],
     "additionalDirectories": [

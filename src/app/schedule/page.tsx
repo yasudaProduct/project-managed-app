@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { ModernCalendar } from "@/components/modern-calendar";
 import { getSchedules, getUsers } from "./action";
 

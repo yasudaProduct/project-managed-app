@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { WbsAssigneeForm } from "@/components/wbs/wbs-assignee-form";
 import { notFound } from "next/navigation";
 import { getWbsAssigneeById } from "../../assignee-actions";

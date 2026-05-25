@@ -41,7 +41,7 @@
     "partially-covered": "rgba(255, 215, 0, 0.7)",
     "covered": "rgba(50, 205, 50, 0.7)"
   },
-  "jest.jestCommandLine": "node ./node_modules/jest/bin/jest.js --config=jest.all.config.js",
+  "jest.jestCommandLine": "node ./node_modules/jest/bin/jest.js --config=jest.all.config.js --runInBand",
   "jest.runMode": {
     "type": "on-demand"
   }

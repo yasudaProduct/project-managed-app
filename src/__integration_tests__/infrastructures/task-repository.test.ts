@@ -11,7 +11,8 @@ import { cleanupTestData, seedTestProject, testIds } from '../helpers';
 
 describe('TaskRepository Integration Tests', () => {
   let taskRepository: TaskRepository;
-  let testTaskId: string;
+  let testTaskNo: string;
+  let testTaskDbId: number;
 
   beforeAll(async () => {
     // リポジトリインスタンスの作成
@@ -30,15 +31,13 @@ describe('TaskRepository Integration Tests', () => {
     it('タスクを作成できること', async () => {
       // テスト用のタスクを作成
       const taskId = TaskNo.reconstruct(`TEST-${Date.now() % 1000}`);
-      testTaskId = taskId.getValue();
-      testIds.taskId = testTaskId;
+      testTaskNo = taskId.getValue();
 
       const task = Task.create({
-        id: taskId,
+        taskNo: taskId,
         wbsId: testIds.wbsId,
         name: '結合テスト用タスク',
         phaseId: testIds.phaseId,
-        assigneeId: 1,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
@@ -57,10 +56,12 @@ describe('TaskRepository Integration Tests', () => {
 
       // リポジトリを使用してタスクを作成
       const createdTask = await taskRepository.create(task);
+      testTaskDbId = createdTask.id!;
+      testIds.taskId = testTaskDbId;
 
       // 作成されたタスクを検証
       expect(createdTask).toBeTruthy();
-      expect(createdTask.taskNo?.getValue()).toBe(testTaskId);
+      expect(createdTask.taskNo?.getValue()).toBe(testTaskNo);
       expect(createdTask.name).toBe('結合テスト用タスク');
       expect(createdTask.wbsId).toBe(testIds.wbsId);
       expect(createdTask.phaseId).toBe(testIds.phaseId);
@@ -69,11 +70,11 @@ describe('TaskRepository Integration Tests', () => {
 
     it('IDによるタスクの取得', async () => {
       // 先ほど作成したタスクをIDで取得
-      const task = await taskRepository.findById(testIds.wbsId, testTaskId);
+      const task = await taskRepository.findById(testTaskDbId);
 
       // 取得したタスクを検証
       expect(task).not.toBeNull();
-      expect(task?.taskNo?.getValue()).toBe(testTaskId);
+      expect(task?.taskNo?.getValue()).toBe(testTaskNo);
       expect(task?.name).toBe('結合テスト用タスク');
       expect(task?.wbsId).toBe(testIds.wbsId);
       expect(task?.phaseId).toBe(testIds.phaseId);
@@ -91,11 +92,10 @@ describe('TaskRepository Integration Tests', () => {
       // 追加のタスクを作成
       const additionalTaskId = TaskNo.reconstruct(`TEST-${Date.now() % 1000}`);
       const additionalTask = Task.create({
-        id: additionalTaskId,
+        taskNo: additionalTaskId,
         wbsId: testIds.wbsId,
         name: '追加タスク',
         phaseId: testIds.phaseId,
-        assigneeId: 2,
         status: new TaskStatus({ status: 'IN_PROGRESS' }),
         periods: [
           Period.create({
@@ -121,7 +121,7 @@ describe('TaskRepository Integration Tests', () => {
       expect(tasks.length).toBeGreaterThanOrEqual(2);
 
       // 最初に作成したタスクが含まれていることを確認
-      const originalTask = tasks.find(t => t.taskNo?.getValue() === testTaskId);
+      const originalTask = tasks.find(t => t.taskNo?.getValue() === testTaskNo);
       expect(originalTask).toBeTruthy();
       expect(originalTask?.name).toBe('結合テスト用タスク');
 
@@ -134,14 +134,13 @@ describe('TaskRepository Integration Tests', () => {
 
     it('タスク情報の更新', async () => {
       // 既存のタスクを取得
-      const taskToUpdate = await taskRepository.findById(testIds.wbsId, testTaskId);
+      const taskToUpdate = await taskRepository.findById(testTaskDbId);
       expect(taskToUpdate).not.toBeNull();
 
       if (taskToUpdate) {
         // タスク情報を更新
         taskToUpdate.name = '更新されたタスク名';
         taskToUpdate.status = new TaskStatus({ status: 'IN_PROGRESS' });
-        taskToUpdate.assigneeId = 3;
 
         // 期間情報を更新
         if (taskToUpdate.periods && taskToUpdate.periods.length > 0) {
@@ -156,37 +155,36 @@ describe('TaskRepository Integration Tests', () => {
         }
 
         // リポジトリを使用してタスクを更新
-        const updatedTask = await taskRepository.update(testIds.wbsId, testTaskId, taskToUpdate);
+        const updatedTask = await taskRepository.update(testIds.wbsId, taskToUpdate);
 
         // 更新されたタスクを検証
         expect(updatedTask).toBeTruthy();
         expect(updatedTask.name).toBe('更新されたタスク名');
         expect(updatedTask.status.getStatus()).toBe('IN_PROGRESS');
-        expect(updatedTask.assigneeId).toBe(3);
 
         // DBが本当に更新されたことを確認
-        const refetchedTask = await taskRepository.findById(testIds.wbsId, testTaskId);
+        const refetchedTask = await taskRepository.findById(testTaskDbId);
         expect(refetchedTask?.name).toBe('更新されたタスク名');
         expect(refetchedTask?.status.getStatus()).toBe('IN_PROGRESS');
       }
     });
 
     it('タスクの削除', async () => {
-      // タスクを削除
-      await taskRepository.delete(testTaskId);
+      // タスクを削除（DB IDを使用）
+      await taskRepository.delete(testTaskDbId);
 
       // 削除されたことを確認
-      const deletedTask = await taskRepository.findById(testIds.wbsId, testTaskId);
+      const deletedTask = await taskRepository.findById(testTaskDbId);
       expect(deletedTask).toBeNull();
 
       // クリーンアップ処理でエラーが発生しないようにIDをリセット
-      testIds.taskId = '';
+      testIds.taskId = 0;
     });
   });
 
   describe('エラーケース', () => {
     it('存在しないIDを指定した場合はnullを返すこと', async () => {
-      const nonExistingTask = await taskRepository.findById(testIds.wbsId, 'non-existing-id');
+      const nonExistingTask = await taskRepository.findById(999999);
       expect(nonExistingTask).toBeNull();
     });
 

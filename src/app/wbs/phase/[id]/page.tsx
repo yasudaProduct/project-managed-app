@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { notFound } from "next/navigation";
 import { PhaseForm } from "@/app/wbs/phase/phase.form";
 import { getPhaseById } from "@/app/wbs/phase/phase-actions";

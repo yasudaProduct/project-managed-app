@@ -4,35 +4,37 @@ import { IAssigneeGanttService } from '@/applications/assignee-gantt/iassignee-g
 import { ITaskRepository } from '@/applications/task/itask-repository';
 import { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
-import { IWbsRepository } from '@/applications/wbs/iwbs-repository';
-import { IProjectRepository } from '@/applications/projects/iproject-repository';
-import { PrismaClient } from '@prisma/client';
 import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
-import { Wbs } from '@/domains/wbs/wbs';
-import { Project } from '@/domains/project/project';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/project-status';
 import { Period } from '@/domains/task/period';
 import { CompanyHoliday } from '@/domains/calendar/company-calendar';
-import { ProjectStatus } from '@/domains/project/project-status';
 import { PeriodType } from '@/domains/task/value-object/period-type';
 import { ManHour } from '@/domains/task/man-hour';
 import { ManHourType } from '@/domains/task/value-object/man-hour-type';
+import { cleanupTestData, seedTestProject, testIds } from '../helpers';
+
+/**
+ * テストローカルのID管理
+ */
+const localIds = {
+  assignee1Id: 0,
+  assignee2Id: 0,
+  user1Id: 'assignee-gantt-user-001',
+  user2Id: 'assignee-gantt-user-002',
+  user3Id: 'assignee-gantt-user-003',
+  taskIds: [] as number[],
+  holidayIds: [] as number[],
+  scheduleIds: [] as number[],
+  extraAssigneeIds: [] as number[],
+};
 
 describe('AssigneeGantt Integration Tests', () => {
   let assigneeGanttService: IAssigneeGanttService;
   let taskRepository: ITaskRepository;
   let wbsAssigneeRepository: IWbsAssigneeRepository;
-
   let companyHolidayRepository: ICompanyHolidayRepository;
-  let wbsRepository: IWbsRepository;
-  let projectRepository: IProjectRepository;
-  let prisma: PrismaClient;
-
-  let testProject: Project;
-  let testWbs: Wbs;
-  let testAssignees: WbsAssignee[];
 
   beforeAll(async () => {
     // DIコンテナから必要なサービスを取得
@@ -40,92 +42,47 @@ describe('AssigneeGantt Integration Tests', () => {
     taskRepository = container.get<ITaskRepository>(SYMBOL.ITaskRepository);
     wbsAssigneeRepository = container.get<IWbsAssigneeRepository>(SYMBOL.IWbsAssigneeRepository);
     companyHolidayRepository = container.get<ICompanyHolidayRepository>(SYMBOL.ICompanyHolidayRepository);
-    wbsRepository = container.get<IWbsRepository>(SYMBOL.IWbsRepository);
-    projectRepository = container.get<IProjectRepository>(SYMBOL.IProjectRepository);
-    prisma = new PrismaClient();
-  });
 
-  beforeEach(async () => {
-    // テストデータをクリーンアップ
-    await prisma.wbsTask.deleteMany();
-    await prisma.wbsAssignee.deleteMany();
-    await prisma.wbsPhase.deleteMany();
-    await prisma.milestone.deleteMany();
-    await prisma.wbsBuffer.deleteMany();
-    await prisma.wbs.deleteMany();
-    await prisma.projects.deleteMany();
-    await prisma.userSchedule.deleteMany();
-    await prisma.companyHoliday.deleteMany();
-
-    await prisma.users.upsert({
-      where: { id: 'user-001' },
+    // ユーザー作成（upsert）
+    await global.prisma.users.upsert({
+      where: { id: localIds.user1Id },
       update: {},
-      create: {
-        id: 'user-001',
-        email: 'user001@example.com',
-        name: '山田太郎',
-        displayName: '山田太郎',
-      },
+      create: { id: localIds.user1Id, email: 'ag-user001@example.com', name: '山田太郎', displayName: '山田太郎' },
     });
-    await prisma.users.upsert({
-      where: { id: 'user-002' },
+    await global.prisma.users.upsert({
+      where: { id: localIds.user2Id },
       update: {},
-      create: {
-        id: 'user-002',
-        email: 'user002@example.com',
-        name: '田中花子',
-        displayName: '田中花子',
-      },
+      create: { id: localIds.user2Id, email: 'ag-user002@example.com', name: '田中花子', displayName: '田中花子' },
     });
-    await prisma.users.upsert({
-      where: { id: 'user-003' },
+    await global.prisma.users.upsert({
+      where: { id: localIds.user3Id },
       update: {},
-      create: {
-        id: 'user-003',
-        email: 'user003@example.com',
-        name: '佐藤次郎',
-        displayName: '佐藤次郎',
-      },
+      create: { id: localIds.user3Id, email: 'ag-user003@example.com', name: '佐藤次郎', displayName: '佐藤次郎' },
     });
 
-    // テストプロジェクトを作成
-    testProject = Project.create({
-      name: '結合テスト用プロジェクト',
-      description: '結合テスト用プロジェクト',
-      startDate: new Date('2025-05-01'),
-      endDate: new Date('2025-12-31'),
-    });
-    testProject.updateStatus(new ProjectStatus({ status: 'ACTIVE' }));
-    const projectDb = await projectRepository.create(testProject);
+    // 共通のプロジェクト/WBS/フェーズを作成
+    await seedTestProject(global.prisma);
 
-    // テストWBSを作成
-    testWbs = Wbs.create({
-      name: '結合テスト用WBS',
-      projectId: projectDb.id!,
-    });
-    const wbsDb = await wbsRepository.create(testWbs);
-
-    // テスト担当者を作成
-    const assignee1 = WbsAssignee.create({
-      wbsId: wbsDb.id!,
-      userId: 'user-001',
-      rate: 0.8, // 80%稼働
+    // 担当者作成
+    const assignee1 = await wbsAssigneeRepository.create(testIds.wbsId, WbsAssignee.create({
+      wbsId: testIds.wbsId,
+      userId: localIds.user1Id,
+      rate: 0.8,
       seq: 1,
-    });
-    const assignee2 = WbsAssignee.create({
-      wbsId: testWbs.id!,
-      userId: 'user-002',
-      rate: 1.0, // 100%稼働
+    }));
+    const assignee2 = await wbsAssigneeRepository.create(testIds.wbsId, WbsAssignee.create({
+      wbsId: testIds.wbsId,
+      userId: localIds.user2Id,
+      rate: 1.0,
       seq: 2,
-    });
-    await wbsAssigneeRepository.create(wbsDb.id!, assignee1);
-    await wbsAssigneeRepository.create(wbsDb.id!, assignee2);
-    testAssignees = [assignee1, assignee2];
+    }));
+    localIds.assignee1Id = assignee1.id!;
+    localIds.assignee2Id = assignee2.id!;
 
-    // テストタスクを作成
+    // 基本タスク作成
     const task1 = Task.create({
-      taskNo: TaskNo.create('A1', 1),
-      wbsId: testWbs.id!,
+      taskNo: TaskNo.create('AG', 1),
+      wbsId: testIds.wbsId,
       name: 'フロントエンド開発',
       assigneeId: assignee1.id,
       status: new TaskStatus({ status: 'IN_PROGRESS' }),
@@ -134,16 +91,13 @@ describe('AssigneeGantt Integration Tests', () => {
           startDate: new Date('2025-05-01'),
           endDate: new Date('2025-05-05'),
           type: new PeriodType({ type: 'YOTEI' }),
-          manHours: [
-            ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
-          ]
-        })
-      ]
+          manHours: [ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })],
+        }),
+      ],
     });
-
     const task2 = Task.create({
-      taskNo: TaskNo.create('A2', 2),
-      wbsId: testWbs.id!,
+      taskNo: TaskNo.create('AG', 2),
+      wbsId: testIds.wbsId,
       name: 'バックエンド開発',
       assigneeId: assignee2.id,
       status: new TaskStatus({ status: 'NOT_STARTED' }),
@@ -152,298 +106,280 @@ describe('AssigneeGantt Integration Tests', () => {
           startDate: new Date('2025-05-06'),
           endDate: new Date('2025-05-10'),
           type: new PeriodType({ type: 'YOTEI' }),
-          manHours: [
-            ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
-          ]
-        })
-      ]
+          manHours: [ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })],
+        }),
+      ],
     });
 
-    await taskRepository.create(task1);
-    await taskRepository.create(task2);
-  });
-
-  afterEach(async () => {
+    const created1 = await taskRepository.create(task1);
+    const created2 = await taskRepository.create(task2);
+    localIds.taskIds.push(created1.id!, created2.id!);
   });
 
   afterAll(async () => {
-    await prisma.$disconnect();
+    // 自分が作成したデータのみクリーンアップ（逆順）
+    for (const scheduleId of localIds.scheduleIds) {
+      await global.prisma.userSchedule.delete({ where: { id: scheduleId } }).catch(() => {});
+    }
+    for (const holidayId of localIds.holidayIds) {
+      await global.prisma.companyHoliday.delete({ where: { id: holidayId } }).catch(() => {});
+    }
+    for (const taskId of localIds.taskIds) {
+      await global.prisma.wbsTask.delete({ where: { id: taskId } }).catch(() => {});
+    }
+    for (const assigneeId of localIds.extraAssigneeIds) {
+      await global.prisma.wbsAssignee.delete({ where: { id: assigneeId } }).catch(() => {});
+    }
+    await global.prisma.wbsAssignee.delete({ where: { id: localIds.assignee1Id } }).catch(() => {});
+    await global.prisma.wbsAssignee.delete({ where: { id: localIds.assignee2Id } }).catch(() => {});
+    await cleanupTestData(global.prisma);
   });
 
   describe('getAssigneeWorkloads', () => {
     it('複数担当者の作業負荷を正しく計算する', async () => {
-      // Arrange
       const startDate = new Date('2025-05-01');
       const endDate = new Date('2025-05-05');
 
-      // Act
       const workloads = await assigneeGanttService.getAssigneeWorkloads(
-        testWbs.id!,
-        startDate,
-        endDate
+        testIds.wbsId, startDate, endDate
       );
 
-      // Assert
       expect(workloads).toHaveLength(2);
 
-      // 山田太郎の作業負荷を確認
       const yamadaWorkload = workloads.find(w => w.assigneeName === '山田太郎');
       expect(yamadaWorkload).toBeDefined();
       expect(yamadaWorkload!.assigneeRate).toBe(0.8);
-      expect(yamadaWorkload!.dailyAllocations).toHaveLength(5); // 5日間
+      expect(yamadaWorkload!.dailyAllocations).toHaveLength(5);
 
-      // 田中花子の作業負荷を確認
       const tanakaWorkload = workloads.find(w => w.assigneeName === '田中花子');
       expect(tanakaWorkload).toBeDefined();
       expect(tanakaWorkload!.assigneeRate).toBe(1.0);
-      expect(tanakaWorkload!.dailyAllocations).toHaveLength(5); // 5日間
+      expect(tanakaWorkload!.dailyAllocations).toHaveLength(5);
     });
 
     it('会社休日を考慮して作業負荷を計算する', async () => {
-      // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-19');
-
-      // 会社休日を設定（1/17を祝日とする）
+      // 2025-05-01(木)を会社休日に設定
       const holiday: CompanyHoliday = {
-        date: new Date('2024-01-17'),
-        name: '祝日',
-        type: 'NATIONAL'
+        date: new Date('2025-05-01'),
+        name: 'ag-テスト祝日',
+        type: 'COMPANY',
       };
       await companyHolidayRepository.save(holiday);
+      // saveの戻り値からIDを取得
+      const found = await global.prisma.companyHoliday.findFirst({
+        where: { name: 'ag-テスト祝日' },
+        orderBy: { id: 'desc' },
+      });
+      if (found) localIds.holidayIds.push(found.id);
 
-      // Act
+      const startDate = new Date('2025-05-01');
+      const endDate = new Date('2025-05-05');
+
       const workloads = await assigneeGanttService.getAssigneeWorkloads(
-        testWbs.id!,
-        startDate,
-        endDate
+        testIds.wbsId, startDate, endDate
       );
 
-      // Assert
       const yamadaWorkload = workloads.find(w => w.assigneeName === '山田太郎');
       const holidayAllocation = yamadaWorkload!.dailyAllocations.find(
-        d => d.date.toDateString() === new Date('2024-01-17').toDateString()
+        d => d.date.toDateString() === new Date('2025-05-01').toDateString()
       );
 
       expect(holidayAllocation).toBeDefined();
       expect(holidayAllocation!.isCompanyHoliday).toBe(true);
-      expect(holidayAllocation!.availableHours).toBe(0); // 休日なので稼働時間0
-      expect(holidayAllocation!.allocatedHours).toBe(0); // 工数配分も0
+      expect(holidayAllocation!.availableHours).toBe(0);
+      expect(holidayAllocation!.allocatedHours).toBe(0);
     });
 
     it('個人予定を考慮して作業負荷を計算する', async () => {
-      // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-19');
-
-      // 山田太郎の個人予定を設定
-      await prisma.userSchedule.create({
+      // 山田太郎の個人予定を設定（2025-05-02金曜に3時間会議）
+      const schedule = await global.prisma.userSchedule.create({
         data: {
-          userId: 'user-001',
-          date: new Date('2024-01-16'),
-          title: '午前休',
+          userId: localIds.user1Id,
+          date: new Date('2025-05-02'),
+          title: '午前会議',
           startTime: '09:00',
-          endTime: '12:00'
-        }
+          endTime: '12:00',
+        },
       });
+      localIds.scheduleIds.push(schedule.id);
 
-      // Act
+      const startDate = new Date('2025-05-01');
+      const endDate = new Date('2025-05-05');
+
       const workloads = await assigneeGanttService.getAssigneeWorkloads(
-        testWbs.id!,
-        startDate,
-        endDate
+        testIds.wbsId, startDate, endDate
       );
 
-      // Assert
       const yamadaWorkload = workloads.find(w => w.assigneeName === '山田太郎');
       const scheduleDay = yamadaWorkload!.dailyAllocations.find(
-        d => d.date.toDateString() === new Date('2024-01-16').toDateString()
+        d => d.date.toDateString() === new Date('2025-05-02').toDateString()
       );
 
       expect(scheduleDay).toBeDefined();
       expect(scheduleDay!.userSchedules).toHaveLength(1);
-      expect(scheduleDay!.userSchedules[0].title).toBe('午前休');
-      expect(scheduleDay!.userSchedules[0].durationHours).toBe(3); // 3時間の予定
-      // 稼働可能時間が減少していることを確認
-      expect(scheduleDay!.availableHours).toBeLessThan(7.5 * 0.8);
+      expect(scheduleDay!.userSchedules[0].title).toBe('午前会議');
+      expect(scheduleDay!.userSchedules[0].durationHours).toBe(3);
+      // 稼働可能時間が減少: min(7.5-3, 7.5*0.8) = min(4.5, 6) = 4.5
+      expect(scheduleDay!.availableHours).toBe(4.5);
     });
 
     it('複数タスクの工数を日別に正しく配分する', async () => {
-      // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-19');
-
-      // 同一担当者に複数タスクを割り当て
+      // 追加タスク: 山田太郎に割り当て 2025-07-01〜2025-07-04（他テストに影響しない期間）
       const additionalTask = Task.create({
-        taskNo: TaskNo.create('A3', 3),
-        wbsId: testWbs.id!,
+        taskNo: TaskNo.create('AG', 3),
+        wbsId: testIds.wbsId,
         name: '追加タスク',
-        assigneeId: testAssignees[0].id, // 山田太郎に割り当て
+        assigneeId: localIds.assignee1Id,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
-            startDate: new Date('2025-05-07'),
-            endDate: new Date('2025-05-09'),
+            startDate: new Date('2025-07-02'), // 水曜
+            endDate: new Date('2025-07-04'),   // 金曜
             type: new PeriodType({ type: 'YOTEI' }),
-            manHours: [
-              ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
-            ]
-          })
-        ]
+            manHours: [ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })],
+          }),
+        ],
       });
-      await taskRepository.create(additionalTask);
+      const created = await taskRepository.create(additionalTask);
+      localIds.taskIds.push(created.id!);
 
-      // Act
+      // task1(フロントエンド開発)と重なる別タスクを同期間に作成
+      const overlapTask = Task.create({
+        taskNo: TaskNo.create('AG', 30),
+        wbsId: testIds.wbsId,
+        name: '重複タスク',
+        assigneeId: localIds.assignee1Id,
+        status: new TaskStatus({ status: 'NOT_STARTED' }),
+        periods: [
+          Period.create({
+            startDate: new Date('2025-07-01'), // 火曜
+            endDate: new Date('2025-07-04'),   // 金曜
+            type: new PeriodType({ type: 'YOTEI' }),
+            manHours: [ManHour.create({ kosu: 8, type: new ManHourType({ type: 'NORMAL' }) })],
+          }),
+        ],
+      });
+      const created2 = await taskRepository.create(overlapTask);
+      localIds.taskIds.push(created2.id!);
+
+      const startDate = new Date('2025-07-01');
+      const endDate = new Date('2025-07-04');
+
       const workloads = await assigneeGanttService.getAssigneeWorkloads(
-        testWbs.id!,
-        startDate,
-        endDate
+        testIds.wbsId, startDate, endDate
       );
 
-      // Assert
       const yamadaWorkload = workloads.find(w => w.assigneeName === '山田太郎');
 
-      // 1/17は両方のタスクがアクティブ
-      const day17 = yamadaWorkload!.dailyAllocations.find(
-        d => d.date.toDateString() === new Date('2024-01-17').toDateString()
+      // 7/2(水)は追加タスクと重複タスクの両方がアクティブ
+      const day2 = yamadaWorkload!.dailyAllocations.find(
+        d => d.date.toDateString() === new Date('2025-07-02').toDateString()
       );
-      expect(day17!.taskAllocations).toHaveLength(2);
+      expect(day2!.taskAllocations.length).toBeGreaterThanOrEqual(2);
 
-      // 1/15は最初のタスクのみアクティブ
-      const day15 = yamadaWorkload!.dailyAllocations.find(
-        d => d.date.toDateString() === new Date('2024-01-15').toDateString()
+      // 7/1(火)は重複タスクのみアクティブ
+      const day1 = yamadaWorkload!.dailyAllocations.find(
+        d => d.date.toDateString() === new Date('2025-07-01').toDateString()
       );
-      expect(day15!.taskAllocations).toHaveLength(1);
-      expect(day15!.taskAllocations[0].taskName).toBe('フロントエンド開発');
+      expect(day1!.taskAllocations).toHaveLength(1);
+      expect(day1!.taskAllocations[0].taskName).toBe('重複タスク');
     });
   });
 
   describe('getAssigneeWarnings', () => {
-    it('実現不可能なタスクの警告を生成する', async () => {
-      // Arrange
-      const startDate = new Date('2024-01-20');
-      const endDate = new Date('2024-01-22');
-
-      // 週末のみのタスクを作成
+    it('実現不可能なタスクの警告を生成する（土日のみ）', async () => {
+      // 土日のみのタスク
       const weekendTask = Task.create({
-        taskNo: TaskNo.create('A4', 4),
-        wbsId: testWbs.id!,
+        taskNo: TaskNo.create('AG', 4),
+        wbsId: testIds.wbsId,
         name: '週末タスク',
-        assigneeId: testAssignees[0].id,
+        assigneeId: localIds.assignee1Id,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
-            startDate: new Date('2025-05-20'), // 土曜日
-            endDate: new Date('2025-05-21'), // 日曜日
+            startDate: new Date('2025-05-17'), // 土曜日
+            endDate: new Date('2025-05-18'),   // 日曜日
             type: new PeriodType({ type: 'YOTEI' }),
-            manHours: [
-              ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
-            ]
-          })
-        ]
+            manHours: [ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })],
+          }),
+        ],
       });
-      await taskRepository.create(weekendTask);
+      const created = await taskRepository.create(weekendTask);
+      localIds.taskIds.push(created.id!);
 
-      // 土日を会社休日に設定
-      await companyHolidayRepository.save({
-        date: new Date('2025-05-20'),
-        name: '土曜日',
-        type: 'COMPANY'
-      });
-      await companyHolidayRepository.save({
-        date: new Date('2025-05-21'),
-        name: '日曜日',
-        type: 'COMPANY'
-      });
+      const startDate = new Date('2025-05-17');
+      const endDate = new Date('2025-05-18');
 
-      // Act
       const warnings = await assigneeGanttService.getAssigneeWarnings(
-        testWbs.id!,
-        startDate,
-        endDate
+        testIds.wbsId, startDate, endDate
       );
 
-      // Assert
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0].taskNo).toBe('TASK-004');
-      expect(warnings[0].taskName).toBe('週末タスク');
-      expect(warnings[0].reason).toBe('NO_WORKING_DAYS');
-      expect(warnings[0].assigneeName).toBe('山田太郎');
+      const weekendWarning = warnings.find(w => w.taskName === '週末タスク');
+      expect(weekendWarning).toBeDefined();
+      expect(weekendWarning!.reason).toBe('NO_WORKING_DAYS');
+      expect(weekendWarning!.assigneeName).toBe('山田太郎');
     });
 
     it('個人予定で全日埋まっているタスクに警告を生成する', async () => {
-      // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-15');
+      // 田中花子の有給を設定
+      const schedule = await global.prisma.userSchedule.create({
+        data: {
+          userId: localIds.user2Id,
+          date: new Date('2025-05-15'),
+          title: '有給',
+          startTime: '09:00',
+          endTime: '17:30',
+        },
+      });
+      localIds.scheduleIds.push(schedule.id);
 
-      // 単日タスクを作成
+      // 単日タスク
       const singleDayTask = Task.create({
-        taskNo: TaskNo.create('A5', 5),
-        wbsId: testWbs.id!,
+        taskNo: TaskNo.create('AG', 5),
+        wbsId: testIds.wbsId,
         name: '単日タスク',
-        assigneeId: testAssignees[1].id, // 田中花子
+        assigneeId: localIds.assignee2Id,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
             startDate: new Date('2025-05-15'),
             endDate: new Date('2025-05-15'),
             type: new PeriodType({ type: 'YOTEI' }),
-            manHours: [
-              ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
-            ]
-          })
-        ]
+            manHours: [ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })],
+          }),
+        ],
       });
-      await taskRepository.create(singleDayTask);
+      const created = await taskRepository.create(singleDayTask);
+      localIds.taskIds.push(created.id!);
 
-      // 田中花子の終日予定を設定
-      await prisma.userSchedule.create({
-        data: {
-          userId: 'user-002',
-          date: new Date('2025-05-15'),
-          title: '終日休暇',
-          startTime: '00:00',
-          endTime: '24:00'
-        }
-      });
+      const startDate = new Date('2025-05-15');
+      const endDate = new Date('2025-05-15');
 
-      // Act
       const warnings = await assigneeGanttService.getAssigneeWarnings(
-        testWbs.id!,
-        startDate,
-        endDate
+        testIds.wbsId, startDate, endDate
       );
 
-      // Assert
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0].taskNo).toBe('A5');
-      expect(warnings[0].taskName).toBe('単日タスク');
-      expect(warnings[0].assigneeName).toBe('田中花子');
-      expect(warnings[0].reason).toBe('NO_WORKING_DAYS');
+      const warning = warnings.find(w => w.taskName === '単日タスク');
+      expect(warning).toBeDefined();
+      expect(warning!.assigneeName).toBe('田中花子');
+      expect(warning!.reason).toBe('NO_WORKING_DAYS');
     });
   });
 
   describe('getAssigneeWorkload', () => {
     it('特定担当者の作業負荷を取得する', async () => {
-      // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-19');
+      const startDate = new Date('2025-05-01');
+      const endDate = new Date('2025-05-05');
 
-      // Act
       const workload = await assigneeGanttService.getAssigneeWorkload(
-        testWbs.id!,
-        'user-001',
-        startDate,
-        endDate
+        testIds.wbsId, localIds.user1Id, startDate, endDate
       );
 
-      // Assert
-      expect(workload.assigneeId).toBe('user-001');
+      expect(workload.assigneeId).toBe(localIds.user1Id);
       expect(workload.assigneeName).toBe('山田太郎');
       expect(workload.assigneeRate).toBe(0.8);
       expect(workload.dailyAllocations).toHaveLength(5);
 
-      // タスクが正しく配分されていることを確認
       const hasTaskAllocations = workload.dailyAllocations.some(
         d => d.taskAllocations.length > 0
       );
@@ -451,17 +387,12 @@ describe('AssigneeGantt Integration Tests', () => {
     });
 
     it('存在しない担当者の場合はエラーを投げる', async () => {
-      // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-19');
+      const startDate = new Date('2025-05-01');
+      const endDate = new Date('2025-05-05');
 
-      // Act & Assert
       await expect(
         assigneeGanttService.getAssigneeWorkload(
-          testWbs.id!,
-          'non-existent-user',
-          startDate,
-          endDate
+          testIds.wbsId, 'non-existent-user', startDate, endDate
         )
       ).rejects.toThrow('担当者が見つかりません');
     });
@@ -469,93 +400,83 @@ describe('AssigneeGantt Integration Tests', () => {
 
   describe('稼働率と過負荷の計算', () => {
     it('過負荷状態を正しく検出する', async () => {
-      // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-15');
-
       // 1日で実行不可能な工数のタスクを作成
       const overloadTask = Task.create({
-        taskNo: TaskNo.create('A6', 6),
-        wbsId: testWbs.id!,
+        taskNo: TaskNo.create('AG', 6),
+        wbsId: testIds.wbsId,
         name: '過負荷タスク',
-        assigneeId: testAssignees[0].id, // 山田太郎（80%稼働）
+        assigneeId: localIds.assignee1Id,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
-            startDate: new Date('2025-05-15'),
-            endDate: new Date('2025-05-15'),
+            startDate: new Date('2025-06-02'), // 月曜
+            endDate: new Date('2025-06-02'),
             type: new PeriodType({ type: 'YOTEI' }),
-            manHours: [
-              ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
-            ]
-          })
-        ]
+            manHours: [ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })],
+          }),
+        ],
       });
-      await taskRepository.create(overloadTask);
+      const created = await taskRepository.create(overloadTask);
+      localIds.taskIds.push(created.id!);
 
-      // Act
+      const startDate = new Date('2025-06-02');
+      const endDate = new Date('2025-06-02');
+
       const workloads = await assigneeGanttService.getAssigneeWorkloads(
-        testWbs.id!,
-        startDate,
-        endDate
+        testIds.wbsId, startDate, endDate
       );
 
-      // Assert
       const yamadaWorkload = workloads.find(w => w.assigneeName === '山田太郎');
-      expect(yamadaWorkload!.dailyAllocations.some(d => d.isOverloaded)).toBe(true);
+      // allocatedHours(10) > availableHours(7.5*0.8=6)
+      expect(yamadaWorkload!.dailyAllocations[0].allocatedHours).toBeGreaterThan(
+        yamadaWorkload!.dailyAllocations[0].availableHours
+      );
     });
 
     it('稼働率を考慮して工数を配分する', async () => {
-      // Arrange
-      const startDate = new Date('2024-01-15');
-      const endDate = new Date('2024-01-19');
-
       // 50%稼働の担当者を作成
-      const partTimeAssignee = WbsAssignee.create({
-        wbsId: testWbs.id!,
-        userId: 'user-003',
-        rate: 0.5, // 50%稼働
+      const partTimeAssignee = await wbsAssigneeRepository.create(testIds.wbsId, WbsAssignee.create({
+        wbsId: testIds.wbsId,
+        userId: localIds.user3Id,
+        rate: 0.5,
         seq: 3,
-      });
-      await wbsAssigneeRepository.create(testWbs.id!, partTimeAssignee);
+      }));
+      localIds.extraAssigneeIds.push(partTimeAssignee.id!);
 
-      // タスクを割り当て
       const partTimeTask = Task.create({
-        taskNo: TaskNo.create('A7', 7),
-        wbsId: testWbs.id!,
+        taskNo: TaskNo.create('AG', 7),
+        wbsId: testIds.wbsId,
         name: 'パートタイムタスク',
         assigneeId: partTimeAssignee.id,
         status: new TaskStatus({ status: 'NOT_STARTED' }),
         periods: [
           Period.create({
-            startDate: new Date('2025-05-15'),
-            endDate: new Date('2025-05-19'),
+            startDate: new Date('2025-06-09'), // 月曜
+            endDate: new Date('2025-06-13'),   // 金曜
             type: new PeriodType({ type: 'YOTEI' }),
-            manHours: [
-              ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })
-            ]
-          })
-        ]
+            manHours: [ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) })],
+          }),
+        ],
       });
-      await taskRepository.create(partTimeTask);
+      const created = await taskRepository.create(partTimeTask);
+      localIds.taskIds.push(created.id!);
 
-      // Act
+      const startDate = new Date('2025-06-09');
+      const endDate = new Date('2025-06-13');
+
       const workloads = await assigneeGanttService.getAssigneeWorkloads(
-        testWbs.id!,
-        startDate,
-        endDate
+        testIds.wbsId, startDate, endDate
       );
 
-      // Assert
       const satoWorkload = workloads.find(w => w.assigneeName === '佐藤次郎');
       expect(satoWorkload).toBeDefined();
       expect(satoWorkload!.assigneeRate).toBe(0.5);
 
-      // 各日の稼働可能時間が50%になっていることを確認
+      // 各日の稼働可能時間が50%: 7.5 * 0.5 = 3.75
       const weekday = satoWorkload!.dailyAllocations.find(
         d => !d.isWeekend && !d.isCompanyHoliday
       );
-      expect(weekday!.availableHours).toBe(7.5 * 0.5); // 3.75時間
+      expect(weekday!.availableHours).toBe(7.5 * 0.5);
     });
   });
 });

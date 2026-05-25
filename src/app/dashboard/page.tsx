@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getDashboardStats } from "./actions";
 import DashboardOverview from "@/app/dashboard/_components/dashboard-overview";
 import UpcomingDeadlines from "@/app/dashboard/_components/upcoming-deadlines";
