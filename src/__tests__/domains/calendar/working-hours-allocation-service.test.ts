@@ -306,5 +306,94 @@ describe('WorkingHoursAllocationService', () => {
       // 有給で5月の稼働可能時間が減るため、5月の按分比率が小さくなる
       expect(mayWithSchedule!.plannedHours).toBeLessThan(mayWithout!.plannedHours);
     });
+
+    it('見通し工数と基準工数が同時に設定されている場合、両方が按分される', () => {
+      const task = {
+        wbsId: 1,
+        taskId: 'TASK-001',
+        taskName: 'テスト',
+        yoteiStart: new Date(2026, 4, 25),
+        yoteiEnd: new Date(2026, 5, 5),
+        yoteiKosu: 100,
+        forecastKosu: 120,
+        kijunStart: new Date(2026, 4, 1),
+        kijunEnd: new Date(2026, 5, 30),
+        kijunKosu: 80,
+      };
+
+      const result = service.allocateTaskWithDetails(task, assignee, []);
+      const allocations = result.getMonthlyAllocations();
+
+      const totalPlanned = allocations.reduce((sum, a) => sum + a.allocatedPlannedHours, 0);
+      const totalForecast = allocations.reduce((sum, a) => sum + a.allocatedForecastHours, 0);
+      const totalBaseline = allocations.reduce((sum, a) => sum + a.allocatedBaselineHours, 0);
+
+      expect(totalPlanned).toBeCloseTo(100, 2);
+      expect(totalForecast).toBeCloseTo(120, 2);
+      expect(totalBaseline).toBeCloseTo(80, 2);
+    });
+
+    it('量子化器適用時に予定工数が量子化される', () => {
+      const { AllocationQuantizer } = require('@/domains/wbs/allocation-quantizer');
+      const quantizer = new AllocationQuantizer(0.25);
+
+      const task = {
+        wbsId: 1,
+        taskId: 'TASK-001',
+        taskName: 'テスト',
+        yoteiStart: new Date(2026, 4, 25),
+        yoteiEnd: new Date(2026, 5, 5),
+        yoteiKosu: 100,
+      };
+
+      const result = service.allocateTaskWithDetails(task, assignee, [], quantizer);
+      const allocations = result.getMonthlyAllocations();
+
+      for (const a of allocations) {
+        // 0.25の倍数であること
+        expect(a.allocatedPlannedHours % 0.25).toBeCloseTo(0, 10);
+      }
+
+      const totalPlanned = allocations.reduce((sum, a) => sum + a.allocatedPlannedHours, 0);
+      expect(totalPlanned).toBeCloseTo(100, 0);
+    });
+
+    it('forecastKosu=undefined の場合、見通し工数は按分されない', () => {
+      const task = {
+        wbsId: 1,
+        taskId: 'TASK-001',
+        taskName: 'テスト',
+        yoteiStart: new Date(2026, 4, 25),
+        yoteiEnd: new Date(2026, 5, 5),
+        yoteiKosu: 100,
+      };
+
+      const result = service.allocateTaskWithDetails(task, assignee, []);
+      const allocations = result.getMonthlyAllocations();
+
+      allocations.forEach((a) => {
+        expect(a.allocatedForecastHours).toBe(0);
+      });
+    });
+
+    it('kijunKosu=0 の場合、基準工数は按分されない（truthyチェック）', () => {
+      const task = {
+        wbsId: 1,
+        taskId: 'TASK-001',
+        taskName: 'テスト',
+        yoteiStart: new Date(2026, 4, 25),
+        yoteiEnd: new Date(2026, 5, 5),
+        yoteiKosu: 100,
+        kijunStart: new Date(2026, 4, 1),
+        kijunEnd: new Date(2026, 5, 30),
+        kijunKosu: 0,
+      };
+
+      const result = service.allocateTaskWithDetails(task, assignee, []);
+      const allocations = result.getMonthlyAllocations();
+
+      const totalBaseline = allocations.reduce((sum, a) => sum + a.allocatedBaselineHours, 0);
+      expect(totalBaseline).toBe(0);
+    });
   });
 });

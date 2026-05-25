@@ -431,6 +431,77 @@ describe('TaskEvmData', () => {
       const pv = task.getPlannedValueAtDate('BASE', new Date('2025-01-15'), 'cost');
       expect(pv).toBe(300000); // 100 * 3000
     });
+
+    it('BASEタイプ + ZERO_HUNDRED: 期間中はPV=0', () => {
+      const task = createTestTask({
+        baseStartDate: new Date('2025-01-01'),
+        baseEndDate: new Date('2025-01-10'),
+        baseManHours: 200,
+      });
+
+      const pv = task.getPlannedValueAtDate('BASE', new Date('2025-01-05'), 'hours', 'ZERO_HUNDRED');
+      expect(pv).toBe(0);
+    });
+
+    it('BASEタイプ + ZERO_HUNDRED: 終了日以降はbaseManHours全体', () => {
+      const task = createTestTask({
+        baseStartDate: new Date('2025-01-01'),
+        baseEndDate: new Date('2025-01-10'),
+        baseManHours: 200,
+        plannedManHours: 100,
+      });
+
+      const pv = task.getPlannedValueAtDate('BASE', new Date('2025-01-15'), 'hours', 'ZERO_HUNDRED');
+      expect(pv).toBe(200);
+    });
+
+    it('BASEタイプ + FIFTY_FIFTY: 期間中はbaseManHoursの50%', () => {
+      const task = createTestTask({
+        baseStartDate: new Date('2025-01-01'),
+        baseEndDate: new Date('2025-01-10'),
+        baseManHours: 200,
+      });
+
+      const pv = task.getPlannedValueAtDate('BASE', new Date('2025-01-05'), 'hours', 'FIFTY_FIFTY');
+      expect(pv).toBe(100);
+    });
+
+    it('BASEタイプ + FIFTY_FIFTY: 金額ベースで期間中は50%', () => {
+      const task = createTestTask({
+        baseStartDate: new Date('2025-01-01'),
+        baseEndDate: new Date('2025-01-10'),
+        baseManHours: 200,
+        costPerHour: 3000,
+      });
+
+      const pv = task.getPlannedValueAtDate('BASE', new Date('2025-01-05'), 'cost', 'FIFTY_FIFTY');
+      expect(pv).toBe(300000);
+    });
+
+    it('BASEタイプ + SELF_REPORTED: LINEARとして按分', () => {
+      const task = createTestTask({
+        baseStartDate: new Date('2025-01-01'),
+        baseEndDate: new Date('2025-01-11'),
+        baseManHours: 100,
+      });
+
+      const pv = task.getPlannedValueAtDate('BASE', new Date('2025-01-06'), 'hours', 'SELF_REPORTED');
+      expect(pv).toBeCloseTo(50, 1);
+    });
+
+    it('BASEタイプ: 評価日がbaseStartDateより前はPV=0', () => {
+      const task = createTestTask({
+        baseStartDate: new Date('2025-02-01'),
+        baseEndDate: new Date('2025-02-10'),
+        baseManHours: 100,
+        plannedStartDate: new Date('2025-01-01'),
+        plannedEndDate: new Date('2025-01-10'),
+        plannedManHours: 50,
+      });
+
+      const pv = task.getPlannedValueAtDate('BASE', new Date('2025-01-15'), 'hours');
+      expect(pv).toBe(0);
+    });
   });
 
   describe('getEarnedValue - 境界値テスト', () => {
