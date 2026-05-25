@@ -470,4 +470,107 @@ describe('EVM Integration Tests', () => {
       expect(result.progressMethod).toBe('ZERO_HUNDRED');
     });
   });
+
+  describe('EvmService - 予測計算ロジック統合テスト', () => {
+    it('予測モード有効で計算式通りの値が返される', async () => {
+      // 2025-04-12を「現在」として固定（タスク期間の途中）
+      const fakeNow = new Date('2025-04-12T00:00:00.000Z');
+      jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval', 'setImmediate', 'clearTimeout', 'clearInterval', 'clearImmediate', 'nextTick'] });
+      jest.setSystemTime(fakeNow);
+
+      try {
+        // 「現在」のメトリクスを取得（予測計算のベースライン）
+        const currentMetrics = await evmService.calculateCurrentEvmMetrics(
+          testIds.wbsId, fakeNow, 'hours', 'SELF_REPORTED'
+        );
+
+        // 予測モードで時系列データを取得
+        const startDate = new Date('2025-04-12T00:00:00.000Z');
+        const endDate = new Date('2025-04-26T00:00:00.000Z');
+        const result = await evmService.getEvmTimeSeries(
+          testIds.wbsId, startDate, endDate, 'weekly', 'hours', 'SELF_REPORTED', true
+        );
+
+        // 過去・現在のデータポイントはisPredicted=false
+        const pastMetrics = result.filter(m => m.date.getTime() <= fakeNow.getTime());
+        pastMetrics.forEach(m => expect(m.isPredicted).toBe(false));
+
+        // 未来のデータポイントはisPredicted=true
+        const futureMetrics = result.filter(m => m.date.getTime() > fakeNow.getTime());
+        expect(futureMetrics.length).toBeGreaterThan(0);
+        futureMetrics.forEach(m => expect(m.isPredicted).toBe(true));
+
+        // 予測値が計算式に従っているか検証
+        for (const fm of futureMetrics) {
+          // EV <= BAC
+          expect(fm.ev).toBeLessThanOrEqual(fm.bac);
+
+          // 予測EVの計算式を検証
+          // predictedEV = min(BAC, currentEV + max(0, futurePV - currentPV) * SPI)
+          const spi = currentMetrics.spi;
+          const pvIncrement = Math.max(0, fm.pv - currentMetrics.pv);
+          const expectedEv = Math.min(
+            currentMetrics.bac,
+            currentMetrics.ev + pvIncrement * spi
+          );
+          expect(fm.ev).toBeCloseTo(expectedEv, 5);
+
+          // 予測ACの計算式を検証
+          // predictedAC = currentAC + evIncrement / effectiveCPI
+          const cpi = currentMetrics.cpi;
+          const effectiveCpi = cpi === 0 ? 1 : cpi;
+          const evIncrement = Math.max(0, fm.ev - currentMetrics.ev);
+          const expectedAc = currentMetrics.ac + evIncrement / effectiveCpi;
+          expect(fm.ac).toBeCloseTo(expectedAc, 5);
+
+          // PVはbaseMetricのものを使用（予測値ではない）
+          expect(fm.pv).toBeGreaterThanOrEqual(0);
+        }
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('SPI/CPIが極端な値でも予測計算が破綻しない', async () => {
+      // 全タスク完了のWBSでテスト（SPI/CPIが極端になりうる）
+      // 2025-04-02を「現在」として固定（タスク開始直後）
+      const fakeNow = new Date('2025-04-02T00:00:00.000Z');
+      jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval', 'setImmediate', 'clearTimeout', 'clearInterval', 'clearImmediate', 'nextTick'] });
+      jest.setSystemTime(fakeNow);
+
+      try {
+        const startDate = new Date('2025-04-02T00:00:00.000Z');
+        const endDate = new Date('2025-05-10T00:00:00.000Z');
+
+        const result = await evmService.getEvmTimeSeries(
+          testIds.wbsId, startDate, endDate, 'weekly', 'hours', 'SELF_REPORTED', true
+        );
+
+        expect(result.length).toBeGreaterThan(0);
+
+        for (const m of result) {
+          // 値がNaN/Infinityにならないことを検証
+          expect(Number.isFinite(m.pv)).toBe(true);
+          expect(Number.isFinite(m.ev)).toBe(true);
+          expect(Number.isFinite(m.ac)).toBe(true);
+          expect(Number.isFinite(m.bac)).toBe(true);
+
+          // EVはBACを超えない
+          expect(m.ev).toBeLessThanOrEqual(m.bac + 0.01); // 浮動小数点誤差許容
+
+          // ACは0以上
+          expect(m.ac).toBeGreaterThanOrEqual(0);
+
+          // 予測フラグの整合性
+          if (m.date.getTime() > fakeNow.getTime()) {
+            expect(m.isPredicted).toBe(true);
+          } else {
+            expect(m.isPredicted).toBe(false);
+          }
+        }
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+  });
 });
