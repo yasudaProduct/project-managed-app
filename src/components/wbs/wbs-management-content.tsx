@@ -29,6 +29,7 @@ import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { EvmDashboard } from "@/components/evm/evm-dashboard";
 import { WbsTagInput } from "@/components/wbs/wbs-tag-input";
 import { QualityTabContent } from "@/components/quality/quality-tab-content";
+import { TaskSchedulingPage } from "@/components/task-scheduling/task-scheduling-page";
 import type { ProjectStatus, WbsTask, Milestone } from "@/types/wbs";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 
@@ -119,11 +120,6 @@ export function WbsManagementContent({
           }))}
         /> */}
         <WbsImportJobButtons wbsId={wbsId} wbsName={wbsName} />
-        <Link href={`/wbs/${wbsId}/task-scheduling`}>
-          <Button className="bg-white text-black ml-2">
-            <Calendar className="h-4 w-4" />
-          </Button>
-        </Link>
       </div>
 
       <Suspense
@@ -167,6 +163,9 @@ export function WbsManagementContent({
                 <ShieldCheck className="h-4 w-4" />
               </TabsTrigger>
             )}
+            <TabsTrigger value="task-scheduling" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+            </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
             </TabsTrigger>
@@ -231,6 +230,9 @@ export function WbsManagementContent({
               <QualityTabContent wbsId={wbsId} />
             </TabsContent>
           )}
+          <TabsContent value="task-scheduling">
+            <TaskSchedulingPage wbsId={wbsId} />
+          </TabsContent>
           <TabsContent value="settings">
             <ProjectSettings projectId={project.id} />
           </TabsContent>
