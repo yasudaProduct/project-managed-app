@@ -135,6 +135,7 @@ erDiagram
   Int id PK
   String userId FK
   Int taskId FK "nullable"
+  Int wbsId FK "nullable"
   DateTime date
   Decimal hours_worked
   DateTime createdAt
@@ -326,6 +327,7 @@ erDiagram
 "milestone" }o--|| "wbs" : wbs
 "work_records" }o--|| "users" : user
 "work_records" }o--o| "wbs_task" : task
+"work_records" }o--o| "wbs" : wbs
 "user_schedule" }o--|| "users" : user
 "notifications" }o--|| "users" : user
 "notification_preferences" |o--|| "users" : user
@@ -501,6 +503,7 @@ erDiagram
   - `id`: 
   - `userId`: 
   - `taskId`: 
+  - `wbsId`: 
   - `date`: 
   - `hours_worked`: 
   - `createdAt`: 

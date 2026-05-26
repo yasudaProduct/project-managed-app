@@ -293,6 +293,11 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
         ? taskMap.get(buildTaskMapKey(geppo.PROJECT_ID, geppo.WBS_NO))
         : undefined
 
+      const wbsIdStr = geppo.PROJECT_ID
+        ? projectToWbsIdMap.get(geppo.PROJECT_ID)
+        : undefined
+      const wbsId = wbsIdStr ? Number(wbsIdStr) : undefined
+
       // 日次データに展開
       for (let day = 1; day <= 31; day++) {
         const dayField = `day${day.toString().padStart(2, '0')}` as keyof Geppo
@@ -305,6 +310,7 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
             const workRecord = WorkRecord.createFromGeppo({
               userId,
               taskId,
+              wbsId: wbsId && Number.isFinite(wbsId) ? wbsId : undefined,
               date: workDate,
               hoursWorked
             })

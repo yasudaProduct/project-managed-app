@@ -76,6 +76,7 @@ model Wbs {
   taskDependencies TaskDependency[]
   importJobs ImportJob[]
   tags      WbsTag[]
+  workRecords WorkRecord[]
   createdAt DateTime   @default(now()) @db.Timestamptz
   updatedAt DateTime   @updatedAt @db.Timestamptz
 
@@ -232,12 +233,14 @@ model WorkRecord {
   id                Int        @id @default(autoincrement())
   userId            String
   taskId            Int?
+  wbsId             Int?
   date              DateTime   @db.Date
   hours_worked      Decimal
   createdAt         DateTime   @default(now()) @db.Timestamptz
   updatedAt         DateTime   @updatedAt @db.Timestamptz
   user              Users      @relation(fields: [userId], references: [id])
   task              WbsTask?   @relation(fields: [taskId], references: [id])
+  wbs               Wbs?       @relation(fields: [wbsId], references: [id])
 
   @@map("work_records")
 }
