@@ -73,7 +73,7 @@ export function EvmDashboard({
   >("project");
 
   // 予測表示
-  const [showPrediction, setShowPrediction] = useState(false);
+  const [showPrediction, setShowPrediction] = useState(true);
 
   useEffect(() => {
     loadEvmData();
