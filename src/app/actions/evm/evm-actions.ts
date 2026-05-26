@@ -269,19 +269,31 @@ export async function getEvmDateRange(
       };
     }
 
-    // タスクの最小開始日と最大終了日を取得
-    const taskStartDates = tasks
+    // タスクの最小開始日と最大終了日を取得（計画+実績）
+    const plannedStartDates = tasks
       .map((t) => new Date(t.plannedStartDate))
       .filter((d) => !isNaN(d.getTime()));
-    const taskEndDates = tasks
+    const plannedEndDates = tasks
       .map((t) => new Date(t.plannedEndDate))
       .filter((d) => !isNaN(d.getTime()));
 
-    const minStartDate = taskStartDates.length > 0
-      ? new Date(Math.min(...taskStartDates.map((d) => d.getTime())))
+    const actualStartDates = tasks
+      .filter((t) => t.actualStartDate !== null)
+      .map((t) => new Date(t.actualStartDate!))
+      .filter((d) => !isNaN(d.getTime()));
+    const actualEndDates = tasks
+      .filter((t) => t.actualEndDate !== null)
+      .map((t) => new Date(t.actualEndDate!))
+      .filter((d) => !isNaN(d.getTime()));
+
+    const allStartDates = [...plannedStartDates, ...actualStartDates];
+    const allEndDates = [...plannedEndDates, ...actualEndDates];
+
+    const minStartDate = allStartDates.length > 0
+      ? new Date(Math.min(...allStartDates.map((d) => d.getTime())))
       : null;
-    const maxEndDate = taskEndDates.length > 0
-      ? new Date(Math.max(...taskEndDates.map((d) => d.getTime())))
+    const maxEndDate = allEndDates.length > 0
+      ? new Date(Math.max(...allEndDates.map((d) => d.getTime())))
       : null;
 
     // 推奨期間を決定
