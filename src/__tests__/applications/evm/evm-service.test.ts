@@ -1175,4 +1175,153 @@ describe('EvmService', () => {
       });
     });
   });
+
+  describe('getEvmTimeSeries - 予測ポイント拡張（BAC到達まで延伸）', () => {
+    const createMetrics = (overrides: {
+      pv?: number;
+      ev?: number;
+      ac?: number;
+      bac?: number;
+      date?: Date;
+    }): EvmMetrics => {
+      return EvmMetrics.create({
+        date: overrides.date ?? new Date('2025-06-15T00:00:00.000Z'),
+        pv_base: overrides.pv ?? 100,
+        pv: overrides.pv ?? 100,
+        ev: overrides.ev ?? 60,
+        ac: overrides.ac ?? 80,
+        bac: overrides.bac ?? 200,
+        calculationMode: 'hours',
+        progressMethod: 'SELF_REPORTED',
+      });
+    };
+
+    afterEach(() => {
+      jest.useRealTimers();
+      jest.restoreAllMocks();
+    });
+
+    it('includePrediction=false の場合、拡張ポイントは追加されない', async () => {
+      const now = new Date('2025-06-15T00:00:00.000Z');
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+
+      const metrics = createMetrics({ pv: 100, ev: 60, ac: 80, bac: 200 });
+      jest.spyOn(evmService, 'calculateCurrentEvmMetrics').mockResolvedValue(metrics);
+
+      // startDate=now, endDate=now → 未来ポイントなし、拡張も動かない
+      const result = await evmService.getEvmTimeSeries(
+        1, now, now, 'weekly', 'hours', undefined, false
+      );
+
+      expect(result.every(m => !m.isPredicted)).toBe(true);
+    });
+
+    it('SPI < 1 の場合、PVがBACに到達するポイントまで拡張される', async () => {
+      // now=2025-06-15, endDate=now+7d (拡張前の最後のポイントが予測値)
+      // currentMetrics: pv=100, ev=60, bac=200 → SPI=0.6
+      // now+7d (endDate内): baseMetric.pv=150 → predictedEV = min(200, 60+(150-100)*0.6) = 90
+      // now+14d (拡張1): baseMetric.pv=200 = BAC → プラトー → 1ポイント追加してbreak
+      //
+      // 期待: isPredicted=trueのポイントが2個以上（endDate内1 + 拡張1）
+      const now = new Date('2025-06-15T00:00:00.000Z');
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+
+      const bac = 200;
+      const currentMetrics = createMetrics({ pv: 100, ev: 60, ac: 80, bac });
+      const baseMetricWeek1 = createMetrics({ pv: 150, ev: 60, ac: 80, bac });
+      const baseMetricWeek2 = createMetrics({ pv: 200, ev: 60, ac: 80, bac }); // pv=BAC
+
+      jest.spyOn(evmService, 'calculateCurrentEvmMetrics')
+        .mockImplementation(async (_wbsId, evalDate) => {
+          if (!evalDate || evalDate.getTime() <= now.getTime()) return currentMetrics;
+          const week1End = new Date('2025-06-22T00:00:01.000Z');
+          if (evalDate.getTime() < week1End.getTime()) return baseMetricWeek1;
+          return baseMetricWeek2;
+        });
+
+      const startDate = new Date('2025-06-08T00:00:00.000Z'); // now-7d
+      const endDate = new Date('2025-06-22T00:00:00.000Z'); // now+7d
+
+      const result = await evmService.getEvmTimeSeries(
+        1, startDate, endDate, 'weekly', 'hours', undefined, true
+      );
+
+      const predictedPoints = result.filter(m => m.isPredicted);
+      // endDate内の予測1点 + 拡張1点 = 最低2点
+      expect(predictedPoints.length).toBeGreaterThanOrEqual(2);
+
+      // SPI=0.6 のためプラトーEV = 60 + (200-100)*0.6 = 120
+      const lastPredicted = predictedPoints[predictedPoints.length - 1];
+      expect(lastPredicted.ev).toBeCloseTo(120, 0);
+      expect(lastPredicted.ev).toBeLessThan(bac);
+    });
+
+    it('SPI >= 1 の場合、EV が BAC に到達するポイントで拡張が止まる', async () => {
+      // now=2025-06-15, endDate=now+7d
+      // currentMetrics: pv=100, ev=120, bac=200 → SPI=1.2
+      // now+7d (endDate内): baseMetric.pv=150 → predictedEV = min(200, 120+(150-100)*1.2) = 180
+      // now+14d (拡張1): baseMetric.pv=200 → predictedEV = min(200, 120+(200-100)*1.2) = 200 → BAC到達でbreak
+      //
+      // 期待: 最終予測ポイントのev=BAC=200
+      const now = new Date('2025-06-15T00:00:00.000Z');
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+
+      const bac = 200;
+      const currentMetrics = createMetrics({ pv: 100, ev: 120, ac: 80, bac });
+
+      jest.spyOn(evmService, 'calculateCurrentEvmMetrics')
+        .mockImplementation(async (_wbsId, evalDate) => {
+          if (!evalDate || evalDate.getTime() <= now.getTime()) return currentMetrics;
+          const week1End = new Date('2025-06-22T00:00:01.000Z');
+          const pvVal = evalDate.getTime() < week1End.getTime() ? 150 : 200;
+          return createMetrics({ pv: pvVal, ev: 120, ac: 80, bac });
+        });
+
+      const startDate = new Date('2025-06-08T00:00:00.000Z');
+      const endDate = new Date('2025-06-22T00:00:00.000Z'); // now+7d
+
+      const result = await evmService.getEvmTimeSeries(
+        1, startDate, endDate, 'weekly', 'hours', undefined, true
+      );
+
+      const predictedPoints = result.filter(m => m.isPredicted);
+      const lastPredicted = predictedPoints[predictedPoints.length - 1];
+      expect(lastPredicted.ev).toBe(bac);
+    });
+
+    it('MAX_EXTRA_POINTS (24) の上限が機能する', async () => {
+      // SPI=0 の極端なケース: EVが永遠に増えない
+      // baseMetric.pv が常に BAC 未満を返し続けるため MAX_EXTRA_POINTS で止まる
+      const now = new Date('2025-06-15T00:00:00.000Z');
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+
+      const bac = 200;
+      // ev=0 → SPI=0
+      const currentMetrics = createMetrics({ pv: 100, ev: 0, ac: 0, bac });
+
+      jest.spyOn(evmService, 'calculateCurrentEvmMetrics')
+        .mockImplementation(async (_wbsId, evalDate) => {
+          if (!evalDate || evalDate.getTime() <= now.getTime()) return currentMetrics;
+          // pv=150 < bac=200 を返し続ける（プラトー条件に達しない）
+          return createMetrics({ pv: 150, ev: 0, ac: 0, bac });
+        });
+
+      const startDate = new Date('2025-06-08T00:00:00.000Z');
+      const endDate = new Date('2025-06-22T00:00:00.000Z'); // now+7d
+
+      const result = await evmService.getEvmTimeSeries(
+        1, startDate, endDate, 'weekly', 'hours', undefined, true
+      );
+
+      const predictedPoints = result.filter(m => m.isPredicted);
+      // endDate内の予測1点 + 拡張最大24点 = 最大25点
+      expect(predictedPoints.length).toBeLessThanOrEqual(25);
+      // EVはSPI=0なので常に0
+      predictedPoints.forEach(m => expect(m.ev).toBe(0));
+    });
+  });
 });
