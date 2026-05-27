@@ -11,6 +11,16 @@ import type { IUserScheduleRepository } from '@/applications/calendar/iuser-sche
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
 
+export type SchedulingMode = 'initial' | 'reschedule';
+
+export interface TaskSchedulingOptions {
+  mode?: SchedulingMode;
+  /** リスケモード時の全体起点日（必須） */
+  rescheduleBaseDate?: Date;
+  /** 担当者ごとの起点日（任意） */
+  assigneeStartDates?: Map<number, Date>;
+}
+
 export interface TaskSchedulingResult {
   taskId: number;
   taskNo: string;
@@ -35,13 +45,10 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     @inject(SYMBOL.ISystemSettingsRepository) private systemSettingsRepository: ISystemSettingsRepository,
   ) { }
 
-  /**
-   * WBSのタスクスケジュールを計算
-   * @param wbsId WBS ID
-   * @returns スケジューリング結果
-   */
-  async calculateWbsTaskSchedules(wbsId: number): Promise<TaskSchedulingResult[]> {
-    console.log("calculateWbsTaskSchedules", wbsId);
+  async calculateWbsTaskSchedules(wbsId: number, options?: TaskSchedulingOptions): Promise<TaskSchedulingResult[]> {
+    const mode = options?.mode ?? 'initial';
+    const assigneeStartDates = options?.assigneeStartDates ?? new Map();
+
     // WBSを取得
     const wbs = await this.wbsRepository.findById(wbsId);
     if (!wbs) {
@@ -57,15 +64,25 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
       throw new Error('プロジェクトが見つかりません');
     }
 
-    const projectStartDate = project.startDate;
-    if (!projectStartDate) {
-      throw new Error('プロジェクトの基準開始日が設定されていません');
+    // 全体起点日の決定
+    let globalBaseDate: Date;
+    if (mode === 'reschedule') {
+      if (!options?.rescheduleBaseDate) {
+        throw new Error('リスケモードではrescheduleBaseDateが必要です');
+      }
+      globalBaseDate = options.rescheduleBaseDate;
+    } else {
+      const projectStartDate = project.startDate;
+      if (!projectStartDate) {
+        throw new Error('プロジェクトの基準開始日が設定されていません');
+      }
+      globalBaseDate = projectStartDate;
     }
 
     // WBSに紐付くタスクを取得
     const tasks = await this.taskRepository.findByWbsId(wbsId);
 
-    // 前詰めのためタスク番号でソート（一旦TaskNo順とし、優先度の追加を検討する）
+    // 前詰めのためタスク番号でソート
     const sortedTasks = tasks.sort((a, b) => {
       return a.taskNo.getValue().localeCompare(b.taskNo.getValue());
     });
@@ -73,21 +90,19 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     // スケジューリングを実行
     const results = await this.calculateTaskSchedules(
       sortedTasks,
-      projectStartDate
+      globalBaseDate,
+      mode,
+      assigneeStartDates,
     );
 
     return results;
   }
 
-  /**
-   * WBSのタスク一覧から前詰めでスケジュールを計算する
-   * @param tasks タスクリスト（開始日の早い順にソート済みを想定）
-   * @param projectStartDate プロジェクト開始日
-   * @returns スケジューリング結果
-   */
   private async calculateTaskSchedules(
     tasks: Task[],
-    projectStartDate: Date
+    globalBaseDate: Date,
+    mode: SchedulingMode,
+    assigneeStartDates: Map<number, Date>,
   ): Promise<TaskSchedulingResult[]> {
     const results: TaskSchedulingResult[] = [];
     const systemSettings = await this.systemSettingsRepository.get();
@@ -113,7 +128,94 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
         continue;
       }
 
-      // 予定工数を取得
+      // リスケモード: 完了タスクの処理
+      if (mode === 'reschedule' && task.getStatus() === 'COMPLETED') {
+        const jissekiStart = task.getJissekiStart();
+        const jissekiEnd = task.getJissekiEnd();
+        results.push({
+          taskId: task.id,
+          taskNo: task.taskNo.getValue(),
+          taskName: task.name,
+          assigneeId: task.assigneeId,
+          assigneeName: task.assignee.name,
+          plannedStartDate: jissekiStart,
+          plannedEndDate: jissekiEnd,
+          plannedManHours: task.getJissekiKosus(),
+          hasAssignee: true,
+        });
+        // 担当者の最終終了日を実績終了日で更新
+        if (jissekiEnd) {
+          const current = assigneeLastEndDates.get(task.assigneeId);
+          if (!current || jissekiEnd.getTime() > current.getTime()) {
+            assigneeLastEndDates.set(task.assigneeId, jissekiEnd);
+          }
+        }
+        continue;
+      }
+
+      // リスケモード: 進行中タスクの処理
+      if (mode === 'reschedule' && task.getStatus() === 'IN_PROGRESS') {
+        const jissekiStart = task.getJissekiStart();
+        const jissekiKosu = task.getJissekiKosus() ?? 0;
+        const yoteiKosu = task.getYoteiKosus() ?? 0;
+        const remainingHours = Math.max(0, yoteiKosu - jissekiKosu);
+
+        if (remainingHours <= 0) {
+          results.push({
+            taskId: task.id,
+            taskNo: task.taskNo.getValue(),
+            taskName: task.name,
+            assigneeId: task.assigneeId,
+            assigneeName: task.assignee.name,
+            plannedStartDate: jissekiStart,
+            plannedEndDate: task.getJissekiEnd(),
+            plannedManHours: 0,
+            hasAssignee: true,
+          });
+          if (task.getJissekiEnd()) {
+            const current = assigneeLastEndDates.get(task.assigneeId);
+            if (!current || task.getJissekiEnd()!.getTime() > current.getTime()) {
+              assigneeLastEndDates.set(task.assigneeId, task.getJissekiEnd()!);
+            }
+          }
+          continue;
+        }
+
+        const assignee = await this.wbsAssigneeRepository.findById(task.assigneeId);
+        if (!assignee) {
+          results.push({
+            taskId: task.id,
+            taskNo: task.taskNo.getValue(),
+            taskName: task.name,
+            assigneeId: task.assigneeId,
+            assigneeName: task.assignee.name,
+            hasAssignee: true,
+            errorMessage: '担当者が見つかりません',
+          });
+          continue;
+        }
+
+        const userSchedules = await this.userScheduleRepository.findByUserId(assignee.userId);
+        const assigneeCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, userSchedules);
+
+        const taskEndDate = this.calculateTaskEndDate(globalBaseDate, remainingHours, assigneeCalendar);
+        assigneeLastEndDates.set(task.assigneeId, taskEndDate);
+
+        results.push({
+          taskId: task.id,
+          taskNo: task.taskNo.getValue(),
+          taskName: task.name,
+          assigneeId: task.assigneeId,
+          assigneeName: task.assignee.name,
+          plannedStartDate: jissekiStart,
+          plannedEndDate: taskEndDate,
+          plannedManHours: remainingHours,
+          hasAssignee: true,
+        });
+        continue;
+      }
+
+      // 予定工数を取得（初期計画モード & リスケモード未着手共通）
       const plannedManHours = task.getYoteiKosus();
       if (!plannedManHours || plannedManHours <= 0) {
         results.push({
@@ -128,7 +230,6 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
         continue;
       }
 
-      // 担当者のuserIdを取得
       const assignee = await this.wbsAssigneeRepository.findById(task.assigneeId);
       if (!assignee) {
         results.push({
@@ -139,37 +240,31 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
           assigneeName: task.assignee.name,
           hasAssignee: true,
           errorMessage: '担当者が見つかりません',
-        })
+        });
         continue;
       }
 
-      // 担当者のスケジュールを取得
       const userSchedules = await this.userScheduleRepository.findByUserId(assignee.userId);
+      const assigneeCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, userSchedules);
 
-      // 担当者の稼働カレンダーを作成
-      const assigneeCalendar = new AssigneeWorkingCalendar(
-        assignee,
-        companyCalendar,
-        userSchedules,
-      );
+      // 担当者の起点日を決定
+      const assigneeBaseDate = assigneeStartDates.get(task.assigneeId) ?? globalBaseDate;
 
-      // この担当者の前のタスクの終了日を取得（なければプロジェクト開始日）
+      // この担当者の前のタスクの終了日を取得
       const lastEndDate = assigneeLastEndDates.get(task.assigneeId);
-      const taskStartDate = lastEndDate
-        ? this.getNextBusinessDay(lastEndDate, assigneeCalendar)
-        : projectStartDate;
+      let taskStartDate: Date;
+      if (lastEndDate) {
+        const nextBizDay = this.getNextBusinessDay(lastEndDate, assigneeCalendar);
+        taskStartDate = nextBizDay.getTime() > assigneeBaseDate.getTime()
+          ? nextBizDay
+          : assigneeBaseDate;
+      } else {
+        taskStartDate = assigneeBaseDate;
+      }
 
-      // タスクの終了日を計算
-      const taskEndDate = this.calculateTaskEndDate(
-        taskStartDate,
-        plannedManHours,
-        assigneeCalendar
-      );
-
-      // この担当者の最後の終了日を更新
+      const taskEndDate = this.calculateTaskEndDate(taskStartDate, plannedManHours, assigneeCalendar);
       assigneeLastEndDates.set(task.assigneeId, taskEndDate);
 
-      // 結果を追加
       results.push({
         taskId: task.id,
         taskNo: task.taskNo.getValue(),
@@ -186,12 +281,9 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     return results;
   }
 
-  /**
-   * 次の営業日を取得
-   */
   private getNextBusinessDay(date: Date, calendar: AssigneeWorkingCalendar): Date {
     const nextDate = new Date(date);
-    nextDate.setDate(nextDate.getDate() + 1); // 翌日から開始
+    nextDate.setDate(nextDate.getDate() + 1);
 
     while (calendar.getAvailableHours(nextDate) === 0) {
       nextDate.setDate(nextDate.getDate() + 1);
@@ -200,13 +292,6 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     return nextDate;
   }
 
-  /**
-   * タスクの終了日を計算
-   * @param startDate 開始日
-   * @param totalHours 総工数（時間）
-   * @param calendar 担当者の稼働カレンダー
-   * @returns 終了日
-   */
   private calculateTaskEndDate(
     startDate: Date,
     totalHours: number,
@@ -221,12 +306,10 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
       if (availableHours > 0) {
         remainingHours -= availableHours;
 
-        // まだ工数が残っていて、今日の稼働時間を使い切った場合は次の日へ
         if (remainingHours > 0) {
           currentDate.setDate(currentDate.getDate() + 1);
         }
       } else {
-        // 稼働日でない場合は次の日へ
         currentDate.setDate(currentDate.getDate() + 1);
       }
     }
@@ -234,9 +317,6 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     return currentDate;
   }
 
-  /**
-   * スケジューリング結果をTSV形式に変換
-   */
   convertToTsv(results: TaskSchedulingResult[]): string {
     const headers = [
       'タスクNo',

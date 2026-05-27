@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Copy,
   Play,
@@ -12,10 +14,18 @@ import {
   User,
   Calendar,
   Clock,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { TaskSchedulingResult } from "@/applications/task-scheduling/task-scheduling-application.service";
-import { calculateTaskSchedules } from "./task-scheduling-actions";
+import {
+  calculateTaskSchedules,
+  getSchedulingAssignees,
+  type SchedulingAssignee,
+  type CalculateTaskSchedulesParams,
+} from "./task-scheduling-actions";
 import { toast } from "@/hooks/use-toast";
+import type { SchedulingMode } from "@/applications/task-scheduling/task-scheduling-application.service";
 
 interface TaskSchedulingPageProps {
   wbsId: number;
@@ -26,10 +36,58 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isCalculated, setIsCalculated] = useState(false);
 
+  // モード
+  const [mode, setMode] = useState<SchedulingMode>("initial");
+
+  // 担当者起点日
+  const [assignees, setAssignees] = useState<SchedulingAssignee[]>([]);
+  const [assigneeStartDates, setAssigneeStartDates] = useState<
+    Map<number, string>
+  >(new Map());
+  const [showAssigneeSettings, setShowAssigneeSettings] = useState(false);
+
+  useEffect(() => {
+    getSchedulingAssignees(wbsId).then(setAssignees);
+  }, [wbsId]);
+
+  const handleAssigneeDateChange = useCallback(
+    (assigneeId: number, value: string) => {
+      setAssigneeStartDates((prev) => {
+        const next = new Map(prev);
+        if (value) {
+          next.set(assigneeId, value);
+        } else {
+          next.delete(assigneeId);
+        }
+        return next;
+      });
+    },
+    []
+  );
+
   const handleCalculate = async () => {
     setIsLoading(true);
     try {
-      const calculatedResults = await calculateTaskSchedules(wbsId);
+      const params: CalculateTaskSchedulesParams = {
+        wbsId,
+        mode,
+      };
+
+      if (mode === "reschedule") {
+        params.rescheduleBaseDate = new Date().toISOString();
+      }
+
+      const assigneeDatesArray = Array.from(assigneeStartDates.entries())
+        .filter(([, v]) => v)
+        .map(([assigneeId, startDate]) => ({
+          assigneeId,
+          startDate: new Date(startDate).toISOString(),
+        }));
+      if (assigneeDatesArray.length > 0) {
+        params.assigneeStartDates = assigneeDatesArray;
+      }
+
+      const calculatedResults = await calculateTaskSchedules(params);
       setResults(calculatedResults);
       setIsCalculated(true);
     } catch (error) {
@@ -70,14 +128,13 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
       .map((row) => row.join("\t"))
       .join("\n");
 
-    // document.execCommand('copy')は非推奨だが、HTTP環境ではnavigator.clipboard APIが利用できないため使用
-    const textarea = document.createElement('textarea');
+    const textarea = document.createElement("textarea");
     textarea.value = tsvContent;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
     document.body.appendChild(textarea);
     textarea.select();
-    document.execCommand('copy');
+    document.execCommand("copy");
     document.body.removeChild(textarea);
     toast({
       title: "TSVデータをクリップボードにコピーしました",
@@ -93,6 +150,76 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
 
   return (
     <div className="space-y-6">
+      {/* モード切替・設定 */}
+      <Card>
+        <CardContent className="pt-6 space-y-4">
+          <div className="flex items-center gap-4">
+            <Label>モード</Label>
+            <div className="flex gap-2">
+              <Button
+                variant={mode === "initial" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMode("initial")}
+              >
+                初期計画
+              </Button>
+              <Button
+                variant={mode === "reschedule" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMode("reschedule")}
+              >
+                リスケ
+              </Button>
+            </div>
+            {mode === "reschedule" && (
+              <span className="text-sm text-gray-500">
+                起点日: 今日（{formatDate(new Date())})
+              </span>
+            )}
+          </div>
+
+          {/* 担当者起点日 */}
+          {assignees.length > 0 && (
+            <div>
+              <button
+                type="button"
+                className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                onClick={() => setShowAssigneeSettings(!showAssigneeSettings)}
+              >
+                {showAssigneeSettings ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+                担当者別起点日（任意）
+              </button>
+              {showAssigneeSettings && (
+                <div className="mt-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {assignees.map((assignee) => (
+                    <div
+                      key={assignee.id}
+                      className="flex items-center gap-2"
+                    >
+                      <Label className="text-sm min-w-[80px] truncate">
+                        {assignee.name}
+                      </Label>
+                      <Input
+                        type="date"
+                        className="h-8 text-sm"
+                        value={assigneeStartDates.get(assignee.id) ?? ""}
+                        onChange={(e) =>
+                          handleAssigneeDateChange(assignee.id, e.target.value)
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* 実行ボタン */}
       <div className="flex gap-4">
         <Button
