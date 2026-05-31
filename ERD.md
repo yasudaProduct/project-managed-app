@@ -198,6 +198,7 @@ erDiagram
   Boolean roundToQuarter
   ProgressMeasurementMethod progressMeasurementMethod
   ForecastCalculationMethod forecastCalculationMethod
+  EvmForecastMethod evmForecastMethod
   Int deadlineAlertDays
   Int costOverrunThresholdPct
   Json evmExcludeSettings
@@ -576,6 +577,7 @@ erDiagram
   - `roundToQuarter`: 
   - `progressMeasurementMethod`: 
   - `forecastCalculationMethod`: 
+  - `evmForecastMethod`: 
   - `deadlineAlertDays`: 
   - `costOverrunThresholdPct`: 
   - `evmExcludeSettings`: 

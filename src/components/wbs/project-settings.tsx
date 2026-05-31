@@ -21,6 +21,11 @@ import {
   FORECAST_CALCULATION_METHOD_LABELS,
   FORECAST_CALCULATION_METHOD_DESCRIPTIONS,
 } from "@/types/forecast-calculation-method";
+import type { EvmForecastMethod } from "@/types/evm-forecast-method";
+import {
+  EVM_FORECAST_METHOD_LABELS,
+  EVM_FORECAST_METHOD_DESCRIPTIONS,
+} from "@/types/evm-forecast-method";
 
 interface ProjectSettingsProps {
   projectId: string;
@@ -32,6 +37,8 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
     useState<ProgressMeasurementMethod>("SELF_REPORTED");
   const [forecastCalculationMethod, setForecastCalculationMethod] =
     useState<ForecastCalculationMethod>("REALISTIC");
+  const [evmForecastMethod, setEvmForecastMethod] =
+    useState<EvmForecastMethod>("CPI_ONLY");
   const [deadlineAlertDays, setDeadlineAlertDays] = useState<number>(1);
   const [costOverrunThresholdPct, setCostOverrunThresholdPct] =
     useState<number>(100);
@@ -48,6 +55,9 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         setForecastCalculationMethod(
           data?.forecastCalculationMethod || "REALISTIC"
         );
+        if ("evmForecastMethod" in data && data.evmForecastMethod) {
+          setEvmForecastMethod(data.evmForecastMethod as EvmForecastMethod);
+        }
         if ("deadlineAlertDays" in data) {
           setDeadlineAlertDays(data.deadlineAlertDays as number);
         }
@@ -65,7 +75,8 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         projectId,
         value,
         progressMeasurementMethod,
-        forecastCalculationMethod
+        forecastCalculationMethod,
+        evmForecastMethod
       );
     });
   };
@@ -77,7 +88,8 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         projectId,
         roundToQuarter,
         value,
-        forecastCalculationMethod
+        forecastCalculationMethod,
+        evmForecastMethod
       );
     });
   };
@@ -89,6 +101,20 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         projectId,
         roundToQuarter,
         progressMeasurementMethod,
+        value,
+        evmForecastMethod
+      );
+    });
+  };
+
+  const onEvmForecastMethodChange = (value: EvmForecastMethod) => {
+    setEvmForecastMethod(value);
+    startTransition(async () => {
+      await updateProjectSettings(
+        projectId,
+        roundToQuarter,
+        progressMeasurementMethod,
+        forecastCalculationMethod,
         value
       );
     });
@@ -248,6 +274,75 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
                   </span>
                   <span className="text-xs text-gray-500 font-normal">
                     {FORECAST_CALCULATION_METHOD_DESCRIPTIONS.PLANNED_OR_ACTUAL}
+                  </span>
+                </div>
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        {/* EVM予測計算方式 */}
+        <div className="space-y-3">
+          <div>
+            <Label className="text-base font-medium">EVM予測計算方式</Label>
+            <div className="text-sm text-gray-500 mt-1">
+              EVM指標のEAC（完了時総コスト予測）・ETC（残コスト予測）の算出方式を選択します。
+            </div>
+          </div>
+          <RadioGroup
+            value={evmForecastMethod}
+            onValueChange={(value) =>
+              onEvmForecastMethodChange(value as EvmForecastMethod)
+            }
+            name="evmForecastMethod"
+          >
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem
+                value="CPI_ONLY"
+                id="evm-forecast-cpi-only"
+                disabled={saving}
+              />
+              <Label htmlFor="evm-forecast-cpi-only" className="cursor-pointer">
+                <div className="flex flex-col">
+                  <span className="font-medium">
+                    {EVM_FORECAST_METHOD_LABELS.CPI_ONLY}
+                  </span>
+                  <span className="text-xs text-gray-500 font-normal">
+                    {EVM_FORECAST_METHOD_DESCRIPTIONS.CPI_ONLY}
+                  </span>
+                </div>
+              </Label>
+            </div>
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem
+                value="CPI_SPI"
+                id="evm-forecast-cpi-spi"
+                disabled={saving}
+              />
+              <Label htmlFor="evm-forecast-cpi-spi" className="cursor-pointer">
+                <div className="flex flex-col">
+                  <span className="font-medium">
+                    {EVM_FORECAST_METHOD_LABELS.CPI_SPI}
+                  </span>
+                  <span className="text-xs text-gray-500 font-normal">
+                    {EVM_FORECAST_METHOD_DESCRIPTIONS.CPI_SPI}
+                  </span>
+                </div>
+              </Label>
+            </div>
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem
+                value="PLANNED"
+                id="evm-forecast-planned"
+                disabled={saving}
+              />
+              <Label htmlFor="evm-forecast-planned" className="cursor-pointer">
+                <div className="flex flex-col">
+                  <span className="font-medium">
+                    {EVM_FORECAST_METHOD_LABELS.PLANNED}
+                  </span>
+                  <span className="text-xs text-gray-500 font-normal">
+                    {EVM_FORECAST_METHOD_DESCRIPTIONS.PLANNED}
                   </span>
                 </div>
               </Label>

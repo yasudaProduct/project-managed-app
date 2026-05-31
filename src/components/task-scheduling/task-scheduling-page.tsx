@@ -91,12 +91,6 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
     return `${year}/${month}/${day}`;
   };
 
-  const successCount = results.filter(
-    (r) => r.hasAssignee && !r.errorMessage
-  ).length;
-  const errorCount = results.filter((r) => r.errorMessage).length;
-  const noAssigneeCount = results.filter((r) => !r.hasAssignee).length;
-
   return (
     <div className="space-y-6">
       {/* 実行ボタン */}
@@ -121,59 +115,6 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
           </Button>
         )}
       </div>
-
-      {/* 結果サマリー */}
-      {isCalculated && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">総タスク数</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{results.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-green-600">
-                正常計算
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {successCount}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-red-600">
-                エラー
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {errorCount}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                担当者未設定
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-600">
-                {noAssigneeCount}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* 結果一覧 */}
       {isCalculated && results.length > 0 && (
@@ -223,7 +164,7 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
                       )}
                     </div>
 
-                    <div className="text-sm text-gray-600 space-y-1">
+                    <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
                       {result.assigneeName && (
                         <div className="flex items-center gap-1">
                           <User className="h-3 w-3" />
