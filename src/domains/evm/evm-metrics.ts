@@ -1,6 +1,20 @@
 import { ProgressMeasurementMethod } from '@prisma/client';
+import type { EvmForecastMethod } from '@/types/evm-forecast-method';
 
 export type EvmCalculationMode = 'hours' | 'cost';
+
+type EvmMetricsArgs = {
+  pv_base: number;
+  pv: number;
+  ev: number;
+  ac: number;
+  date: Date;
+  bac?: number;
+  calculationMode?: EvmCalculationMode;
+  progressMethod?: ProgressMeasurementMethod;
+  isPredicted?: boolean;
+  forecastMethod?: EvmForecastMethod;
+};
 
 export class EvmMetrics {
   public readonly pv_base: number; // 基準計画価値
@@ -12,18 +26,9 @@ export class EvmMetrics {
   public readonly calculationMode: EvmCalculationMode;
   public readonly progressMethod: ProgressMeasurementMethod;
   public readonly isPredicted: boolean;
+  public readonly forecastMethod: EvmForecastMethod;
 
-  constructor(args: {
-    pv_base: number;
-    pv: number;
-    ev: number;
-    ac: number;
-    date: Date;
-    bac?: number;
-    calculationMode?: EvmCalculationMode;
-    progressMethod?: ProgressMeasurementMethod;
-    isPredicted?: boolean;
-  }) {
+  constructor(args: EvmMetricsArgs) {
     this.pv_base = args.pv_base;
     this.pv = args.pv;
     this.ev = args.ev;
@@ -33,19 +38,10 @@ export class EvmMetrics {
     this.calculationMode = args.calculationMode ?? 'hours';
     this.progressMethod = args.progressMethod ?? 'SELF_REPORTED';
     this.isPredicted = args.isPredicted ?? false;
+    this.forecastMethod = args.forecastMethod ?? 'CPI_ONLY';
   }
 
-  public static create(args: {
-    pv_base: number;
-    pv: number;
-    ev: number;
-    ac: number;
-    date: Date;
-    bac?: number;
-    calculationMode?: EvmCalculationMode;
-    progressMethod?: ProgressMeasurementMethod;
-    isPredicted?: boolean;
-  }): EvmMetrics {
+  public static create(args: EvmMetricsArgs): EvmMetrics {
     return new EvmMetrics(args);
   }
 
@@ -78,10 +74,18 @@ export class EvmMetrics {
   }
 
   // Estimate To Complete (完了までの残コスト予測)
-  //  (BAC - EV) / CPI
   get etc(): number {
-    // return Math.max(0, this.eac - this.ac);
-    return (this.bac - this.ev) / this.cpi;
+    switch (this.forecastMethod) {
+      case 'CPI_SPI': {
+        const cpiSpi = this.cpi * this.spi;
+        return cpiSpi === 0 ? 0 : (this.bac - this.ev) / cpiSpi;
+      }
+      case 'PLANNED':
+        return this.bac - this.ev;
+      case 'CPI_ONLY':
+      default:
+        return this.cpi === 0 ? 0 : (this.bac - this.ev) / this.cpi;
+    }
   }
 
   // Variance At Completion (完了時差異予測)

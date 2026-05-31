@@ -1176,4 +1176,162 @@ describe('EvmService', () => {
     });
   });
 
+  describe('forecastMethod（EVM予測計算方式）', () => {
+    const createMockTask = (overrides?: Partial<{
+      taskId: number;
+      plannedStartDate: Date;
+      plannedEndDate: Date;
+      actualStartDate: Date | null;
+      plannedManHours: number;
+      status: string;
+      progressRate: number;
+    }>): TaskEvmData => {
+      return new TaskEvmData(
+        overrides?.taskId ?? 1,
+        'T001',
+        'テストタスク',
+        overrides?.plannedStartDate ?? new Date('2025-01-01'),
+        overrides?.plannedEndDate ?? new Date('2025-01-31'),
+        overrides?.plannedStartDate ?? new Date('2025-01-01'),
+        overrides?.plannedEndDate ?? new Date('2025-01-31'),
+        overrides?.actualStartDate ?? new Date('2025-01-01'),
+        null,
+        overrides?.plannedManHours ?? 100,
+        overrides?.plannedManHours ?? 100,
+        0,
+        (overrides?.status ?? 'IN_PROGRESS') as TaskStatus,
+        overrides?.progressRate ?? 50,
+        5000,
+        overrides?.progressRate ?? 50,
+      );
+    };
+
+    const setupMockData = (evmForecastMethod: 'CPI_ONLY' | 'CPI_SPI' | 'PLANNED') => {
+      const tasks = [createMockTask()];
+      const wbsData: WbsEvmData = {
+        wbsId: 1,
+        projectId: 'proj-1',
+        projectName: 'テストプロジェクト',
+        totalPlannedManHours: 100,
+        tasks,
+        buffers: [],
+        settings: {
+          projectId: 'proj-1',
+          progressMeasurementMethod: 'SELF_REPORTED',
+          forecastCalculationMethod: 'REALISTIC',
+          evmForecastMethod,
+        },
+      };
+      mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
+      mockRepository.getActualCostByDate.mockResolvedValue(new Map([['2025-01-15', 60]]));
+    };
+
+    it('ProjectSettingsのevmForecastMethodがEvmMetricsに渡される', async () => {
+      setupMockData('CPI_SPI');
+
+      const result = await evmService.calculateCurrentEvmMetrics(
+        1, new Date('2025-01-15'), 'hours'
+      );
+
+      expect(result.forecastMethod).toBe('CPI_SPI');
+    });
+
+    it('引数のforecastMethodが設定値をオーバーライドする', async () => {
+      setupMockData('CPI_SPI'); // 設定はCPI_SPI
+
+      const result = await evmService.calculateCurrentEvmMetrics(
+        1, new Date('2025-01-15'), 'hours', undefined, 'PLANNED' // 引数でPLANNED指定
+      );
+
+      expect(result.forecastMethod).toBe('PLANNED');
+    });
+
+    it('設定がnullの場合、デフォルトCPI_ONLYが使用される', async () => {
+      const tasks = [createMockTask()];
+      const wbsData: WbsEvmData = {
+        wbsId: 1,
+        projectId: 'proj-1',
+        projectName: 'テストプロジェクト',
+        totalPlannedManHours: 100,
+        tasks,
+        buffers: [],
+        settings: null,
+      };
+      mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
+      mockRepository.getActualCostByDate.mockResolvedValue(new Map());
+
+      const result = await evmService.calculateCurrentEvmMetrics(
+        1, new Date('2025-01-15'), 'hours'
+      );
+
+      expect(result.forecastMethod).toBe('CPI_ONLY');
+    });
+
+    it('CPI_ONLY方式でETC/EACが正しく計算される', async () => {
+      setupMockData('CPI_ONLY');
+
+      const result = await evmService.calculateCurrentEvmMetrics(
+        1, new Date('2025-01-15'), 'hours'
+      );
+
+      // ETCは(BAC-EV)/CPIで計算される
+      if (result.cpi > 0) {
+        expect(result.etc).toBeCloseTo((result.bac - result.ev) / result.cpi, 1);
+      }
+      expect(result.eac).toBeCloseTo(result.ac + result.etc, 1);
+    });
+
+    it('CPI_SPI方式でETC/EACが正しく計算される', async () => {
+      setupMockData('CPI_SPI');
+
+      const result = await evmService.calculateCurrentEvmMetrics(
+        1, new Date('2025-01-15'), 'hours'
+      );
+
+      if (result.cpi > 0 && result.spi > 0) {
+        expect(result.etc).toBeCloseTo(
+          (result.bac - result.ev) / (result.cpi * result.spi), 1
+        );
+      }
+      expect(result.eac).toBeCloseTo(result.ac + result.etc, 1);
+    });
+
+    it('PLANNED方式でETC/EACが正しく計算される', async () => {
+      setupMockData('PLANNED');
+
+      const result = await evmService.calculateCurrentEvmMetrics(
+        1, new Date('2025-01-15'), 'hours'
+      );
+
+      expect(result.etc).toBeCloseTo(result.bac - result.ev, 1);
+      expect(result.eac).toBeCloseTo(result.ac + result.etc, 1);
+    });
+
+    it('予測ポイントにもforecastMethodが適用される', async () => {
+      setupMockData('CPI_SPI');
+
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2025-01-15T00:00:00.000Z'));
+
+      const result = await evmService.getEvmTimeSeries(
+        1,
+        new Date('2025-01-08T00:00:00.000Z'),
+        new Date('2025-01-22T00:00:00.000Z'),
+        'weekly',
+        'hours',
+        undefined,
+        true, // includePrediction
+        'CPI_SPI'
+      );
+
+      const predicted = result.filter(m => m.isPredicted);
+      predicted.forEach(m => {
+        expect(m.forecastMethod).toBe('CPI_SPI');
+      });
+
+      jest.useRealTimers();
+    });
+  });
+
 });
+

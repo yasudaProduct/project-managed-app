@@ -7,6 +7,7 @@ import { EvmService } from '@/applications/evm/evm-service';
 import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { ProgressMeasurementMethod } from '@prisma/client';
+import type { EvmForecastMethod } from '@/types/evm-forecast-method';
 
 const evmService = container.get<EvmService>(SYMBOL.EvmService);
 
@@ -16,6 +17,7 @@ const GetCurrentEvmMetricsSchema = z.object({
   evaluationDate: z.string().optional(), // ISO 8601 string
   calculationMode: z.enum(['hours', 'cost']).default('hours'),
   progressMethod: z.enum(['ZERO_HUNDRED', 'FIFTY_FIFTY', 'SELF_REPORTED']).optional(),
+  forecastMethod: z.enum(['CPI_ONLY', 'CPI_SPI', 'PLANNED']).optional(),
 });
 
 const GetEvmTimeSeriesSchema = z.object({
@@ -26,6 +28,7 @@ const GetEvmTimeSeriesSchema = z.object({
   calculationMode: z.enum(['hours', 'cost']).default('hours'),
   progressMethod: z.enum(['ZERO_HUNDRED', 'FIFTY_FIFTY', 'SELF_REPORTED']).optional(),
   showPrediction: z.boolean().optional(),
+  forecastMethod: z.enum(['CPI_ONLY', 'CPI_SPI', 'PLANNED']).optional(),
 });
 
 const GetTaskEvmDetailsSchema = z.object({
@@ -61,6 +64,7 @@ export type EvmMetricsData = {
   healthStatus: 'healthy' | 'warning' | 'critical';
   calculationMode: EvmCalculationMode; // 計算モード（hours or cost）
   progressMethod: ProgressMeasurementMethod; // 進捗率測定方法（ZERO_HUNDRED or FIFTY_FIFTY or SELF_REPORTED）
+  forecastMethod: EvmForecastMethod; // EVM予測計算方式（CPI_ONLY or CPI_SPI or PLANNED）
   formattedPv: string; // 計画価値のフォーマット（hours or cost）
   formattedEv: string; // 出来高のフォーマット（hours or cost）
   formattedAc: string; // 実コストのフォーマット（hours or cost）
@@ -117,6 +121,7 @@ function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
     healthStatus: metrics.healthStatus,
     calculationMode: metrics.calculationMode,
     progressMethod: metrics.progressMethod,
+    forecastMethod: metrics.forecastMethod,
     formattedPv: metrics.formattedPv,
     formattedEv: metrics.formattedEv,
     formattedAc: metrics.formattedAc,
@@ -164,7 +169,8 @@ export async function getCurrentEvmMetrics(
       validated.wbsId,
       evaluationDate,
       validated.calculationMode as EvmCalculationMode,
-      validated.progressMethod as ProgressMeasurementMethod | undefined
+      validated.progressMethod as ProgressMeasurementMethod | undefined,
+      validated.forecastMethod as EvmForecastMethod | undefined
     );
 
     return {
@@ -198,7 +204,8 @@ export async function getEvmTimeSeries(
       validated.interval,
       validated.calculationMode as EvmCalculationMode,
       validated.progressMethod as ProgressMeasurementMethod | undefined,
-      validated.showPrediction
+      validated.showPrediction,
+      validated.forecastMethod as EvmForecastMethod | undefined
     );
 
     return {

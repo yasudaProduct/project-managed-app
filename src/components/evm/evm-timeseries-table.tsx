@@ -229,12 +229,17 @@ export function EvmTimeSeriesTable({
                 AC
               </li>
               <li>
-                <span className="font-medium">ETC (残コスト):</span>(BAC - EV) /
-                CPI 残作業に必要な予測コスト
+                <span className="font-medium">ETC (残コスト):</span>{" "}
+                {data[0]?.forecastMethod === "CPI_SPI"
+                  ? "(BAC - EV) / (CPI × SPI)"
+                  : data[0]?.forecastMethod === "PLANNED"
+                    ? "BAC - EV"
+                    : "(BAC - EV) / CPI"}{" "}
+                残作業に必要な予測コスト
               </li>
               <li>
-                <span className="font-medium">EAC (完了時総コスト):</span>
-                AC + (BAC - EV) / CPI 完了時の予測総コスト
+                <span className="font-medium">EAC (完了時総コスト):</span>{" "}
+                AC + ETC 完了時の予測総コスト
               </li>
               <li>
                 <span className="font-medium">VAC (完了時差異):</span> BAC - EAC

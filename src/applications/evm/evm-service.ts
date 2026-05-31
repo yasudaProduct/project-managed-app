@@ -4,6 +4,7 @@ import type { IWbsEvmRepository } from './iwbs-evm-repository';
 import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { ProgressMeasurementMethod } from '@prisma/client';
+import type { EvmForecastMethod } from '@/types/evm-forecast-method';
 
 @injectable()
 export class EvmService {
@@ -24,13 +25,18 @@ export class EvmService {
     wbsId: number,
     evaluationDate: Date = new Date(),
     calculationMode: EvmCalculationMode = 'hours',
-    progressMethod?: ProgressMeasurementMethod
+    progressMethod?: ProgressMeasurementMethod,
+    forecastMethod?: EvmForecastMethod
   ): Promise<EvmMetrics> {
     const wbsData = await this.wbsEvmRepository.getWbsEvmData(wbsId, evaluationDate);
 
     // プロジェクト設定から進捗率測定方法を取得（引数で指定されていなければ）
     const method =
       progressMethod ?? wbsData.settings?.progressMeasurementMethod ?? 'SELF_REPORTED';
+
+    // プロジェクト設定からEVM予測計算方式を取得（引数で指定されていなければ）
+    const fMethod =
+      forecastMethod ?? wbsData.settings?.evmForecastMethod ?? 'CPI_ONLY';
 
     // PV_BASE計算: 基準計画価値（WBS全体の計画工数合計）
     const pv_base = wbsData.tasks.reduce((sum, task) => {
@@ -79,6 +85,7 @@ export class EvmService {
       bac,
       calculationMode,
       progressMethod: method,
+      forecastMethod: fMethod,
     });
   }
 
@@ -100,7 +107,8 @@ export class EvmService {
     interval: 'daily' | 'weekly' | 'monthly' = 'weekly',
     calculationMode: EvmCalculationMode = 'hours',
     progressMethod?: ProgressMeasurementMethod,
-    includePrediction: boolean = false
+    includePrediction: boolean = false,
+    forecastMethod?: EvmForecastMethod
   ): Promise<EvmMetrics[]> {
     const dates = this.generateDateRange(startDate, endDate, interval);
     const metrics: EvmMetrics[] = [];
@@ -113,7 +121,8 @@ export class EvmService {
         wbsId,
         now,
         calculationMode,
-        progressMethod
+        progressMethod,
+        forecastMethod
       );
     }
 
@@ -125,7 +134,8 @@ export class EvmService {
           wbsId,
           date,
           calculationMode,
-          progressMethod
+          progressMethod,
+          forecastMethod
         );
 
         // 予測EV: 現在EV + (将来PV - 現在PV) * SPI
@@ -154,6 +164,7 @@ export class EvmService {
           bac: baseMetric.bac,
           calculationMode,
           progressMethod: baseMetric.progressMethod,
+          forecastMethod: baseMetric.forecastMethod,
           isPredicted: true,
         });
       }
@@ -162,7 +173,8 @@ export class EvmService {
         wbsId,
         date,
         calculationMode,
-        progressMethod
+        progressMethod,
+        forecastMethod
       );
     });
 

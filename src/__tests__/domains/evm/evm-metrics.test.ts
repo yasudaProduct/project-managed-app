@@ -76,7 +76,7 @@ describe('EvmMetrics', () => {
       expect(metrics.vac).toBeCloseTo(-25, 1);
     });
 
-    it('CPIが0の場合、ETCはInfinityを返す', () => {
+    it('CPIが0の場合、ETCは0を返す（ガード処理）', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
         pv_base: 100,
@@ -86,8 +86,8 @@ describe('EvmMetrics', () => {
         bac: 200,
       });
 
-      // CPI = 0 の場合、ETC = (BAC - EV) / CPI = (200 - 0) / 0 = Infinity
-      expect(metrics.etc).toBe(Infinity);
+      // CPI = 0 の場合、ゼロ除算を回避して0を返す
+      expect(metrics.etc).toBe(0);
     });
 
     it('CPI > 1 の場合、ETCは残工数を正しく計算する', () => {
@@ -541,6 +541,158 @@ describe('EvmMetrics', () => {
       expect(metrics.spi).toBeCloseTo(0.7, 2);
       expect(metrics.cpi).toBeCloseTo(1.0, 2);
       expect(metrics.healthStatus).toBe('critical');
+    });
+  });
+
+  describe('EVM予測計算方式（forecastMethod）', () => {
+    // 共通テストデータ: pv=100, ev=50, ac=60, bac=200
+    // CPI = 50/60 = 0.8333...
+    // SPI = 50/100 = 0.5
+    const baseArgs = {
+      date: new Date('2025-01-01'),
+      pv_base: 100,
+      pv: 100,
+      ev: 50,
+      ac: 60,
+      bac: 200,
+    };
+
+    describe('CPI_ONLY（デフォルト）', () => {
+      it('etc = (BAC - EV) / CPI', () => {
+        const metrics = EvmMetrics.create({ ...baseArgs, forecastMethod: 'CPI_ONLY' });
+        // ETC = (200 - 50) / (50/60) = 150 / 0.8333 = 180
+        expect(metrics.etc).toBeCloseTo(180, 0);
+        expect(metrics.forecastMethod).toBe('CPI_ONLY');
+      });
+
+      it('eac = AC + ETC', () => {
+        const metrics = EvmMetrics.create({ ...baseArgs, forecastMethod: 'CPI_ONLY' });
+        // EAC = 60 + 180 = 240
+        expect(metrics.eac).toBeCloseTo(240, 0);
+      });
+
+      it('vac = BAC - EAC', () => {
+        const metrics = EvmMetrics.create({ ...baseArgs, forecastMethod: 'CPI_ONLY' });
+        // VAC = 200 - 240 = -40
+        expect(metrics.vac).toBeCloseTo(-40, 0);
+      });
+
+      it('CPI=0の場合、etc=0を返す', () => {
+        const metrics = EvmMetrics.create({
+          ...baseArgs,
+          ev: 0, ac: 0, // CPI = 0
+          forecastMethod: 'CPI_ONLY',
+        });
+        expect(metrics.etc).toBe(0);
+      });
+    });
+
+    describe('CPI_SPI', () => {
+      it('etc = (BAC - EV) / (CPI × SPI)', () => {
+        const metrics = EvmMetrics.create({ ...baseArgs, forecastMethod: 'CPI_SPI' });
+        // CPI×SPI = (50/60) × (50/100) = 0.4167
+        // ETC = (200 - 50) / 0.4167 = 360
+        const cpiSpi = (50 / 60) * (50 / 100);
+        expect(metrics.etc).toBeCloseTo(150 / cpiSpi, 0);
+        expect(metrics.forecastMethod).toBe('CPI_SPI');
+      });
+
+      it('eac = AC + ETC', () => {
+        const metrics = EvmMetrics.create({ ...baseArgs, forecastMethod: 'CPI_SPI' });
+        const cpiSpi = (50 / 60) * (50 / 100);
+        const expectedEtc = 150 / cpiSpi;
+        expect(metrics.eac).toBeCloseTo(60 + expectedEtc, 0);
+      });
+
+      it('vac = BAC - EAC', () => {
+        const metrics = EvmMetrics.create({ ...baseArgs, forecastMethod: 'CPI_SPI' });
+        expect(metrics.vac).toBeCloseTo(200 - metrics.eac, 0);
+      });
+
+      it('CPI=0の場合、etc=0を返す', () => {
+        const metrics = EvmMetrics.create({
+          ...baseArgs,
+          ev: 0, ac: 0, // CPI = 0
+          forecastMethod: 'CPI_SPI',
+        });
+        expect(metrics.etc).toBe(0);
+      });
+
+      it('SPI=0の場合、etc=0を返す', () => {
+        const metrics = EvmMetrics.create({
+          ...baseArgs,
+          pv: 0, // SPI = 0 (PV=0)
+          forecastMethod: 'CPI_SPI',
+        });
+        expect(metrics.etc).toBe(0);
+      });
+
+      it('CPI×SPIが極小値の場合でも正常に計算する', () => {
+        const metrics = EvmMetrics.create({
+          ...baseArgs,
+          pv: 1000, ev: 1, ac: 100, // CPI=0.01, SPI=0.001
+          forecastMethod: 'CPI_SPI',
+        });
+        // CPI×SPI = 0.01 * 0.001 = 0.00001
+        // ETC = (200 - 1) / 0.00001 = very large
+        expect(metrics.etc).toBeGreaterThan(0);
+        expect(Number.isFinite(metrics.etc)).toBe(true);
+      });
+    });
+
+    describe('PLANNED', () => {
+      it('etc = BAC - EV', () => {
+        const metrics = EvmMetrics.create({ ...baseArgs, forecastMethod: 'PLANNED' });
+        // ETC = 200 - 50 = 150
+        expect(metrics.etc).toBe(150);
+        expect(metrics.forecastMethod).toBe('PLANNED');
+      });
+
+      it('eac = AC + ETC', () => {
+        const metrics = EvmMetrics.create({ ...baseArgs, forecastMethod: 'PLANNED' });
+        // EAC = 60 + 150 = 210
+        expect(metrics.eac).toBe(210);
+      });
+
+      it('vac = BAC - EAC', () => {
+        const metrics = EvmMetrics.create({ ...baseArgs, forecastMethod: 'PLANNED' });
+        // VAC = 200 - 210 = -10
+        expect(metrics.vac).toBe(-10);
+      });
+
+      it('CPI=0でも正常に計算する（CPIに依存しない）', () => {
+        const metrics = EvmMetrics.create({
+          ...baseArgs,
+          ev: 0, ac: 0,
+          forecastMethod: 'PLANNED',
+        });
+        // ETC = 200 - 0 = 200
+        expect(metrics.etc).toBe(200);
+        expect(metrics.eac).toBe(200); // AC(0) + ETC(200)
+      });
+    });
+
+    describe('デフォルト動作', () => {
+      it('forecastMethod未指定時はCPI_ONLYとして動作する', () => {
+        const withDefault = EvmMetrics.create(baseArgs);
+        const withExplicit = EvmMetrics.create({ ...baseArgs, forecastMethod: 'CPI_ONLY' });
+        expect(withDefault.forecastMethod).toBe('CPI_ONLY');
+        expect(withDefault.etc).toBeCloseTo(withExplicit.etc, 10);
+        expect(withDefault.eac).toBeCloseTo(withExplicit.eac, 10);
+        expect(withDefault.vac).toBeCloseTo(withExplicit.vac, 10);
+      });
+    });
+
+    describe('方式間の比較', () => {
+      it('遅延プロジェクト（SPI<1）ではCPI_SPI > CPI_ONLY > PLANNEDのETC順になる', () => {
+        // SPI < 1 の場合、CPI_SPIが最も保守的（ETC大）
+        const cpiOnly = EvmMetrics.create({ ...baseArgs, forecastMethod: 'CPI_ONLY' });
+        const cpiSpi = EvmMetrics.create({ ...baseArgs, forecastMethod: 'CPI_SPI' });
+        const planned = EvmMetrics.create({ ...baseArgs, forecastMethod: 'PLANNED' });
+
+        expect(cpiSpi.etc).toBeGreaterThan(cpiOnly.etc);
+        expect(cpiOnly.etc).toBeGreaterThan(planned.etc);
+      });
     });
   });
 

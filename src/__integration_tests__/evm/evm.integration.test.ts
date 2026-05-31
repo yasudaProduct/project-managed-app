@@ -320,6 +320,7 @@ describe('EVM Integration Tests', () => {
       expect(settings).not.toBeNull();
       expect(settings!.progressMeasurementMethod).toBe('FIFTY_FIFTY');
       expect(settings!.forecastCalculationMethod).toBe('REALISTIC');
+      expect(settings!.evmForecastMethod).toBe('CPI_ONLY'); // デフォルト値
     });
 
     it('getTasksEvmData でタスク別EVMデータを取得できる', async () => {
@@ -571,6 +572,77 @@ describe('EVM Integration Tests', () => {
       } finally {
         jest.useRealTimers();
       }
+    });
+
+    it('forecastMethod CPI_SPI でEAC/ETCがCPI×SPIベースで計算される', async () => {
+      // ProjectSettingsにCPI_SPIを設定
+      await global.prisma.projectSettings.upsert({
+        where: { projectId: testIds.projectId },
+        create: {
+          projectId: testIds.projectId,
+          evmForecastMethod: 'CPI_SPI',
+        },
+        update: {
+          evmForecastMethod: 'CPI_SPI',
+        },
+      });
+
+      const evaluationDate = new Date('2025-04-15');
+      const result = await evmService.calculateCurrentEvmMetrics(
+        testIds.wbsId, evaluationDate, 'hours'
+      );
+
+      expect(result.forecastMethod).toBe('CPI_SPI');
+      if (result.cpi > 0 && result.spi > 0) {
+        const expectedEtc = (result.bac - result.ev) / (result.cpi * result.spi);
+        expect(result.etc).toBeCloseTo(expectedEtc, 1);
+      }
+      expect(result.eac).toBeCloseTo(result.ac + result.etc, 1);
+    });
+
+    it('forecastMethod PLANNED でETC = BAC - EV となる', async () => {
+      await global.prisma.projectSettings.upsert({
+        where: { projectId: testIds.projectId },
+        create: {
+          projectId: testIds.projectId,
+          evmForecastMethod: 'PLANNED',
+        },
+        update: {
+          evmForecastMethod: 'PLANNED',
+        },
+      });
+
+      const evaluationDate = new Date('2025-04-15');
+      const result = await evmService.calculateCurrentEvmMetrics(
+        testIds.wbsId, evaluationDate, 'hours'
+      );
+
+      expect(result.forecastMethod).toBe('PLANNED');
+      expect(result.etc).toBeCloseTo(result.bac - result.ev, 1);
+      expect(result.eac).toBeCloseTo(result.ac + result.etc, 1);
+    });
+
+    it('引数のforecastMethodがProjectSettings設定をオーバーライドする', async () => {
+      // 設定はCPI_SPI
+      await global.prisma.projectSettings.upsert({
+        where: { projectId: testIds.projectId },
+        create: {
+          projectId: testIds.projectId,
+          evmForecastMethod: 'CPI_SPI',
+        },
+        update: {
+          evmForecastMethod: 'CPI_SPI',
+        },
+      });
+
+      const evaluationDate = new Date('2025-04-15');
+      // 引数でPLANNEDを指定
+      const result = await evmService.calculateCurrentEvmMetrics(
+        testIds.wbsId, evaluationDate, 'hours', undefined, 'PLANNED'
+      );
+
+      expect(result.forecastMethod).toBe('PLANNED');
+      expect(result.etc).toBeCloseTo(result.bac - result.ev, 1);
     });
   });
 });

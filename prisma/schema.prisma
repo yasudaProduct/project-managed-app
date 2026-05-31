@@ -393,11 +393,18 @@ enum ForecastCalculationMethod {
   PLANNED_OR_ACTUAL // 予定/実績優先：予定 > 実績なら予定、予定 < 実績なら実績
 }
 
+enum EvmForecastMethod {
+  CPI_ONLY  // EAC = AC + (BAC - EV) / CPI：現在のCPIが継続
+  CPI_SPI   // EAC = AC + (BAC - EV) / (CPI × SPI)：スケジュール遅延がコストにも影響
+  PLANNED   // EAC = AC + (BAC - EV)：残作業は計画通りのコストで完了
+}
+
 model ProjectSettings {
   projectId                 String                     @id
   roundToQuarter            Boolean                    @default(false)
   progressMeasurementMethod ProgressMeasurementMethod  @default(SELF_REPORTED)
   forecastCalculationMethod ForecastCalculationMethod  @default(REALISTIC)
+  evmForecastMethod         EvmForecastMethod          @default(CPI_ONLY)  // EVM予測計算方式
   deadlineAlertDays         Int                        @default(1)    // 期限間近アラートの日数
   costOverrunThresholdPct   Int                        @default(100)  // 工数超過アラートの閾値(%)
   evmExcludeSettings        Json                       @default("{}") // EVM除外設定 (enabled, task_names 等)

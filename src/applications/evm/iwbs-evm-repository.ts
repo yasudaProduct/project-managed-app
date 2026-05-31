@@ -1,4 +1,4 @@
-import { ProgressMeasurementMethod, ForecastCalculationMethod } from '@prisma/client';
+import { ProgressMeasurementMethod, ForecastCalculationMethod, EvmForecastMethod } from '@prisma/client';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { EvmCalculationMode } from '@/domains/evm/evm-metrics';
 
@@ -45,4 +45,5 @@ export interface ProjectSettingsData {
   projectId: string;
   progressMeasurementMethod: ProgressMeasurementMethod;
   forecastCalculationMethod: ForecastCalculationMethod;
+  evmForecastMethod: EvmForecastMethod;
 }

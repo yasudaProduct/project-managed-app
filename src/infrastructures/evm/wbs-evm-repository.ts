@@ -120,6 +120,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       projectId: settings.projectId,
       progressMeasurementMethod: settings.progressMeasurementMethod,
       forecastCalculationMethod: settings.forecastCalculationMethod,
+      evmForecastMethod: settings.evmForecastMethod,
     };
   }
 
