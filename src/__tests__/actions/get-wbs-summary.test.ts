@@ -12,6 +12,9 @@ jest.mock("@/lib/prisma/prisma", () => ({
       findMany: jest.fn(),
       count: jest.fn(),
     },
+    wbsTask: {
+      findMany: jest.fn(),
+    },
   },
 }));
 
@@ -21,6 +24,7 @@ import { getWbsTasksSummary } from "@/app/actions/get-wbs-summary";
 const mockedPrisma = prisma as unknown as {
   taskKosu: { findMany: jest.Mock };
   workRecord: { findMany: jest.Mock; count: jest.Mock };
+  wbsTask: { findMany: jest.Mock };
 };
 
 describe("getWbsTasksSummary", () => {
@@ -28,6 +32,8 @@ describe("getWbsTasksSummary", () => {
     mockedPrisma.taskKosu.findMany.mockReset();
     mockedPrisma.workRecord.findMany.mockReset();
     mockedPrisma.workRecord.count.mockReset();
+    mockedPrisma.wbsTask.findMany.mockReset();
+    mockedPrisma.wbsTask.findMany.mockResolvedValue([]);
   });
 
   it("unlinkedWorkRecordsCount が戻り値に含まれる", async () => {

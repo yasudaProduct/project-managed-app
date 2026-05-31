@@ -19,6 +19,13 @@ interface WbsTasksSummary {
   taskJisseki: number;
   kijunKosu: number;
   unlinkedWorkRecordsCount: number;
+  actualCompleted: number;
+  plannedCompleted: number;
+  actualInProgress: number;
+  plannedInProgress: number;
+  plannedCompletedKosu: number;
+  actualProgress: number;
+  plannedProgress: number;
 }
 
 export function Header() {
@@ -140,20 +147,38 @@ export function Header() {
                     </div>
                     <div className="flex items-center space-x-1">
                       <span className="text-sm text-gray-600">実績:</span>
-                      <span className="text-sm font-medium text-red-600">
+                      <span className="text-sm font-medium text-gray-900">
                         {tasksSummary.taskJisseki.toFixed(1)}h
+                      </span>
+                      <span className="text-sm text-amber-600">
+                        / {tasksSummary.plannedCompletedKosu.toFixed(1)}h
                       </span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <span className="text-sm text-gray-600">進捗:</span>
                       <span className="text-sm font-medium text-gray-900">
-                        {tasksSummary.taskKosu > 0
-                          ? `${(
-                            (tasksSummary.taskJisseki /
-                              tasksSummary.taskKosu) *
-                            100
-                          ).toFixed(1)}%`
-                          : "0.0%"}
+                        {tasksSummary.actualProgress}%
+                      </span>
+                      <span className="text-sm text-amber-600">
+                        / {tasksSummary.plannedProgress}%
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm text-gray-600">着手中:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {tasksSummary.actualInProgress}
+                      </span>
+                      <span className="text-sm text-amber-600">
+                        / {tasksSummary.plannedInProgress}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm text-gray-600">完了:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {tasksSummary.actualCompleted}
+                      </span>
+                      <span className="text-sm text-amber-600">
+                        / {tasksSummary.plannedCompleted}
                       </span>
                     </div>
                     <UnlinkedWorkRecordsBadge
