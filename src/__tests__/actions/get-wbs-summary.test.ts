@@ -49,7 +49,7 @@ describe("getWbsTasksSummary", () => {
 
     expect(result.unlinkedWorkRecordsCount).toBe(3);
     expect(mockedPrisma.workRecord.count).toHaveBeenCalledWith({
-      where: { taskId: null },
+      where: { taskId: null, wbsId: 1 },
     });
   });
 

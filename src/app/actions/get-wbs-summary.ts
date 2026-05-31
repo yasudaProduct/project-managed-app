@@ -20,10 +20,10 @@ export async function getWbsTasksSummary(wbsId: string) {
         select: { kosu: true },
       }),
       prisma.workRecord.findMany({
-        where: { task: { wbsId: Number(wbsId) } },
+        where: { wbsId: Number(wbsId), taskId: { not: null } },
         select: { hours_worked: true },
       }),
-      prisma.workRecord.count({ where: { taskId: null } }),
+      prisma.workRecord.count({ where: { taskId: null, wbsId: Number(wbsId) } }),
     ]);
 
   return {

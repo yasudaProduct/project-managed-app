@@ -11,6 +11,7 @@ describe('WorkRecord', () => {
       const workRecord = WorkRecord.create({
         userId: 'user-id-1',
         taskId,
+        wbsId: 10,
         startDate,
         endDate,
         manHours
@@ -19,6 +20,7 @@ describe('WorkRecord', () => {
       expect(workRecord).toBeInstanceOf(WorkRecord);
       expect(workRecord.id).toBeUndefined();
       expect(workRecord.taskId).toBe(taskId);
+      expect(workRecord.wbsId).toBe(10);
       expect(workRecord.startDate).toBe(startDate);
       expect(workRecord.endDate).toBe(endDate);
       expect(workRecord.manHours).toBe(manHours);
@@ -35,6 +37,7 @@ describe('WorkRecord', () => {
         id: 1,
         userId: 'user-id-1',
         taskId,
+        wbsId: 10,
         startDate,
         endDate,
         manHours
@@ -44,6 +47,7 @@ describe('WorkRecord', () => {
       expect(workRecord.id).toBe(1);
       expect(workRecord.userId).toBe('user-id-1');
       expect(workRecord.taskId).toBe(taskId);
+      expect(workRecord.wbsId).toBe(10);
       expect(workRecord.startDate).toBe(startDate);
       expect(workRecord.endDate).toBe(endDate);
       expect(workRecord.manHours).toBe(manHours);

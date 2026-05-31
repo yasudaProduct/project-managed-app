@@ -14,19 +14,15 @@ export class WorkRecordPrismaRepository implements IWorkRecordRepository {
       const data = workRecords.map(wr => ({
         userId: wr.userId!,
         taskId: wr.taskId,
+        wbsId: wr.wbsId,
         date: wr.startDate!,
         hours_worked: wr.manHours!
       }))
 
-      // await prisma.workRecord.createMany({
-      //   data,
-      //   skipDuplicates: true
-      // })
-      for (const record of data) {
-        await prisma.workRecord.create({
-          data: record
-        })
-      }
+      await prisma.workRecord.createMany({
+        data,
+        skipDuplicates: true
+      })
     } catch (error) {
       console.error('Failed to bulk create work records:', error)
       throw new Error('作業実績の一括作成に失敗しました')
@@ -38,23 +34,23 @@ export class WorkRecordPrismaRepository implements IWorkRecordRepository {
       let created = 0
       let updated = 0
 
-      // PostgreSQLのON CONFLICT構文を使用したupsert処理
       for (const wr of workRecords) {
         const userId = wr.userId!
         const data = {
           userId,
           taskId: wr.taskId,
+          wbsId: wr.wbsId,
           date: wr.startDate!,
           hours_worked: wr.manHours!,
           updatedAt: new Date()
         }
 
-        // 既存レコードの確認
         const existing = await prisma.workRecord.findFirst({
           where: {
             userId,
             date: wr.startDate!,
-            taskId: wr.taskId
+            taskId: wr.taskId,
+            wbsId: wr.wbsId
           }
         })
 
@@ -96,7 +92,7 @@ export class WorkRecordPrismaRepository implements IWorkRecordRepository {
             gte: startDate,
             lte: endDate
           },
-          task: { is: { wbsId: { in: wbsIds } } }
+          wbsId: { in: wbsIds }
         }
       })
       return result.count

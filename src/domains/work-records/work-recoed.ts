@@ -2,6 +2,7 @@ export class WorkRecord {
     public readonly id?: number;
     public readonly userId?: string;
     public readonly taskId?: number;
+    public readonly wbsId?: number;
     public readonly startDate?: Date;
     public readonly endDate?: Date;
     public readonly manHours?: number;
@@ -10,6 +11,7 @@ export class WorkRecord {
         id?: number;
         userId?: string;
         taskId?: number;
+        wbsId?: number;
         startDate?: Date;
         endDate?: Date;
         manHours?: number
@@ -17,6 +19,7 @@ export class WorkRecord {
         this.id = args.id;
         this.userId = args.userId;
         this.taskId = args.taskId;
+        this.wbsId = args.wbsId;
         this.startDate = args.startDate;
         this.endDate = args.endDate;
         this.manHours = args.manHours;
@@ -27,6 +30,7 @@ export class WorkRecord {
     public static create(args: {
         userId: string;
         taskId?: number;
+        wbsId?: number;
         startDate: Date;
         endDate: Date;
         manHours: number
@@ -38,6 +42,7 @@ export class WorkRecord {
         id: number;
         userId: string;
         taskId?: number;
+        wbsId?: number;
         startDate: Date;
         endDate: Date;
         manHours: number
@@ -48,12 +53,14 @@ export class WorkRecord {
     public static createFromGeppo(args: {
         userId: string;
         taskId?: number;
+        wbsId?: number;
         date: Date;
         hoursWorked: number;
     }): WorkRecord {
         return new WorkRecord({
             userId: args.userId,
             taskId: args.taskId,
+            wbsId: args.wbsId,
             startDate: args.date,
             endDate: args.date,
             manHours: args.hoursWorked
