@@ -59,16 +59,16 @@ export default function GanttControls({
   onShowMilestonesChange,
 }: GanttControlsProps) {
   return (
-    <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="bg-gray-50 px-3 py-2 rounded-lg">
+      <div className="flex flex-wrap items-center gap-3">
         {/* 表示モード */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
             表示モード
           </label>
           <Select value={viewMode} onValueChange={onViewModeChange}>
-            <SelectTrigger data-testid="view-mode-select">
+            <SelectTrigger data-testid="view-mode-select" className="h-7 text-xs w-[80px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -82,13 +82,13 @@ export default function GanttControls({
         </div>
 
         {/* グループ化 */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
+            <BarChart3 className="h-3 w-3" />
             グループ化
           </label>
           <Select value={groupBy} onValueChange={onGroupByChange}>
-            <SelectTrigger data-testid="group-by-select">
+            <SelectTrigger data-testid="group-by-select" className="h-7 text-xs w-[110px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -102,13 +102,13 @@ export default function GanttControls({
         </div>
 
         {/* ステータスフィルター */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Filter className="h-4 w-4" />
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
+            <Filter className="h-3 w-3" />
             ステータス
           </label>
           <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-            <SelectTrigger data-testid="status-filter-select">
+            <SelectTrigger data-testid="status-filter-select" className="h-7 text-xs w-[100px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -123,13 +123,13 @@ export default function GanttControls({
         </div>
 
         {/* 担当者フィルター */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <User className="h-4 w-4" />
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
+            <User className="h-3 w-3" />
             担当者
           </label>
           <Select value={assigneeFilter} onValueChange={onAssigneeFilterChange}>
-            <SelectTrigger data-testid="assignee-filter-select">
+            <SelectTrigger data-testid="assignee-filter-select" className="h-7 text-xs w-[100px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -146,24 +146,22 @@ export default function GanttControls({
             </SelectContent>
           </Select>
         </div>
-      </div>
 
-      {/* 表示オプション */}
-      <div className="flex items-center gap-4">
+        {/* マイルストーン表示 */}
         <Button
           variant="outline"
           size="sm"
           onClick={() => onShowMilestonesChange(!showMilestones)}
           className={cn(
-            "gap-2",
+            "h-7 text-xs gap-1.5 px-2",
             showMilestones && "bg-blue-50 border-blue-200"
           )}
           data-testid="milestone-toggle-button"
         >
           {showMilestones ? (
-            <Eye className="h-4 w-4" />
+            <Eye className="h-3 w-3" />
           ) : (
-            <EyeOff className="h-4 w-4" />
+            <EyeOff className="h-3 w-3" />
           )}
           マイルストーン
         </Button>
