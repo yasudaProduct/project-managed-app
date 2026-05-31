@@ -86,6 +86,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 300,
+        totalBaseManHours: 300,
         tasks,
         buffers: [],
         settings: null,
@@ -143,6 +144,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -195,6 +197,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 200,
+        totalBaseManHours: 200,
         tasks,
         buffers: [],
         settings: null,
@@ -243,6 +246,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 300,
+        totalBaseManHours: 300,
         tasks,
         buffers: [],
         settings: null,
@@ -280,6 +284,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: {
@@ -314,6 +319,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: {
@@ -351,6 +357,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [
           { bufferHours: 20 },
@@ -384,6 +391,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [
           { bufferHours: 20 },
@@ -408,6 +416,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 0,
+        totalBaseManHours: 0,
         tasks: [],
         buffers: [],
         settings: null,
@@ -446,6 +455,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -482,6 +492,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -518,6 +529,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -554,6 +566,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -631,6 +644,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 1000,
+        totalBaseManHours: 1000,
         tasks,
         buffers: [],
         settings: null,
@@ -673,6 +687,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 1000,
+        totalBaseManHours: 1000,
         tasks,
         buffers: [],
         settings: null,
@@ -708,6 +723,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -754,6 +770,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 300,
+        totalBaseManHours: 300,
         tasks,
         buffers: [],
         settings: null,
@@ -785,6 +802,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -924,6 +942,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: BAC,
+        totalBaseManHours: BAC,
         tasks,
         buffers: [],
         settings: null,
@@ -1037,7 +1056,7 @@ describe('EvmService', () => {
         ];
         const wbsData: WbsEvmData = {
           wbsId: 1, projectId: 'proj-1', projectName: 'Test',
-          totalPlannedManHours: BAC, tasks, buffers: [], settings: null,
+          totalPlannedManHours: BAC, totalBaseManHours: BAC, tasks, buffers: [], settings: null,
         };
         mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
         mockRepository.getActualCostByDate.mockResolvedValue(new Map([['2025-03-07', 100]]));
@@ -1185,6 +1204,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'テストプロジェクト',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: {
@@ -1225,6 +1245,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'テストプロジェクト',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -1324,6 +1345,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -1362,6 +1384,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -1400,6 +1423,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,

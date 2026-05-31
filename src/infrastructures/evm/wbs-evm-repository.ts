@@ -85,11 +85,17 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       0
     );
 
+    const totalBaseManHours = tasks.reduce(
+      (sum, task) => sum + task.baseManHours,
+      0
+    );
+
     return {
       wbsId: wbs.id,
       projectId: wbs.projectId,
       projectName: wbs.project.name,
       totalPlannedManHours,
+      totalBaseManHours,
       tasks,
       buffers,
       settings,

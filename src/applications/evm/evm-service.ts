@@ -171,10 +171,10 @@ export class EvmService {
     const bac =
       calculationMode === 'cost'
         ? wbsData.tasks.reduce(
-          (sum, task) => sum + task.plannedManHours * task.costPerHour,
+          (sum, task) => sum + task.baseManHours * task.costPerHour,
           0
         ) + wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0)
-        : wbsData.totalPlannedManHours +
+        : wbsData.totalBaseManHours +
         wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0);
 
     return EvmMetrics.create({

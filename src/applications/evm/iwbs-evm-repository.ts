@@ -29,6 +29,7 @@ export interface WbsEvmData {
   projectId: string;
   projectName: string;
   totalPlannedManHours: number;
+  totalBaseManHours: number;
   tasks: TaskEvmData[];
   buffers: BufferData[];
   settings: ProjectSettingsData | null;
