@@ -929,6 +929,137 @@ export function getMockData(): MockData[] {
         }
     }
 
+    // EVM予測拡張検証用データ
+    // - SPI < 1（スケジュール遅延）で予測ポイントが endDate 以降に拡張されることを確認
+    // - 今日: 2026-05-30, プロジェクト: 2026-04-01 ~ 2026-06-30
+    // - BAC=300h, 現在EV≈160h, SPI≈0.73
+    // - 予測ON時、06/30 以降に予測ポイントが1点追加され、EV≈218h でプラトーになる
+    const mockDataEvmPrediction = (projectId: string, wbsId: number, multiId: number): MockData => {
+        const wbsAssigneeId = wbsId * multiId;
+        const wbsPhaseId = wbsId * multiId;
+        const wbsBufferId = wbsId * multiId;
+        const wbsMilestoneId = wbsId * multiId;
+
+        const projectStart = new Date("2026-04-01T00:00:00.000Z");
+        const projectEnd = new Date("2026-06-30T00:00:00.000Z");
+
+        // 作業実績ID用オフセット（既存IDと衝突しないよう大きめの値）
+        let workRecordIdSeq = wbsId * multiId;
+
+        // 週次の作業実績を生成するヘルパー
+        const generateWeeklyRecords = (
+            userId: string,
+            taskNo: string,
+            startDate: Date,
+            weeks: number,
+            hoursPerWeek: number
+        ) => {
+            const records = [];
+            for (let w = 0; w < weeks; w++) {
+                const d = new Date(startDate);
+                d.setDate(d.getDate() + w * 7);
+                records.push({
+                    id: ++workRecordIdSeq,
+                    userId,
+                    taskNo,
+                    date: d,
+                    hours_worked: hoursPerWeek,
+                });
+            }
+            return records;
+        };
+
+        return {
+            project: {
+                id: projectId,
+                name: "EVM予測拡張検証",
+                status: "ACTIVE",
+                description: "SPI<1の状態で予測EV/ACがBAC到達まで延伸されることを確認するテストデータ",
+                startDate: projectStart,
+                endDate: projectEnd,
+            },
+            wbs: [{
+                id: wbsId,
+                projectId,
+                name: "EVM予測検証WBS",
+                status: "ACTIVE",
+            }],
+            wbsAssignee: [
+                { id: wbsAssigneeId, wbsId, assigneeId: "dummy01", rate: 1.0 },
+                { id: wbsAssigneeId + 1, wbsId, assigneeId: "dummy02", rate: 1.0 },
+            ],
+            wbsPhase: [
+                { id: wbsPhaseId, wbsId, name: "詳細設計", code: "D2", seq: 1 },
+                { id: wbsPhaseId + 1, wbsId, name: "製造", code: "D3", seq: 2 },
+                { id: wbsPhaseId + 2, wbsId, name: "テスト", code: "D4", seq: 3 },
+            ],
+            wbsTask: [
+                // T1: 設計（完了済み）100h
+                {
+                    id: wbsId * multiId,
+                    taskNo: "D2-0001",
+                    wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "画面設計",
+                    assigneeId: wbsAssigneeId,
+                    status: "COMPLETED",
+                    startDate: new Date("2026-04-01T00:00:00.000Z"),
+                    endDate: new Date("2026-04-30T00:00:00.000Z"),
+                    kosu: 100,
+                    progressRate: 100,
+                },
+                // T2: 製造（進行中・遅延）120h / 進捗50%
+                {
+                    id: wbsId * multiId + 1,
+                    taskNo: "D3-0001",
+                    wbsId,
+                    phaseId: wbsPhaseId + 1,
+                    name: "バックエンド実装",
+                    assigneeId: wbsAssigneeId,
+                    status: "IN_PROGRESS",
+                    startDate: new Date("2026-05-01T00:00:00.000Z"),
+                    endDate: new Date("2026-05-31T00:00:00.000Z"),
+                    kosu: 120,
+                    progressRate: 50,
+                },
+                // T3: テスト（未着手）80h
+                {
+                    id: wbsId * multiId + 2,
+                    taskNo: "D4-0001",
+                    wbsId,
+                    phaseId: wbsPhaseId + 2,
+                    name: "結合テスト",
+                    assigneeId: wbsAssigneeId + 1,
+                    status: "NOT_STARTED",
+                    startDate: new Date("2026-06-01T00:00:00.000Z"),
+                    endDate: new Date("2026-06-30T00:00:00.000Z"),
+                    kosu: 80,
+                    progressRate: 0,
+                },
+            ],
+            wbsBuffer: [{
+                id: wbsBufferId,
+                wbsId,
+                name: "リスクバッファ",
+                buffer: 0,
+                bufferType: "RISK",
+            }],
+            workRecords: [
+                // T1（設計）: 4月に4週×25h = 100h → 完了
+                ...generateWeeklyRecords("dummy01", "D2-0001", new Date("2026-04-06T00:00:00.000Z"), 4, 25),
+                // T2（製造）: 5月に4週×20h = 80h （進捗50%だがコスト超過）
+                ...generateWeeklyRecords("dummy01", "D3-0001", new Date("2026-05-04T00:00:00.000Z"), 4, 20),
+            ],
+            milestone: [
+                { id: wbsMilestoneId, wbsId, name: "設計完了", date: new Date("2026-04-30T00:00:00.000Z") },
+                { id: wbsMilestoneId + 1, wbsId, name: "製造完了", date: new Date("2026-05-31T00:00:00.000Z") },
+                { id: wbsMilestoneId + 2, wbsId, name: "テスト完了", date: new Date("2026-06-30T00:00:00.000Z") },
+            ],
+            companyHolidays: [],
+            userSchedules: [],
+        };
+    };
+
     return [
         mockData("test-project-1", 1, 10),
         // mockDataLarge("test-project-2", 2, 1000),
@@ -936,6 +1067,7 @@ export function getMockData(): MockData[] {
         // mockDataImportValidationError("test-project-4", 4, 100),
         // mockDataImportValidation("test-project-5", 5, 100),
         mockDataWbsSummary("test-project-6", 6, 100),
+        mockDataEvmPrediction("evm-prediction-test", 7, 1000),
     ]
 }
 // export const mockDataLarge = {

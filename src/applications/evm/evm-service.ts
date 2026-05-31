@@ -90,6 +90,7 @@ export class EvmService {
    * @param interval 間隔
    * @param calculationMode 計算モード
    * @param progressMethod 進捗率測定方法
+   * @param includePrediction 予測計算を含むかどうか
    * @returns EVM時系列データ
    */
   async getEvmTimeSeries(
@@ -168,105 +169,7 @@ export class EvmService {
     const resolvedMetrics = await Promise.all(metricPromises);
     metrics.push(...resolvedMetrics);
 
-    // 予測ポイントを BAC 到達まで拡張する
-    if (includePrediction && currentMetrics) {
-      const lastMetric = resolvedMetrics[resolvedMetrics.length - 1];
-      if (lastMetric?.isPredicted && lastMetric.ev < currentMetrics.bac) {
-        const extraPoints = await this.extendPredictionPoints(
-          wbsId,
-          lastMetric,
-          currentMetrics,
-          interval,
-          calculationMode,
-          progressMethod
-        );
-        metrics.push(...extraPoints);
-      }
-    }
-
     return metrics;
-  }
-
-  private static readonly MAX_EXTRA_POINTS = 24;
-
-  /**
-   * 予測ポイントを BAC 到達（またはプラトー）まで延伸する
-   */
-  private async extendPredictionPoints(
-    wbsId: number,
-    lastMetric: EvmMetrics,
-    currentMetrics: EvmMetrics,
-    interval: 'daily' | 'weekly' | 'monthly',
-    calculationMode: EvmCalculationMode,
-    progressMethod?: ProgressMeasurementMethod
-  ): Promise<EvmMetrics[]> {
-    const extraPoints: EvmMetrics[] = [];
-    let prevMetric = lastMetric;
-    let extraCount = 0;
-
-    while (extraCount < EvmService.MAX_EXTRA_POINTS) {
-      const nextDate = this.advanceDate(new Date(prevMetric.date), interval);
-      const baseMetric = await this.calculateCurrentEvmMetrics(
-        wbsId,
-        nextDate,
-        calculationMode,
-        progressMethod
-      );
-
-      const spi = currentMetrics.spi;
-      const pvIncrement = Math.max(0, baseMetric.pv - currentMetrics.pv);
-      const predictedEv = Math.min(
-        currentMetrics.bac,
-        currentMetrics.ev + pvIncrement * spi
-      );
-
-      const effectiveCpi = currentMetrics.cpi === 0 ? 1 : currentMetrics.cpi;
-      const evIncrement = Math.max(0, predictedEv - currentMetrics.ev);
-      const predictedAc = currentMetrics.ac + evIncrement / effectiveCpi;
-
-      const extraMetric = EvmMetrics.create({
-        date: nextDate,
-        pv_base: baseMetric.pv_base,
-        pv: baseMetric.pv,
-        ev: predictedEv,
-        ac: predictedAc,
-        bac: baseMetric.bac,
-        calculationMode,
-        progressMethod: baseMetric.progressMethod,
-        isPredicted: true,
-      });
-
-      extraPoints.push(extraMetric);
-
-      // PVがBACに到達 = プラトーの最初のポイントを追加して終了
-      if (baseMetric.pv >= currentMetrics.bac) break;
-      // EVがBACに到達 = 完了
-      if (predictedEv >= currentMetrics.bac) break;
-
-      prevMetric = extraMetric;
-      extraCount++;
-    }
-
-    return extraPoints;
-  }
-
-  /**
-   * interval 分だけ日付を進める
-   */
-  private advanceDate(date: Date, interval: 'daily' | 'weekly' | 'monthly'): Date {
-    const next = new Date(date);
-    switch (interval) {
-      case 'daily':
-        next.setDate(next.getDate() + 1);
-        break;
-      case 'weekly':
-        next.setDate(next.getDate() + 7);
-        break;
-      case 'monthly':
-        next.setMonth(next.getMonth() + 1);
-        break;
-    }
-    return next;
   }
 
   async getTaskEvmDetails(wbsId: number): Promise<TaskEvmData[]> {

@@ -108,7 +108,10 @@ export function EvmTimeSeriesTable({
             <TableBody>
               {data.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={14} className="text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={14}
+                    className="text-center text-muted-foreground"
+                  >
                     データがありません
                   </TableCell>
                 </TableRow>
@@ -139,14 +142,14 @@ export function EvmTimeSeriesTable({
                     </TableCell>
                     <TableCell
                       className={`text-right ${getVarianceColorClass(
-                        metrics.sv
+                        metrics.sv,
                       )}`}
                     >
                       {formatValue(metrics.sv)}
                     </TableCell>
                     <TableCell
                       className={`text-right ${getVarianceColorClass(
-                        metrics.cv
+                        metrics.cv,
                       )}`}
                     >
                       {formatValue(metrics.cv)}
@@ -168,12 +171,14 @@ export function EvmTimeSeriesTable({
                     </TableCell>
                     <TableCell
                       className={`text-right ${getVarianceColorClass(
-                        metrics.vac
+                        metrics.vac,
                       )}`}
                     >
                       {formatValue(metrics.vac)}
                     </TableCell>
-                    <TableCell>{getHealthBadge(metrics.healthStatus)}</TableCell>
+                    <TableCell>
+                      {getHealthBadge(metrics.healthStatus)}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -224,12 +229,12 @@ export function EvmTimeSeriesTable({
                 AC
               </li>
               <li>
-                <span className="font-medium">EAC (完了時総コスト):</span>{" "}
-                完了時の予測総コスト
+                <span className="font-medium">ETC (残コスト):</span>(BAC - EV) /
+                CPI 残作業に必要な予測コスト
               </li>
               <li>
-                <span className="font-medium">ETC (残コスト):</span>{" "}
-                残作業に必要な予測コスト
+                <span className="font-medium">EAC (完了時総コスト):</span>
+                AC + (BAC - EV) / CPI 完了時の予測総コスト
               </li>
               <li>
                 <span className="font-medium">VAC (完了時差異):</span> BAC - EAC
