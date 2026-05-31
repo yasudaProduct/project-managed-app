@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
-import type { IWbsEvmRepository } from './iwbs-evm-repository';
+import type { IWbsEvmRepository, WbsEvmData } from './iwbs-evm-repository';
 import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { ProgressMeasurementMethod } from '@prisma/client';
@@ -30,28 +30,10 @@ export class EvmService {
   ): Promise<EvmMetrics> {
     const wbsData = await this.wbsEvmRepository.getWbsEvmData(wbsId, evaluationDate);
 
-    // プロジェクト設定から進捗率測定方法を取得（引数で指定されていなければ）
     const method =
       progressMethod ?? wbsData.settings?.progressMeasurementMethod ?? 'SELF_REPORTED';
-
-    // プロジェクト設定からEVM予測計算方式を取得（引数で指定されていなければ）
     const fMethod =
       forecastMethod ?? wbsData.settings?.evmForecastMethod ?? 'CPI_ONLY';
-
-    // PV_BASE計算: 基準計画価値（WBS全体の計画工数合計）
-    const pv_base = wbsData.tasks.reduce((sum, task) => {
-      return sum + task.getPlannedValueAtDate('BASE', evaluationDate, calculationMode, method);
-    }, 0);
-
-    // PV計算: 評価日までの計画値
-    const pv = wbsData.tasks.reduce((sum, task) => {
-      return sum + task.getPlannedValueAtDate('YOTEI', evaluationDate, calculationMode, method);
-    }, 0);
-
-    // EV計算: 完了した作業の出来高
-    const ev = wbsData.tasks.reduce((sum, task) => {
-      return sum + task.getEarnedValue(evaluationDate, calculationMode, method);
-    }, 0);
 
     // AC計算: 実際の投入コスト
     const actualCostMap = await this.wbsEvmRepository.getActualCostByDate(
@@ -60,45 +42,17 @@ export class EvmService {
       evaluationDate,
       calculationMode
     );
-
     const ac = Array.from(actualCostMap.values()).reduce(
       (sum, cost) => sum + cost,
       0
     );
 
-    // BAC計算: 完了時の予算
-    const bac =
-      calculationMode === 'cost'
-        ? wbsData.tasks.reduce(
-          (sum, task) => sum + task.plannedManHours * task.costPerHour,
-          0
-        ) + wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0)
-        : wbsData.totalPlannedManHours +
-        wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0);
-
-    return EvmMetrics.create({
-      date: evaluationDate,
-      pv_base: pv_base,
-      pv,
-      ev,
-      ac,
-      bac,
-      calculationMode,
-      progressMethod: method,
-      forecastMethod: fMethod,
-    });
+    return this.computeMetricsFromData(wbsData, evaluationDate, ac, calculationMode, method, fMethod);
   }
 
   /**
    * EVM時系列データを取得
-   * @param wbsId WBS ID
-   * @param startDate 開始日
-   * @param endDate 終了日
-   * @param interval 間隔
-   * @param calculationMode 計算モード
-   * @param progressMethod 進捗率測定方法
-   * @param includePrediction 予測計算を含むかどうか
-   * @returns EVM時系列データ
+   * WBSデータと作業記録を1回だけ取得し、各日付のメトリクスをメモリ上で計算する。
    */
   async getEvmTimeSeries(
     wbsId: number,
@@ -111,77 +65,130 @@ export class EvmService {
     forecastMethod?: EvmForecastMethod
   ): Promise<EvmMetrics[]> {
     const dates = this.generateDateRange(startDate, endDate, interval);
-    const metrics: EvmMetrics[] = [];
     const now = new Date();
 
-    // 予測計算用の現在時点メトリクスを取得
+    // (1) WBSデータを1回だけ取得（日付に依存しない）
+    const wbsData = await this.wbsEvmRepository.getWbsEvmData(wbsId, now);
+    const method =
+      progressMethod ?? wbsData.settings?.progressMeasurementMethod ?? 'SELF_REPORTED';
+    const fMethod =
+      forecastMethod ?? wbsData.settings?.evmForecastMethod ?? 'CPI_ONLY';
+
+    // (2) 全期間のWorkRecordsを1回だけ取得
+    const taskStartDate = wbsData.tasks[0]?.plannedStartDate || new Date();
+    const actualCostMap = await this.wbsEvmRepository.getActualCostByDate(
+      wbsId,
+      taskStartDate,
+      endDate,
+      calculationMode
+    );
+
+    // (3) 累積ACをソート済み配列から計算するヘルパー
+    const sortedCostEntries = Array.from(actualCostMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b));
+    const computeCumulativeAc = (evalDate: Date): number => {
+      const evalKey = evalDate.toISOString().split('T')[0];
+      let cumulative = 0;
+      for (const [dateKey, cost] of sortedCostEntries) {
+        if (dateKey <= evalKey) cumulative += cost;
+        else break;
+      }
+      return cumulative;
+    };
+
+    // (4) 予測モード用の現在メトリクスを計算（DBアクセスなし）
     let currentMetrics: EvmMetrics | null = null;
     if (includePrediction) {
-      currentMetrics = await this.calculateCurrentEvmMetrics(
-        wbsId,
-        now,
-        calculationMode,
-        progressMethod,
-        forecastMethod
+      currentMetrics = this.computeMetricsFromData(
+        wbsData, now, computeCumulativeAc(now), calculationMode, method, fMethod
       );
     }
 
-    const metricPromises = dates.map(async (date) => {
-      // 未来日付かつ予測モード有効の場合
+    // (5) 各日付のメトリクスをインメモリで計算
+    return dates.map((date) => {
       if (includePrediction && date > now && currentMetrics) {
-        // ベースとなるメトリクス（PV計算用）
-        const baseMetric = await this.calculateCurrentEvmMetrics(
-          wbsId,
-          date,
-          calculationMode,
-          progressMethod,
-          forecastMethod
+        const baseMetric = this.computeMetricsFromData(
+          wbsData, date, computeCumulativeAc(date), calculationMode, method, fMethod
         );
 
-        // 予測EV: 現在EV + (将来PV - 現在PV) * SPI
-        // SPIが極端な値にならないようガード（例: 0の場合は0、大きすぎる場合はキャップするなど検討可だが一旦そのまま）
-        const spi = currentMetrics!.spi;
-        const pvIncrement = Math.max(0, baseMetric.pv - currentMetrics!.pv);
+        const spi = currentMetrics.spi;
+        const pvIncrement = Math.max(0, baseMetric.pv - currentMetrics.pv);
         const predictedEvIncrement = pvIncrement * spi;
         const predictedEv = Math.min(
-          currentMetrics!.bac, // BACを超えない
-          currentMetrics!.ev + predictedEvIncrement
+          currentMetrics.bac,
+          currentMetrics.ev + predictedEvIncrement
         );
 
-        // 予測AC: 現在AC + (予測EV増加分) / CPI
-        const cpi = currentMetrics!.cpi;
-        // CPIが0の場合は1（計画通り）と仮定して計算
+        const cpi = currentMetrics.cpi;
         const effectiveCpi = cpi === 0 ? 1 : cpi;
-        const evIncrement = Math.max(0, predictedEv - currentMetrics!.ev);
-        const predictedAc = currentMetrics!.ac + (evIncrement / effectiveCpi);
+        const evIncrement = Math.max(0, predictedEv - currentMetrics.ev);
+        const predictedAc = currentMetrics.ac + (evIncrement / effectiveCpi);
 
         return EvmMetrics.create({
-          date: date,
+          date,
           pv_base: baseMetric.pv_base,
           pv: baseMetric.pv,
           ev: predictedEv,
           ac: predictedAc,
           bac: baseMetric.bac,
           calculationMode,
-          progressMethod: baseMetric.progressMethod,
-          forecastMethod: baseMetric.forecastMethod,
+          progressMethod: method,
+          forecastMethod: fMethod,
           isPredicted: true,
         });
       }
 
-      return this.calculateCurrentEvmMetrics(
-        wbsId,
-        date,
-        calculationMode,
-        progressMethod,
-        forecastMethod
+      return this.computeMetricsFromData(
+        wbsData, date, computeCumulativeAc(date), calculationMode, method, fMethod
       );
     });
+  }
 
-    const resolvedMetrics = await Promise.all(metricPromises);
-    metrics.push(...resolvedMetrics);
+  /**
+   * 事前取得済みデータからEVMメトリクスを計算する（DBアクセスなし）
+   */
+  private computeMetricsFromData(
+    wbsData: WbsEvmData,
+    evaluationDate: Date,
+    ac: number,
+    calculationMode: EvmCalculationMode,
+    progressMethod: ProgressMeasurementMethod,
+    forecastMethod: EvmForecastMethod,
+    isPredicted: boolean = false,
+  ): EvmMetrics {
+    const pv_base = wbsData.tasks.reduce((sum, task) => {
+      return sum + task.getPlannedValueAtDate('BASE', evaluationDate, calculationMode, progressMethod);
+    }, 0);
 
-    return metrics;
+    const pv = wbsData.tasks.reduce((sum, task) => {
+      return sum + task.getPlannedValueAtDate('YOTEI', evaluationDate, calculationMode, progressMethod);
+    }, 0);
+
+    const ev = wbsData.tasks.reduce((sum, task) => {
+      return sum + task.getEarnedValue(evaluationDate, calculationMode, progressMethod);
+    }, 0);
+
+    const bac =
+      calculationMode === 'cost'
+        ? wbsData.tasks.reduce(
+          (sum, task) => sum + task.plannedManHours * task.costPerHour,
+          0
+        ) + wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0)
+        : wbsData.totalPlannedManHours +
+        wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0);
+
+    return EvmMetrics.create({
+      date: evaluationDate,
+      pv_base,
+      pv,
+      ev,
+      ac,
+      bac,
+      calculationMode,
+      progressMethod,
+      forecastMethod,
+      isPredicted,
+    });
   }
 
   async getTaskEvmDetails(wbsId: number): Promise<TaskEvmData[]> {

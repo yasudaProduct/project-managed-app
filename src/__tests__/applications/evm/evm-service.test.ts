@@ -883,55 +883,69 @@ describe('EvmService', () => {
   });
 
   describe('getEvmTimeSeries - 予測計算ロジック詳細', () => {
-    // 制御されたEvmMetricsを生成するヘルパー
-    const createControlledMetrics = (overrides: {
-      pv?: number;
-      ev?: number;
-      ac?: number;
-      bac?: number;
-      pv_base?: number;
-    }): EvmMetrics => {
-      return EvmMetrics.create({
-        date: new Date('2025-06-15'),
-        pv_base: overrides.pv_base ?? overrides.pv ?? 100,
-        pv: overrides.pv ?? 100,
-        ev: overrides.ev ?? 50,
-        ac: overrides.ac ?? 50,
-        bac: overrides.bac ?? 200,
-        calculationMode: 'hours',
-        progressMethod: 'SELF_REPORTED',
-      });
-    };
+    // タスク: start=2025-03-07, end=2025-09-23 (200日間), plannedManHours=200
+    // now=2025-06-15 (100日経過) → PV(now)=100
+    // future=2025-06-22 (107日経過) → PV(future)=107
+    // pvIncrement = 7, BAC = 200
+    const TASK_START = new Date('2025-03-07T00:00:00.000Z');
+    const TASK_END = new Date('2025-09-23T00:00:00.000Z');
+    const NOW = new Date('2025-06-15T00:00:00.000Z');
+    const PV_AT_NOW = 100;    // 200 * 100/200
+    const PV_AT_FUTURE = 107; // 200 * 107/200
+    const PV_INCREMENT = 7;
+    const BAC = 200;
 
     /**
      * 予測テスト共通セットアップ
      * - fakeTimerで「現在時刻」を固定
-     * - calculateCurrentEvmMetricsをspy → now時点=currentMetrics, 未来=baseMetrics
+     * - リポジトリモックでタスクデータとACを設定
      * - 週次で [now, now+7d] の2データポイントを生成
+     * @param progressRate タスクの進捗率 (EV = BAC * progressRate/100)
+     * @param ac 累積AC（nowまで）
      */
-    const setupPredictionTest = (
-      currentOverrides: Parameters<typeof createControlledMetrics>[0],
-      baseOverrides: Parameters<typeof createControlledMetrics>[0]
-    ) => {
-      const now = new Date('2025-06-15T00:00:00.000Z');
+    const setupPredictionTest = (progressRate: number, ac: number) => {
       jest.useFakeTimers();
-      jest.setSystemTime(now);
+      jest.setSystemTime(NOW);
 
-      const currentMetrics = createControlledMetrics(currentOverrides);
-      const baseMetrics = createControlledMetrics(baseOverrides);
+      const tasks = [
+        new TaskEvmData(
+          1, 'T001', 'Task1',
+          TASK_START, TASK_END,
+          TASK_START, TASK_END,
+          TASK_START, null,
+          BAC, BAC, 0,
+          'IN_PROGRESS' as TaskStatus,
+          progressRate, 5000, progressRate
+        ),
+      ];
 
-      const spy = jest.spyOn(evmService, 'calculateCurrentEvmMetrics')
-        .mockImplementation(async (_wbsId, evalDate) => {
-          if (evalDate && evalDate.getTime() > now.getTime()) {
-            return baseMetrics;
-          }
-          return currentMetrics;
-        });
+      const wbsData: WbsEvmData = {
+        wbsId: 1,
+        projectId: 'proj-1',
+        projectName: 'Test',
+        totalPlannedManHours: BAC,
+        tasks,
+        buffers: [],
+        settings: null,
+      };
+
+      // ACは nowまでの日付キーで設定（累積値として1エントリ）
+      const actualCostMap = new Map<string, number>();
+      if (ac > 0) {
+        actualCostMap.set('2025-03-07', ac);
+      }
+
+      mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
+      mockRepository.getActualCostByDate.mockResolvedValue(actualCostMap);
 
       const startDate = new Date('2025-06-15T00:00:00.000Z');
       const endDate = new Date('2025-06-22T00:00:00.000Z');
 
-      return { now, startDate, endDate, spy, currentMetrics, baseMetrics };
+      const ev = BAC * progressRate / 100;
+      const spi = ev / PV_AT_NOW;
+      const cpi = ac === 0 ? 0 : ev / ac;
+
+      return { startDate, endDate, ev, spi, cpi };
     };
 
     afterEach(() => {
@@ -941,13 +955,9 @@ describe('EvmService', () => {
 
     describe('予測EV計算', () => {
       it('SPI=1.0の場合、PV増分と同量のEV増加', async () => {
-        // currentMetrics: PV=100, EV=100, AC=100, BAC=200 → SPI=1.0
-        // baseMetrics: PV=150, BAC=200
-        // predictedEV = min(200, 100 + (150-100)*1.0) = 150
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 100, ev: 100, ac: 100, bac: 200 },
-          { pv: 150, bac: 200 }
-        );
+        // progressRate=50 → EV=100, SPI=100/100=1.0
+        // predictedEV = min(200, 100 + 7*1.0) = 107
+        const { startDate, endDate, ev } = setupPredictionTest(50, 100);
 
         const result = await evmService.getEvmTimeSeries(
           1, startDate, endDate, 'weekly', 'hours', undefined, true
@@ -955,51 +965,39 @@ describe('EvmService', () => {
 
         const predicted = result.find(m => m.isPredicted);
         expect(predicted).toBeDefined();
-        expect(predicted!.ev).toBe(150);
+        expect(predicted!.ev).toBe(ev + PV_INCREMENT * 1.0);
       });
 
       it('SPI<1の場合、PV増分×SPIのEV増加', async () => {
-        // currentMetrics: PV=100, EV=80, AC=100, BAC=200 → SPI=0.8
-        // baseMetrics: PV=150, BAC=200
-        // predictedEV = min(200, 80 + (150-100)*0.8) = min(200, 120) = 120
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 100, ev: 80, ac: 100, bac: 200 },
-          { pv: 150, bac: 200 }
-        );
+        // progressRate=40 → EV=80, SPI=80/100=0.8
+        // predictedEV = min(200, 80 + 7*0.8) = 85.6
+        const { startDate, endDate, ev, spi } = setupPredictionTest(40, 100);
 
         const result = await evmService.getEvmTimeSeries(
           1, startDate, endDate, 'weekly', 'hours', undefined, true
         );
 
         const predicted = result.find(m => m.isPredicted);
-        expect(predicted!.ev).toBe(120);
+        expect(predicted!.ev).toBeCloseTo(ev + PV_INCREMENT * spi, 5);
       });
 
       it('SPI>1の場合、PV増分以上のEV増加', async () => {
-        // currentMetrics: PV=100, EV=120, AC=80, BAC=200 → SPI=1.2
-        // baseMetrics: PV=150, BAC=200
-        // predictedEV = min(200, 120 + (150-100)*1.2) = min(200, 180) = 180
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 100, ev: 120, ac: 80, bac: 200 },
-          { pv: 150, bac: 200 }
-        );
+        // progressRate=60 → EV=120, SPI=120/100=1.2
+        // predictedEV = min(200, 120 + 7*1.2) = 128.4
+        const { startDate, endDate, ev, spi } = setupPredictionTest(60, 80);
 
         const result = await evmService.getEvmTimeSeries(
           1, startDate, endDate, 'weekly', 'hours', undefined, true
         );
 
         const predicted = result.find(m => m.isPredicted);
-        expect(predicted!.ev).toBe(180);
+        expect(predicted!.ev).toBeCloseTo(ev + PV_INCREMENT * spi, 5);
       });
 
       it('SPI=0の場合、EVは増加しない', async () => {
-        // currentMetrics: PV=100, EV=0, AC=50, BAC=200 → SPI=0
-        // baseMetrics: PV=150, BAC=200
-        // predictedEV = min(200, 0 + (150-100)*0) = 0
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 100, ev: 0, ac: 50, bac: 200 },
-          { pv: 150, bac: 200 }
-        );
+        // progressRate=0 → EV=0, SPI=0
+        // predictedEV = min(200, 0 + 7*0) = 0
+        const { startDate, endDate } = setupPredictionTest(0, 50);
 
         const result = await evmService.getEvmTimeSeries(
           1, startDate, endDate, 'weekly', 'hours', undefined, true
@@ -1010,168 +1008,142 @@ describe('EvmService', () => {
       });
 
       it('予測EVがBAC超過時、BACにクランプされる', async () => {
-        // currentMetrics: PV=150, EV=180, AC=200, BAC=200 → SPI=1.2
-        // baseMetrics: PV=200, BAC=200
-        // predictedEV = min(200, 180 + (200-150)*1.2) = min(200, 240) = 200
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 150, ev: 180, ac: 200, bac: 200 },
-          { pv: 200, bac: 200 }
-        );
+        // progressRate=95 → EV=190, SPI=190/100=1.9
+        // predictedEV = min(200, 190 + 7*1.9) = min(200, 203.3) = 200
+        const { startDate, endDate } = setupPredictionTest(95, 200);
 
         const result = await evmService.getEvmTimeSeries(
           1, startDate, endDate, 'weekly', 'hours', undefined, true
         );
 
         const predicted = result.find(m => m.isPredicted);
-        expect(predicted!.ev).toBe(200); // BAC上限
+        expect(predicted!.ev).toBe(BAC);
       });
 
-      it('futurePV < currentPVの場合、pvIncrement=0でEV不変', async () => {
-        // currentMetrics: PV=150, EV=120, AC=100, BAC=200 → SPI=0.8
-        // baseMetrics: PV=100, BAC=200 (futurePV < currentPV)
-        // pvIncrement = max(0, 100-150) = 0
-        // predictedEV = min(200, 120+0) = 120
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 150, ev: 120, ac: 100, bac: 200 },
-          { pv: 100, bac: 200 }
-        );
+      it('pvIncrement=0の場合、EV不変（タスク期間終了後）', async () => {
+        // タスク終了後の期間でテスト → PV(now)=PV(future)=BAC → pvIncrement=0
+        jest.useRealTimers(); // setupのfakeTimerをリセット
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date('2025-10-01T00:00:00.000Z'));
+
+        const tasks = [
+          new TaskEvmData(
+            1, 'T001', 'Task1',
+            TASK_START, TASK_END, TASK_START, TASK_END,
+            TASK_START, null,
+            BAC, BAC, 0,
+            'IN_PROGRESS' as TaskStatus, 60, 5000, 60
+          ),
+        ];
+        const wbsData: WbsEvmData = {
+          wbsId: 1, projectId: 'proj-1', projectName: 'Test',
+          totalPlannedManHours: BAC, tasks, buffers: [], settings: null,
+        };
+        mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
+        mockRepository.getActualCostByDate.mockResolvedValue(new Map([['2025-03-07', 100]]));
 
         const result = await evmService.getEvmTimeSeries(
-          1, startDate, endDate, 'weekly', 'hours', undefined, true
+          1,
+          new Date('2025-10-01T00:00:00.000Z'),
+          new Date('2025-10-08T00:00:00.000Z'),
+          'weekly', 'hours', undefined, true
         );
 
         const predicted = result.find(m => m.isPredicted);
-        expect(predicted!.ev).toBe(120); // 変化なし
+        // pvIncrement=0なので、EV = currentMetrics.ev のまま
+        expect(predicted!.ev).toBe(BAC * 0.6); // EV=120
       });
     });
 
     describe('予測AC計算', () => {
       it('CPI=1.0の場合、AC増加=EV増加', async () => {
-        // currentMetrics: PV=100, EV=100, AC=100, BAC=200 → SPI=1.0, CPI=1.0
-        // baseMetrics: PV=150, BAC=200
-        // predictedEV = 150, evIncrement = 50
-        // predictedAC = 100 + 50/1.0 = 150
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 100, ev: 100, ac: 100, bac: 200 },
-          { pv: 150, bac: 200 }
-        );
+        // progressRate=50 → EV=100, AC=100, SPI=1.0, CPI=1.0
+        // predictedEV = 107, evIncrement=7
+        // predictedAC = 100 + 7/1.0 = 107
+        const { startDate, endDate } = setupPredictionTest(50, 100);
 
         const result = await evmService.getEvmTimeSeries(
           1, startDate, endDate, 'weekly', 'hours', undefined, true
         );
 
         const predicted = result.find(m => m.isPredicted);
-        expect(predicted!.ac).toBe(150);
+        expect(predicted!.ac).toBe(107);
       });
 
       it('CPI<1の場合、AC増加>EV増加（コスト超過傾向）', async () => {
-        // currentMetrics: PV=100, EV=100, AC=125, BAC=200 → SPI=1.0, CPI=0.8
-        // baseMetrics: PV=150, BAC=200
-        // predictedEV = 150, evIncrement = 50
-        // predictedAC = 125 + 50/0.8 = 125 + 62.5 = 187.5
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 100, ev: 100, ac: 125, bac: 200 },
-          { pv: 150, bac: 200 }
-        );
+        // progressRate=50 → EV=100, AC=125, SPI=1.0, CPI=100/125=0.8
+        // predictedEV = 107, evIncrement=7
+        // predictedAC = 125 + 7/0.8 = 133.75
+        const { startDate, endDate } = setupPredictionTest(50, 125);
 
         const result = await evmService.getEvmTimeSeries(
           1, startDate, endDate, 'weekly', 'hours', undefined, true
         );
 
         const predicted = result.find(m => m.isPredicted);
-        expect(predicted!.ac).toBe(187.5);
+        expect(predicted!.ac).toBeCloseTo(125 + PV_INCREMENT / 0.8, 5);
       });
 
       it('CPI>1の場合、AC増加<EV増加（コスト効率良好）', async () => {
-        // currentMetrics: PV=100, EV=120, AC=80, BAC=200 → SPI=1.2, CPI=1.5
-        // baseMetrics: PV=150, BAC=200
-        // predictedEV = 180, evIncrement = 60
-        // predictedAC = 80 + 60/1.5 = 80 + 40 = 120
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 100, ev: 120, ac: 80, bac: 200 },
-          { pv: 150, bac: 200 }
-        );
+        // progressRate=60 → EV=120, AC=80, SPI=1.2, CPI=120/80=1.5
+        // pvIncrement=7, predictedEvIncrement=7*1.2=8.4
+        // predictedEV = 128.4, evIncrement=8.4
+        // predictedAC = 80 + 8.4/1.5 = 85.6
+        const { startDate, endDate, spi, cpi } = setupPredictionTest(60, 80);
 
         const result = await evmService.getEvmTimeSeries(
           1, startDate, endDate, 'weekly', 'hours', undefined, true
         );
 
         const predicted = result.find(m => m.isPredicted);
-        expect(predicted!.ac).toBe(120);
+        const evIncrement = PV_INCREMENT * spi;
+        expect(predicted!.ac).toBeCloseTo(80 + evIncrement / cpi, 5);
       });
 
       it('CPI=0の場合、effectiveCPI=1にフォールバック', async () => {
-        // currentMetrics: PV=100, EV=50, AC=0, BAC=200 → SPI=0.5, CPI=0
-        // baseMetrics: PV=200, BAC=200
-        // pvIncrement = 100, predictedEvIncrement = 100*0.5 = 50
-        // predictedEV = min(200, 50+50) = 100
-        // evIncrement = 50, effectiveCPI = 1
-        // predictedAC = 0 + 50/1 = 50
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 100, ev: 50, ac: 0, bac: 200 },
-          { pv: 200, bac: 200 }
-        );
+        // progressRate=25 → EV=50, AC=0, SPI=50/100=0.5, CPI=0 → effectiveCPI=1
+        // pvIncrement=7, predictedEvIncrement=7*0.5=3.5
+        // predictedEV = 53.5, evIncrement=3.5
+        // predictedAC = 0 + 3.5/1 = 3.5
+        const { startDate, endDate, ev, spi } = setupPredictionTest(25, 0);
 
         const result = await evmService.getEvmTimeSeries(
           1, startDate, endDate, 'weekly', 'hours', undefined, true
         );
 
         const predicted = result.find(m => m.isPredicted);
-        expect(predicted!.ev).toBe(100);
-        expect(predicted!.ac).toBe(50); // effectiveCPI=1でフォールバック
+        const evIncrement = PV_INCREMENT * spi;
+        expect(predicted!.ev).toBeCloseTo(ev + evIncrement, 5);
+        expect(predicted!.ac).toBeCloseTo(evIncrement, 5); // effectiveCPI=1
       });
 
       it('EV増分=0の場合、ACも増加しない', async () => {
-        // currentMetrics: PV=100, EV=200, AC=200, BAC=200 → SPI=2.0, CPI=1.0
-        // (EVが既にBACに到達)
-        // baseMetrics: PV=150, BAC=200
-        // predictedEV = min(200, 200+50*2.0) = 200 (BACクランプ)
-        // evIncrement = max(0, 200-200) = 0
-        // predictedAC = 200 + 0/1.0 = 200
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 100, ev: 200, ac: 200, bac: 200 },
-          { pv: 150, bac: 200 }
-        );
+        // progressRate=100 → EV=200=BAC, AC=200, SPI=2.0
+        // predictedEV = min(200, 200+7*2.0) = 200 (BACクランプ)
+        // evIncrement = 0
+        // predictedAC = 200
+        const { startDate, endDate } = setupPredictionTest(100, 200);
 
         const result = await evmService.getEvmTimeSeries(
           1, startDate, endDate, 'weekly', 'hours', undefined, true
         );
 
         const predicted = result.find(m => m.isPredicted);
-        expect(predicted!.ev).toBe(200);
-        expect(predicted!.ac).toBe(200); // ACも不変
+        expect(predicted!.ev).toBe(BAC);
+        expect(predicted!.ac).toBe(200);
       });
     });
 
     describe('予測メトリクスのPV/BAC参照元', () => {
-      it('PVはbaseMetricのPVを使用する', async () => {
-        // currentMetrics: PV=100, baseMetrics: PV=180
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 100, ev: 100, ac: 100, bac: 200 },
-          { pv: 180, bac: 200 }
-        );
+      it('PVは未来日付のPVを使用する', async () => {
+        const { startDate, endDate } = setupPredictionTest(50, 100);
 
         const result = await evmService.getEvmTimeSeries(
           1, startDate, endDate, 'weekly', 'hours', undefined, true
         );
 
         const predicted = result.find(m => m.isPredicted);
-        expect(predicted!.pv).toBe(180); // baseMetricのPV
-      });
-
-      it('BACはbaseMetricのBACを使用する', async () => {
-        // currentMetrics: BAC=200, baseMetrics: BAC=250
-        const { startDate, endDate } = setupPredictionTest(
-          { pv: 100, ev: 100, ac: 100, bac: 200 },
-          { pv: 150, bac: 250 }
-        );
-
-        const result = await evmService.getEvmTimeSeries(
-          1, startDate, endDate, 'weekly', 'hours', undefined, true
-        );
-
-        const predicted = result.find(m => m.isPredicted);
-        expect(predicted!.bac).toBe(250); // baseMetricのBAC
+        expect(predicted!.pv).toBe(PV_AT_FUTURE);
       });
     });
   });
@@ -1330,6 +1302,134 @@ describe('EvmService', () => {
       });
 
       jest.useRealTimers();
+    });
+  });
+
+  describe('getEvmTimeSeries - パフォーマンス最適化', () => {
+    it('getWbsEvmDataを1回だけ呼ぶ', async () => {
+      const tasks = [
+        new TaskEvmData(
+          1, 'T001', 'Task1',
+          new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-01-10'),
+          null, null,
+          100, 100, 0,
+          'IN_PROGRESS', 50,
+          5000, null
+        ),
+      ];
+
+      const wbsData: WbsEvmData = {
+        wbsId: 1,
+        projectId: 'proj-1',
+        projectName: 'Test',
+        totalPlannedManHours: 100,
+        tasks,
+        buffers: [],
+        settings: null,
+      };
+
+      mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
+      mockRepository.getActualCostByDate.mockResolvedValue(new Map());
+
+      await evmService.getEvmTimeSeries(
+        1,
+        new Date('2025-01-01'),
+        new Date('2025-01-05'),
+        'daily',
+        'hours'
+      );
+
+      // 5日間のデータポイントでも、getWbsEvmDataは1回だけ呼ばれる
+      expect(mockRepository.getWbsEvmData).toHaveBeenCalledTimes(1);
+    });
+
+    it('getActualCostByDateを1回だけ呼ぶ', async () => {
+      const tasks = [
+        new TaskEvmData(
+          1, 'T001', 'Task1',
+          new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-01-10'),
+          null, null,
+          100, 100, 0,
+          'IN_PROGRESS', 50,
+          5000, null
+        ),
+      ];
+
+      const wbsData: WbsEvmData = {
+        wbsId: 1,
+        projectId: 'proj-1',
+        projectName: 'Test',
+        totalPlannedManHours: 100,
+        tasks,
+        buffers: [],
+        settings: null,
+      };
+
+      mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
+      mockRepository.getActualCostByDate.mockResolvedValue(new Map());
+
+      await evmService.getEvmTimeSeries(
+        1,
+        new Date('2025-01-01'),
+        new Date('2025-01-05'),
+        'daily',
+        'hours'
+      );
+
+      // 5日間のデータポイントでも、getActualCostByDateは1回だけ呼ばれる
+      expect(mockRepository.getActualCostByDate).toHaveBeenCalledTimes(1);
+    });
+
+    it('累積ACが正しく計算される（日次コストの累積）', async () => {
+      const tasks = [
+        new TaskEvmData(
+          1, 'T001', 'Task1',
+          new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), null,
+          100, 100, 0,
+          'IN_PROGRESS', 50,
+          5000, 50
+        ),
+      ];
+
+      const wbsData: WbsEvmData = {
+        wbsId: 1,
+        projectId: 'proj-1',
+        projectName: 'Test',
+        totalPlannedManHours: 100,
+        tasks,
+        buffers: [],
+        settings: null,
+      };
+
+      // 日次コスト: 1/1=10, 1/2=20, 1/3=30
+      const actualCostMap = new Map<string, number>([
+        ['2025-01-01', 10],
+        ['2025-01-02', 20],
+        ['2025-01-03', 30],
+      ]);
+
+      mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
+      mockRepository.getActualCostByDate.mockResolvedValue(actualCostMap);
+
+      const result = await evmService.getEvmTimeSeries(
+        1,
+        new Date('2025-01-01'),
+        new Date('2025-01-03'),
+        'daily',
+        'hours'
+      );
+
+      expect(result).toHaveLength(3);
+      // 1/1: AC = 10（累積）
+      expect(result[0].ac).toBe(10);
+      // 1/2: AC = 10 + 20 = 30（累積）
+      expect(result[1].ac).toBe(30);
+      // 1/3: AC = 10 + 20 + 30 = 60（累積）
+      expect(result[2].ac).toBe(60);
     });
   });
 
