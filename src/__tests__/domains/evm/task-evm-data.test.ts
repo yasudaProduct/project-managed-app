@@ -36,8 +36,7 @@ describe('TaskEvmData', () => {
       overrides?.status ?? 'NOT_STARTED',
       overrides?.progressRate ?? 0,
       overrides?.costPerHour ?? 5000,
-      overrides?.selfReportedProgress ?? null,
-      overrides?.progressRate ?? 0
+      overrides?.selfReportedProgress ?? null
     );
   };
 
@@ -538,6 +537,139 @@ describe('TaskEvmData', () => {
 
       const ev = task.getEarnedValue(new Date('2025-01-05'), 'hours', 'ZERO_HUNDRED');
       expect(ev).toBe(0); // 0 * (100/100) = 0
+    });
+  });
+
+  describe('getEarnedValue - 時系列の位相（提案C: 完了日計上＋実績期間按分）', () => {
+    describe('ZERO_HUNDRED: 完了日に0→100へステップ', () => {
+      it('完了日前のEVは0', () => {
+        const task = createTestTask({
+          plannedManHours: 100,
+          status: 'COMPLETED',
+          actualStartDate: new Date('2025-01-01'),
+          actualEndDate: new Date('2025-01-10'),
+        });
+
+        // 完了日(1/10)より前の評価日 → 0
+        const ev = task.getEarnedValue(new Date('2025-01-05'), 'hours', 'ZERO_HUNDRED');
+        expect(ev).toBe(0);
+      });
+
+      it('完了日以降のEVは全体', () => {
+        const task = createTestTask({
+          plannedManHours: 100,
+          status: 'COMPLETED',
+          actualStartDate: new Date('2025-01-01'),
+          actualEndDate: new Date('2025-01-10'),
+        });
+
+        const ev = task.getEarnedValue(new Date('2025-01-10'), 'hours', 'ZERO_HUNDRED');
+        expect(ev).toBe(100);
+      });
+    });
+
+    describe('FIFTY_FIFTY: 実績開始で50、完了日で100', () => {
+      it('完了タスクは開始〜完了日の間は50%', () => {
+        const task = createTestTask({
+          plannedManHours: 100,
+          status: 'COMPLETED',
+          actualStartDate: new Date('2025-01-01'),
+          actualEndDate: new Date('2025-01-10'),
+        });
+
+        const ev = task.getEarnedValue(new Date('2025-01-05'), 'hours', 'FIFTY_FIFTY');
+        expect(ev).toBe(50);
+      });
+
+      it('完了タスクは完了日以降100%', () => {
+        const task = createTestTask({
+          plannedManHours: 100,
+          status: 'COMPLETED',
+          actualStartDate: new Date('2025-01-01'),
+          actualEndDate: new Date('2025-01-10'),
+        });
+
+        const ev = task.getEarnedValue(new Date('2025-01-15'), 'hours', 'FIFTY_FIFTY');
+        expect(ev).toBe(100);
+      });
+
+      it('進行中タスクは開始以降50%で一定', () => {
+        const task = createTestTask({
+          plannedManHours: 100,
+          status: 'IN_PROGRESS',
+          actualStartDate: new Date('2025-01-01'),
+        });
+
+        const ev = task.getEarnedValue(new Date('2025-01-05'), 'hours', 'FIFTY_FIFTY');
+        expect(ev).toBe(50);
+      });
+    });
+
+    describe('SELF_REPORTED: 実績開始→基準日まで線形按分', () => {
+      it('進行中タスクは実績開始〜基準日の中間で按分される', () => {
+        const task = createTestTask({
+          plannedManHours: 100,
+          status: 'IN_PROGRESS',
+          progressRate: 80,
+          selfReportedProgress: 80,
+          actualStartDate: new Date('2025-01-01'),
+        });
+
+        // 基準日(now)=1/11（実績10日間）、評価日=1/06（経過5日 → 半分）
+        const ev = task.getEarnedValue(
+          new Date('2025-01-06'),
+          'hours',
+          'SELF_REPORTED',
+          new Date('2025-01-11')
+        );
+        // final=80 を 5/10 で按分 → 40
+        expect(ev).toBeCloseTo(40, 5);
+      });
+
+      it('基準日(現在時点)では現在進捗率そのもの（=従来値を維持）', () => {
+        const task = createTestTask({
+          plannedManHours: 100,
+          status: 'IN_PROGRESS',
+          progressRate: 80,
+          selfReportedProgress: 80,
+          actualStartDate: new Date('2025-01-01'),
+        });
+
+        const referenceDate = new Date('2025-01-11');
+        const ev = task.getEarnedValue(referenceDate, 'hours', 'SELF_REPORTED', referenceDate);
+        expect(ev).toBe(80);
+      });
+
+      it('完了タスクは実績開始→完了日で100%まで按分', () => {
+        const task = createTestTask({
+          plannedManHours: 100,
+          status: 'COMPLETED',
+          progressRate: 100,
+          actualStartDate: new Date('2025-01-01'),
+          actualEndDate: new Date('2025-01-11'),
+        });
+
+        // 完了日(1/11)以降は100、途中(1/06, 5/10)は50に按分
+        const evMid = task.getEarnedValue(new Date('2025-01-06'), 'hours', 'SELF_REPORTED');
+        expect(evMid).toBeCloseTo(50, 5);
+
+        const evEnd = task.getEarnedValue(new Date('2025-01-15'), 'hours', 'SELF_REPORTED');
+        expect(evEnd).toBe(100);
+      });
+
+      it('完了タスクはprogressRateが100未満でも100%として扱う', () => {
+        const task = createTestTask({
+          plannedManHours: 100,
+          status: 'COMPLETED',
+          progressRate: 80, // 古い申告値だが完了済み
+          selfReportedProgress: 80,
+          actualStartDate: new Date('2025-01-01'),
+          actualEndDate: new Date('2025-01-10'),
+        });
+
+        const ev = task.getEarnedValue(new Date('2025-01-15'), 'hours', 'SELF_REPORTED');
+        expect(ev).toBe(100);
+      });
     });
   });
 

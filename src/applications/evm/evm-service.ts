@@ -47,7 +47,7 @@ export class EvmService {
       0
     );
 
-    return this.computeMetricsFromData(wbsData, evaluationDate, ac, calculationMode, method, fMethod);
+    return this.computeMetricsFromData(wbsData, evaluationDate, ac, calculationMode, method, fMethod, false, evaluationDate);
   }
 
   /**
@@ -100,7 +100,7 @@ export class EvmService {
     let currentMetrics: EvmMetrics | null = null;
     if (includePrediction) {
       currentMetrics = this.computeMetricsFromData(
-        wbsData, now, computeCumulativeAc(now), calculationMode, method, fMethod
+        wbsData, now, computeCumulativeAc(now), calculationMode, method, fMethod, false, now
       );
     }
 
@@ -108,7 +108,7 @@ export class EvmService {
     return dates.map((date) => {
       if (includePrediction && date > now && currentMetrics) {
         const baseMetric = this.computeMetricsFromData(
-          wbsData, date, computeCumulativeAc(date), calculationMode, method, fMethod
+          wbsData, date, computeCumulativeAc(date), calculationMode, method, fMethod, false, now
         );
 
         const spi = currentMetrics.spi;
@@ -139,7 +139,7 @@ export class EvmService {
       }
 
       return this.computeMetricsFromData(
-        wbsData, date, computeCumulativeAc(date), calculationMode, method, fMethod
+        wbsData, date, computeCumulativeAc(date), calculationMode, method, fMethod, false, now
       );
     });
   }
@@ -155,6 +155,7 @@ export class EvmService {
     progressMethod: ProgressMeasurementMethod,
     forecastMethod: EvmForecastMethod,
     isPredicted: boolean = false,
+    referenceDate: Date = evaluationDate,
   ): EvmMetrics {
     const pv_base = wbsData.tasks.reduce((sum, task) => {
       return sum + task.getPlannedValueAtDate('BASE', evaluationDate, calculationMode, progressMethod);
@@ -165,7 +166,7 @@ export class EvmService {
     }, 0);
 
     const ev = wbsData.tasks.reduce((sum, task) => {
-      return sum + task.getEarnedValue(evaluationDate, calculationMode, progressMethod);
+      return sum + task.getEarnedValue(evaluationDate, calculationMode, progressMethod, referenceDate);
     }, 0);
 
     const bac =

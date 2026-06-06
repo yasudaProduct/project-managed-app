@@ -364,8 +364,8 @@ describe('EVM Integration Tests', () => {
       expect(result.calculationMode).toBe('cost');
       expect(result.bac).toBeGreaterThan(0);
 
-      // BAC (cost): 40*5000 + 100*8000 + 60*5000 + 20(buffer) = 200000 + 800000 + 300000 + 20 = 1300020
-      expect(result.bac).toBeCloseTo(1300020, -2);
+      // BAC (cost) はベース工数(kijun)で計算する: 40*5000 + 80*8000 + 60*5000 + 20(buffer) = 200000 + 640000 + 300000 + 20 = 1140020
+      expect(result.bac).toBeCloseTo(1140020, -2);
     });
 
     it('calculateCurrentEvmMetrics で進捗率測定方法を指定できる', async () => {

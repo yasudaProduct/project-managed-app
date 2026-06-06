@@ -445,8 +445,9 @@ describe('EvmService', () => {
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
@@ -482,8 +483,9 @@ describe('EvmService', () => {
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-01-31'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
@@ -519,8 +521,9 @@ describe('EvmService', () => {
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-12-31'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
@@ -556,8 +559,9 @@ describe('EvmService', () => {
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
