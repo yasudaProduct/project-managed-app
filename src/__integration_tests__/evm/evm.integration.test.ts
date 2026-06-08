@@ -343,6 +343,44 @@ describe('EVM Integration Tests', () => {
       await global.prisma.wbsTask.delete({ where: { id: t.id } }).catch(() => {});
     });
 
+    it('soft-delete済みタスクの早期実績も累積ACに含まれる（最初の有効タスク開始で切らない）', async () => {
+      // 最初の有効タスクの予定開始(2025-04-01)より前に実績を持つ削除済みタスクを用意
+      const baseline = await evmService.calculateCurrentEvmMetrics(
+        testIds.wbsId, new Date('2025-12-31'), 'hours',
+      );
+
+      const t = await global.prisma.wbsTask.create({
+        data: {
+          taskNo: `AC-EARLY-${Date.now() % 100000}`,
+          name: '早期実績の削除済みタスク',
+          wbsId: testIds.wbsId,
+          phaseId: testIds.phaseId,
+          status: 'IN_PROGRESS',
+          isDeleted: true,
+          deletedAt: new Date(),
+        },
+      });
+      const wr = await global.prisma.workRecord.create({
+        data: {
+          userId: localIds.user1Id,
+          taskId: t.id,
+          date: new Date('2025-03-01'), // 最初の有効タスク開始(04-01)より前
+          hours_worked: 11,
+        },
+      });
+
+      const after = await evmService.calculateCurrentEvmMetrics(
+        testIds.wbsId, new Date('2025-12-31'), 'hours',
+      );
+
+      // 修正により、開始下限で切られず早期実績11hが累積ACに含まれる
+      expect(after.ac - baseline.ac).toBeCloseTo(11, 5);
+
+      // 後始末
+      await global.prisma.workRecord.delete({ where: { id: wr.id } }).catch(() => {});
+      await global.prisma.wbsTask.delete({ where: { id: t.id } }).catch(() => {});
+    });
+
     it('getProjectSettings でプロジェクト設定を取得できる（設定なし）', async () => {
       const settings = await wbsEvmRepository.getProjectSettings(testIds.projectId);
       expect(settings).toBeNull();

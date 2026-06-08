@@ -46,9 +46,10 @@ export class EvmService {
       forecastMethod ?? wbsData.settings?.evmForecastMethod ?? 'CPI_ONLY';
 
     // AC計算: 実際の投入コスト
+    // 下限はアクティブタスク開始で切らない（soft-delete済みタスクの早期実績も含めるため）
     const actualCostMap = await this.wbsEvmRepository.getActualCostByDate(
       wbsId,
-      wbsData.tasks[0]?.plannedStartDate || new Date(),
+      new Date(0),
       evaluationDate,
       calculationMode
     );
@@ -86,9 +87,7 @@ export class EvmService {
     // (2) 全期間のWorkRecordsを1回だけ取得し、累積ACヘルパーを構築
     const computeCumulativeAc = await this.buildCumulativeAcFn(
       wbsId,
-      wbsData,
       endDate,
-      now,
       calculationMode
     );
 
@@ -154,9 +153,7 @@ export class EvmService {
     const costRangeEnd = endDate.getTime() > now.getTime() ? endDate : now;
     const computeCumulativeAc = await this.buildCumulativeAcFn(
       wbsId,
-      wbsData,
       costRangeEnd,
-      now,
       calculationMode
     );
 
@@ -190,15 +187,13 @@ export class EvmService {
    */
   private async buildCumulativeAcFn(
     wbsId: number,
-    wbsData: WbsEvmData,
     endDate: Date,
-    now: Date,
     calculationMode: EvmCalculationMode
   ): Promise<(evalDate: Date) => number> {
-    const taskStartDate = wbsData.tasks[0]?.plannedStartDate || now;
+    // 下限はアクティブタスク開始で切らない（soft-delete済みタスクの早期実績も累積ACに含めるため）
     const actualCostMap = await this.wbsEvmRepository.getActualCostByDate(
       wbsId,
-      taskStartDate,
+      new Date(0),
       endDate,
       calculationMode
     );

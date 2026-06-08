@@ -335,10 +335,12 @@ export class TaskRepository implements ITaskRepository {
                     where: { id: task.id, wbsId },
                     data: {
                         name: task.name,
-                        assigneeId: task.assigneeId ?? undefined,
-                        phaseId: task.phaseId ?? undefined,
+                        // Excelは差分同期の唯一の真実源。値が無いnullableは undefined（=変更しない）ではなく
+                        // 明示的にクリアする（担当者/進捗を外したときに古い値が残らないようにする）。
+                        assigneeId: task.assigneeId ?? null,
+                        phaseId: task.phaseId ?? null,
                         status: task.status.status,
-                        progressRate: task.progressRate,
+                        progressRate: task.progressRate ?? 0, // 未設定は0（@default(0)・create挙動に一致）
                         isDeleted: false,
                         deletedAt: null,
                     },

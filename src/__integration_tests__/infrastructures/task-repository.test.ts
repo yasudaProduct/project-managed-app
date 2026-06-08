@@ -480,6 +480,69 @@ describe('TaskRepository Integration Tests', () => {
     });
   });
 
+  describe('applySyncDiff：差分updateで不在のnullableをクリアする', () => {
+    const taskNo = 'NULLCLR-0001';
+    const userId = 'nullclr-user-1';
+    let assigneeId: number;
+    let taskId: number;
+
+    beforeAll(async () => {
+      await global.prisma.users.upsert({
+        where: { id: userId },
+        update: {},
+        create: { id: userId, email: 'nullclr@example.com', name: 'NC', displayName: 'NC' },
+      });
+      const assignee = await global.prisma.wbsAssignee.create({
+        data: { wbsId: testIds.wbsId, assigneeId: userId },
+      });
+      assigneeId = assignee.id;
+      const t = await global.prisma.wbsTask.create({
+        data: {
+          taskNo,
+          name: 'クリア前',
+          wbsId: testIds.wbsId,
+          phaseId: testIds.phaseId,
+          assigneeId,
+          status: 'IN_PROGRESS',
+          progressRate: 90,
+        },
+      });
+      taskId = t.id;
+    });
+
+    afterAll(async () => {
+      await global.prisma.wbsTask
+        .deleteMany({ where: { wbsId: testIds.wbsId, taskNo } })
+        .catch(() => {});
+      await global.prisma.wbsAssignee.delete({ where: { id: assigneeId } }).catch(() => {});
+      await global.prisma.users.delete({ where: { id: userId } }).catch(() => {});
+    });
+
+    it('Excelで担当者・進捗が空になった更新は、DBの古い値をクリアする', async () => {
+      // 担当者・進捗を持たない更新タスク（Excelで空欄になった想定）
+      const upd = Task.create({
+        taskNo: TaskNo.reconstruct(taskNo),
+        wbsId: testIds.wbsId,
+        name: 'クリア後',
+        phaseId: testIds.phaseId,
+        status: new TaskStatus({ status: 'IN_PROGRESS' }),
+        periods: [],
+      });
+      upd.id = taskId;
+
+      await taskRepository.applySyncDiff(
+        testIds.wbsId,
+        { toCreate: [], toUpdate: [upd], toSoftDeleteIds: [] },
+        new Date(),
+      );
+
+      const row = await global.prisma.wbsTask.findUnique({ where: { id: taskId } });
+      expect(row?.assigneeId).toBeNull(); // 担当者がクリアされる
+      expect(Number(row?.progressRate)).toBe(0); // 進捗が0にクリアされる
+      expect(row?.name).toBe('クリア後');
+    });
+  });
+
   describe('エラーケース', () => {
     it('存在しないIDを指定した場合はnullを返すこと', async () => {
       const nonExistingTask = await taskRepository.findById(999999);
