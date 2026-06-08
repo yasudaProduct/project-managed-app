@@ -69,10 +69,6 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       // 削除数を設定
       result.deletedCount = existingTasks.length;
 
-      // replaceは物理削除＋新id再作成のため、古いidを指す進捗スナップショット履歴を
-      // クリアする（残すとEVM時系列で古スナップショットと新ライブタスクが二重計上される）。
-      await this.taskRepository.deleteProgressSnapshotsByWbsId(wbsId);
-
       // TODO: ここからトランザクション貼る
       // 既存タスクを全削除
       for (const task of existingTasks) {
@@ -145,6 +141,13 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
 
       if (validationErrors.length > 0) {
         result.errorDetails = { validationErrors };
+      }
+
+      // replaceが成功した場合のみ、孤児化する古いスナップショット履歴をクリアする。
+      // （replaceAllは非トランザクションのため、早期に消すと後続の削除/検証失敗で
+      //   同期は失敗なのに履歴だけ失われる＝データ損失になる。成功確定後に行う）
+      if (result.success) {
+        await this.taskRepository.deleteProgressSnapshotsByWbsId(wbsId);
       }
 
       // 同期ログを記録

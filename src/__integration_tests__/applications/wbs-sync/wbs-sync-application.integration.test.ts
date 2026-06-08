@@ -170,4 +170,29 @@ describe('WbsSyncApplicationService.syncDiff（統合・Excelスタブ）', () =
     });
     expect(afterSnaps).toBe(0);
   });
+
+  it('replaceが失敗した場合はスナップショット履歴を消さない（履歴のデータ損失を防ぐ）', async () => {
+    // まず diff でスナップショットを蓄積
+    excelRows = [makeRow({ WBS_ID: 'D1-0001', ROW_NO: 1, PROGRESS_RATE: 40 })];
+    const diff = await service.syncDiff(testIds.wbsId);
+    expect(diff.success).toBe(true);
+    const snapsBefore = await global.prisma.taskProgressSnapshot.count({
+      where: { wbsId: testIds.wbsId },
+    });
+    expect(snapsBefore).toBeGreaterThan(0);
+
+    // 不正行（存在しないフェーズ）を含むExcelで replace → 失敗させる
+    excelRows = [
+      makeRow({ WBS_ID: 'D1-0001', ROW_NO: 1 }),
+      makeRow({ WBS_ID: 'D1-0009', ROW_NO: 2, PHASE: '存在しないフェーズ' }),
+    ];
+    const result = await service.replaceAll(testIds.wbsId);
+    expect(result.success).toBe(false);
+
+    // 失敗時はスナップショットが保持される（0件になっていない）
+    const snapsAfter = await global.prisma.taskProgressSnapshot.count({
+      where: { wbsId: testIds.wbsId },
+    });
+    expect(snapsAfter).toBeGreaterThan(0);
+  });
 });
