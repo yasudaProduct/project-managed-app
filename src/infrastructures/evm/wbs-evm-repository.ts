@@ -154,15 +154,16 @@ export class WbsEvmRepository implements IWbsEvmRepository {
           lte: endDate,
         },
       },
-      include: {
-        task: {
-          include: {
-            assignee: true,
-          },
-        },
-      },
       orderBy: { date: 'asc' },
     });
+
+    // コスト単価は「実績を記録したユーザー」のWBS単価を使う（不変な実績コストの基準）。
+    // タスクの現担当者に依存させると、担当者変更/クリアで過去ACが遡及して変わるため。
+    let rateByUserId = new Map<string, number>();
+    if (calculationMode === 'cost') {
+      const assignees = await prisma.wbsAssignee.findMany({ where: { wbsId } });
+      rateByUserId = new Map(assignees.map((a) => [a.assigneeId, a.costPerHour]));
+    }
 
     const costMap = new Map<string, number>();
 
@@ -173,8 +174,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       // 計算モードに応じて工数または金額を加算
       const cost =
         calculationMode === 'cost'
-          ? Number(record.hours_worked) *
-          (record.task?.assignee?.costPerHour ?? 5000)
+          ? Number(record.hours_worked) * (rateByUserId.get(record.userId) ?? 5000)
           : Number(record.hours_worked);
 
       costMap.set(dateKey, currentCost + cost);
