@@ -391,6 +391,10 @@ export class TaskRepository implements ITaskRepository {
         return { syncLogId };
     }
 
+    async deleteProgressSnapshotsByWbsId(wbsId: number): Promise<void> {
+        await prisma.taskProgressSnapshot.deleteMany({ where: { wbsId } });
+    }
+
     async delete(id: number): Promise<void> {
         await prisma.wbsTask.delete({
             where: { id },

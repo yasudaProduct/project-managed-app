@@ -144,9 +144,10 @@ export class WbsEvmRepository implements IWbsEvmRepository {
   ): Promise<Map<string, number>> {
     const workRecords = await prisma.workRecord.findMany({
       where: {
+        // AC（実績コスト）はworkRecordという不変事実の集計。タスクがsoft-delete
+        // されても実績は消えないため、isDeletedで絞らずWBS配下の実績を全て対象にする。
         task: {
           wbsId: wbsId,
-          isDeleted: false,
         },
         date: {
           gte: startDate,

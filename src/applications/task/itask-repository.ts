@@ -74,6 +74,8 @@ interface ITaskRepository {
         now: Date,
         context?: SyncDiffContext
     ): Promise<{ syncLogId: number | null }>;
+    /** 指定WBSの進捗スナップショット履歴を全削除する（replace同期のリセット用） */
+    deleteProgressSnapshotsByWbsId(wbsId: number): Promise<void>;
     delete(id: number): Promise<void>;
 }
 

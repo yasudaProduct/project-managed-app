@@ -300,6 +300,49 @@ describe('EVM Integration Tests', () => {
       expect(totalCost).toBe(0);
     });
 
+    it('soft-deleteされたタスクの実績ACも除外されない（実績は不変の事実）', async () => {
+      // 専用タスク＋作業記録を作成
+      const t = await global.prisma.wbsTask.create({
+        data: {
+          taskNo: `AC-SOFTDEL-${Date.now() % 100000}`,
+          name: 'AC保持テスト',
+          wbsId: testIds.wbsId,
+          phaseId: testIds.phaseId,
+          status: 'IN_PROGRESS',
+        },
+      });
+      const wr = await global.prisma.workRecord.create({
+        data: {
+          userId: localIds.user1Id,
+          taskId: t.id,
+          date: new Date('2025-07-15'),
+          hours_worked: 9,
+        },
+      });
+
+      // soft-delete 前：実績が含まれる
+      const before = await wbsEvmRepository.getActualCostByDate(
+        testIds.wbsId, new Date('2025-07-01'), new Date('2025-07-31'), 'hours',
+      );
+      expect(before.get('2025-07-15')).toBe(9);
+
+      // soft-delete
+      await global.prisma.wbsTask.update({
+        where: { id: t.id },
+        data: { isDeleted: true, deletedAt: new Date() },
+      });
+
+      // soft-delete 後も実績ACは落ちない
+      const after = await wbsEvmRepository.getActualCostByDate(
+        testIds.wbsId, new Date('2025-07-01'), new Date('2025-07-31'), 'hours',
+      );
+      expect(after.get('2025-07-15')).toBe(9);
+
+      // 後始末
+      await global.prisma.workRecord.delete({ where: { id: wr.id } }).catch(() => {});
+      await global.prisma.wbsTask.delete({ where: { id: t.id } }).catch(() => {});
+    });
+
     it('getProjectSettings でプロジェクト設定を取得できる（設定なし）', async () => {
       const settings = await wbsEvmRepository.getProjectSettings(testIds.projectId);
       expect(settings).toBeNull();

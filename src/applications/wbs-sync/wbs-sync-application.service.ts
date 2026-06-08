@@ -69,6 +69,10 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       // 削除数を設定
       result.deletedCount = existingTasks.length;
 
+      // replaceは物理削除＋新id再作成のため、古いidを指す進捗スナップショット履歴を
+      // クリアする（残すとEVM時系列で古スナップショットと新ライブタスクが二重計上される）。
+      await this.taskRepository.deleteProgressSnapshotsByWbsId(wbsId);
+
       // TODO: ここからトランザクション貼る
       // 既存タスクを全削除
       for (const task of existingTasks) {

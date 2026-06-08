@@ -151,4 +151,23 @@ describe('WbsSyncApplicationService.syncDiff（統合・Excelスタブ）', () =
     expect(after.map((s) => s.taskNo).sort()).toEqual(before.map((s) => s.taskNo).sort());
     expect(after.some((s) => s.taskNo === 'D1-0003')).toBe(false);
   });
+
+  it('replace同期は孤児化する進捗スナップショット履歴をクリアする（二重計上防止）', async () => {
+    // 直前までにスナップショットが蓄積されている前提
+    const beforeSnaps = await global.prisma.taskProgressSnapshot.count({
+      where: { wbsId: testIds.wbsId },
+    });
+    expect(beforeSnaps).toBeGreaterThan(0);
+
+    // replace（洗い替え）を実行
+    excelRows = [makeRow({ WBS_ID: 'D1-0001', ROW_NO: 1 })];
+    const result = await service.replaceAll(testIds.wbsId);
+    expect(result.success).toBe(true);
+
+    // 当該WBSのスナップショット履歴は0件（クリアされる）
+    const afterSnaps = await global.prisma.taskProgressSnapshot.count({
+      where: { wbsId: testIds.wbsId },
+    });
+    expect(afterSnaps).toBe(0);
+  });
 });
