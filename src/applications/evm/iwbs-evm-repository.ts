@@ -1,4 +1,4 @@
-import { ProgressMeasurementMethod, ForecastCalculationMethod, EvmForecastMethod } from '@prisma/client';
+import { ProgressMeasurementMethod, ForecastCalculationMethod, EvmForecastMethod, TaskStatus } from '@prisma/client';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { EvmCalculationMode } from '@/domains/evm/evm-metrics';
 
@@ -22,6 +22,28 @@ export interface IWbsEvmRepository {
 
   // プロジェクト設定の取得
   getProjectSettings(projectId: string): Promise<ProjectSettingsData | null>;
+
+  // 進捗スナップショット履歴（snapshotAt <= toDate を全件、taskId/snapshotAt 昇順）
+  getProgressSnapshots(wbsId: number, toDate: Date): Promise<TaskProgressSnapshotRecord[]>;
+}
+
+// 進捗スナップショット1件の読み出し用レコード（時点データ・自己完結）
+export interface TaskProgressSnapshotRecord {
+  taskId: number;
+  taskNo: string;
+  snapshotAt: Date;
+  progressRate: number | null;
+  status: TaskStatus;
+  plannedManHours: number;
+  baseManHours: number;
+  costPerHour: number;
+  plannedStart: Date | null;
+  plannedEnd: Date | null;
+  baseStart: Date | null;
+  baseEnd: Date | null;
+  actualStart: Date | null;
+  actualEnd: Date | null;
+  isRemoved: boolean;
 }
 
 export interface WbsEvmData {

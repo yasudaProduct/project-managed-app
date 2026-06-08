@@ -93,6 +93,8 @@ erDiagram
   Int assigneeId FK "nullable"
   TaskStatus status
   Decimal progressRate "nullable"
+  Boolean isDeleted
+  DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -227,6 +229,27 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"task_progress_snapshot" {
+  Int id PK
+  Int taskId
+  Int wbsId
+  String taskNo
+  DateTime snapshotAt
+  Decimal progressRate "nullable"
+  TaskStatus status
+  Decimal plannedManHours
+  Decimal baseManHours
+  Decimal costPerHour
+  DateTime plannedStart "nullable"
+  DateTime plannedEnd "nullable"
+  DateTime baseStart "nullable"
+  DateTime baseEnd "nullable"
+  DateTime actualStart "nullable"
+  DateTime actualEnd "nullable"
+  Boolean isRemoved
+  Int syncLogId FK
+  DateTime createdAt
+}
 "company_holidays" {
   Int id PK
   DateTime date UK
@@ -337,6 +360,7 @@ erDiagram
 "task_dependencies" }o--|| "wbs_task" : predecessorTask
 "task_dependencies" }o--|| "wbs_task" : successorTask
 "task_dependencies" }o--|| "wbs" : wbs
+"task_progress_snapshot" }o--|| "sync_logs" : syncLog
 "import_jobs" }o--o| "users" : user
 "import_jobs" }o--o| "wbs" : wbs
 "import_job_progress" }o--|| "import_jobs" : job
@@ -452,6 +476,8 @@ erDiagram
   - `assigneeId`: 
   - `status`: 
   - `progressRate`: 
+  - `isDeleted`: 
+  - `deletedAt`: 
   - `createdAt`: 
   - `updatedAt`: 
 
@@ -609,6 +635,29 @@ erDiagram
   - `errorDetails`: 
   - `createdAt`: 
   - `updatedAt`: 
+
+### `task_progress_snapshot`
+
+**Properties**
+  - `id`: 
+  - `taskId`: 
+  - `wbsId`: 
+  - `taskNo`: 
+  - `snapshotAt`: 
+  - `progressRate`: 
+  - `status`: 
+  - `plannedManHours`: 
+  - `baseManHours`: 
+  - `costPerHour`: 
+  - `plannedStart`: 
+  - `plannedEnd`: 
+  - `baseStart`: 
+  - `baseEnd`: 
+  - `actualStart`: 
+  - `actualEnd`: 
+  - `isRemoved`: 
+  - `syncLogId`: 
+  - `createdAt`: 
 
 ### `company_holidays`
 

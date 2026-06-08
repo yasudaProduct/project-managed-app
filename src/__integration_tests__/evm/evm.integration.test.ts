@@ -645,4 +645,162 @@ describe('EVM Integration Tests', () => {
       expect(result.etc).toBeCloseTo(result.bac - result.ev, 1);
     });
   });
+
+  describe('getProgressSnapshots（2B読み出し）', () => {
+    let syncLogId: number;
+    let taskId: number;
+    let taskNo: string;
+
+    beforeAll(async () => {
+      const t = await global.prisma.wbsTask.findFirst({ where: { wbsId: testIds.wbsId } });
+      taskId = t!.id;
+      taskNo = t!.taskNo;
+      const log = await global.prisma.syncLog.create({
+        data: {
+          projectId: testIds.projectId,
+          syncStatus: 'SUCCESS',
+          syncedAt: new Date(),
+          recordCount: 0,
+          addedCount: 0,
+          updatedCount: 0,
+          deletedCount: 0,
+        },
+      });
+      syncLogId = log.id;
+      await global.prisma.taskProgressSnapshot.createMany({
+        data: [
+          {
+            taskId, wbsId: testIds.wbsId, taskNo,
+            snapshotAt: new Date('2025-03-01T10:00:00Z'),
+            progressRate: 50, status: 'IN_PROGRESS',
+            plannedManHours: 100, baseManHours: 100, costPerHour: 5000,
+            isRemoved: false, syncLogId,
+          },
+          {
+            taskId, wbsId: testIds.wbsId, taskNo,
+            snapshotAt: new Date('2025-02-01T10:00:00Z'),
+            progressRate: 20, status: 'IN_PROGRESS',
+            plannedManHours: 100, baseManHours: 100, costPerHour: 5000,
+            isRemoved: false, syncLogId,
+          },
+        ],
+      });
+    });
+
+    afterAll(async () => {
+      await global.prisma.taskProgressSnapshot.deleteMany({ where: { syncLogId } }).catch(() => {});
+      await global.prisma.syncLog.delete({ where: { id: syncLogId } }).catch(() => {});
+    });
+
+    it('snapshotAt<=toDate を snapshotAt昇順で返し、Decimalは数値化される', async () => {
+      const partial = await wbsEvmRepository.getProgressSnapshots(testIds.wbsId, new Date('2025-02-15'));
+      const mine = partial.filter((r) => r.taskId === taskId);
+      expect(mine).toHaveLength(1); // 2/1のみ（3/1はtoDate超過で除外）
+      expect(mine[0].progressRate).toBe(20);
+      expect(typeof mine[0].plannedManHours).toBe('number');
+      expect(typeof mine[0].costPerHour).toBe('number');
+
+      const all = await wbsEvmRepository.getProgressSnapshots(testIds.wbsId, new Date('2025-04-01'));
+      const mineAll = all.filter((r) => r.taskId === taskId);
+      expect(mineAll.map((r) => r.progressRate)).toEqual([20, 50]); // snapshotAt昇順
+    });
+  });
+
+  describe('getEvmTimeSeries の as-of再構築（2B end-to-end）', () => {
+    const syncLogIds: number[] = [];
+    let taskIds: number[] = [];
+    let taskNos: string[] = [];
+
+    // 指定日のEVを時系列から取り出す
+    const evOn = (series: { date: Date; ev: number }[], ymd: string): number => {
+      const target = series.find((m) => {
+        const d = m.date;
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        return key === ymd;
+      });
+      if (!target) throw new Error(`date not found: ${ymd}`);
+      return target.ev;
+    };
+
+    beforeAll(async () => {
+      // クリーンスレート（他describeのsnapshotが残っていても影響させない）
+      await global.prisma.taskProgressSnapshot
+        .deleteMany({ where: { wbsId: testIds.wbsId } })
+        .catch(() => {});
+
+      const tasks = await global.prisma.wbsTask.findMany({
+        where: { wbsId: testIds.wbsId },
+        orderBy: { taskNo: 'asc' },
+      });
+      taskIds = tasks.map((t) => t.id);
+      taskNos = tasks.map((t) => t.taskNo);
+
+      const log = await global.prisma.syncLog.create({
+        data: {
+          projectId: testIds.projectId, syncStatus: 'SUCCESS', syncedAt: new Date(),
+          recordCount: 0, addedCount: 0, updatedCount: 0, deletedCount: 0,
+        },
+      });
+      syncLogIds.push(log.id);
+
+      // 全タスクに対し 2025-03-15 時点の進捗20%スナップショット（planned/base=100, SELF_REPORTED想定）
+      await global.prisma.taskProgressSnapshot.createMany({
+        data: tasks.map((t) => ({
+          taskId: t.id, wbsId: testIds.wbsId, taskNo: t.taskNo,
+          snapshotAt: new Date('2025-03-15T10:00:00Z'),
+          progressRate: 20, status: 'IN_PROGRESS' as const,
+          plannedManHours: 100, baseManHours: 100, costPerHour: 5000,
+          plannedStart: new Date('2025-01-01'), plannedEnd: new Date('2025-06-30'),
+          baseStart: new Date('2025-01-01'), baseEnd: new Date('2025-06-30'),
+          isRemoved: false, syncLogId: log.id,
+        })),
+      });
+    });
+
+    afterAll(async () => {
+      await global.prisma.taskProgressSnapshot
+        .deleteMany({ where: { taskNo: { in: taskNos } } })
+        .catch(() => {});
+      if (syncLogIds.length) {
+        await global.prisma.syncLog.deleteMany({ where: { id: { in: syncLogIds } } }).catch(() => {});
+      }
+    });
+
+    it('過去日のEVが「現在のタスク進捗」ではなく当時のスナップショット進捗で再構築される', async () => {
+      const series = await evmService.getEvmTimeSeries(
+        testIds.wbsId, new Date('2025-03-20'), new Date('2025-04-05'),
+        'daily', 'hours', 'SELF_REPORTED',
+      );
+      // 3タスク × planned100 × 20% = 60（ライブ進捗ではなくsnapshot確定値）
+      expect(evOn(series, '2025-04-01')).toBeCloseTo(60, 5);
+    });
+
+    it('tombstoneスナップショット以降は当該タスクの寄与が0になる', async () => {
+      // 1タスクを 2025-03-25 に論理削除（tombstone）
+      const log = await global.prisma.syncLog.create({
+        data: {
+          projectId: testIds.projectId, syncStatus: 'SUCCESS', syncedAt: new Date(),
+          recordCount: 0, addedCount: 0, updatedCount: 0, deletedCount: 0,
+        },
+      });
+      syncLogIds.push(log.id);
+      await global.prisma.taskProgressSnapshot.create({
+        data: {
+          taskId: taskIds[0], wbsId: testIds.wbsId, taskNo: taskNos[0],
+          snapshotAt: new Date('2025-03-25T10:00:00Z'),
+          progressRate: null, status: 'IN_PROGRESS',
+          plannedManHours: 0, baseManHours: 0, costPerHour: 0,
+          isRemoved: true, syncLogId: log.id,
+        },
+      });
+
+      const series = await evmService.getEvmTimeSeries(
+        testIds.wbsId, new Date('2025-03-20'), new Date('2025-04-05'),
+        'daily', 'hours', 'SELF_REPORTED',
+      );
+      // tombstone前(3/20)は3タスク=60、tombstone後(4/1)は残り2タスク=40
+      expect(evOn(series, '2025-03-20')).toBeCloseTo(60, 5);
+      expect(evOn(series, '2025-04-01')).toBeCloseTo(40, 5);
+    });
+  });
 });

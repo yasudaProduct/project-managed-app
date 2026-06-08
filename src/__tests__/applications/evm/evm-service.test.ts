@@ -16,6 +16,7 @@ describe('EvmService', () => {
       getActualCostByDate: jest.fn(),
       getBuffers: jest.fn(),
       getProjectSettings: jest.fn(),
+      getProgressSnapshots: jest.fn().mockResolvedValue([]),
     } as jest.Mocked<IWbsEvmRepository>;
 
     evmService = new EvmService(mockRepository);

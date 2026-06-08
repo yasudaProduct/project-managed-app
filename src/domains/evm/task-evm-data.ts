@@ -84,6 +84,40 @@ export class TaskEvmData {
   }
 
   /**
+   * 按分しない直接EV（スナップショット値の確定進捗をそのまま使う）。
+   * @description
+   * スナップショットは既にas-of確定値のため、提案Cの線形按分や actualStartDate ゲートを通さず、
+   * その時点の進捗率を予定工数（コスト時は単価込み）に直接適用する。
+   */
+  getEarnedValueDirect(
+    calculationMode: EvmCalculationMode,
+    progressMethod: ProgressMeasurementMethod
+  ): number {
+    const base =
+      calculationMode === 'cost'
+        ? this.plannedManHours * this.costPerHour
+        : this.plannedManHours;
+    return base * (this.directRate(progressMethod) / 100);
+  }
+
+  /** 方式別の直接進捗率（0〜100、按分なし） */
+  private directRate(method: ProgressMeasurementMethod): number {
+    switch (method) {
+      case 'ZERO_HUNDRED':
+        return this.status === 'COMPLETED' ? 100 : 0;
+      case 'FIFTY_FIFTY':
+        if (this.status === 'COMPLETED') return 100;
+        if (this.status === 'IN_PROGRESS') return 50;
+        return 0;
+      case 'SELF_REPORTED':
+      default:
+        return this.status === 'COMPLETED'
+          ? 100
+          : Math.max(0, Math.min(100, this.selfReportedProgress ?? this.progressRate));
+    }
+  }
+
+  /**
    * 評価日時点での実効進捗率（0〜100）を方式別の位相で算出する。
    * @param evaluationDate 評価日（actualStartDate以降であることが呼び出し側で保証される）
    * @param method 進捗率測定方法

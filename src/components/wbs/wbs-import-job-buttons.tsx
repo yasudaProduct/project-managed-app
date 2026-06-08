@@ -2,9 +2,16 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCcw } from "lucide-react";
+import { RefreshCcw, ChevronDown } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import GeppoImportModal from "./geppo-import-modal";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import type { WbsSyncMode } from "@/applications/wbs-sync/wbs-sync-mode";
 
 type Props = {
   wbsId: number;
@@ -22,7 +29,7 @@ export default function WbsImportJobButtons({
   const [creating, setCreating] = useState(false);
   const [geppoModalOpen, setGeppoModalOpen] = useState(false);
 
-  const createWbsJob = async () => {
+  const createWbsJob = async (syncMode: WbsSyncMode = "diff") => {
     setCreating(true);
     try {
       const res = await fetch(`/api/import-jobs`, {
@@ -31,14 +38,14 @@ export default function WbsImportJobButtons({
         body: JSON.stringify({
           type: "WBS",
           wbsId,
-          options: {},
+          options: { syncMode },
         }),
       });
       if (res.ok) {
         const data = await res.json();
         toast({
           title: "ジョブ作成",
-          description: `WBS(${wbsId})のジョブを作成しました。`,
+          description: `WBS(${wbsId})のジョブを作成しました（${syncMode === "replace" ? "洗い替え" : "差分"}）。`,
         });
         onCreated?.(data.id);
         onRefresh?.();
@@ -69,14 +76,22 @@ export default function WbsImportJobButtons({
         >
           <RefreshCcw className="h-4 w-4" /> 月報
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={createWbsJob}
-          disabled={creating}
-        >
-          <RefreshCcw className="h-4 w-4" /> WBS
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" disabled={creating}>
+              <RefreshCcw className="h-4 w-4" /> WBS
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => createWbsJob("diff")}>
+              WBS同期（差分）
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => createWbsJob("replace")}>
+              WBS同期（洗い替え）
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         {onRefresh && (
           <Button variant="outline" size="sm" onClick={onRefresh}>
             <RefreshCcw className="h-4 w-4" /> 更新

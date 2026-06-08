@@ -58,7 +58,8 @@ export class DashboardQueryRepository implements IDashboardQueryRepository {
             for (const wbs of project.wbs) {
                 const tasks = await prisma.wbsTask.findMany({
                     where: {
-                        wbsId: wbs.id
+                        wbsId: wbs.id,
+                        isDeleted: false
                     }
                 });
                 totalTasks += tasks.length;
@@ -74,7 +75,8 @@ export class DashboardQueryRepository implements IDashboardQueryRepository {
             where: {
                 wbsId: {
                     in: activeProjects.flatMap(project => project.wbs.map(wbs => wbs.id))
-                }
+                },
+                isDeleted: false
             }
         });
         const taskStats = {

@@ -14,7 +14,8 @@ export interface SyncLog {
 
 export interface ISyncLogRepository {
   getLastSync(projectId: string): Promise<SyncLog | null>;
-  recordSync(log: Omit<SyncLog, 'id' | 'createdAt' | 'updatedAt'>): Promise<void>;
+  /** 同期ログを記録し、採番された id を返す */
+  recordSync(log: Omit<SyncLog, 'id' | 'createdAt' | 'updatedAt'>): Promise<number>;
   getHistory(
     projectId: string, 
     limit?: number

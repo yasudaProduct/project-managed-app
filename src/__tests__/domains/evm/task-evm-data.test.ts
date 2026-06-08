@@ -673,6 +673,58 @@ describe('TaskEvmData', () => {
     });
   });
 
+  describe('getEarnedValueDirect（按分しない直接EV・2B）', () => {
+    it('SELF_REPORTED：進捗率を直接適用（按分なし）', () => {
+      const task = createTestTask({
+        plannedManHours: 100,
+        status: 'IN_PROGRESS',
+        progressRate: 40,
+        selfReportedProgress: 40,
+      });
+      expect(task.getEarnedValueDirect('hours', 'SELF_REPORTED')).toBe(40);
+    });
+
+    it('SELF_REPORTED：COMPLETEDは100%強制', () => {
+      const task = createTestTask({
+        plannedManHours: 100,
+        status: 'COMPLETED',
+        progressRate: 40,
+        selfReportedProgress: 40,
+      });
+      expect(task.getEarnedValueDirect('hours', 'SELF_REPORTED')).toBe(100);
+    });
+
+    it('ZERO_HUNDRED：未完了0%・完了100%', () => {
+      expect(
+        createTestTask({ status: 'IN_PROGRESS', plannedManHours: 100 }).getEarnedValueDirect('hours', 'ZERO_HUNDRED'),
+      ).toBe(0);
+      expect(
+        createTestTask({ status: 'COMPLETED', plannedManHours: 100 }).getEarnedValueDirect('hours', 'ZERO_HUNDRED'),
+      ).toBe(100);
+    });
+
+    it('FIFTY_FIFTY：着手中50%・完了100%', () => {
+      expect(
+        createTestTask({ status: 'IN_PROGRESS', plannedManHours: 100 }).getEarnedValueDirect('hours', 'FIFTY_FIFTY'),
+      ).toBe(50);
+      expect(
+        createTestTask({ status: 'COMPLETED', plannedManHours: 100 }).getEarnedValueDirect('hours', 'FIFTY_FIFTY'),
+      ).toBe(100);
+    });
+
+    it('costモード：単価込みで計算', () => {
+      const task = createTestTask({
+        plannedManHours: 10,
+        costPerHour: 5000,
+        status: 'IN_PROGRESS',
+        progressRate: 50,
+        selfReportedProgress: 50,
+      });
+      // 10h * 5000 * 50% = 25000
+      expect(task.getEarnedValueDirect('cost', 'SELF_REPORTED')).toBe(25000);
+    });
+  });
+
   describe('コンストラクタ', () => {
     it('すべてのプロパティが正しく設定される', () => {
       const task = new TaskEvmData(

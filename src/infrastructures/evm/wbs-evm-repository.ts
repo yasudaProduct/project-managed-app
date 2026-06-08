@@ -6,6 +6,7 @@ import {
   WbsEvmData,
   BufferData,
   ProjectSettingsData,
+  TaskProgressSnapshotRecord,
 } from '@/applications/evm/iwbs-evm-repository';
 import type { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-repository';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
@@ -145,6 +146,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       where: {
         task: {
           wbsId: wbsId,
+          isDeleted: false,
         },
         date: {
           gte: startDate,
@@ -205,5 +207,33 @@ export class WbsEvmRepository implements IWbsEvmRepository {
     }
 
     return dates;
+  }
+
+  async getProgressSnapshots(
+    wbsId: number,
+    toDate: Date
+  ): Promise<TaskProgressSnapshotRecord[]> {
+    const rows = await prisma.taskProgressSnapshot.findMany({
+      where: { wbsId, snapshotAt: { lte: toDate } },
+      orderBy: [{ taskId: 'asc' }, { snapshotAt: 'asc' }],
+    });
+
+    return rows.map((r) => ({
+      taskId: r.taskId,
+      taskNo: r.taskNo,
+      snapshotAt: r.snapshotAt,
+      progressRate: r.progressRate !== null ? Number(r.progressRate) : null,
+      status: r.status,
+      plannedManHours: Number(r.plannedManHours),
+      baseManHours: Number(r.baseManHours),
+      costPerHour: Number(r.costPerHour),
+      plannedStart: r.plannedStart,
+      plannedEnd: r.plannedEnd,
+      baseStart: r.baseStart,
+      baseEnd: r.baseEnd,
+      actualStart: r.actualStart,
+      actualEnd: r.actualEnd,
+      isRemoved: r.isRemoved,
+    }));
   }
 }

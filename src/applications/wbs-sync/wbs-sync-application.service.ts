@@ -8,7 +8,7 @@ import { SYMBOL } from '@/types/symbol';
 import type { IPhaseRepository } from '@/applications/task/iphase-repository';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
-import type { ITaskRepository } from '@/applications/task/itask-repository';
+import type { ITaskRepository, TaskSyncState, TaskProgressSnapshotInput } from '@/applications/task/itask-repository';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/project-status';
 import type { IWbsRepository } from '../wbs/iwbs-repository';
@@ -63,8 +63,8 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       // プロジェクトIDを設定
       result.projectId = excelData[0].PROJECT_ID;
 
-      // 既存タスクを取得
-      const existingTasks = await this.taskRepository.findByWbsId(wbsId);
+      // 既存タスクを取得（論理削除済みのtombstoneも含めて全削除する必要があるため）
+      const existingTasks = await this.taskRepository.findIncludingDeletedByWbsId(wbsId);
 
       // 削除数を設定
       result.deletedCount = existingTasks.length;
@@ -181,6 +181,174 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
     }
   }
 
+  // 差分同期（taskNo upsert＋revive＋soft-delete）
+  // 事前検証で原子性を担保し、差分適用は単一トランザクションで行う。
+  async syncDiff(wbsId: number): Promise<SyncResult> {
+    const validationErrors: ValidationError[] = [];
+    const result: SyncResult = {
+      success: false,
+      projectId: '',
+      recordCount: 0,
+      addedCount: 0,
+      updatedCount: 0,
+      deletedCount: 0,
+    };
+
+    const now = new Date();
+
+    try {
+      // wbs存在チェック
+      const wbs = await this.wbsRepository.findById(wbsId);
+      if (!wbs) {
+        throw new SyncError('WBSが見つかりません', SyncErrorType.VALIDATION_ERROR, { wbsId });
+      }
+
+      // Excelデータを取得
+      const excelData = await this.fetchExcelData(wbs.name);
+      const excelDataWithRowNumbers = excelData.map((data) => ({
+        data,
+        rowNumber: data.ROW_NO,
+      }));
+      result.projectId = excelData[0].PROJECT_ID;
+      // taskNo→Excel行（実績日付などの参照用）
+      const excelByTaskNo = new Map<string, ExcelWbs>(
+        excelData.map((d) => [d.WBS_ID, d])
+      );
+
+      // フェーズ・担当者マップ（replaceAllと同じ）
+      const phaseList = await this.phaseRepository.findByWbsId(wbsId);
+      const phaseNameToId = new Map<string, number>();
+      phaseList.forEach((p) => {
+        const id = (p as unknown as { id?: number }).id;
+        if (p.name && id !== undefined) {
+          phaseNameToId.set(p.name, id);
+        }
+      });
+      const assignees = await this.wbsAssigneeRepository.findByWbsId(wbsId);
+
+      // 既存の同期状態（id/taskNo/isDeleted、論理削除込み）
+      const state = await this.taskRepository.findSyncStateByWbsId(wbsId);
+
+      // [事前検証フェーズ] 全Excel行をドメイン構築＆検証（DB更新なし）
+      const builtTasks: Task[] = [];
+      for (const { data: excelWbs, rowNumber } of excelDataWithRowNumbers) {
+        try {
+          const task = this.buildTaskDomainFromExcel({ excelWbs, wbsId, phaseNameToId, assignees });
+          builtTasks.push(task);
+        } catch (error) {
+          const field = this.getErrorField(error);
+          validationErrors.push({
+            taskNo: excelWbs.WBS_ID,
+            field,
+            message: error instanceof Error ? error.message : String(error),
+            value: this.getFieldValue(excelWbs, field),
+            rowNumber,
+          });
+        }
+      }
+
+      result.recordCount = excelData.length;
+
+      if (validationErrors.length > 0) {
+        // 1件でもエラーがあればDBを一切更新しない（原子性担保）
+        result.success = false;
+        result.errorDetails = { validationErrors };
+      } else {
+        // [差分バケット構築（純粋計算）]
+        const existingByTaskNo = new Map(state.map((s) => [s.taskNo, s]));
+        const excelTaskNos = new Set(builtTasks.map((t) => t.taskNo.getValue()));
+
+        const toCreate: Task[] = [];
+        const toUpdate: Task[] = [];
+        for (const task of builtTasks) {
+          const existing = existingByTaskNo.get(task.taskNo.getValue());
+          if (existing) {
+            // 存続/復活：id保持でupdate（reviveはapplySyncDiff側でisDeleted解除）
+            task.id = existing.id;
+            toUpdate.push(task);
+          } else {
+            toCreate.push(task);
+          }
+        }
+        // 消失：Excelに無い有効タスクのみ論理削除（既存tombstoneは対象外）
+        const tombstoneStates = state.filter(
+          (s) => !s.isDeleted && !excelTaskNos.has(s.taskNo)
+        );
+        const toSoftDeleteIds = tombstoneStates.map((s) => s.id);
+
+        result.addedCount = toCreate.length;
+        result.updatedCount = toUpdate.length;
+        result.deletedCount = toSoftDeleteIds.length;
+
+        // スナップショット入力（時点データ・自己完結）を構築
+        const snapshotInputs = this.buildSnapshotInputs(
+          [...toCreate, ...toUpdate],
+          tombstoneStates,
+          assignees,
+          excelByTaskNo
+        );
+
+        // [適用：単一トランザクション] SyncLog採番＋差分適用＋スナップショット追記
+        await this.taskRepository.applySyncDiff(
+          wbsId,
+          { toCreate, toUpdate, toSoftDeleteIds },
+          now,
+          {
+            syncLogData: {
+              projectId: result.projectId,
+              syncStatus: 'SUCCESS',
+              syncedAt: now,
+              recordCount: result.recordCount,
+              addedCount: result.addedCount,
+              updatedCount: result.updatedCount,
+              deletedCount: result.deletedCount,
+            },
+            snapshotInputs,
+            snapshotAt: now,
+          }
+        );
+
+        result.success = true;
+      }
+
+      // 検証エラー時のみ FAILED ログを記録（成功時は applySyncDiff 内で採番・記録済み）
+      if (!result.success) {
+        await this.syncLogRepository.recordSync({
+          projectId: result.projectId,
+          syncStatus: 'FAILED',
+          syncedAt: now,
+          recordCount: result.recordCount,
+          addedCount: result.addedCount,
+          updatedCount: result.updatedCount,
+          deletedCount: result.deletedCount,
+          errorDetails: result.errorDetails,
+        });
+      }
+
+      return result;
+    } catch (error) {
+      await this.syncLogRepository.recordSync({
+        projectId: result.projectId || 'unknown',
+        syncStatus: 'FAILED',
+        syncedAt: new Date(),
+        recordCount: 0,
+        addedCount: 0,
+        updatedCount: 0,
+        deletedCount: 0,
+        errorDetails: error instanceof Error ? { message: error.message } : { message: String(error) },
+      });
+
+      if (error instanceof SyncError) {
+        throw error;
+      }
+      throw new SyncError(
+        'WBS同期処理中にエラーが発生しました',
+        SyncErrorType.TRANSACTION_ERROR,
+        { message: String(error) }
+      );
+    }
+  }
+
   // エクセル側のでwbsデータを取得
   // エクセルデータはWBS名で取得する
   private async fetchExcelData(wbsName: string): Promise<ExcelWbs[]> {
@@ -265,6 +433,77 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
     if (!tantoName) return null;
     const found = assignees.find(a => a.userName === tantoName);
     return found && found.id !== undefined ? found.id : null;
+  }
+
+  /**
+   * 進捗スナップショット入力を構築する（時点データ・自己完結）。
+   * - activeTasks（新規/存続/復活）：Task のperiods/status/progressRate＋担当者単価＋ExcelのJISSEKI実績から構築
+   * - tombstoneStates（消失）：isRemoved=true。工数・単価は読み出し時に無視されるため0
+   */
+  private buildSnapshotInputs(
+    activeTasks: Task[],
+    tombstoneStates: TaskSyncState[],
+    assignees: WbsAssignee[],
+    excelByTaskNo: Map<string, ExcelWbs>,
+  ): TaskProgressSnapshotInput[] {
+    const costByAssigneeId = new Map<number, number>();
+    assignees.forEach(a => {
+      if (a.id !== undefined) costByAssigneeId.set(a.id, a.getCostPerHour());
+    });
+
+    const normalKosu = (period?: { manHours: { kosu: number; type: { type: string } }[] }): number =>
+      (period?.manHours ?? [])
+        .filter(m => m.type.type === 'NORMAL')
+        .reduce((sum, m) => sum + Number(m.kosu), 0);
+
+    const inputs: TaskProgressSnapshotInput[] = activeTasks.map((task) => {
+      const taskNo = task.taskNo.getValue();
+      const kijun = task.periods?.find(p => p.type.type === 'KIJUN');
+      const yotei = task.periods?.find(p => p.type.type === 'YOTEI');
+      const baseManHours = normalKosu(kijun);
+      const plannedManHours = yotei ? normalKosu(yotei) : baseManHours;
+      const excel = excelByTaskNo.get(taskNo);
+
+      return {
+        taskId: task.id ?? null, // 新規はnull（create後にtaskNoで解決）
+        taskNo,
+        progressRate: task.progressRate ?? null,
+        status: task.status.status,
+        plannedManHours,
+        baseManHours,
+        costPerHour:
+          task.assigneeId !== undefined ? (costByAssigneeId.get(task.assigneeId) ?? 5000) : 5000,
+        plannedStart: yotei?.startDate ?? null,
+        plannedEnd: yotei?.endDate ?? null,
+        baseStart: kijun?.startDate ?? null,
+        baseEnd: kijun?.endDate ?? null,
+        actualStart: excel?.JISSEKI_START_DATE ?? null,
+        actualEnd: excel?.JISSEKI_END_DATE ?? null,
+        isRemoved: false,
+      };
+    });
+
+    // 消失タスクは tombstone スナップショット（値は読み出し時に無視）
+    for (const s of tombstoneStates) {
+      inputs.push({
+        taskId: s.id,
+        taskNo: s.taskNo,
+        progressRate: null,
+        status: 'NOT_STARTED',
+        plannedManHours: 0,
+        baseManHours: 0,
+        costPerHour: 0,
+        plannedStart: null,
+        plannedEnd: null,
+        baseStart: null,
+        baseEnd: null,
+        actualStart: null,
+        actualEnd: null,
+        isRemoved: true,
+      });
+    }
+
+    return inputs;
   }
 
   // エラーからフィールド名を推測

@@ -9,7 +9,7 @@ import type {
 export class QualityTaskPrismaRepository implements IQualityTaskRepository {
   async findAllForQualitySync(wbsId: number): Promise<QualitySyncTaskRow[]> {
     const rows = await prisma.wbsTask.findMany({
-      where: { wbsId },
+      where: { wbsId, isDeleted: false },
       select: {
         taskNo: true,
         name: true,
@@ -29,7 +29,7 @@ export class QualityTaskPrismaRepository implements IQualityTaskRepository {
   ): Promise<Map<string, string | null>> {
     if (taskNos.length === 0) return new Map();
     const tasks = await prisma.wbsTask.findMany({
-      where: { wbsId, taskNo: { in: taskNos } },
+      where: { wbsId, taskNo: { in: taskNos }, isDeleted: false },
       select: { taskNo: true, phase: { select: { name: true } } },
     });
     return new Map(tasks.map((t) => [t.taskNo, t.phase?.name ?? null]));
@@ -41,7 +41,7 @@ export class QualityTaskPrismaRepository implements IQualityTaskRepository {
   ): Promise<Map<string, string | null>> {
     if (taskNos.length === 0) return new Map();
     const tasks = await prisma.wbsTask.findMany({
-      where: { wbsId, taskNo: { in: taskNos } },
+      where: { wbsId, taskNo: { in: taskNos }, isDeleted: false },
       select: {
         taskNo: true,
         assignee: { select: { assignee: { select: { name: true } } } },

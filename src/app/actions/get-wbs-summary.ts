@@ -25,7 +25,7 @@ export async function getWbsTasksSummary(wbsId: string) {
       }),
       prisma.workRecord.count({ where: { taskId: null, wbsId: Number(wbsId) } }),
       prisma.wbsTask.findMany({
-        where: { wbsId: Number(wbsId) },
+        where: { wbsId: Number(wbsId), isDeleted: false },
         select: {
           status: true,
           periods: {

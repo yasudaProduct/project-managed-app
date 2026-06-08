@@ -68,7 +68,8 @@ export class PhaseRepository implements IPhaseRepository {
                 where: {
                     phaseId: {
                         in: phases.map(phase => phase.id)
-                    }
+                    },
+                    isDeleted: false,
                 },
             });
 

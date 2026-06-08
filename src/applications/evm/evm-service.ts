@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
-import type { IWbsEvmRepository, WbsEvmData } from './iwbs-evm-repository';
+import type { IWbsEvmRepository, WbsEvmData, TaskProgressSnapshotRecord } from './iwbs-evm-repository';
 import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { ProgressMeasurementMethod } from '@prisma/client';
@@ -92,10 +92,17 @@ export class EvmService {
       calculationMode
     );
 
-    // (3) 各日付のメトリクスをインメモリで計算
+    // (3) 進捗スナップショット履歴を1回取得し、評価日ごとのas-ofメトリクス関数を構築
+    const snapToDate = endDate.getTime() > now.getTime() ? endDate : now;
+    const snapshots = await this.wbsEvmRepository.getProgressSnapshots(wbsId, snapToDate);
+    const computeHistorical = this.buildAsOfMetricsFn(
+      wbsData, snapshots, now, calculationMode, method, fMethod
+    );
+
+    // (4) 各日付のメトリクスをインメモリで計算
     const dates = this.generateDateRange(startDate, endDate, interval);
     return this.computeTimeSeries(
-      wbsData, dates, computeCumulativeAc, now, calculationMode, method, fMethod, includePrediction
+      wbsData, dates, computeCumulativeAc, computeHistorical, now, calculationMode, method, fMethod, includePrediction
     );
   }
 
@@ -153,15 +160,21 @@ export class EvmService {
       calculationMode
     );
 
-    // (4) 現在メトリクス
+    // (4) 現在メトリクス（カードはライブ値が正）
     const currentMetrics = this.computeMetricsFromData(
       wbsData, now, computeCumulativeAc(now), calculationMode, method, fMethod, false, now
     );
 
-    // (5) 時系列メトリクス
+    // (5) 進捗スナップショット履歴を1回取得し、as-ofメトリクス関数を構築
+    const snapshots = await this.wbsEvmRepository.getProgressSnapshots(wbsId, costRangeEnd);
+    const computeHistorical = this.buildAsOfMetricsFn(
+      wbsData, snapshots, now, calculationMode, method, fMethod
+    );
+
+    // (6) 時系列メトリクス
     const dates = this.generateDateRange(startDate, endDate, interval);
     const timeSeries = this.computeTimeSeries(
-      wbsData, dates, computeCumulativeAc, now, calculationMode, method, fMethod, showPrediction
+      wbsData, dates, computeCumulativeAc, computeHistorical, now, calculationMode, method, fMethod, showPrediction
     );
 
     return {
@@ -211,6 +224,7 @@ export class EvmService {
     wbsData: WbsEvmData,
     dates: Date[],
     computeCumulativeAc: (evalDate: Date) => number,
+    computeHistorical: (evalDate: Date, ac: number) => EvmMetrics,
     now: Date,
     calculationMode: EvmCalculationMode,
     method: ProgressMeasurementMethod,
@@ -258,9 +272,8 @@ export class EvmService {
         });
       }
 
-      return this.computeMetricsFromData(
-        wbsData, date, computeCumulativeAc(date), calculationMode, method, fMethod, false, now
-      );
+      // 非予測（過去〜現在）はas-ofメトリクス（スナップショット優先・無ければ提案Cフォールバック）
+      return computeHistorical(date, computeCumulativeAc(date));
     });
   }
 
@@ -377,6 +390,134 @@ export class EvmService {
       forecastMethod,
       isPredicted,
     });
+  }
+
+  /**
+   * 進捗スナップショット履歴から、評価日ごとの過去メトリクス（PV/基準PV/EV/BAC）を
+   * as-of再構築するクロージャを構築する。
+   * @description
+   * - 各タスクについて「評価日の終了時刻（翌日00:00未満）までの最新スナップショット」をas-of解決し、
+   *   確定進捗を直接使用（提案Cの按分は通さない）。tombstone(isRemoved)は寄与0。
+   * - スナップショットが無い区間（最初のsnapshotより前）は、ライブタスクで提案Cにフォールバックする。
+   * - スナップショットが空なら全タスク・全評価日がフォールバックとなり、結果は現行（computeMetricsFromData）と一致する。
+   */
+  private buildAsOfMetricsFn(
+    wbsData: WbsEvmData,
+    snapshots: TaskProgressSnapshotRecord[],
+    now: Date,
+    calculationMode: EvmCalculationMode,
+    method: ProgressMeasurementMethod,
+    fMethod: EvmForecastMethod
+  ): (evalDate: Date, ac: number) => EvmMetrics {
+    // taskId別のスナップショット配列（snapshotAt昇順。取得時点でソート済み）
+    const snapshotsByTask = new Map<number, TaskProgressSnapshotRecord[]>();
+    for (const s of snapshots) {
+      const arr = snapshotsByTask.get(s.taskId);
+      if (arr) arr.push(s);
+      else snapshotsByTask.set(s.taskId, [s]);
+    }
+
+    // ライブタスク（フォールバック用）
+    const liveById = new Map<number, TaskEvmData>();
+    for (const t of wbsData.tasks) liveById.set(t.taskId, t);
+
+    const allTaskIds = new Set<number>([...liveById.keys(), ...snapshotsByTask.keys()]);
+    const bufferTotal = wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0);
+
+    return (evalDate: Date, ac: number): EvmMetrics => {
+      // 評価日 d の終了時刻 = 翌日00:00（ローカル）。これ未満の最新スナップショットを d に反映。
+      const cutoffMs = new Date(
+        evalDate.getFullYear(),
+        evalDate.getMonth(),
+        evalDate.getDate() + 1
+      ).getTime();
+
+      let pv = 0;
+      let pv_base = 0;
+      let ev = 0;
+      let bac = 0;
+
+      for (const taskId of allTaskIds) {
+        const snaps = snapshotsByTask.get(taskId);
+        const asOf = snaps ? this.asOfSnapshot(snaps, cutoffMs) : undefined;
+
+        if (asOf) {
+          if (asOf.isRemoved) continue; // tombstone以降は寄与0
+          const t = this.taskFromSnapshot(asOf);
+          if (asOf.plannedStart && asOf.plannedEnd) {
+            pv += t.getPlannedValueAtDate('YOTEI', evalDate, calculationMode, method);
+          }
+          if (asOf.baseStart && asOf.baseEnd) {
+            pv_base += t.getPlannedValueAtDate('BASE', evalDate, calculationMode, method);
+          }
+          ev += t.getEarnedValueDirect(calculationMode, method);
+          bac +=
+            calculationMode === 'cost'
+              ? asOf.baseManHours * asOf.costPerHour
+              : asOf.baseManHours;
+        } else {
+          // スナップショット未蓄積区間：ライブタスクで提案Cフォールバック（現行と同一）
+          const live = liveById.get(taskId);
+          if (!live) continue;
+          pv_base += live.getPlannedValueAtDate('BASE', evalDate, calculationMode, method);
+          pv += live.getPlannedValueAtDate('YOTEI', evalDate, calculationMode, method);
+          ev += live.getEarnedValue(evalDate, calculationMode, method, now);
+          bac +=
+            calculationMode === 'cost'
+              ? live.baseManHours * live.costPerHour
+              : live.baseManHours;
+        }
+      }
+
+      return EvmMetrics.create({
+        date: evalDate,
+        pv_base,
+        pv,
+        ev,
+        ac,
+        bac: bac + bufferTotal,
+        calculationMode,
+        progressMethod: method,
+        forecastMethod: fMethod,
+        isPredicted: false,
+      });
+    };
+  }
+
+  /** snapshotAt < cutoffMs の最新スナップショット（昇順配列を線形走査） */
+  private asOfSnapshot(
+    snaps: TaskProgressSnapshotRecord[],
+    cutoffMs: number
+  ): TaskProgressSnapshotRecord | undefined {
+    let result: TaskProgressSnapshotRecord | undefined;
+    for (const s of snaps) {
+      if (s.snapshotAt.getTime() < cutoffMs) result = s;
+      else break;
+    }
+    return result;
+  }
+
+  /** スナップショットレコードから TaskEvmData を構築（期間null時はEPOCH placeholder。PVは呼び出し側でnullガード） */
+  private taskFromSnapshot(s: TaskProgressSnapshotRecord): TaskEvmData {
+    const EPOCH = new Date(0);
+    return new TaskEvmData(
+      s.taskId,
+      s.taskNo,
+      s.taskNo,
+      s.baseStart ?? EPOCH,
+      s.baseEnd ?? EPOCH,
+      s.plannedStart ?? EPOCH,
+      s.plannedEnd ?? EPOCH,
+      s.actualStart,
+      s.actualEnd,
+      s.baseManHours,
+      s.plannedManHours,
+      0,
+      s.status,
+      s.progressRate ?? 0,
+      s.costPerHour,
+      s.progressRate
+    );
   }
 
   async getTaskEvmDetails(wbsId: number): Promise<TaskEvmData[]> {

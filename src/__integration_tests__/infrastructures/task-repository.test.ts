@@ -8,6 +8,7 @@ import { PeriodType } from '@/domains/task/value-object/period-type';
 import { ManHour } from '@/domains/task/man-hour';
 import { ManHourType } from '@/domains/task/value-object/man-hour-type';
 import { cleanupTestData, seedTestProject, testIds } from '../helpers';
+import type { TaskProgressSnapshotInput } from '@/applications/task/itask-repository';
 
 describe('TaskRepository Integration Tests', () => {
   let taskRepository: TaskRepository;
@@ -166,7 +167,44 @@ describe('TaskRepository Integration Tests', () => {
         const refetchedTask = await taskRepository.findById(testTaskDbId);
         expect(refetchedTask?.name).toBe('更新されたタスク名');
         expect(refetchedTask?.status.getStatus()).toBe('IN_PROGRESS');
+        // 期間・工数が増殖せず、新しい値で入れ替わっていること
+        expect(refetchedTask?.periods?.length).toBe(1);
+        expect(refetchedTask?.periods?.[0].manHours.length).toBe(1);
+        expect(refetchedTask?.periods?.[0].manHours[0].kosu).toBe(15);
       }
+    });
+
+    it('update を2回連続実行しても period/kosu が増殖しないこと', async () => {
+      const baseTask = await taskRepository.findById(testTaskDbId);
+      expect(baseTask).not.toBeNull();
+      if (!baseTask) return;
+
+      // 1回目の更新
+      baseTask.name = '2回更新-1';
+      await taskRepository.update(testIds.wbsId, baseTask);
+
+      // 2回目の更新（DBから取り直して同じタスクを再更新）
+      const reloaded = await taskRepository.findById(testTaskDbId);
+      expect(reloaded).not.toBeNull();
+      if (!reloaded) return;
+      reloaded.name = '2回更新-2';
+      await taskRepository.update(testIds.wbsId, reloaded);
+
+      // 2回更新後も period は1件・kosu は1件のまま（重複蓄積していないこと）
+      const finalTask = await taskRepository.findById(testTaskDbId);
+      expect(finalTask?.name).toBe('2回更新-2');
+      expect(finalTask?.periods?.length).toBe(1);
+      expect(finalTask?.periods?.[0].manHours.length).toBe(1);
+
+      // DBレベルでも期間・工数の行数が1件ずつであることを確認
+      const periodCount = await global.prisma.taskPeriod.count({
+        where: { taskId: testTaskDbId },
+      });
+      expect(periodCount).toBe(1);
+      const kosuCount = await global.prisma.taskKosu.count({
+        where: { period: { taskId: testTaskDbId } },
+      });
+      expect(kosuCount).toBe(1);
     });
 
     it('タスクの削除', async () => {
@@ -179,6 +217,266 @@ describe('TaskRepository Integration Tests', () => {
 
       // クリーンアップ処理でエラーが発生しないようにIDをリセット
       testIds.taskId = 0;
+    });
+  });
+
+  describe('論理削除（soft-delete）フィルタ', () => {
+    it('論理削除済みタスクは有効取得から除外され、削除込み取得には現れること', async () => {
+      // 専用タスクを作成（他テストと干渉しないよう独立）
+      const taskNo = TaskNo.reconstruct(`SOFTDEL-${Date.now() % 100000}`);
+      const created = await taskRepository.create(
+        Task.create({
+          taskNo,
+          wbsId: testIds.wbsId,
+          name: '論理削除テスト用',
+          phaseId: testIds.phaseId,
+          status: new TaskStatus({ status: 'NOT_STARTED' }),
+          periods: [],
+        })
+      );
+      const softDelId = created.id!;
+
+      // 論理削除（1C時点ではsyncが未対応のため手動でフラグを立てる）
+      await global.prisma.wbsTask.update({
+        where: { id: softDelId },
+        data: { isDeleted: true, deletedAt: new Date() },
+      });
+
+      // findById（有効のみ）→ null
+      expect(await taskRepository.findById(softDelId)).toBeNull();
+
+      // findActiveByWbsId（有効のみ）→ 含まれない
+      const active = await taskRepository.findActiveByWbsId(testIds.wbsId);
+      expect(active.some((t) => t.id === softDelId)).toBe(false);
+
+      // findIncludingDeletedByWbsId（削除込み）→ 含まれる
+      const including = await taskRepository.findIncludingDeletedByWbsId(testIds.wbsId);
+      expect(including.some((t) => t.id === softDelId)).toBe(true);
+
+      // クリーンアップ（物理削除）
+      await global.prisma.wbsTask.delete({ where: { id: softDelId } });
+    });
+  });
+
+  describe('applySyncDiff / findSyncStateByWbsId（差分同期）', () => {
+    const createdTaskNos = ['SD-0001', 'SD-0002'];
+
+    const mkTask = (taskNo: string, name: string, kosu: number): Task => {
+      const t = Task.create({
+        taskNo: TaskNo.reconstruct(taskNo),
+        wbsId: testIds.wbsId,
+        name,
+        phaseId: testIds.phaseId,
+        status: new TaskStatus({ status: 'NOT_STARTED' }),
+        periods: [
+          Period.create({
+            startDate: new Date('2025-05-01'),
+            endDate: new Date('2025-05-31'),
+            type: new PeriodType({ type: 'YOTEI' }),
+            manHours: [ManHour.create({ kosu, type: new ManHourType({ type: 'NORMAL' }) })],
+          }),
+        ],
+      });
+      return t;
+    };
+
+    afterAll(async () => {
+      // 後始末：TaskStatusLog（Restrict）を先に削除してからタスクを物理削除（period/kosuはCascade）
+      await global.prisma.taskStatusLog
+        .deleteMany({ where: { task: { wbsId: testIds.wbsId, taskNo: { in: createdTaskNos } } } })
+        .catch(() => {});
+      await global.prisma.wbsTask
+        .deleteMany({ where: { wbsId: testIds.wbsId, taskNo: { in: createdTaskNos } } })
+        .catch(() => {});
+    });
+
+    it('create→update(増殖なし)→soft-delete(紐づけ保持)→revive を通しで検証', async () => {
+      const now = new Date();
+
+      // 1) 新規作成
+      await taskRepository.applySyncDiff(
+        testIds.wbsId,
+        { toCreate: [mkTask('SD-0001', '名前A', 10), mkTask('SD-0002', '名前B', 20)], toUpdate: [], toSoftDeleteIds: [] },
+        now,
+      );
+
+      let state = await taskRepository.findSyncStateByWbsId(testIds.wbsId);
+      const s1 = state.find((s) => s.taskNo === 'SD-0001')!;
+      const s2 = state.find((s) => s.taskNo === 'SD-0002')!;
+      expect(s1).toBeTruthy();
+      expect(s2).toBeTruthy();
+      expect(s1.isDeleted).toBe(false);
+      expect(await global.prisma.taskPeriod.count({ where: { taskId: s1.id } })).toBe(1);
+
+      // 2) update（id保持・period増殖しない）
+      const upd = mkTask('SD-0001', '名前A-改', 15);
+      upd.id = s1.id;
+      await taskRepository.applySyncDiff(
+        testIds.wbsId,
+        { toCreate: [], toUpdate: [upd], toSoftDeleteIds: [] },
+        now,
+      );
+      expect(await global.prisma.taskPeriod.count({ where: { taskId: s1.id } })).toBe(1);
+      expect(await global.prisma.taskKosu.count({ where: { period: { taskId: s1.id } } })).toBe(1);
+      const reloaded = await taskRepository.findById(s1.id);
+      expect(reloaded?.name).toBe('名前A-改');
+
+      // s2 に TaskStatusLog を紐付け（soft-delete後も保持されることの確認用）
+      await global.prisma.taskStatusLog.create({
+        data: { taskId: s2.id, status: 'NOT_STARTED', changedAt: now },
+      });
+
+      // 3) soft-delete（s2をExcelから消した想定）
+      await taskRepository.applySyncDiff(
+        testIds.wbsId,
+        { toCreate: [], toUpdate: [], toSoftDeleteIds: [s2.id] },
+        now,
+      );
+      state = await taskRepository.findSyncStateByWbsId(testIds.wbsId);
+      expect(state.find((s) => s.taskNo === 'SD-0002')!.isDeleted).toBe(true);
+      // 有効取得から除外される
+      const active = await taskRepository.findActiveByWbsId(testIds.wbsId);
+      expect(active.some((t) => t.taskNo.getValue() === 'SD-0002')).toBe(false);
+      // 紐づけ（StatusLog）は物理削除されず保持される
+      expect(await global.prisma.taskStatusLog.count({ where: { taskId: s2.id } })).toBe(1);
+
+      // 4) revive（s2のtaskNoが再登場）
+      const rev = mkTask('SD-0002', '名前B-復活', 20);
+      rev.id = s2.id;
+      await taskRepository.applySyncDiff(
+        testIds.wbsId,
+        { toCreate: [], toUpdate: [rev], toSoftDeleteIds: [] },
+        now,
+      );
+      state = await taskRepository.findSyncStateByWbsId(testIds.wbsId);
+      expect(state.find((s) => s.taskNo === 'SD-0002')!.isDeleted).toBe(false);
+      const revived = await taskRepository.findById(s2.id);
+      expect(revived?.name).toBe('名前B-復活');
+    });
+  });
+
+  describe('applySyncDiff：スナップショット書き込み（2A）', () => {
+    const taskNos = ['SS-0001', 'SS-0002'];
+    const syncLogIds: number[] = [];
+
+    const mkTask = (taskNo: string): Task =>
+      Task.create({
+        taskNo: TaskNo.reconstruct(taskNo),
+        wbsId: testIds.wbsId,
+        name: `snapshot-${taskNo}`,
+        phaseId: testIds.phaseId,
+        status: new TaskStatus({ status: 'NOT_STARTED' }),
+        periods: [],
+      });
+
+    const snapInput = (
+      taskNo: string,
+      taskId: number | null,
+      isRemoved = false,
+    ): TaskProgressSnapshotInput => ({
+      taskId,
+      taskNo,
+      progressRate: 50,
+      status: 'IN_PROGRESS',
+      plannedManHours: 20,
+      baseManHours: 10,
+      costPerHour: 5000,
+      plannedStart: new Date('2025-05-01'),
+      plannedEnd: new Date('2025-05-31'),
+      baseStart: new Date('2025-05-01'),
+      baseEnd: new Date('2025-05-31'),
+      actualStart: null,
+      actualEnd: null,
+      isRemoved,
+    });
+
+    afterAll(async () => {
+      await global.prisma.taskProgressSnapshot
+        .deleteMany({ where: { taskNo: { in: taskNos } } })
+        .catch(() => {});
+      if (syncLogIds.length) {
+        await global.prisma.syncLog.deleteMany({ where: { id: { in: syncLogIds } } }).catch(() => {});
+      }
+      await global.prisma.wbsTask
+        .deleteMany({ where: { wbsId: testIds.wbsId, taskNo: { in: taskNos } } })
+        .catch(() => {});
+    });
+
+    it('SyncLog採番＋各タスクのスナップショットが同一syncLogIdで作成される', async () => {
+      const now = new Date();
+      const { syncLogId } = await taskRepository.applySyncDiff(
+        testIds.wbsId,
+        { toCreate: [mkTask('SS-0001'), mkTask('SS-0002')], toUpdate: [], toSoftDeleteIds: [] },
+        now,
+        {
+          syncLogData: {
+            projectId: testIds.projectId,
+            syncStatus: 'SUCCESS',
+            syncedAt: now,
+            recordCount: 2,
+            addedCount: 2,
+            updatedCount: 0,
+            deletedCount: 0,
+          },
+          snapshotInputs: [snapInput('SS-0001', null), snapInput('SS-0002', null)],
+          snapshotAt: now,
+        },
+      );
+
+      expect(syncLogId).not.toBeNull();
+      syncLogIds.push(syncLogId!);
+
+      const snaps = await global.prisma.taskProgressSnapshot.findMany({
+        where: { syncLogId: syncLogId! },
+      });
+      expect(snaps).toHaveLength(2);
+      expect(snaps.every((s) => !s.isRemoved)).toBe(true);
+
+      // 新規タスクの taskId が create 結果の id に解決されている
+      const state = await taskRepository.findSyncStateByWbsId(testIds.wbsId);
+      const id1 = state.find((s) => s.taskNo === 'SS-0001')!.id;
+      expect(snaps.find((s) => s.taskNo === 'SS-0001')!.taskId).toBe(id1);
+    });
+
+    it('2回目の同期で別世代が蓄積され、消失タスクは isRemoved=true のtombstone', async () => {
+      const state = await taskRepository.findSyncStateByWbsId(testIds.wbsId);
+      const t1 = state.find((s) => s.taskNo === 'SS-0001')!;
+      const t2 = state.find((s) => s.taskNo === 'SS-0002')!;
+      const now = new Date();
+      const upd = mkTask('SS-0001');
+      upd.id = t1.id;
+
+      const { syncLogId } = await taskRepository.applySyncDiff(
+        testIds.wbsId,
+        { toCreate: [], toUpdate: [upd], toSoftDeleteIds: [t2.id] },
+        now,
+        {
+          syncLogData: {
+            projectId: testIds.projectId,
+            syncStatus: 'SUCCESS',
+            syncedAt: now,
+            recordCount: 1,
+            addedCount: 0,
+            updatedCount: 1,
+            deletedCount: 1,
+          },
+          snapshotInputs: [snapInput('SS-0001', t1.id), snapInput('SS-0002', t2.id, true)],
+          snapshotAt: now,
+        },
+      );
+      syncLogIds.push(syncLogId!);
+
+      // SS-0001 は2世代分のスナップショット
+      const s1snaps = await global.prisma.taskProgressSnapshot.findMany({
+        where: { taskNo: 'SS-0001' },
+      });
+      expect(s1snaps.length).toBeGreaterThanOrEqual(2);
+
+      // 消失タスクは tombstone
+      const tomb = await global.prisma.taskProgressSnapshot.findFirst({
+        where: { syncLogId: syncLogId!, taskNo: 'SS-0002' },
+      });
+      expect(tomb?.isRemoved).toBe(true);
     });
   });
 
