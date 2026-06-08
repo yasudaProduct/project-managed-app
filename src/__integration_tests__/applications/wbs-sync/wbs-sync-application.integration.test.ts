@@ -152,8 +152,8 @@ describe('WbsSyncApplicationService.syncDiff（統合・Excelスタブ）', () =
     expect(after.some((s) => s.taskNo === 'D1-0003')).toBe(false);
   });
 
-  it('replace同期は孤児化する進捗スナップショット履歴をクリアする（二重計上防止）', async () => {
-    // 直前までにスナップショットが蓄積されている前提
+  it('replace成功：全タスクを原子的に置換し、孤児化する進捗スナップショット履歴をクリアする', async () => {
+    // 直前までにスナップショットと既存タスク（D1-0001有効＋D1-0002 tombstone）がある前提
     const beforeSnaps = await global.prisma.taskProgressSnapshot.count({
       where: { wbsId: testIds.wbsId },
     });
@@ -163,23 +163,33 @@ describe('WbsSyncApplicationService.syncDiff（統合・Excelスタブ）', () =
     excelRows = [makeRow({ WBS_ID: 'D1-0001', ROW_NO: 1 })];
     const result = await service.replaceAll(testIds.wbsId);
     expect(result.success).toBe(true);
+    expect(result.deletedCount).toBe(2); // D1-0001有効 + D1-0002 tombstone
+    expect(result.addedCount).toBe(1);
 
-    // 当該WBSのスナップショット履歴は0件（クリアされる）
+    // 有効タスクは D1-0001 のみ（全置換）
+    const active = await taskRepository.findActiveByWbsId(testIds.wbsId);
+    expect(active.map((t) => t.taskNo.getValue())).toEqual(['D1-0001']);
+
+    // スナップショット履歴は0件（クリアされる）
     const afterSnaps = await global.prisma.taskProgressSnapshot.count({
       where: { wbsId: testIds.wbsId },
     });
     expect(afterSnaps).toBe(0);
   });
 
-  it('replaceが失敗した場合はスナップショット履歴を消さない（履歴のデータ損失を防ぐ）', async () => {
+  it('replace失敗（不正行）：事前検証で中断し、タスクもスナップショットも一切変更しない', async () => {
     // まず diff でスナップショットを蓄積
     excelRows = [makeRow({ WBS_ID: 'D1-0001', ROW_NO: 1, PROGRESS_RATE: 40 })];
     const diff = await service.syncDiff(testIds.wbsId);
     expect(diff.success).toBe(true);
+
     const snapsBefore = await global.prisma.taskProgressSnapshot.count({
       where: { wbsId: testIds.wbsId },
     });
     expect(snapsBefore).toBeGreaterThan(0);
+    const stateBefore = (await taskRepository.findSyncStateByWbsId(testIds.wbsId))
+      .map((s) => `${s.taskNo}:${s.isDeleted}`)
+      .sort();
 
     // 不正行（存在しないフェーズ）を含むExcelで replace → 失敗させる
     excelRows = [
@@ -189,10 +199,17 @@ describe('WbsSyncApplicationService.syncDiff（統合・Excelスタブ）', () =
     const result = await service.replaceAll(testIds.wbsId);
     expect(result.success).toBe(false);
 
-    // 失敗時はスナップショットが保持される（0件になっていない）
+    // 失敗時はスナップショットが保持される（データ損失なし）
     const snapsAfter = await global.prisma.taskProgressSnapshot.count({
       where: { wbsId: testIds.wbsId },
     });
-    expect(snapsAfter).toBeGreaterThan(0);
+    expect(snapsAfter).toBe(snapsBefore);
+
+    // タスクも一切変更されていない（部分置換が起きない＝二重計上の原因を作らない）
+    const stateAfter = (await taskRepository.findSyncStateByWbsId(testIds.wbsId))
+      .map((s) => `${s.taskNo}:${s.isDeleted}`)
+      .sort();
+    expect(stateAfter).toEqual(stateBefore);
+    expect(stateAfter.some((s) => s.startsWith('D1-0009'))).toBe(false);
   });
 });

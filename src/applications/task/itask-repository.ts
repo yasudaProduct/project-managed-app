@@ -74,8 +74,12 @@ interface ITaskRepository {
         now: Date,
         context?: SyncDiffContext
     ): Promise<{ syncLogId: number | null }>;
-    /** 指定WBSの進捗スナップショット履歴を全削除する（replace同期のリセット用） */
-    deleteProgressSnapshotsByWbsId(wbsId: number): Promise<void>;
+    /**
+     * 指定WBSのタスクを全置換（洗い替え）する。単一トランザクションで
+     * 「全タスク削除＋進捗スナップショット履歴クリア＋新タスク作成」を原子的に行う。
+     * 事前にドメイン検証済みのtasksを渡すこと（部分置換を起こさないため）。
+     */
+    replaceAllTasks(wbsId: number, tasks: Task[]): Promise<{ deleted: number; added: number }>;
     delete(id: number): Promise<void>;
 }
 

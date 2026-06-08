@@ -391,8 +391,42 @@ export class TaskRepository implements ITaskRepository {
         return { syncLogId };
     }
 
-    async deleteProgressSnapshotsByWbsId(wbsId: number): Promise<void> {
-        await prisma.taskProgressSnapshot.deleteMany({ where: { wbsId } });
+    async replaceAllTasks(
+        wbsId: number,
+        tasks: Task[]
+    ): Promise<{ deleted: number; added: number }> {
+        return prisma.$transaction(
+            async (tx) => {
+                // 既存タスク数（tombstone含む）を記録
+                const deleted = await tx.wbsTask.count({ where: { wbsId } });
+
+                // 全タスク削除（TaskPeriod/Kosu/DependencyはDB FK Cascade、
+                // WorkRecordはSetNull、TaskStatusLogはRestrict→違反時はtx全体ロールバック）
+                await tx.wbsTask.deleteMany({ where: { wbsId } });
+
+                // 孤児化する進捗スナップショット履歴をtx内でクリア（失敗時は保持される）
+                await tx.taskProgressSnapshot.deleteMany({ where: { wbsId } });
+
+                // 新タスクを作成
+                for (const task of tasks) {
+                    const created = await tx.wbsTask.create({
+                        data: {
+                            taskNo: task.taskNo?.getValue(),
+                            name: task.name,
+                            wbsId: task.wbsId,
+                            assigneeId: task.assigneeId ?? undefined,
+                            phaseId: task.phaseId ?? undefined,
+                            status: task.status.status,
+                            progressRate: task.progressRate,
+                        },
+                    });
+                    await this.replacePeriodsTx(tx, created.id, wbsId, task.periods ?? []);
+                }
+
+                return { deleted, added: tasks.length };
+            },
+            { timeout: 30000, maxWait: 30000 }
+        );
     }
 
     async delete(id: number): Promise<void> {

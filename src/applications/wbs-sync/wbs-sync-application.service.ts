@@ -63,20 +63,6 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       // プロジェクトIDを設定
       result.projectId = excelData[0].PROJECT_ID;
 
-      // 既存タスクを取得（論理削除済みのtombstoneも含めて全削除する必要があるため）
-      const existingTasks = await this.taskRepository.findIncludingDeletedByWbsId(wbsId);
-
-      // 削除数を設定
-      result.deletedCount = existingTasks.length;
-
-      // TODO: ここからトランザクション貼る
-      // 既存タスクを全削除
-      for (const task of existingTasks) {
-        if (task.id) {
-          await this.taskRepository.delete(task.id);
-        }
-      }
-
       // フェーズ情報を取得（IDマッピング用）
       const phaseList = await this.phaseRepository.findByWbsId(wbsId);
       const phaseNameToId = new Map<string, number>(); // <フェーズ名, フェーズID>
@@ -90,64 +76,38 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       // 担当者情報を取得
       const assignees = await this.wbsAssigneeRepository.findByWbsId(wbsId);
 
-      // 全タスクを処理（バリデーション・作成）
-      const summary = {
-        totalTasks: 0,
-        validTasks: 0,
-        errorTasks: 0,
-        byPhase: {} as Record<string, number>,
-        byAssignee: {} as Record<string, number>
-      };
-
-      for (let i = 0; i < excelDataWithRowNumbers.length; i++) {
-        const { data: excelWbs, rowNumber } = excelDataWithRowNumbers[i];
-        summary.totalTasks++;
-
+      // [事前検証フェーズ] 全Excel行をドメイン構築＆検証（DB無変更）。
+      // 1行でもエラーがあればmutationせず中断し、部分置換を起こさない。
+      const builtTasks: Task[] = [];
+      for (const { data: excelWbs, rowNumber } of excelDataWithRowNumbers) {
         try {
-          // タスクドメインを構築
-          const task = this.buildTaskDomainFromExcel({ excelWbs, wbsId, phaseNameToId, assignees: assignees });
-
-          // タスクを作成
-          await this.taskRepository.create(task);
-
-          result.addedCount++;
-          summary.validTasks++;
-
-          // フェーズ別集計
-          if (excelWbs.PHASE) {
-            summary.byPhase[excelWbs.PHASE] = (summary.byPhase[excelWbs.PHASE] || 0) + 1;
-          }
-
-          // 担当者別集計
-          if (excelWbs.TANTO) {
-            summary.byAssignee[excelWbs.TANTO] = (summary.byAssignee[excelWbs.TANTO] || 0) + 1;
-          }
+          const task = this.buildTaskDomainFromExcel({ excelWbs, wbsId, phaseNameToId, assignees });
+          builtTasks.push(task);
         } catch (error) {
-          console.log('エラー', error);
-          summary.errorTasks++;
           const field = this.getErrorField(error);
           validationErrors.push({
             taskNo: excelWbs.WBS_ID,
             field,
             message: error instanceof Error ? error.message : String(error),
             value: this.getFieldValue(excelWbs, field),
-            rowNumber
+            rowNumber,
           });
         }
       }
 
       result.recordCount = excelData.length;
-      result.success = validationErrors.length === 0;
 
       if (validationErrors.length > 0) {
+        // DBを一切更新しない
+        result.success = false;
         result.errorDetails = { validationErrors };
-      }
-
-      // replaceが成功した場合のみ、孤児化する古いスナップショット履歴をクリアする。
-      // （replaceAllは非トランザクションのため、早期に消すと後続の削除/検証失敗で
-      //   同期は失敗なのに履歴だけ失われる＝データ損失になる。成功確定後に行う）
-      if (result.success) {
-        await this.taskRepository.deleteProgressSnapshotsByWbsId(wbsId);
+      } else {
+        // [適用：単一トランザクション] 全削除＋スナップショット履歴クリア＋全再作成（原子的）
+        const { deleted, added } = await this.taskRepository.replaceAllTasks(wbsId, builtTasks);
+        result.deletedCount = deleted;
+        result.addedCount = added;
+        result.updatedCount = 0;
+        result.success = true;
       }
 
       // 同期ログを記録
