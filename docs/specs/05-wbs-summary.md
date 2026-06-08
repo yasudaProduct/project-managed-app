@@ -432,8 +432,8 @@ grandTotal: taskCount=3, plannedHours=50, actualHours=20
 
 | クラス | ファイル | 責務 |
 | --- | --- | --- |
-| `GetWbsSummaryQuery` | `src/applications/wbs/query/get-wbs-summary.query.ts` | 集計クエリの入力パラメータ |
-| `WbsSummaryQueryHandler` | `src/applications/wbs/query/get-wbs-summary.handler.ts` | サマリー集計のオーケストレーション |
+| `GetWbsSummaryQuery` | `src/applications/wbs/query/get-wbs-summary-query.ts` | 集計クエリの入力パラメータ |
+| `GetWbsSummaryHandler` | `src/applications/wbs/query/get-wbs-summary-handler.ts` | サマリー集計のオーケストレーション |
 | `MonthlySummaryAccumulator` | `src/applications/wbs/query/monthly-summary-accumulator.ts` | 担当者×月集計 |
 | `MonthlyPhaseSummaryAccumulator` | `src/applications/wbs/query/monthly-phase-summary-accumulator.ts` | フェーズ×月集計 |
 
