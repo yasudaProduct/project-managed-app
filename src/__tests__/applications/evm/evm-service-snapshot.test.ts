@@ -23,6 +23,8 @@ describe('EvmService - スナップショットas-of時系列（2B）', () => {
       getBuffers: jest.fn(),
       getProjectSettings: jest.fn(),
       getProgressSnapshots: jest.fn().mockResolvedValue([]),
+      getEditableProgressSnapshots: jest.fn().mockResolvedValue([]),
+      updateProgressSnapshot: jest.fn().mockResolvedValue(undefined),
     } as jest.Mocked<IWbsEvmRepository>;
     evmService = new EvmService(mockRepository);
   });

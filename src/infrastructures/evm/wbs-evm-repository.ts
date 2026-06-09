@@ -7,6 +7,7 @@ import {
   BufferData,
   ProjectSettingsData,
   TaskProgressSnapshotRecord,
+  EditableProgressSnapshot,
 } from '@/applications/evm/iwbs-evm-repository';
 import type { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-repository';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
@@ -236,5 +237,44 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       actualEnd: r.actualEnd,
       isRemoved: r.isRemoved,
     }));
+  }
+
+  async getEditableProgressSnapshots(
+    wbsId: number
+  ): Promise<EditableProgressSnapshot[]> {
+    // 編集対象は有効タスクのスナップショットのみ（tombstone は除外）。
+    const rows = await prisma.taskProgressSnapshot.findMany({
+      where: { wbsId, isRemoved: false },
+      orderBy: [{ taskNo: 'asc' }, { snapshotAt: 'asc' }],
+    });
+
+    // タスク名は WbsTask から taskId → name で解決（snapshot.taskId は wbsTask.id を参照）。
+    const tasks = await prisma.wbsTask.findMany({
+      where: { wbsId },
+      select: { id: true, name: true },
+    });
+    const nameByTaskId = new Map(tasks.map((t) => [t.id, t.name]));
+
+    return rows.map((r) => ({
+      id: r.id,
+      taskId: r.taskId,
+      taskNo: r.taskNo,
+      taskName: nameByTaskId.get(r.taskId) ?? r.taskNo,
+      snapshotAt: r.snapshotAt,
+      progressRate: r.progressRate !== null ? Number(r.progressRate) : null,
+      status: r.status,
+    }));
+  }
+
+  async updateProgressSnapshot(
+    id: number,
+    progressRate: number | null,
+    status: TaskStatus
+  ): Promise<void> {
+    // 訂正対象は progressRate / status のみ。他カラム（工数・単価・日付・isRemoved）には触れない。
+    await prisma.taskProgressSnapshot.update({
+      where: { id },
+      data: { progressRate, status },
+    });
   }
 }

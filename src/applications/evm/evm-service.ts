@@ -1,9 +1,9 @@
 import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
-import type { IWbsEvmRepository, WbsEvmData, TaskProgressSnapshotRecord } from './iwbs-evm-repository';
+import type { IWbsEvmRepository, WbsEvmData, TaskProgressSnapshotRecord, EditableProgressSnapshot } from './iwbs-evm-repository';
 import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
-import { ProgressMeasurementMethod } from '@prisma/client';
+import { ProgressMeasurementMethod, TaskStatus } from '@prisma/client';
 import type { EvmForecastMethod } from '@/types/evm-forecast-method';
 
 /**
@@ -22,6 +22,39 @@ export class EvmService {
     @inject(SYMBOL.IWbsEvmRepository)
     private wbsEvmRepository: IWbsEvmRepository
   ) { }
+
+  /**
+   * 進捗スナップショット訂正画面用：編集対象スナップショット一覧を取得
+   * @param wbsId WBS ID
+   * @returns id 付きの編集レコード（isRemoved=false、taskNo/snapshotAt 昇順）
+   */
+  async getEditableProgressSnapshots(
+    wbsId: number
+  ): Promise<EditableProgressSnapshot[]> {
+    return this.wbsEvmRepository.getEditableProgressSnapshots(wbsId);
+  }
+
+  /**
+   * 進捗スナップショット訂正画面用：1件の progressRate / status を手動補正する
+   * @param id スナップショット行 ID
+   * @param progressRate 進捗率（0〜100 または null）。範囲外は例外
+   * @param status タスクステータス
+   */
+  async updateProgressSnapshot(
+    id: number,
+    progressRate: number | null,
+    status: TaskStatus
+  ): Promise<void> {
+    if (progressRate !== null) {
+      if (!Number.isFinite(progressRate) || progressRate < 0 || progressRate > 100) {
+        throw new Error('進捗率は0〜100の範囲で指定してください。');
+      }
+    }
+    if (!Object.values(TaskStatus).includes(status)) {
+      throw new Error(`不正なステータスです: ${status}`);
+    }
+    await this.wbsEvmRepository.updateProgressSnapshot(id, progressRate, status);
+  }
 
   /**
    * 現在のEVMメトリクスを計算

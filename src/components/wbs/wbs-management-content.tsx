@@ -3,6 +3,7 @@ import {
   BarChart3,
   CalendarCheck,
   CirclePlus,
+  History,
   LayoutDashboard,
   List,
   Loader2,
@@ -103,6 +104,11 @@ export function WbsManagementContent({
         <Link href={`/wbs/${wbsId}/assignee`}>
           <Button className="bg-white text-black ml-2">
             <Users className="h-4 w-4" />
+          </Button>
+        </Link>
+        <Link href={`/wbs/${wbsId}/progress-history`}>
+          <Button className="bg-white text-black ml-2" title="進捗履歴の訂正">
+            <History className="h-4 w-4" />
           </Button>
         </Link>
         <TaskModal wbsId={wbsId}>

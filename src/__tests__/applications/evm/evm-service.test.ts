@@ -17,6 +17,8 @@ describe('EvmService', () => {
       getBuffers: jest.fn(),
       getProjectSettings: jest.fn(),
       getProgressSnapshots: jest.fn().mockResolvedValue([]),
+      getEditableProgressSnapshots: jest.fn().mockResolvedValue([]),
+      updateProgressSnapshot: jest.fn().mockResolvedValue(undefined),
     } as jest.Mocked<IWbsEvmRepository>;
 
     evmService = new EvmService(mockRepository);
@@ -1459,6 +1461,54 @@ describe('EvmService', () => {
       expect(result[1].ac).toBe(30);
       // 1/3: AC = 10 + 20 + 30 = 60（累積）
       expect(result[2].ac).toBe(60);
+    });
+  });
+
+  describe('updateProgressSnapshot（進捗スナップショット訂正）', () => {
+    it('正常系: progressRate/status をリポジトリへそのまま委譲する', async () => {
+      await evmService.updateProgressSnapshot(10, 50, TaskStatus.IN_PROGRESS);
+
+      expect(mockRepository.updateProgressSnapshot).toHaveBeenCalledWith(
+        10,
+        50,
+        TaskStatus.IN_PROGRESS
+      );
+    });
+
+    it('正常系: progressRate=null（クリア）を許容する', async () => {
+      await evmService.updateProgressSnapshot(10, null, TaskStatus.NOT_STARTED);
+
+      expect(mockRepository.updateProgressSnapshot).toHaveBeenCalledWith(
+        10,
+        null,
+        TaskStatus.NOT_STARTED
+      );
+    });
+
+    it('境界値: 0 と 100 は許容する', async () => {
+      await evmService.updateProgressSnapshot(1, 0, TaskStatus.NOT_STARTED);
+      await evmService.updateProgressSnapshot(2, 100, TaskStatus.COMPLETED);
+
+      expect(mockRepository.updateProgressSnapshot).toHaveBeenCalledTimes(2);
+    });
+
+    it('範囲外（負の値）は例外を投げ、リポジトリを呼ばない', async () => {
+      await expect(
+        evmService.updateProgressSnapshot(10, -1, TaskStatus.IN_PROGRESS)
+      ).rejects.toThrow();
+      expect(mockRepository.updateProgressSnapshot).not.toHaveBeenCalled();
+    });
+
+    it('範囲外（100超）は例外を投げ、リポジトリを呼ばない', async () => {
+      await expect(
+        evmService.updateProgressSnapshot(10, 101, TaskStatus.IN_PROGRESS)
+      ).rejects.toThrow();
+      expect(mockRepository.updateProgressSnapshot).not.toHaveBeenCalled();
+    });
+
+    it('getEditableProgressSnapshots はリポジトリへ委譲する', async () => {
+      await evmService.getEditableProgressSnapshots(123);
+      expect(mockRepository.getEditableProgressSnapshots).toHaveBeenCalledWith(123);
     });
   });
 
