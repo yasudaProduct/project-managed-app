@@ -204,6 +204,24 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       ROW_HEIGHT,
     ]);
 
+    // 依存矢印用: 可視タスクと、そのバー中心Y座標（タスクID→Y）
+    const visibleTasks = useMemo(
+      () =>
+        ganttRows
+          .filter((row) => row.type === "task" && row.task)
+          .map((row) => row.task!),
+      [ganttRows]
+    );
+    const taskCenterYById = useMemo(() => {
+      const map = new Map<string, number>();
+      ganttRows.forEach((row) => {
+        if (row.type === "task" && row.task) {
+          map.set(row.task.id, row.y + row.height / 2);
+        }
+      });
+      return map;
+    }, [ganttRows]);
+
     // 各種寸法を計算
     const totalDays = Math.ceil(
       (timelineBounds.end.getTime() - timelineBounds.start.getTime()) /
@@ -732,6 +750,18 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                         }
                         return null;
                       })}
+
+                      {/* 依存関係の矢印 */}
+                      {style.showDependencies && (
+                        <DependencyArrows
+                          tasks={visibleTasks}
+                          dateToX={dateToX}
+                          rowHeight={ROW_HEIGHT}
+                          taskHeight={TASK_HEIGHT}
+                          style={style}
+                          taskPositions={taskCenterYById}
+                        />
+                      )}
                     </svg>
                   </div>
                 </div>
