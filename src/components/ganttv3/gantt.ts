@@ -16,6 +16,11 @@ export interface Task {
   resources?: string[]; // リソース
   assignee?: string; // 担当者
   status?: TaskStatus; // ステータス
+  // --- DB永続化用メタ情報（UI表示には使わない） ---
+  dbId?: number; // DB上の数値ID（タスク or マイルストーン）
+  assigneeId?: number; // 担当者の数値ID
+  phaseId?: number; // フェーズの数値ID
+  taskNo?: string; // タスクNo（"P-0001"形式）
 }
 
 export type TaskStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD';
@@ -34,6 +39,7 @@ export interface Dependency {
   taskId: string;
   type: DependencyType;
   lag: number;
+  dbId?: number; // DB上の依存関係ID（削除時に使用）
 }
 
 export type DependencyType = 'FS' | 'SS' | 'FF' | 'SF';

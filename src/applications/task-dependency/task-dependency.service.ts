@@ -1,5 +1,5 @@
 import { inject, injectable } from "inversify";
-import { TaskDependency } from "@/domains/task-dependency/task-dependency";
+import { TaskDependency, DependencyType } from "@/domains/task-dependency/task-dependency";
 import { TaskDependencyValidator } from "@/domains/task-dependency/task-dependency-validator";
 import type { ITaskDependencyRepository } from "./itask-dependency-repository";
 import type { ITaskRepository } from "@/applications/task/itask-repository";
@@ -21,6 +21,8 @@ export class TaskDependencyService {
         predecessorTaskId: number;
         successorTaskId: number;
         wbsId: number;
+        type?: DependencyType;
+        lag?: number;
     }): Promise<TaskDependency> {
         // 新しい依存関係を作成
         const newDependency = TaskDependency.create(args);

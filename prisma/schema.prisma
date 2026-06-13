@@ -422,6 +422,8 @@ model TaskDependency {
   predecessorTaskId Int
   successorTaskId   Int
   wbsId             Int
+  type              String   @default("FS")
+  lag               Int      @default(0)
   createdAt         DateTime @default(now()) @db.Timestamptz
   updatedAt         DateTime @updatedAt @db.Timestamptz
   

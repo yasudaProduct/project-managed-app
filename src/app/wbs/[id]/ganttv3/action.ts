@@ -7,6 +7,17 @@ import { container } from "@/lib/inversify.config";
 import { Milestone, WbsTask } from "@/types/wbs";
 import { IWbsApplicationService } from "@/applications/wbs/wbs-application-service";
 import { IMilestoneApplicationService } from "@/applications/milestone/milestone-application-service";
+import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import { DependencyType } from "@/components/ganttv3/gantt";
+
+// フェーズ色用の固定パレット（seq/index順に決定的に割り当てる）
+const PHASE_COLOR_PALETTE = [
+    "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6",
+    "#06B6D4", "#84CC16", "#F97316", "#EC4899", "#6B7280",
+];
+
+// マイルストーンの固定色
+const MILESTONE_COLOR = "#EF4444";
 
 export async function getGanttTasks(wbsId: number): Promise<GanttTask[]> {
 
@@ -21,10 +32,60 @@ export async function getGanttTasks(wbsId: number): Promise<GanttTask[]> {
     const tasks = await taskService.getTaskAll(wbsId);
     const milestones = await milestoneService.getMilestones(wbsId);
 
-    return [
+    const ganttTasks: GanttTask[] = [
         ...milestones.map(convertMilestone).filter((milestone): milestone is GanttTask => milestone !== undefined),
         ...tasks.map(convertTask).filter((task): task is GanttTask => task !== undefined)
-    ];;
+    ];
+
+    // タスクバーの色をフェーズ色（getPhases と同じパレット・順序）に合わせる
+    try {
+        const wbsService = container.get<IWbsApplicationService>(
+            SYMBOL.IWbsApplicationService
+        );
+        const phases = await wbsService.getPhases(wbsId);
+        const phaseColorById = new Map<number, string>();
+        phases.forEach((phase, index) => {
+            phaseColorById.set(
+                phase.id,
+                PHASE_COLOR_PALETTE[index % PHASE_COLOR_PALETTE.length]
+            );
+        });
+
+        for (const task of ganttTasks) {
+            if (task.isMilestone || task.phaseId === undefined) continue;
+            const color = phaseColorById.get(task.phaseId);
+            if (color) {
+                task.color = color;
+            }
+        }
+    } catch (e) {
+        console.error("フェーズ色の取得に失敗しました", e);
+    }
+
+    // 依存関係を読み込み、後続タスクの predecessors に詰める
+    try {
+        const dependencyService = container.get<TaskDependencyService>(
+            SYMBOL.ITaskDependencyService
+        );
+        const dependencies = await dependencyService.getDependenciesByWbsId(wbsId);
+        const tasksById = new Map(ganttTasks.map((t) => [t.id, t]));
+
+        for (const dep of dependencies) {
+            const successor = tasksById.get(dep.successorTaskId.toString());
+            if (successor) {
+                successor.predecessors.push({
+                    taskId: dep.predecessorTaskId.toString(),
+                    type: dep.type as DependencyType,
+                    lag: dep.lag,
+                    dbId: dep.id,
+                });
+            }
+        }
+    } catch (e) {
+        console.error("依存関係の取得に失敗しました", e);
+    }
+
+    return ganttTasks;
 }
 
 export async function getPhases(wbsId: number): Promise<GanttPhase[]> {
@@ -34,12 +95,12 @@ export async function getPhases(wbsId: number): Promise<GanttPhase[]> {
     );
 
     const phases = await wbsService.getPhases(wbsId);
-    return phases.map(phase => ({
+    return phases.map((phase, index) => ({
         id: phase.id.toString(),
         seq: phase.seq,
         name: phase.name,
         code: phase.code,
-        color: "#" + Math.floor(Math.random() * 16777215).toString(16),
+        color: PHASE_COLOR_PALETTE[index % PHASE_COLOR_PALETTE.length],
         startDate: phase.startDate,
         endDate: phase.endDate,
     }));
@@ -68,8 +129,6 @@ function convertTask(task: WbsTask): GanttTask | undefined {
             break;
     }
 
-    console.log(task.status);
-
     if (task.yoteiStart && task.yoteiEnd && task.yoteiKosu) {
 
         return {
@@ -87,6 +146,11 @@ function convertTask(task: WbsTask): GanttTask | undefined {
             category: task.phase?.name,
             assignee: task.assignee?.name,
             status: status,
+            // DB永続化用メタ情報
+            dbId: task.id,
+            assigneeId: task.assigneeId ?? task.assignee?.id,
+            phaseId: task.phaseId ?? task.phase?.id,
+            taskNo: task.taskNo,
         };
     }
 
@@ -101,7 +165,7 @@ function convertMilestone(milestone: Milestone): GanttTask | undefined {
         startDate: milestone.date,
         endDate: milestone.date,
         duration: 0,
-        color: "#" + Math.floor(Math.random() * 16777215).toString(16),
+        color: MILESTONE_COLOR,
         isMilestone: true,
         progress: 0,
         predecessors: [],
@@ -110,5 +174,7 @@ function convertMilestone(milestone: Milestone): GanttTask | undefined {
         category: milestone.name,
         assignee: "milestone",
         // status: "notStarted",
+        // DB永続化用メタ情報
+        dbId: milestone.id,
     };
 }

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Task, DependencyType, Dependency } from "./gantt";
+import { Task, DependencyType } from "./gantt";
 import {
   Table,
   TableBody,
@@ -52,6 +52,13 @@ interface TaskTableProps {
   onTaskReorder: (taskId: string, direction: "up" | "down") => void;
   onTaskDuplicate: (taskId: string) => void;
   onTaskIndent: (taskId: string, direction: "indent" | "outdent") => void;
+  onDependencyAdd: (
+    successorTaskId: string,
+    predecessorTaskId: string,
+    type: DependencyType,
+    lag: number
+  ) => void;
+  onDependencyRemove: (dependencyDbId: number) => void;
 }
 
 export const TaskTable = ({
@@ -62,6 +69,8 @@ export const TaskTable = ({
   onTaskReorder,
   onTaskDuplicate,
   onTaskIndent,
+  onDependencyAdd,
+  onDependencyRemove,
 }: TaskTableProps) => {
   const [editingCell, setEditingCell] = useState<{
     taskId: string;
@@ -197,20 +206,10 @@ export const TaskTable = ({
       const task = tasks.find((t) => t.id === taskId);
       if (!task) return;
 
-      const newDependency: Dependency = {
-        taskId: predecessorId,
-        type,
-        lag,
-      };
-
-      const updatedTask: Task = {
-        ...task,
-        predecessors: [...task.predecessors, newDependency],
-      };
-
-      onTaskUpdate(updatedTask);
+      // taskId = 後続タスク, predecessorId = 先行タスク
+      onDependencyAdd(taskId, predecessorId, type, lag);
     },
-    [tasks, onTaskUpdate]
+    [tasks, onDependencyAdd]
   );
 
   const handleDependencyRemove = useCallback(
@@ -218,16 +217,12 @@ export const TaskTable = ({
       const task = tasks.find((t) => t.id === taskId);
       if (!task) return;
 
-      const updatedTask: Task = {
-        ...task,
-        predecessors: task.predecessors.filter(
-          (_, index) => index !== dependencyIndex
-        ),
-      };
+      const dependency = task.predecessors[dependencyIndex];
+      if (!dependency || dependency.dbId === undefined) return;
 
-      onTaskUpdate(updatedTask);
+      onDependencyRemove(dependency.dbId);
     },
-    [tasks, onTaskUpdate]
+    [tasks, onDependencyRemove]
   );
 
   const calculateWorkingDays = (startDate: Date, endDate: Date): number => {
@@ -492,7 +487,7 @@ export const TaskTable = ({
           </PopoverTrigger>
           <PopoverContent className="w-80">
             <DependencySelector
-              tasks={tasks.filter((t) => t.id !== task.id)}
+              tasks={tasks.filter((t) => t.id !== task.id && !t.isMilestone)}
               onAdd={(predId, type, lag) => {
                 handleDependencyAdd(task.id, predId, type, lag);
                 setShowDependencyPopover(null);

@@ -29,7 +29,8 @@ export const TaskBar = ({
   const [isHovered, setIsHovered] = useState(false);
 
   const isOnCriticalPath = task.isOnCriticalPath && style.showCriticalPath;
-  const taskColor = isOnCriticalPath ? style.colors.criticalPath : task.color;
+  // クリティカルパス上でもバー色・枠線はフェーズ色（task.color）に合わせる
+  const taskColor = task.color;
 
   if (task.isMilestone) {
     // Render milestone as diamond
@@ -82,7 +83,7 @@ export const TaskBar = ({
             } ${centerX},${centerY - size / 2 + 3} ${centerX - 3},${
               centerY - size / 2
             }`}
-            fill={style.colors.criticalPath}
+            fill={taskColor}
             className="animate-pulse"
           />
         )}
@@ -140,7 +141,7 @@ export const TaskBar = ({
           height={height + 2}
           rx={radius + 1}
           fill="none"
-          stroke={style.colors.criticalPath}
+          stroke={taskColor}
           strokeWidth={2}
           strokeDasharray="4,2"
           className="animate-pulse"

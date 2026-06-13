@@ -11,7 +11,24 @@ import {
   GanttChart,
   GroupBy,
 } from "@/components/ganttv3";
+import { TaskTable } from "@/components/ganttv3/TaskTable";
 import { getGanttTasks, getPhases } from "@/app/wbs/[id]/ganttv3/action";
+import {
+  createTask,
+  updateTask,
+  deleteTask,
+} from "@/app/wbs/[id]/actions/wbs-task-actions";
+import {
+  createMilestone,
+  updateMilestone,
+  deleteMilestone,
+} from "@/app/wbs/[id]/actions/milestone-actions";
+import {
+  createGanttDependency,
+  deleteGanttDependency,
+} from "@/app/wbs/[id]/ganttv3/dependency-actions";
+import { DependencyType } from "@/components/ganttv3/gantt";
+import { toast } from "@/hooks/use-toast";
 
 const defaultGanttStyle: GanttStyle = {
   theme: "modern",
@@ -51,19 +68,6 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     new Set(categories.map((c) => c.name))
   );
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      const tasks = await getGanttTasks(wbsId);
-      setTasks(tasks);
-    };
-    const fetchPhases = async () => {
-      const phases = await getPhases(wbsId);
-      setCategories(phases);
-    };
-    fetchTasks();
-    fetchPhases();
-  }, [wbsId]);
-
   // Add zoom level state
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
 
@@ -74,6 +78,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
 
   // クリティカルパス計算
   const calculateCriticalPath = useCallback((updatedTasks: Task[]): Task[] => {
+    const DAY = 24 * 60 * 60 * 1000;
     const taskMap = new Map(
       updatedTasks.map((task) => [
         task.id,
@@ -81,10 +86,37 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
       ])
     );
 
-    const calculateEarliestTimes = (
+    // 依存種別とラグから、後続タスクの最早開始の下限を算出する
+    const impliedStart = (
+      predStart: number,
+      predFinish: number,
+      successorDuration: number,
+      type: DependencyType,
+      lag: number
+    ): number => {
+      const lagMs = lag * DAY;
+      const durMs = successorDuration * DAY;
+      switch (type) {
+        case "SS":
+          return predStart + lagMs;
+        case "FF":
+          return predFinish + lagMs - durMs;
+        case "SF":
+          return predStart + lagMs - durMs;
+        case "FS":
+        default:
+          return predFinish + lagMs;
+      }
+    };
+
+    // 各タスクの最早開始時刻（メモ化）
+    const earliestStartCache = new Map<string, number>();
+    const calculateEarliestStart = (
       taskId: string,
       visited = new Set<string>()
     ): number => {
+      const cached = earliestStartCache.get(taskId);
+      if (cached !== undefined) return cached;
       if (visited.has(taskId)) return 0;
       visited.add(taskId);
 
@@ -96,21 +128,22 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
       for (const pred of task.predecessors) {
         const predTask = taskMap.get(pred.taskId);
         if (predTask) {
-          const predFinish =
-            calculateEarliestTimes(pred.taskId, visited) +
-            predTask.duration * 24 * 60 * 60 * 1000;
-          earliestStart = Math.max(earliestStart, predFinish);
+          const predStart = calculateEarliestStart(pred.taskId, visited);
+          const predFinish = predStart + predTask.duration * DAY;
+          earliestStart = Math.max(
+            earliestStart,
+            impliedStart(predStart, predFinish, task.duration, pred.type, pred.lag)
+          );
         }
       }
 
+      earliestStartCache.set(taskId, earliestStart);
       return earliestStart;
     };
 
-    const taskDurations = new Map<string, number>();
+    // 全タスクの最早開始を確定
     for (const task of updatedTasks) {
-      const earliestFinish =
-        calculateEarliestTimes(task.id) + task.duration * 24 * 60 * 60 * 1000;
-      taskDurations.set(task.id, earliestFinish);
+      calculateEarliestStart(task.id);
     }
 
     const criticalTasks = new Set<string>();
@@ -132,18 +165,23 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
 
       criticalTasks.add(taskId);
 
+      const taskStart = earliestStartCache.get(taskId) ?? 0;
+
       for (const pred of task.predecessors) {
         const predTask = taskMap.get(pred.taskId);
         if (predTask) {
-          const predFinish = taskDurations.get(pred.taskId) || 0;
-          const taskStart = taskDurations.get(taskId) || 0;
+          const predStart = earliestStartCache.get(pred.taskId) ?? 0;
+          const predFinish = predStart + predTask.duration * DAY;
+          const implied = impliedStart(
+            predStart,
+            predFinish,
+            task.duration,
+            pred.type,
+            pred.lag
+          );
 
-          if (
-            Math.abs(
-              predFinish - taskStart + task.duration * 24 * 60 * 60 * 1000
-            ) <
-            24 * 60 * 60 * 1000
-          ) {
+          // この依存が後続の開始を律速している（余裕ゼロ）ならクリティカル
+          if (Math.abs(implied - taskStart) < DAY) {
             markCriticalPath(pred.taskId, visited);
           }
         }
@@ -160,60 +198,280 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     }));
   }, []);
 
+  // サーバーから最新タスクを取得してStateへ反映
+  const refetchTasks = useCallback(async () => {
+    const fresh = await getGanttTasks(wbsId);
+    setTasks(calculateCriticalPath(fresh));
+  }, [wbsId, calculateCriticalPath]);
+
+  // 初期ロード
+  useEffect(() => {
+    refetchTasks();
+    const fetchPhases = async () => {
+      const phases = await getPhases(wbsId);
+      setCategories(phases);
+    };
+    fetchPhases();
+  }, [wbsId, refetchTasks]);
+
   // イベントハンドラ
+  // タスク/マイルストーンの更新（楽観的更新 → サーバー保存 → 失敗時ロールバック）
   const handleTaskUpdate = useCallback(
-    (updatedTask: Task) => {
+    async (updatedTask: Task) => {
+      const prevTasks = tasks;
       const newTasks = tasks.map((task) =>
         task.id === updatedTask.id ? updatedTask : task
       );
       setTasks(calculateCriticalPath(newTasks));
+
+      try {
+        const dbId = Number(updatedTask.dbId ?? updatedTask.id);
+        const result = updatedTask.isMilestone
+          ? await updateMilestone({
+              id: dbId,
+              name: updatedTask.name,
+              date: updatedTask.startDate,
+              wbsId,
+            })
+          : await updateTask(wbsId, {
+              id: dbId,
+              taskNo: updatedTask.taskNo,
+              name: updatedTask.name,
+              yoteiStart: updatedTask.startDate,
+              yoteiEnd: updatedTask.endDate,
+              yoteiKosu: updatedTask.duration,
+              status: updatedTask.status ?? "NOT_STARTED",
+              assigneeId: updatedTask.assigneeId,
+              phaseId: updatedTask.phaseId,
+            });
+
+        if (!result.success) {
+          setTasks(calculateCriticalPath(prevTasks));
+          toast({
+            title: "更新に失敗しました",
+            description: result.error,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        setTasks(calculateCriticalPath(prevTasks));
+        toast({
+          title: "更新に失敗しました",
+          description: error instanceof Error ? error.message : "不明なエラー",
+          variant: "destructive",
+        });
+      }
     },
-    [tasks, calculateCriticalPath]
+    [tasks, calculateCriticalPath, wbsId]
   );
 
+  // タスク追加（サーバーに作成 → 再取得）
   const handleTaskAdd = useCallback(
-    (newTask: Omit<Task, "id">) => {
-      const task: Task = {
-        ...newTask,
-        id: Date.now().toString(),
-        isOnCriticalPath: false,
-      };
-      setTasks((prev) => calculateCriticalPath([...prev, task]));
+    async (newTask: Omit<Task, "id">) => {
+      const phaseId =
+        newTask.phaseId ??
+        (categories[0] ? Number(categories[0].id) : undefined);
+      if (!phaseId) {
+        toast({
+          title: "タスクを追加できません",
+          description: "フェーズが存在しません",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        const result = await createTask(wbsId, {
+          name: newTask.name,
+          periods: [
+            {
+              startDate: newTask.startDate.toISOString(),
+              endDate: newTask.endDate.toISOString(),
+              type: "YOTEI",
+              kosus: [{ kosu: newTask.duration ?? 0, type: "NORMAL" }],
+            },
+          ],
+          status: newTask.status ?? "NOT_STARTED",
+          assigneeId: newTask.assigneeId ? String(newTask.assigneeId) : undefined,
+          phaseId,
+        });
+
+        if (result.success) {
+          await refetchTasks();
+        } else {
+          toast({
+            title: "タスクの追加に失敗しました",
+            description: result.error,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "タスクの追加に失敗しました",
+          description: error instanceof Error ? error.message : "不明なエラー",
+          variant: "destructive",
+        });
+      }
     },
-    [calculateCriticalPath]
+    [wbsId, categories, refetchTasks]
   );
 
+  // タスク/マイルストーン削除（楽観的削除 → サーバー削除 → 失敗時は再取得で同期）
   const handleTaskDelete = useCallback(
-    (taskIds: string[]) => {
-      setTasks((prev) => {
-        const filtered = prev.filter((task) => !taskIds.includes(task.id));
-        return calculateCriticalPath(
+    async (taskIds: string[]) => {
+      const targets = tasks.filter((task) => taskIds.includes(task.id));
+      const prevTasks = tasks;
+
+      const filtered = prevTasks.filter((task) => !taskIds.includes(task.id));
+      setTasks(
+        calculateCriticalPath(
           filtered.map((task) => ({
             ...task,
             predecessors: task.predecessors.filter(
               (pred) => !taskIds.includes(pred.taskId)
             ),
           }))
-        );
-      });
+        )
+      );
       setSelectedTasks(new Set());
+
+      try {
+        const results = await Promise.all(
+          targets.map((task) => {
+            const dbId = Number(task.dbId ?? task.id);
+            return task.isMilestone
+              ? deleteMilestone(dbId, wbsId)
+              : deleteTask(dbId);
+          })
+        );
+        if (results.some((r) => !r.success)) {
+          toast({
+            title: "一部のタスクの削除に失敗しました",
+            variant: "destructive",
+          });
+          await refetchTasks();
+        }
+      } catch (error) {
+        toast({
+          title: "タスクの削除に失敗しました",
+          description: error instanceof Error ? error.message : "不明なエラー",
+          variant: "destructive",
+        });
+        await refetchTasks();
+      }
     },
-    [calculateCriticalPath]
+    [tasks, calculateCriticalPath, wbsId, refetchTasks]
   );
 
+  // タスク複製（サーバーに新規作成 → 再取得）。マイルストーンは対象外。
   const handleTaskDuplicate = useCallback(
-    (taskIds: string[]) => {
-      const tasksToClone = tasks.filter((task) => taskIds.includes(task.id));
-      const clonedTasks = tasksToClone.map((task) => ({
-        ...task,
-        id: Date.now().toString() + Math.random(),
-        name: `${task.name} (Copy)`,
-        predecessors: [],
-        isOnCriticalPath: false,
-      }));
-      setTasks((prev) => calculateCriticalPath([...prev, ...clonedTasks]));
+    async (taskIds: string[]) => {
+      const targets = tasks.filter(
+        (task) => taskIds.includes(task.id) && !task.isMilestone
+      );
+      if (targets.length === 0) return;
+
+      try {
+        for (const task of targets) {
+          const phaseId =
+            task.phaseId ??
+            (categories[0] ? Number(categories[0].id) : undefined);
+          if (!phaseId) continue;
+          await createTask(wbsId, {
+            name: `${task.name} (Copy)`,
+            periods: [
+              {
+                startDate: task.startDate.toISOString(),
+                endDate: task.endDate.toISOString(),
+                type: "YOTEI",
+                kosus: [{ kosu: task.duration ?? 0, type: "NORMAL" }],
+              },
+            ],
+            status: task.status ?? "NOT_STARTED",
+            assigneeId: task.assigneeId ? String(task.assigneeId) : undefined,
+            phaseId,
+          });
+        }
+        await refetchTasks();
+      } catch (error) {
+        toast({
+          title: "タスクの複製に失敗しました",
+          description: error instanceof Error ? error.message : "不明なエラー",
+          variant: "destructive",
+        });
+      }
     },
-    [tasks, calculateCriticalPath]
+    [tasks, wbsId, categories, refetchTasks]
+  );
+
+  // 依存関係を追加（サーバーに作成 → 再取得）
+  const handleDependencyAdd = useCallback(
+    async (
+      successorTaskId: string,
+      predecessorTaskId: string,
+      type: DependencyType,
+      lag: number
+    ) => {
+      try {
+        const result = await createGanttDependency(wbsId, {
+          successorTaskId: Number(successorTaskId),
+          predecessorTaskId: Number(predecessorTaskId),
+          type,
+          lag,
+        });
+
+        if (result.success) {
+          await refetchTasks();
+        } else {
+          toast({
+            title: "依存関係の追加に失敗しました",
+            description: result.error,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "依存関係の追加に失敗しました",
+          description: error instanceof Error ? error.message : "不明なエラー",
+          variant: "destructive",
+        });
+      }
+    },
+    [wbsId, refetchTasks]
+  );
+
+  // 依存関係を削除（楽観的更新 → サーバー削除）
+  const handleDependencyRemove = useCallback(
+    async (dependencyDbId: number) => {
+      const prevTasks = tasks;
+      const newTasks = tasks.map((task) => ({
+        ...task,
+        predecessors: task.predecessors.filter(
+          (pred) => pred.dbId !== dependencyDbId
+        ),
+      }));
+      setTasks(calculateCriticalPath(newTasks));
+
+      try {
+        const result = await deleteGanttDependency(wbsId, dependencyDbId);
+        if (!result.success) {
+          setTasks(calculateCriticalPath(prevTasks));
+          toast({
+            title: "依存関係の削除に失敗しました",
+            description: result.error,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        setTasks(calculateCriticalPath(prevTasks));
+        toast({
+          title: "依存関係の削除に失敗しました",
+          description: error instanceof Error ? error.message : "不明なエラー",
+          variant: "destructive",
+        });
+      }
+    },
+    [tasks, calculateCriticalPath, wbsId]
   );
 
   const handleTimelineScaleChange = useCallback((scale: TimelineScale) => {
@@ -319,9 +577,17 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
             onZoomChange={setZoomLevel}
           />
         ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            <p>Table view is temporarily unavailable</p>
-          </div>
+          <TaskTable
+            tasks={tasks}
+            onTaskUpdate={handleTaskUpdate}
+            onTaskDelete={(id) => handleTaskDelete([id])}
+            onTaskAdd={handleTaskAdd}
+            onTaskReorder={() => {}}
+            onTaskDuplicate={(id) => handleTaskDuplicate([id])}
+            onTaskIndent={() => {}}
+            onDependencyAdd={handleDependencyAdd}
+            onDependencyRemove={handleDependencyRemove}
+          />
         )}
       </div>
     </div>

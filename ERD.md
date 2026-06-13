@@ -211,6 +211,8 @@ erDiagram
   Int predecessorTaskId FK
   Int successorTaskId FK
   Int wbsId FK
+  String type
+  Int lag
   DateTime createdAt
   DateTime updatedAt
 }
@@ -592,6 +594,8 @@ erDiagram
   - `predecessorTaskId`: 
   - `successorTaskId`: 
   - `wbsId`: 
+  - `type`: 
+  - `lag`: 
   - `createdAt`: 
   - `updatedAt`: 
 
