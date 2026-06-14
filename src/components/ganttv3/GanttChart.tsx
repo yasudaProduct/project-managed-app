@@ -22,7 +22,21 @@ import {
   Maximize2,
   ZoomIn,
   ZoomOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
+
+// タスクリスト幅の最小・最大（px）
+const TASK_LIST_MIN_WIDTH = 240;
+const TASK_LIST_MAX_WIDTH = 800;
+
+// 予定日（Date）をタスクリスト表示用に MM/DD へ整形する
+const formatMonthDay = (date?: Date): string => {
+  if (!date) return "";
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${month}/${day}`;
+};
 
 interface GanttChartProps {
   tasks: Task[];
@@ -77,13 +91,63 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     const timelineScrollRef = useRef<HTMLDivElement>(null);
     const [scrollLeft, setScrollLeft] = useState(0);
 
+    // タスクリスト幅（マウスドラッグでリサイズ可能）
+    const [taskListWidth, setTaskListWidth] = useState(440);
+    const resizeStateRef = useRef<{
+      startX: number;
+      startWidth: number;
+    } | null>(null);
+
+    const handleResizeStart = useCallback(
+      (e: React.MouseEvent) => {
+        e.preventDefault();
+        resizeStateRef.current = {
+          startX: e.clientX,
+          startWidth: taskListWidth,
+        };
+
+        const handleMove = (ev: MouseEvent) => {
+          if (!resizeStateRef.current) return;
+          const delta = ev.clientX - resizeStateRef.current.startX;
+          const next = Math.min(
+            TASK_LIST_MAX_WIDTH,
+            Math.max(
+              TASK_LIST_MIN_WIDTH,
+              resizeStateRef.current.startWidth + delta,
+            ),
+          );
+          setTaskListWidth(next);
+        };
+        const handleUp = () => {
+          resizeStateRef.current = null;
+          document.removeEventListener("mousemove", handleMove);
+          document.removeEventListener("mouseup", handleUp);
+          document.body.style.userSelect = "";
+          document.body.style.cursor = "";
+        };
+        document.addEventListener("mousemove", handleMove);
+        document.addEventListener("mouseup", handleUp);
+        document.body.style.userSelect = "none";
+        document.body.style.cursor = "col-resize";
+      },
+      [taskListWidth],
+    );
+
+    // タスクリスト幅を最小⇔最大でトグルする
+    const isTaskListMaxed = taskListWidth >= TASK_LIST_MAX_WIDTH;
+    const handleToggleTaskListWidth = useCallback(() => {
+      setTaskListWidth((w) =>
+        w >= TASK_LIST_MAX_WIDTH ? TASK_LIST_MIN_WIDTH : TASK_LIST_MAX_WIDTH,
+      );
+    }, []);
+
     // 厳密な寸法定数 - 可変性なし、絶対的な精度
     const TASK_HEIGHT = 16;
     const ROW_SPACING = 4;
     const ROW_HEIGHT = TASK_HEIGHT + ROW_SPACING; // 20px
     const CATEGORY_HEIGHT = 20;
     const HEADER_HEIGHT = 50;
-    const TASK_LIST_WIDTH = 300;
+    const TASK_LIST_WIDTH = taskListWidth;
 
     // タイムラインの範囲を計算
     const timelineBounds = useMemo(() => {
@@ -435,6 +499,24 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                 今日
               </Button>
             )}
+            <div className="w-px h-4 bg-border mx-2" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleTaskListWidth}
+              className="gap-2"
+              title={
+                isTaskListMaxed
+                  ? "タスクリストを最小化"
+                  : "タスクリストを最大化"
+              }
+            >
+              {isTaskListMaxed ? (
+                <PanelLeftClose className="w-4 h-4" />
+              ) : (
+                <PanelLeftOpen className="w-4 h-4" />
+              )}
+            </Button>
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span>Zoom: {Math.round(zoomLevel * 100)}%</span>
@@ -469,9 +551,13 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                 className="border-b border-border px-4 py-3 bg-muted/30 flex flex-col justify-center"
                 style={{ height: HEADER_HEIGHT }}
               >
-                <div className="flex items-center justify-between">
-                  {/* <h3 className="font-medium">タスク名</h3>
-                  <div className="text-xs text-muted-foreground">詳細</div> */}
+                <div className="flex items-center gap-2 w-full text-xs font-medium text-muted-foreground">
+                  <span className="w-2 flex-shrink-0" aria-hidden />
+                  <span className="w-16 flex-shrink-0 truncate">No.</span>
+                  <span className="flex-1 min-w-0 truncate">タスク名</span>
+                  <span className="w-12 flex-shrink-0 text-right">開始</span>
+                  <span className="w-12 flex-shrink-0 text-right">終了</span>
+                  <span className="w-12 flex-shrink-0 text-right">工数</span>
                 </div>
               </div>
 
@@ -556,25 +642,32 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             lineHeight: `${row.height}px`,
                           }}
                         >
-                          <div className="flex items-center justify-between w-full h-full">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              {task.level > 0 && (
-                                <div className="w-3 h-3 border-l border-b border-muted-foreground/30" />
-                              )}
-                              <div
-                                className="w-2 h-2 flex-shrink-0"
-                                style={{
-                                  backgroundColor: task.color,
-                                }}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium truncate text-xs leading-tight">
-                                  {task.name}
-                                </div>
-                              </div>
+                          <div className="flex items-center gap-2 w-full h-full">
+                            {task.level > 0 && (
+                              <div className="w-3 h-3 border-l border-b border-muted-foreground/30 flex-shrink-0" />
+                            )}
+                            <div
+                              className="w-2 h-2 flex-shrink-0"
+                              style={{
+                                backgroundColor: task.color,
+                              }}
+                            />
+                            <div className="w-16 flex-shrink-0 text-xs text-muted-foreground truncate">
+                              {task.taskNo ?? ""}
                             </div>
-                            <div className="text-xs text-muted-foreground ml-2">
-                              {task.isMilestone ? "M" : `${task.duration}d`}
+                            <div className="flex-1 min-w-0 font-medium truncate text-xs leading-tight">
+                              {task.name}
+                            </div>
+                            <div className="w-12 flex-shrink-0 text-xs text-muted-foreground text-right tabular-nums">
+                              {formatMonthDay(task.startDate)}
+                            </div>
+                            <div className="w-12 flex-shrink-0 text-xs text-muted-foreground text-right tabular-nums">
+                              {task.isMilestone
+                                ? ""
+                                : formatMonthDay(task.endDate)}
+                            </div>
+                            <div className="w-12 flex-shrink-0 text-xs text-muted-foreground text-right tabular-nums">
+                              {task.isMilestone ? "M" : `${task.duration}h`}
                             </div>
                           </div>
                         </div>
@@ -585,6 +678,15 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                 </div>
               </div>
             </div>
+
+            {/* タスクリスト幅のリサイズハンドル */}
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              onMouseDown={handleResizeStart}
+              className="w-1 flex-shrink-0 cursor-col-resize bg-border hover:bg-primary/50 active:bg-primary transition-colors"
+              title="ドラッグして幅を調整"
+            />
 
             {/* タイムライン領域 */}
             <div className="flex-1 flex flex-col min-w-0">
