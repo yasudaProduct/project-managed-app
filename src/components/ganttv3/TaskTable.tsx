@@ -100,11 +100,10 @@ export const TaskTable = ({
   const dependencyTypes: DependencyType[] = ["FS", "SS", "FF", "SF"];
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}/${m}/${d}`;
   };
 
   const handleCellEdit = useCallback(
@@ -309,7 +308,7 @@ export const TaskTable = ({
                   className="w-full justify-start text-left"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {value ? formatDate(value) : "Select date"}
+                  {value ? formatDate(value) : "日付を選択"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -460,8 +459,8 @@ export const TaskTable = ({
               className="flex items-center justify-between bg-muted/30 p-1 rounded"
             >
               <span className="text-sm">
-                {predTask?.name || "Unknown"} ({dep.type})
-                {dep.lag !== 0 && ` ${dep.lag > 0 ? "+" : ""}${dep.lag}d`}
+                {predTask?.name || "不明"} ({dep.type})
+                {dep.lag !== 0 && ` ${dep.lag > 0 ? "+" : ""}${dep.lag}日`}
               </span>
               <Button
                 size="sm"
@@ -482,7 +481,7 @@ export const TaskTable = ({
           <PopoverTrigger asChild>
             <Button size="sm" variant="outline" className="w-full">
               <Plus className="w-3 h-3 mr-1" />
-              Add Dependency
+              依存関係を追加
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80">
@@ -522,25 +521,25 @@ export const TaskTable = ({
             }
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Task
+            タスク追加
           </Button>
           {selectedTasks.size > 0 && (
             <>
               <Button variant="destructive" onClick={handleBulkDelete}>
                 <Trash2 className="w-4 h-4 mr-2" />
-                Delete Selected ({selectedTasks.size})
+                選択を削除 ({selectedTasks.size})
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setSelectedTasks(new Set())}
               >
-                Clear Selection
+                選択を解除
               </Button>
             </>
           )}
         </div>
         <div className="text-sm text-muted-foreground">
-          {tasks.length} tasks • {selectedTasks.size} selected
+          {tasks.length} 件 • {selectedTasks.size} 件選択中
         </div>
       </div>
 
@@ -557,21 +556,21 @@ export const TaskTable = ({
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead className="w-10">Level</TableHead>
-              <TableHead className="w-8">Actions</TableHead>
-              <TableHead className="min-w-[200px]">Task Name</TableHead>
-              <TableHead className="w-32">Start Date</TableHead>
-              <TableHead className="w-32">End Date</TableHead>
-              <TableHead className="w-20">Duration</TableHead>
-              <TableHead className="w-20">Progress</TableHead>
-              <TableHead className="w-24">Milestone</TableHead>
-              <TableHead className="w-32">Category</TableHead>
-              <TableHead className="w-24">Color</TableHead>
-              <TableHead className="min-w-[200px]">Dependencies</TableHead>
-              <TableHead className="w-24">Manual</TableHead>
-              <TableHead className="w-24">Critical</TableHead>
-              <TableHead className="min-w-[150px]">Resources</TableHead>
-              <TableHead className="min-w-[200px]">Description</TableHead>
+              <TableHead className="w-10">レベル</TableHead>
+              <TableHead className="w-8">操作</TableHead>
+              <TableHead className="min-w-[200px]">タスク名</TableHead>
+              <TableHead className="w-32">開始日</TableHead>
+              <TableHead className="w-32">終了日</TableHead>
+              <TableHead className="w-20">期間</TableHead>
+              <TableHead className="w-20">進捗</TableHead>
+              <TableHead className="w-24">マイルストーン</TableHead>
+              <TableHead className="w-32">フェーズ</TableHead>
+              <TableHead className="w-24">色</TableHead>
+              <TableHead className="min-w-[200px]">依存関係</TableHead>
+              <TableHead className="w-24">手動スケジュール</TableHead>
+              <TableHead className="w-24">クリティカル</TableHead>
+              <TableHead className="min-w-[150px]">リソース</TableHead>
+              <TableHead className="min-w-[200px]">説明</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -729,7 +728,7 @@ export const TaskTable = ({
                   {task.isOnCriticalPath && (
                     <Badge variant="destructive">
                       <AlertTriangle className="w-3 h-3 mr-1" />
-                      Critical
+                      クリティカル
                     </Badge>
                   )}
                 </TableCell>
@@ -779,11 +778,11 @@ const DependencySelector = ({ tasks, onAdd }: DependencySelectorProps) => {
   return (
     <div className="space-y-4">
       <div>
-        <label className="text-sm font-medium">Predecessor Task</label>
+        <label className="text-sm font-medium">先行タスク</label>
         <Command>
-          <CommandInput placeholder="Search tasks..." />
+          <CommandInput placeholder="タスクを検索..." />
           <CommandList>
-            <CommandEmpty>No tasks found.</CommandEmpty>
+            <CommandEmpty>タスクが見つかりません。</CommandEmpty>
             <CommandGroup>
               {tasks.map((task) => (
                 <CommandItem
@@ -800,7 +799,7 @@ const DependencySelector = ({ tasks, onAdd }: DependencySelectorProps) => {
       </div>
 
       <div>
-        <label className="text-sm font-medium">Dependency Type</label>
+        <label className="text-sm font-medium">依存タイプ</label>
         <Select
           value={dependencyType}
           onValueChange={(value: DependencyType) => setDependencyType(value)}
@@ -818,7 +817,7 @@ const DependencySelector = ({ tasks, onAdd }: DependencySelectorProps) => {
       </div>
 
       <div>
-        <label className="text-sm font-medium">Lag/Lead (days)</label>
+        <label className="text-sm font-medium">ラグ/リード（日）</label>
         <Input
           type="number"
           value={lag}
@@ -828,7 +827,7 @@ const DependencySelector = ({ tasks, onAdd }: DependencySelectorProps) => {
       </div>
 
       <Button onClick={handleAdd} disabled={!selectedTask} className="w-full">
-        Add Dependency
+        依存関係を追加
       </Button>
     </div>
   );
