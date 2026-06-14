@@ -41,7 +41,11 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { getGanttTasks, getPhases } from "@/app/wbs/[id]/ganttv3/action";
+import {
+  getGanttTasks,
+  getPhases,
+  getAssigneeOptions,
+} from "@/app/wbs/[id]/ganttv3/action";
 import {
   createTask,
   updateTask,
@@ -90,6 +94,11 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
 
   const [categories, setCategories] = useState<Category[]>([]);
+
+  // 編集モードの担当者プルダウン用の選択肢（seq昇順）
+  const [assignees, setAssignees] = useState<{ id: number; name: string }[]>(
+    [],
+  );
 
   const [currentView, setCurrentView] = useState<"gantt" | "table">("gantt");
   const [timelineScale, setTimelineScale] = useState<TimelineScale>("month");
@@ -276,6 +285,11 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
       setCategories(phases);
     };
     fetchPhases();
+    const fetchAssignees = async () => {
+      const options = await getAssigneeOptions(wbsId);
+      setAssignees(options);
+    };
+    fetchAssignees();
   }, [wbsId, refetchTasks]);
 
   // グルーピングの切替やデータ初回ロードでグループ名の集合が変わったら、全グループを展開状態にする
@@ -758,7 +772,8 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           dt.startDate.getTime() !== orig.startDate.getTime() ||
           dt.endDate.getTime() !== orig.endDate.getTime();
         const kosuChanged = dt.duration !== orig.duration;
-        if (!dateChanged && !kosuChanged) continue;
+        const assigneeChanged = dt.assigneeId !== orig.assigneeId;
+        if (!dateChanged && !kosuChanged && !assigneeChanged) continue;
 
         const dbId = Number(dt.dbId ?? dt.id);
         if (dt.isMilestone) {
@@ -1203,6 +1218,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
             zoomLevel={zoomLevel}
             groupBy={groupBy}
             sortBy={sortBy}
+            assignees={assignees}
             onTaskUpdate={editMode ? handleDraftTaskUpdate : handleTaskUpdate}
             onCategoryToggle={handleCategoryToggle}
             onZoomChange={setZoomLevel}

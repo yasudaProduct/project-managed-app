@@ -112,6 +112,27 @@ export async function getGanttTasks(wbsId: number): Promise<GanttTask[]> {
     return ganttTasks;
 }
 
+// 編集モードの担当者プルダウン用に、WBSの担当者一覧を seq 昇順で返す
+// id は wbs_assignee.id（gantt Task の assigneeId と一致）
+export async function getAssigneeOptions(
+    wbsId: number
+): Promise<{ id: number; name: string }[]> {
+    const wbsService = container.get<IWbsApplicationService>(
+        SYMBOL.IWbsApplicationService
+    );
+
+    const assignees = await wbsService.getAssignees(wbsId);
+    return (assignees ?? [])
+        .filter((a) => a.assignee !== null)
+        .map((a) => ({
+            id: a.assignee!.id,
+            name: a.assignee!.displayName,
+            seq: a.assignee!.seq,
+        }))
+        .sort((x, y) => x.seq - y.seq)
+        .map(({ id, name }) => ({ id, name }));
+}
+
 export async function getPhases(wbsId: number): Promise<GanttPhase[]> {
 
     const wbsService = container.get<IWbsApplicationService>(
@@ -168,7 +189,7 @@ function convertTask(task: WbsTask): GanttTask | undefined {
             level: 0,
             isManuallyScheduled: true,
             category: task.phase?.name,
-            assignee: task.assignee?.name,
+            assignee: task.assignee?.displayName ?? task.assignee?.name,
             status: status,
             // DB永続化用メタ情報
             dbId: task.id,

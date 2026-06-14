@@ -77,6 +77,8 @@ interface GanttChartProps {
   groupBy?: GroupBy;
   /** グループ内のタスクの並び順 */
   sortBy?: TaskSortBy;
+  /** 編集モードの担当者プルダウン用の選択肢 */
+  assignees?: { id: number; name: string }[];
   onTaskUpdate: (task: Task) => void;
   onCategoryToggle: (categoryName: string) => void;
   onZoomChange?: (zoom: number) => void;
@@ -116,6 +118,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       zoomLevel = 1.0,
       groupBy = "phase",
       sortBy = "taskNo",
+      assignees = [],
       onTaskUpdate,
       onCategoryToggle,
       onZoomChange,
@@ -844,6 +847,30 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
               </label>
             )}
 
+            {!editingTask.isMilestone && (
+              <label className="flex flex-col text-[11px] text-muted-foreground">
+                担当者
+                <select
+                  className="h-8 w-36 rounded border bg-background px-2 text-sm text-foreground"
+                  value={editingTask.assigneeId ?? ""}
+                  onChange={(e) => {
+                    const id = e.target.value
+                      ? Number(e.target.value)
+                      : undefined;
+                    const name = assignees.find((a) => a.id === id)?.name;
+                    updateEditingField({ assigneeId: id, assignee: name });
+                  }}
+                >
+                  <option value="">未割当</option>
+                  {assignees.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
             {!editingTask.isMilestone && onEditDependencies && (
               <Button
                 variant="outline"
@@ -884,6 +911,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                   <span className="w-2 flex-shrink-0" aria-hidden />
                   <span className="w-16 flex-shrink-0 truncate">No.</span>
                   <span className="flex-1 min-w-0 truncate">タスク名</span>
+                  <span className="w-20 flex-shrink-0 truncate">担当者</span>
                   <span className="w-12 flex-shrink-0 text-right">開始</span>
                   <span className="w-12 flex-shrink-0 text-right">終了</span>
                   <span className="w-12 flex-shrink-0 text-right">工数</span>
@@ -986,6 +1014,9 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             </div>
                             <div className="flex-1 min-w-0 font-medium truncate text-xs leading-tight">
                               {task.name}
+                            </div>
+                            <div className="w-20 flex-shrink-0 text-xs text-muted-foreground truncate">
+                              {task.isMilestone ? "" : task.assignee ?? ""}
                             </div>
                             <div className="w-12 flex-shrink-0 text-xs text-muted-foreground text-right tabular-nums">
                               {formatMonthDay(task.startDate)}
