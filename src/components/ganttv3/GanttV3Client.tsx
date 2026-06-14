@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Task,
   TimelineScale,
@@ -11,7 +11,36 @@ import {
   GanttChart,
   GroupBy,
 } from "@/components/ganttv3";
-import { TaskTable } from "@/components/ganttv3/TaskTable";
+import { TaskTable, TaskTableColumn } from "@/components/ganttv3/TaskTable";
+import { DependencyEditModal } from "@/components/ganttv3/DependencyEditModal";
+import { TaskModal } from "@/components/wbs/task-modal";
+import { WbsTask } from "@/types/wbs";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { formatDate } from "@/utils/date-util";
+import { getTaskStatusName } from "@/utils/utils";
+import {
+  HoursUnit,
+  HOURS_UNIT_LABELS,
+  formatHoursWithUnit,
+} from "@/utils/hours-converter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertTriangle,
+  Copy,
+  Flag,
+  Link2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { getGanttTasks, getPhases } from "@/app/wbs/[id]/ganttv3/action";
 import {
   createTask,
@@ -19,7 +48,6 @@ import {
   deleteTask,
 } from "@/app/wbs/[id]/actions/wbs-task-actions";
 import {
-  createMilestone,
   updateMilestone,
   deleteMilestone,
 } from "@/app/wbs/[id]/actions/milestone-actions";
@@ -75,6 +103,13 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
 
   // Add groupBy state
   const [groupBy, setGroupBy] = useState<GroupBy>("phase");
+
+  // モーダル制御（編集対象はIDで保持し、最新の tasks から都度引き直す）
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [dependencyTaskId, setDependencyTaskId] = useState<string | null>(null);
+
+  // テーブルの工数表示単位（時間 / 人日）
+  const [kosuUnit, setKosuUnit] = useState<HoursUnit>("hours");
 
   // クリティカルパス計算
   const calculateCriticalPath = useCallback((updatedTasks: Task[]): Task[] => {
@@ -498,6 +533,243 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     setExpandedCategories(new Set());
   }, []);
 
+  // gantt の Task を TaskModal が要求する WbsTask 形へ変換
+  const toWbsTask = useCallback((task: Task): WbsTask => {
+    return {
+      id: Number(task.dbId ?? task.id),
+      taskNo: task.taskNo,
+      name: task.name,
+      status: task.status ?? "NOT_STARTED",
+      assigneeId: task.assigneeId,
+      assignee: task.assigneeId
+        ? {
+            id: task.assigneeId,
+            name: task.assignee ?? "",
+            displayName: task.assignee ?? "",
+          }
+        : undefined,
+      phaseId: task.phaseId,
+      phase: task.phaseId
+        ? { id: task.phaseId, name: task.category ?? "", seq: 0 }
+        : undefined,
+      yoteiStart: task.startDate,
+      yoteiEnd: task.endDate,
+      yoteiKosu: task.duration,
+    };
+  }, []);
+
+  // 編集・依存モーダルの対象タスク（最新stateから引く）
+  const editingTask = useMemo(
+    () => tasks.find((t) => t.id === editingTaskId) ?? null,
+    [tasks, editingTaskId]
+  );
+  const dependencyTask = useMemo(
+    () => tasks.find((t) => t.id === dependencyTaskId) ?? null,
+    [tasks, dependencyTaskId]
+  );
+
+  // テーブルの列定義（ヘッダー名・幅・表示データを全てここで組み立てて渡す）
+  const columns = useMemo<TaskTableColumn[]>(
+    () => [
+      {
+        key: "name",
+        header: "タスク名",
+        width: 260,
+        renderCell: (task) => (
+          <div
+            className="flex items-center gap-2"
+            style={{ paddingLeft: `${task.level * 16}px` }}
+          >
+            {task.isMilestone && (
+              <Flag className="w-3 h-3 shrink-0 text-muted-foreground" />
+            )}
+            <span className="font-medium truncate">{task.name}</span>
+          </div>
+        ),
+      },
+      {
+        key: "assignee",
+        header: "担当者",
+        width: 120,
+        renderCell: (task) => (
+          <span className="text-sm">{task.assignee ?? "-"}</span>
+        ),
+      },
+      {
+        key: "phase",
+        header: "フェーズ",
+        width: 130,
+        renderCell: (task) => (
+          <div className="flex items-center gap-2">
+            <span
+              className="w-3 h-3 rounded-sm shrink-0"
+              style={{ backgroundColor: task.color }}
+            />
+            <span className="text-sm truncate">{task.category ?? "-"}</span>
+          </div>
+        ),
+      },
+      {
+        key: "startDate",
+        header: "開始日",
+        width: 110,
+        renderCell: (task) => (
+          <span className="text-sm">
+            {formatDate(task.startDate, "YYYY/MM/DD")}
+          </span>
+        ),
+      },
+      {
+        key: "endDate",
+        header: "終了日",
+        width: 110,
+        renderCell: (task) =>
+          task.isMilestone ? (
+            <span className="text-muted-foreground">-</span>
+          ) : (
+            <span className="text-sm">
+              {formatDate(task.endDate, "YYYY/MM/DD")}
+            </span>
+          ),
+      },
+      {
+        key: "kosu",
+        header: "工数",
+        width: 90,
+        align: "right",
+        renderCell: (task) =>
+          task.isMilestone ? (
+            <span className="text-muted-foreground">-</span>
+          ) : (
+            <span className="text-sm">
+              {formatHoursWithUnit(task.duration, kosuUnit)}
+            </span>
+          ),
+      },
+      {
+        key: "progress",
+        header: "進捗",
+        width: 70,
+        align: "right",
+        renderCell: (task) => <span className="text-sm">{task.progress}%</span>,
+      },
+      {
+        key: "status",
+        header: "ステータス",
+        width: 110,
+        renderCell: (task) =>
+          task.isMilestone ? (
+            <span className="text-muted-foreground">-</span>
+          ) : (
+            <Badge variant="outline">
+              {getTaskStatusName(task.status ?? "NOT_STARTED")}
+            </Badge>
+          ),
+      },
+      {
+        key: "dependencies",
+        header: "依存関係",
+        width: 220,
+        interactive: true,
+        renderCell: (task) => (
+          <div className="flex items-center gap-1 flex-wrap">
+            {task.predecessors.length === 0 ? (
+              <span className="text-xs text-muted-foreground">なし</span>
+            ) : (
+              task.predecessors.map((dep, i) => {
+                const pred = tasks.find((t) => t.id === dep.taskId);
+                return (
+                  <Badge key={i} variant="secondary" className="text-xs">
+                    {pred?.name ?? "不明"} ({dep.type}
+                    {dep.lag !== 0
+                      ? `${dep.lag > 0 ? "+" : ""}${dep.lag}d`
+                      : ""}
+                    )
+                  </Badge>
+                );
+              })
+            )}
+            {!task.isMilestone && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0"
+                onClick={() => setDependencyTaskId(task.id)}
+              >
+                <Plus className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: "critical",
+        header: "クリティカル",
+        width: 110,
+        align: "center",
+        renderCell: (task) =>
+          task.isOnCriticalPath ? (
+            <Badge variant="destructive">
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              クリティカル
+            </Badge>
+          ) : null,
+      },
+      {
+        key: "actions",
+        header: "操作",
+        width: 70,
+        align: "center",
+        interactive: true,
+        renderCell: (task) => (
+          <div className="flex items-center justify-center">
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">メニューを開く</span>
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {!task.isMilestone && (
+                  <DropdownMenuItem onClick={() => setEditingTaskId(task.id)}>
+                    <Pencil className="w-4 h-4" />
+                    編集
+                  </DropdownMenuItem>
+                )}
+                {!task.isMilestone && (
+                  <DropdownMenuItem
+                    onClick={() => setDependencyTaskId(task.id)}
+                  >
+                    <Link2 className="w-4 h-4" />
+                    依存関係を編集
+                  </DropdownMenuItem>
+                )}
+                {!task.isMilestone && (
+                  <DropdownMenuItem
+                    onClick={() => handleTaskDuplicate([task.id])}
+                  >
+                    <Copy className="w-4 h-4" />
+                    複製
+                  </DropdownMenuItem>
+                )}
+                {!task.isMilestone && <DropdownMenuSeparator />}
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => handleTaskDelete([task.id])}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  削除
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ),
+      },
+    ],
+    [tasks, handleTaskDuplicate, handleTaskDelete, kosuUnit]
+  );
+
   return (
     <div className="h-[calc(100vh-4rem)] bg-background flex flex-col">
       {/* Main Navigation */}
@@ -557,6 +829,27 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
                 </button>
               </div>
             )}
+
+            {currentView === "table" && (
+              <div className="flex items-center gap-2 border-l pl-4">
+                <span className="text-xs text-muted-foreground">工数単位</span>
+                <div className="flex rounded-md border overflow-hidden">
+                  {(["hours", "days"] as const).map((unit) => (
+                    <button
+                      key={unit}
+                      onClick={() => setKosuUnit(unit)}
+                      className={`px-3 py-1 text-xs transition-colors ${
+                        kosuUnit === unit
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted hover:bg-muted/80"
+                      }`}
+                    >
+                      {HOURS_UNIT_LABELS[unit]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -579,17 +872,49 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
         ) : (
           <TaskTable
             tasks={tasks}
-            onTaskUpdate={handleTaskUpdate}
-            onTaskDelete={(id) => handleTaskDelete([id])}
-            onTaskAdd={handleTaskAdd}
-            onTaskReorder={() => {}}
-            onTaskDuplicate={(id) => handleTaskDuplicate([id])}
-            onTaskIndent={() => {}}
-            onDependencyAdd={handleDependencyAdd}
-            onDependencyRemove={handleDependencyRemove}
+            columns={columns}
+            rowHeight={48}
+            headerHeight={44}
+            selectable
+            selectedTaskIds={selectedTasks}
+            onSelectionChange={setSelectedTasks}
+            onRowActivate={(task) => {
+              if (!task.isMilestone) setEditingTaskId(task.id);
+            }}
+            getRowClassName={(task) =>
+              task.isOnCriticalPath ? "border-l-4 border-l-red-500" : ""
+            }
           />
         )}
       </div>
+
+      {/* タスク編集モーダル（マイルストーンは対象外） */}
+      {editingTask && !editingTask.isMilestone && (
+        <TaskModal
+          wbsId={wbsId}
+          task={toWbsTask(editingTask)}
+          isOpen={true}
+          onClose={() => {
+            setEditingTaskId(null);
+            // モーダル内で更新された場合に備えて再取得
+            refetchTasks();
+          }}
+        />
+      )}
+
+      {/* 依存関係編集モーダル */}
+      <DependencyEditModal
+        open={dependencyTask !== null}
+        onOpenChange={(open) => {
+          if (!open) setDependencyTaskId(null);
+        }}
+        task={dependencyTask}
+        candidateTasks={tasks.filter(
+          (t) => !t.isMilestone && t.id !== dependencyTaskId
+        )}
+        onAdd={handleDependencyAdd}
+        onRemove={handleDependencyRemove}
+      />
     </div>
   );
 }
