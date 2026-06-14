@@ -16,6 +16,9 @@ describe('EvmService', () => {
       getActualCostByDate: jest.fn(),
       getBuffers: jest.fn(),
       getProjectSettings: jest.fn(),
+      getProgressSnapshots: jest.fn().mockResolvedValue([]),
+      getEditableProgressSnapshots: jest.fn().mockResolvedValue([]),
+      updateProgressSnapshot: jest.fn().mockResolvedValue(undefined),
     } as jest.Mocked<IWbsEvmRepository>;
 
     evmService = new EvmService(mockRepository);
@@ -86,6 +89,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 300,
+        totalBaseManHours: 300,
         tasks,
         buffers: [],
         settings: null,
@@ -143,6 +147,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -195,6 +200,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 200,
+        totalBaseManHours: 200,
         tasks,
         buffers: [],
         settings: null,
@@ -243,6 +249,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 300,
+        totalBaseManHours: 300,
         tasks,
         buffers: [],
         settings: null,
@@ -280,6 +287,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: {
@@ -314,6 +322,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: {
@@ -351,6 +360,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [
           { bufferHours: 20 },
@@ -384,6 +394,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [
           { bufferHours: 20 },
@@ -408,6 +419,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 0,
+        totalBaseManHours: 0,
         tasks: [],
         buffers: [],
         settings: null,
@@ -436,8 +448,9 @@ describe('EvmService', () => {
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
@@ -446,6 +459,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -472,8 +486,9 @@ describe('EvmService', () => {
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-01-31'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
@@ -482,6 +497,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -508,8 +524,9 @@ describe('EvmService', () => {
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-12-31'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
@@ -518,6 +535,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -544,8 +562,9 @@ describe('EvmService', () => {
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
@@ -554,6 +573,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -631,6 +651,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 1000,
+        totalBaseManHours: 1000,
         tasks,
         buffers: [],
         settings: null,
@@ -673,6 +694,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 1000,
+        totalBaseManHours: 1000,
         tasks,
         buffers: [],
         settings: null,
@@ -708,6 +730,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -754,6 +777,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 300,
+        totalBaseManHours: 300,
         tasks,
         buffers: [],
         settings: null,
@@ -785,6 +809,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -924,6 +949,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: BAC,
+        totalBaseManHours: BAC,
         tasks,
         buffers: [],
         settings: null,
@@ -1037,7 +1063,7 @@ describe('EvmService', () => {
         ];
         const wbsData: WbsEvmData = {
           wbsId: 1, projectId: 'proj-1', projectName: 'Test',
-          totalPlannedManHours: BAC, tasks, buffers: [], settings: null,
+          totalPlannedManHours: BAC, totalBaseManHours: BAC, tasks, buffers: [], settings: null,
         };
         mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
         mockRepository.getActualCostByDate.mockResolvedValue(new Map([['2025-03-07', 100]]));
@@ -1185,6 +1211,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'テストプロジェクト',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: {
@@ -1225,6 +1252,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'テストプロジェクト',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -1324,6 +1352,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -1362,6 +1391,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -1400,6 +1430,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -1430,6 +1461,54 @@ describe('EvmService', () => {
       expect(result[1].ac).toBe(30);
       // 1/3: AC = 10 + 20 + 30 = 60（累積）
       expect(result[2].ac).toBe(60);
+    });
+  });
+
+  describe('updateProgressSnapshot（進捗スナップショット訂正）', () => {
+    it('正常系: progressRate/status をリポジトリへそのまま委譲する', async () => {
+      await evmService.updateProgressSnapshot(10, 50, TaskStatus.IN_PROGRESS);
+
+      expect(mockRepository.updateProgressSnapshot).toHaveBeenCalledWith(
+        10,
+        50,
+        TaskStatus.IN_PROGRESS
+      );
+    });
+
+    it('正常系: progressRate=null（クリア）を許容する', async () => {
+      await evmService.updateProgressSnapshot(10, null, TaskStatus.NOT_STARTED);
+
+      expect(mockRepository.updateProgressSnapshot).toHaveBeenCalledWith(
+        10,
+        null,
+        TaskStatus.NOT_STARTED
+      );
+    });
+
+    it('境界値: 0 と 100 は許容する', async () => {
+      await evmService.updateProgressSnapshot(1, 0, TaskStatus.NOT_STARTED);
+      await evmService.updateProgressSnapshot(2, 100, TaskStatus.COMPLETED);
+
+      expect(mockRepository.updateProgressSnapshot).toHaveBeenCalledTimes(2);
+    });
+
+    it('範囲外（負の値）は例外を投げ、リポジトリを呼ばない', async () => {
+      await expect(
+        evmService.updateProgressSnapshot(10, -1, TaskStatus.IN_PROGRESS)
+      ).rejects.toThrow();
+      expect(mockRepository.updateProgressSnapshot).not.toHaveBeenCalled();
+    });
+
+    it('範囲外（100超）は例外を投げ、リポジトリを呼ばない', async () => {
+      await expect(
+        evmService.updateProgressSnapshot(10, 101, TaskStatus.IN_PROGRESS)
+      ).rejects.toThrow();
+      expect(mockRepository.updateProgressSnapshot).not.toHaveBeenCalled();
+    });
+
+    it('getEditableProgressSnapshots はリポジトリへ委譲する', async () => {
+      await evmService.getEditableProgressSnapshots(123);
+      expect(mockRepository.getEditableProgressSnapshots).toHaveBeenCalledWith(123);
     });
   });
 

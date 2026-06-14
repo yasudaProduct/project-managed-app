@@ -35,8 +35,8 @@ export class SyncLogRepository implements ISyncLogRepository {
     };
   }
 
-  async recordSync(log: Omit<SyncLog, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> {
-    await prisma.syncLog.create({
+  async recordSync(log: Omit<SyncLog, 'id' | 'createdAt' | 'updatedAt'>): Promise<number> {
+    const created = await prisma.syncLog.create({
       data: {
         projectId: log.projectId,
         syncStatus: log.syncStatus,
@@ -51,6 +51,7 @@ export class SyncLogRepository implements ISyncLogRepository {
             : (log.errorDetails as Prisma.InputJsonValue),
       },
     });
+    return created.id;
   }
 
   async getHistory(projectId: string, limit: number = 10): Promise<SyncLog[]> {

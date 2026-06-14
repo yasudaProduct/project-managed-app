@@ -203,8 +203,8 @@ export class QualityMetricsReadPrismaRepository implements IQualityMetricsReadRe
     const results: ReviewManHoursResult[] = [];
 
     for (const { wbsId, taskNo } of reviewTaskNos) {
-      const task = await prisma.wbsTask.findUnique({
-        where: { taskNo_wbsId: { taskNo, wbsId } },
+      const task = await prisma.wbsTask.findFirst({
+        where: { taskNo, wbsId, isDeleted: false },
         select: { id: true },
       });
       if (!task) {
@@ -290,6 +290,7 @@ export class QualityMetricsReadPrismaRepository implements IQualityMetricsReadRe
 
     const tasks = await prisma.wbsTask.findMany({
       where: {
+        isDeleted: false,
         OR: reviewTaskNos.map(({ wbsId, taskNo }) => ({ wbsId, taskNo })),
       },
       select: { id: true },

@@ -19,6 +19,7 @@ import { getProjectStatusName } from "@/utils/utils";
 import { formatDate } from "@/utils/date-util";
 import { ProjectStatus, WbsTask, Milestone, TaskStatus } from "@/types/wbs";
 import { useMemo, useState, useCallback } from "react";
+import { copyToClipboard } from "@/utils/export-table";
 
 interface ProjectInfoCardProps {
   project: {
@@ -164,7 +165,7 @@ export function ProjectInfoCard({
   const [copied, setCopied] = useState(false);
   const handleCopyTsv = useCallback(() => {
     const statuses: TaskStatus[] = ["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "ON_HOLD"];
-    const header = ["工程", ...statuses.map((s) => TASK_STATUS_LABELS[s])].join("\t");
+    const headers = ["工程", ...statuses.map((s) => TASK_STATUS_LABELS[s])];
     const rows = phaseTaskSummary
       .filter((p) => p.total > 0)
       .map((phase) => {
@@ -175,7 +176,7 @@ export function ProjectInfoCard({
           }
           return `${actual}`;
         });
-        return [phase.name, ...cells].join("\t");
+        return [phase.name, ...cells];
       });
 
     const totalRow = statuses.map((status) => {
@@ -187,13 +188,11 @@ export function ProjectInfoCard({
       }
       return `${actualTotal}`;
     });
-    rows.push(["全体", ...totalRow].join("\t"));
+    rows.push(["全体", ...totalRow]);
 
-    const tsv = [header, ...rows].join("\n");
-    navigator.clipboard.writeText(tsv).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    copyToClipboard(headers, rows);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }, [phaseTaskSummary]);
 
   // 期限間近 / 期限超過タスク（未着手・着手中のみ）

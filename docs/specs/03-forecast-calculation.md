@@ -99,7 +99,7 @@ ZERO_HUNDRED  : (100*20 + 100*30 +  0*40 + 0*10) / 100 = 50%
 
 ## 4. 見通し計算方式
 
-`ForecastCalculationService.calculateForecastHours` は、入力（`plannedHours`, `actualHours`, `effectiveProgressRate`）と選択された方式に基づき見通し工数を返す。
+`ForecastCalculationService` の内部メソッド `calculateForecastHours`（`private static`）は、入力（`plannedHours`, `actualHours`, `effectiveProgressRate`）と選択された方式に基づき見通し工数を返す。外部からは公開メソッド `calculateTaskForecast`（タスク単体）/ `calculateMultipleTasksForecast`（複数タスク）経由で呼び出される。
 
 ### 4.1 方式一覧
 
@@ -208,7 +208,7 @@ else:
 
 - **意味**: 実績が存在する場合、予定と実績の大きい方（＝最悪ケース）を見通しとする。
 - **特性**: 進捗率の精度に依存しないシンプルな方式。計画管理の初期段階や、進捗率の申告が信頼できない場合に有用。
-- 境界条件（`progressRate >= 100` や `progressRate <= 0`）の**前に**評価される。
+- **評価順序**: 実装上、`progressRate >= 100`（完了済み → `actualHours`）の共通条件は `plannedOrActual` の分岐よりも**先に**評価される。一方 `progressRate <= 0` の共通条件は `plannedOrActual` の分岐の**後**に評価されるため、`plannedOrActual` には適用されない（上記の実績有無による分岐がそのまま使われる）。
 
 ---
 

@@ -15,13 +15,9 @@ import { EvmMetricsCard } from "./evm-metrics-card";
 import { TaskEvmTable } from "./task-evm-table";
 import { EvmTimeSeriesTable } from "./evm-timeseries-table";
 import {
-  getCurrentEvmMetrics,
-  getEvmTimeSeries,
-  getTaskEvmDetails,
-  getEvmDateRange,
+  getEvmDashboardData,
   type EvmMetricsData,
   type TaskEvmDataSerialized,
-  type EvmDateRangeData,
 } from "@/app/actions/evm/evm-actions";
 import { Loader2, TrendingUp, DollarSign, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -88,108 +84,30 @@ export function EvmDashboard({
   ]);
 
   /**
-   * 期間モードに基づいて開始日と終了日を計算
-   */
-  const calculateDateRange = (
-    mode: typeof periodMode,
-    range: EvmDateRangeData | null
-  ): { startDate: Date; endDate: Date } => {
-    const now = new Date();
-
-    switch (mode) {
-      case "project":
-        // プロジェクト全体期間（タスクの最小開始日〜最大終了日）
-        if (range?.recommendedStartDate && range?.recommendedEndDate) {
-          return {
-            startDate: new Date(range.recommendedStartDate),
-            endDate: new Date(range.recommendedEndDate),
-          };
-        }
-        // フォールバック: 過去3ヶ月〜現在
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-        return { startDate: threeMonthsAgo, endDate: now };
-
-      case "recent3months":
-        const recent3Months = new Date();
-        recent3Months.setMonth(recent3Months.getMonth() - 3);
-        return { startDate: recent3Months, endDate: now };
-
-      case "recent1month":
-        const recent1Month = new Date();
-        recent1Month.setMonth(recent1Month.getMonth() - 1);
-        return { startDate: recent1Month, endDate: now };
-
-      case "custom":
-        // カスタム期間（今後実装）
-        return { startDate: now, endDate: now };
-
-      default:
-        return { startDate: now, endDate: now };
-    }
-  };
-
-  /**
    * EVMデータを読み込む
+   * 現在メトリクス・時系列・タスク別詳細・日付範囲を1リクエストでまとめて取得する。
    */
   const loadEvmData = async (): Promise<void> => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // 日付範囲情報を取得
-      const rangeResult = await getEvmDateRange({ wbsId });
-
-      // 現在のメトリクスを取得
-      const metricsResult = await getCurrentEvmMetrics({
+      const result = await getEvmDashboardData({
         wbsId,
         calculationMode,
         progressMethod,
-      });
-
-      if (!metricsResult.success || !metricsResult.data) {
-        throw new Error(
-          metricsResult.error ?? "メトリクスのロードに失敗しました"
-        );
-      }
-
-      setCurrentMetrics(metricsResult.data);
-
-      // 期間を計算
-      const { startDate, endDate } = calculateDateRange(
-        periodMode,
-        rangeResult.data ?? null
-      );
-
-      // 時系列データを取得
-      // TODO: このアクションが遅いのでパフォーマンス改善を検討
-      const timeSeriesResult = await getEvmTimeSeries({
-        wbsId,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
         interval,
-        calculationMode,
-        progressMethod,
+        periodMode,
         showPrediction,
       });
 
-      if (!timeSeriesResult.success || !timeSeriesResult.data) {
-        throw new Error(
-          timeSeriesResult.error ?? "時系列データをロードできませんでした"
-        );
+      if (!result.success || !result.data) {
+        throw new Error(result.error ?? "EVMデータのロードに失敗しました");
       }
 
-      setTimeSeriesData(timeSeriesResult.data);
-
-      // タスク別データを取得
-      const taskResult = await getTaskEvmDetails({ wbsId });
-
-      if (!taskResult.success || !taskResult.data) {
-        throw new Error(
-          taskResult.error ?? "タスクの詳細をロードできませんでした"
-        );
-      }
-      setTaskDetails(taskResult.data);
+      setCurrentMetrics(result.data.currentMetrics);
+      setTimeSeriesData(result.data.timeSeries);
+      setTaskDetails(result.data.taskDetails);
     } catch (err) {
       console.error("Failed to load EVM data:", err);
       setError(err instanceof Error ? err.message : "Unknown error");

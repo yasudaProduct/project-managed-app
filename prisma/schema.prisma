@@ -160,6 +160,8 @@ model WbsTask {
   assigneeId       Int?
   status           TaskStatus       @default(NOT_STARTED)
   progressRate     Decimal?         @default(0) // 進捗率（0-100）
+  isDeleted        Boolean          @default(false) // 論理削除フラグ（同期で消失したタスクのtombstone化）
+  deletedAt        DateTime?        @db.Timestamptz // 論理削除日時（UTC）
   wbs              Wbs              @relation(fields: [wbsId], references: [id])
   phase            WbsPhase?        @relation(fields: [phaseId], references: [id])
   assignee         WbsAssignee?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
@@ -172,6 +174,7 @@ model WbsTask {
   successors       TaskDependency[] @relation("SuccessorTask")
 
   @@unique(fields: [taskNo,wbsId])
+  @@index([wbsId, isDeleted])
   @@map("wbs_task")
 }
 
@@ -448,6 +451,7 @@ model SyncLog {
   errorDetails  Json?
   createdAt     DateTime  @default(now()) @db.Timestamptz
   updatedAt     DateTime  @updatedAt @db.Timestamptz
+  snapshots     TaskProgressSnapshot[]
 
   @@index([projectId, syncedAt])
   @@map("sync_logs")
@@ -457,6 +461,35 @@ enum SyncStatus {
   SUCCESS
   FAILED
   PARTIAL
+}
+
+// 同期実行時点のタスク進捗・工数・単価・期間を時点データ・自己完結で記録する履歴
+model TaskProgressSnapshot {
+  id              Int        @id @default(autoincrement())
+  taskId          Int
+  wbsId           Int
+  taskNo          String
+  snapshotAt      DateTime   @db.Timestamptz // 同期実行時刻（UTC）
+  progressRate    Decimal? // SELF_REPORTED用
+  status          TaskStatus
+  plannedManHours Decimal // YOTEI NORMAL（無ければKIJUN）
+  baseManHours    Decimal // KIJUN NORMAL
+  costPerHour     Decimal // 当時の単価（自己完結）
+  plannedStart    DateTime?  @db.Date
+  plannedEnd      DateTime?  @db.Date
+  baseStart       DateTime?  @db.Date
+  baseEnd         DateTime?  @db.Date
+  actualStart     DateTime?  @db.Date // Excel JISSEKI（自己申告実績）
+  actualEnd       DateTime?  @db.Date
+  isRemoved       Boolean    @default(false) // soft-delete連動のtombstone
+  syncLogId       Int
+  syncLog         SyncLog    @relation(fields: [syncLogId], references: [id])
+  createdAt       DateTime   @default(now()) @db.Timestamptz
+
+  @@index([taskId, snapshotAt])
+  @@index([wbsId, snapshotAt])
+  @@index([syncLogId])
+  @@map("task_progress_snapshot")
 }
 
 model CompanyHoliday {

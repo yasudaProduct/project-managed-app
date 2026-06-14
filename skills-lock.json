@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "drawio": {
+      "source": "bahayonghang/drawio-skills",
+      "sourceType": "github",
+      "skillPath": "skills/drawio/SKILL.md",
+      "computedHash": "3570b5f13cbcdf8f78bb19c603bdb3744ea04658451ed7f31cbbcbc013a8d03a"
+    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",

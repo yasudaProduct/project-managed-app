@@ -89,6 +89,7 @@ export class WbsQueryRepository implements IWbsQueryRepository {
         ) AS tk_yotei ON TRUE
       WHERE
         t."wbsId" = ${Number(wbsId)}
+        AND t."isDeleted" = false
       ORDER BY
         p."seq" ASC,
         t."taskNo" ASC;
@@ -124,6 +125,7 @@ export class WbsQueryRepository implements IWbsQueryRepository {
       JOIN "wbs_task" t ON wr."taskId" = t.id
       JOIN "users" u    ON wr."userId" = u.id
       WHERE t."wbsId" = ${Number(wbsId)}
+        AND t."isDeleted" = false
         AND wr."taskId" IS NOT NULL
       GROUP BY wr."taskId", wr."userId", u."displayName", TO_CHAR(wr.date, 'YYYY/MM')
     `;

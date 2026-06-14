@@ -39,6 +39,16 @@ const GetEvmDateRangeSchema = z.object({
   wbsId: z.number(),
 });
 
+const GetEvmDashboardDataSchema = z.object({
+  wbsId: z.number(),
+  calculationMode: z.enum(['hours', 'cost']).default('hours'),
+  progressMethod: z.enum(['ZERO_HUNDRED', 'FIFTY_FIFTY', 'SELF_REPORTED']).optional(),
+  forecastMethod: z.enum(['CPI_ONLY', 'CPI_SPI', 'PLANNED']).optional(),
+  interval: z.enum(['daily', 'weekly', 'monthly']).default('weekly'),
+  periodMode: z.enum(['project', 'recent3months', 'recent1month', 'custom']).default('project'),
+  showPrediction: z.boolean().optional(),
+});
+
 // 型定義
 export type EvmActionResult<T = unknown> = {
   success: boolean;
@@ -97,6 +107,13 @@ export type EvmDateRangeData = {
   taskMaxEndDate: string | null;
   recommendedStartDate: string;
   recommendedEndDate: string;
+};
+
+export type EvmDashboardData = {
+  currentMetrics: EvmMetricsData;
+  timeSeries: EvmMetricsData[];
+  taskDetails: TaskEvmDataSerialized[];
+  dateRange: EvmDateRangeData;
 };
 
 /**
@@ -321,6 +338,50 @@ export async function getEvmDateRange(
     };
   } catch (error) {
     console.error('Failed to get EVM date range:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * ダッシュボード表示に必要なEVMデータを1リクエストでまとめて取得
+ * （WBSデータの重いクエリを1回に集約し、現在メトリクス・時系列・タスク別詳細・日付範囲を返す）
+ */
+export async function getEvmDashboardData(
+  params: z.infer<typeof GetEvmDashboardDataSchema>
+): Promise<EvmActionResult<EvmDashboardData>> {
+  try {
+    const validated = GetEvmDashboardDataSchema.parse(params);
+
+    const result = await evmService.getEvmDashboardData(validated.wbsId, {
+      calculationMode: validated.calculationMode as EvmCalculationMode,
+      progressMethod: validated.progressMethod as ProgressMeasurementMethod | undefined,
+      forecastMethod: validated.forecastMethod as EvmForecastMethod | undefined,
+      interval: validated.interval,
+      periodMode: validated.periodMode,
+      showPrediction: validated.showPrediction,
+    });
+
+    return {
+      success: true,
+      data: {
+        currentMetrics: serializeEvmMetrics(result.currentMetrics),
+        timeSeries: result.timeSeries.map(serializeEvmMetrics),
+        taskDetails: result.taskDetails.map(serializeTaskEvmData),
+        dateRange: {
+          projectStartDate: null,
+          projectEndDate: null,
+          taskMinStartDate: result.dateRange.taskMinStartDate?.toISOString() ?? null,
+          taskMaxEndDate: result.dateRange.taskMaxEndDate?.toISOString() ?? null,
+          recommendedStartDate: result.dateRange.recommendedStartDate.toISOString(),
+          recommendedEndDate: result.dateRange.recommendedEndDate.toISOString(),
+        },
+      },
+    };
+  } catch (error) {
+    console.error('Failed to get EVM dashboard data:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

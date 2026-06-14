@@ -4,6 +4,7 @@ import { SYMBOL } from '@/types/symbol'
 import { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service'
 import { IGeppoImportApplicationService } from '@/applications/geppo-import/geppo-import-application-service'
 import { IWbsSyncApplicationService } from '@/applications/wbs-sync/IWbsSyncApplicationService'
+import { resolveWbsSyncMode } from '@/applications/wbs-sync/wbs-sync-mode'
 import { ImportJob } from '@/domains/import-job/import-job'
 import { INotificationService } from '@/applications/notification/INotificationService'
 import { NotificationType } from '@/types/notification'
@@ -173,7 +174,15 @@ async function executeWbsImport(jobId: string, job: ImportJob) {
     }
 
     // WBS同期実行
-    const result = await wbsSyncService.replaceAll(job.wbsId)
+    // 同期モードはジョブのoptions.syncModeで実行時に選択（既定=diff＝差分同期）。
+    const syncMode = resolveWbsSyncMode(job.options)
+    await importJobService.addProgress(jobId, {
+      message: `同期モード: ${syncMode === 'replace' ? '洗い替え(replace)' : '差分(diff)'}`,
+      level: 'info',
+    })
+    const result = syncMode === 'replace'
+      ? await wbsSyncService.replaceAll(job.wbsId)
+      : await wbsSyncService.syncDiff(job.wbsId)
 
     if (result.success) {
 
@@ -188,16 +197,16 @@ async function executeWbsImport(jobId: string, job: ImportJob) {
         })
       }
 
-      // 完了
+      // 完了（同期結果の実数を反映）
       await importJobService.completeJob(jobId, {
-        recordCount: 1,
-        addedCount: 0,
-        updatedCount: 1,
-        deletedCount: 0,
+        recordCount: result.recordCount,
+        addedCount: result.addedCount,
+        updatedCount: result.updatedCount,
+        deletedCount: result.deletedCount,
       })
 
       await importJobService.addProgress(jobId, {
-        message: 'WBS同期が完了しました',
+        message: `WBS同期が完了しました（新規: ${result.addedCount}件 / 更新: ${result.updatedCount}件 / 削除: ${result.deletedCount}件）`,
         level: 'info',
       })
     } else {

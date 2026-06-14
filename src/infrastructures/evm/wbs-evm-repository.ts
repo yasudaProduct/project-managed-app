@@ -6,6 +6,8 @@ import {
   WbsEvmData,
   BufferData,
   ProjectSettingsData,
+  TaskProgressSnapshotRecord,
+  EditableProgressSnapshot,
 } from '@/applications/evm/iwbs-evm-repository';
 import type { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-repository';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
@@ -85,11 +87,17 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       0
     );
 
+    const totalBaseManHours = tasks.reduce(
+      (sum, task) => sum + task.baseManHours,
+      0
+    );
+
     return {
       wbsId: wbs.id,
       projectId: wbs.projectId,
       projectName: wbs.project.name,
       totalPlannedManHours,
+      totalBaseManHours,
       tasks,
       buffers,
       settings,
@@ -137,6 +145,8 @@ export class WbsEvmRepository implements IWbsEvmRepository {
   ): Promise<Map<string, number>> {
     const workRecords = await prisma.workRecord.findMany({
       where: {
+        // AC（実績コスト）はworkRecordという不変事実の集計。タスクがsoft-delete
+        // されても実績は消えないため、isDeletedで絞らずWBS配下の実績を全て対象にする。
         task: {
           wbsId: wbsId,
         },
@@ -145,15 +155,16 @@ export class WbsEvmRepository implements IWbsEvmRepository {
           lte: endDate,
         },
       },
-      include: {
-        task: {
-          include: {
-            assignee: true,
-          },
-        },
-      },
       orderBy: { date: 'asc' },
     });
+
+    // コスト単価は「実績を記録したユーザー」のWBS単価を使う（不変な実績コストの基準）。
+    // タスクの現担当者に依存させると、担当者変更/クリアで過去ACが遡及して変わるため。
+    let rateByUserId = new Map<string, number>();
+    if (calculationMode === 'cost') {
+      const assignees = await prisma.wbsAssignee.findMany({ where: { wbsId } });
+      rateByUserId = new Map(assignees.map((a) => [a.assigneeId, a.costPerHour]));
+    }
 
     const costMap = new Map<string, number>();
 
@@ -164,8 +175,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       // 計算モードに応じて工数または金額を加算
       const cost =
         calculationMode === 'cost'
-          ? Number(record.hours_worked) *
-          (record.task?.assignee?.costPerHour ?? 5000)
+          ? Number(record.hours_worked) * (rateByUserId.get(record.userId) ?? 5000)
           : Number(record.hours_worked);
 
       costMap.set(dateKey, currentCost + cost);
@@ -199,5 +209,72 @@ export class WbsEvmRepository implements IWbsEvmRepository {
     }
 
     return dates;
+  }
+
+  async getProgressSnapshots(
+    wbsId: number,
+    toDate: Date
+  ): Promise<TaskProgressSnapshotRecord[]> {
+    const rows = await prisma.taskProgressSnapshot.findMany({
+      where: { wbsId, snapshotAt: { lte: toDate } },
+      orderBy: [{ taskId: 'asc' }, { snapshotAt: 'asc' }],
+    });
+
+    return rows.map((r) => ({
+      taskId: r.taskId,
+      taskNo: r.taskNo,
+      snapshotAt: r.snapshotAt,
+      progressRate: r.progressRate !== null ? Number(r.progressRate) : null,
+      status: r.status,
+      plannedManHours: Number(r.plannedManHours),
+      baseManHours: Number(r.baseManHours),
+      costPerHour: Number(r.costPerHour),
+      plannedStart: r.plannedStart,
+      plannedEnd: r.plannedEnd,
+      baseStart: r.baseStart,
+      baseEnd: r.baseEnd,
+      actualStart: r.actualStart,
+      actualEnd: r.actualEnd,
+      isRemoved: r.isRemoved,
+    }));
+  }
+
+  async getEditableProgressSnapshots(
+    wbsId: number
+  ): Promise<EditableProgressSnapshot[]> {
+    // 編集対象は有効タスクのスナップショットのみ（tombstone は除外）。
+    const rows = await prisma.taskProgressSnapshot.findMany({
+      where: { wbsId, isRemoved: false },
+      orderBy: [{ taskNo: 'asc' }, { snapshotAt: 'asc' }],
+    });
+
+    // タスク名は WbsTask から taskId → name で解決（snapshot.taskId は wbsTask.id を参照）。
+    const tasks = await prisma.wbsTask.findMany({
+      where: { wbsId },
+      select: { id: true, name: true },
+    });
+    const nameByTaskId = new Map(tasks.map((t) => [t.id, t.name]));
+
+    return rows.map((r) => ({
+      id: r.id,
+      taskId: r.taskId,
+      taskNo: r.taskNo,
+      taskName: nameByTaskId.get(r.taskId) ?? r.taskNo,
+      snapshotAt: r.snapshotAt,
+      progressRate: r.progressRate !== null ? Number(r.progressRate) : null,
+      status: r.status,
+    }));
+  }
+
+  async updateProgressSnapshot(
+    id: number,
+    progressRate: number | null,
+    status: TaskStatus
+  ): Promise<void> {
+    // 訂正対象は progressRate / status のみ。他カラム（工数・単価・日付・isRemoved）には触れない。
+    await prisma.taskProgressSnapshot.update({
+      where: { id },
+      data: { progressRate, status },
+    });
   }
 }
