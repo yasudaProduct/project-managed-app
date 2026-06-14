@@ -30,6 +30,14 @@ import {
 const TASK_LIST_MIN_WIDTH = 240;
 const TASK_LIST_MAX_WIDTH = 800;
 
+// 行高さの基準値（rowScale=1 のときの px）
+const BASE_TASK_HEIGHT = 16;
+const BASE_ROW_SPACING = 4;
+const BASE_CATEGORY_HEIGHT = 20;
+// 行高さスケール（Ctrl+ホイールで変更）の下限・上限
+const ROW_SCALE_MIN = 0.6;
+const ROW_SCALE_MAX = 3;
+
 // 予定日（Date）をタスクリスト表示用に MM/DD へ整形する
 const formatMonthDay = (date?: Date): string => {
   if (!date) return "";
@@ -91,6 +99,10 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     const timelineScrollRef = useRef<HTMLDivElement>(null);
     const [scrollLeft, setScrollLeft] = useState(0);
 
+    // 行高さスケール（Ctrl+ホイールで全行の高さを均等に増減）
+    const [rowScale, setRowScale] = useState(1);
+    const chartContentRef = useRef<HTMLDivElement>(null);
+
     // タスクリスト幅（マウスドラッグでリサイズ可能）
     const [taskListWidth, setTaskListWidth] = useState(440);
     const resizeStateRef = useRef<{
@@ -141,11 +153,11 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       );
     }, []);
 
-    // 厳密な寸法定数 - 可変性なし、絶対的な精度
-    const TASK_HEIGHT = 16;
-    const ROW_SPACING = 4;
-    const ROW_HEIGHT = TASK_HEIGHT + ROW_SPACING; // 20px
-    const CATEGORY_HEIGHT = 20;
+    // 行の寸法 - rowScale に比例（Ctrl+ホイールで均等に増減）
+    const TASK_HEIGHT = Math.round(BASE_TASK_HEIGHT * rowScale);
+    const ROW_SPACING = Math.round(BASE_ROW_SPACING * rowScale);
+    const ROW_HEIGHT = TASK_HEIGHT + ROW_SPACING;
+    const CATEGORY_HEIGHT = Math.round(BASE_CATEGORY_HEIGHT * rowScale);
     const HEADER_HEIGHT = 50;
     const TASK_LIST_WIDTH = taskListWidth;
 
@@ -186,6 +198,25 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         scrollElement.addEventListener("scroll", handleScroll);
         return () => scrollElement.removeEventListener("scroll", handleScroll);
       }
+    }, []);
+
+    // Ctrl+ホイールで全行の高さを均等に増減（ブラウザのページズームは抑止）
+    useEffect(() => {
+      const el = chartContentRef.current;
+      if (!el) return;
+
+      const handleWheel = (e: WheelEvent) => {
+        if (!e.ctrlKey) return;
+        e.preventDefault();
+        setRowScale((prev) => {
+          // 上スクロールで拡大・下スクロールで縮小（deltaY に比例した滑らかな変化）
+          const next = prev * Math.exp(-e.deltaY * 0.001);
+          return Math.min(ROW_SCALE_MAX, Math.max(ROW_SCALE_MIN, next));
+        });
+      };
+
+      el.addEventListener("wheel", handleWheel, { passive: false });
+      return () => el.removeEventListener("wheel", handleWheel);
     }, []);
 
     // 列幅を計算
@@ -540,7 +571,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
           </div>
         </div>
         <div ref={ref} className="w-full h-full bg-background gantt-chart">
-          <div className="flex h-full">
+          <div ref={chartContentRef} className="flex h-full">
             {/* タスクリスト列 */}
             <div
               className="border-r border-border bg-card flex-shrink-0"
