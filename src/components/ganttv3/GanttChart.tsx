@@ -62,7 +62,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       onCategoryToggle,
       onZoomChange,
     },
-    ref
+    ref,
   ) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     onTaskUpdate;
@@ -210,7 +210,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         ganttRows
           .filter((row) => row.type === "task" && row.task)
           .map((row) => row.task!),
-      [ganttRows]
+      [ganttRows],
     );
     const taskCenterYById = useMemo(() => {
       const map = new Map<string, number>();
@@ -225,19 +225,19 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     // 各種寸法を計算
     const totalDays = Math.ceil(
       (timelineBounds.end.getTime() - timelineBounds.start.getTime()) /
-        (24 * 60 * 60 * 1000)
+        (24 * 60 * 60 * 1000),
     );
     const scaleMultiplier =
       timelineScale === "day"
         ? 1
         : timelineScale === "week"
-        ? 7
-        : timelineScale === "month"
-        ? 30
-        : 90;
+          ? 7
+          : timelineScale === "month"
+            ? 30
+            : 90;
     const chartWidth = Math.max(
       (totalDays / scaleMultiplier) * columnWidth,
-      1200
+      1200,
     );
     const totalContentHeight =
       ganttRows.length > 0
@@ -254,7 +254,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
           (24 * 60 * 60 * 1000);
         return (daysDiff / scaleMultiplier) * columnWidth;
       },
-      [timelineBounds.start, columnWidth, scaleMultiplier]
+      [timelineBounds.start, columnWidth, scaleMultiplier],
     );
 
     // ナビゲーション用ハンドラ
@@ -296,7 +296,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
         const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
         const totalProjectDays = Math.ceil(
-          (maxDate.getTime() - minDate.getTime()) / (24 * 60 * 60 * 1000)
+          (maxDate.getTime() - minDate.getTime()) / (24 * 60 * 60 * 1000),
         );
         const paddedDays = totalProjectDays * 1.2;
         const totalColumns = paddedDays / scaleMultiplier;
@@ -304,7 +304,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         const baseColumnWidth = getBaseColumnWidth();
         const requiredZoom = Math.max(
           0.1,
-          Math.min(3.0, targetColumnWidth / baseColumnWidth)
+          Math.min(3.0, targetColumnWidth / baseColumnWidth),
         );
 
         onZoomChange(requiredZoom);
@@ -363,10 +363,10 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         const startDates = categoryTasks.map((task) => task.startDate);
         const endDates = categoryTasks.map((task) => task.endDate);
         const earliestStart = new Date(
-          Math.min(...startDates.map((d) => d.getTime()))
+          Math.min(...startDates.map((d) => d.getTime())),
         );
         const latestEnd = new Date(
-          Math.max(...endDates.map((d) => d.getTime()))
+          Math.max(...endDates.map((d) => d.getTime())),
         );
         const avgProgress =
           categoryTasks.reduce((sum, task) => sum + task.progress, 0) /
@@ -528,8 +528,10 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             )}
                           </button>
                           <div
-                            className="w-3 h-3 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: row.category!.color }}
+                            className="w-3 h-3 flex-shrink-0"
+                            style={{
+                              backgroundColor: row.category!.color,
+                            }}
                           />
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-xs truncate">
@@ -546,11 +548,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                       return (
                         <div
                           key={row.id}
-                          className={`px-4 py-0 border-b border-border hover:bg-muted/30 transition-colors absolute w-full flex items-center ${
-                            task.isOnCriticalPath && style.showCriticalPath
-                              ? "bg-red-50/50"
-                              : ""
-                          }`}
+                          className={`px-4 py-0 border-b border-border hover:bg-muted/30 transition-colors absolute w-full flex items-center `}
                           style={{
                             top: row.y,
                             height: row.height,
@@ -564,13 +562,9 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                 <div className="w-3 h-3 border-l border-b border-muted-foreground/30" />
                               )}
                               <div
-                                className="w-2 h-2 rounded-full flex-shrink-0"
+                                className="w-2 h-2 flex-shrink-0"
                                 style={{
-                                  backgroundColor:
-                                    task.isOnCriticalPath &&
-                                    style.showCriticalPath
-                                      ? style.colors.criticalPath
-                                      : task.color,
+                                  backgroundColor: task.color,
                                 }}
                               />
                               <div className="flex-1 min-w-0">
@@ -660,7 +654,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                               height={row.height}
                               fill="rgba(0,0,0,0.02)"
                               className="pointer-events-none"
-                            />
+                            />,
                           );
 
                           // カテゴリのサマリーバー
@@ -671,7 +665,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             const categoryEndX = dateToX(categoryRange.end);
                             const categoryWidth = Math.max(
                               categoryEndX - categoryStartX,
-                              20
+                              20,
                             );
                             const categoryBarHeight = 8;
                             const categoryBarY =
@@ -688,7 +682,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                 fillOpacity={0.3}
                                 rx={2}
                                 className="pointer-events-none"
-                              />
+                              />,
                             );
 
                             const progressWidth =
@@ -704,7 +698,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                 fillOpacity={0.8}
                                 rx={2}
                                 className="pointer-events-none"
-                              />
+                              />,
                             );
 
                             elements.push(
@@ -720,7 +714,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                 strokeOpacity={0.6}
                                 rx={2}
                                 className="pointer-events-none"
-                              />
+                              />,
                             );
                           }
 
@@ -739,7 +733,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                               y={taskBarY}
                               width={Math.max(
                                 dateToX(task.endDate) - dateToX(task.startDate),
-                                task.isMilestone ? 0 : 20
+                                task.isMilestone ? 0 : 20,
                               )}
                               height={TASK_HEIGHT}
                               style={style}
@@ -771,7 +765,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         </div>
       </>
     );
-  }
+  },
 );
 
 GanttChart.displayName = "GanttChart";

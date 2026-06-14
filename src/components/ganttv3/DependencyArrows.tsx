@@ -189,7 +189,7 @@ export const DependencyArrows = ({
           refX="9"
           refY="3.5"
           orient="auto"
-          markerUnits="strokeWidth"
+          markerUnits="userSpaceOnUse"
         >
           <polygon
             points="0 0, 10 3.5, 0 7"
