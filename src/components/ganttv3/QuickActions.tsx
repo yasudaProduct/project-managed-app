@@ -21,6 +21,7 @@ import {
   Layers,
   Activity,
   List,
+  Download,
 } from "lucide-react";
 
 interface QuickActionsProps {
@@ -34,6 +35,8 @@ interface QuickActionsProps {
   onDuplicateTasks: () => void;
   groupBy?: GroupBy;
   onGroupByChange?: (groupBy: GroupBy) => void;
+  /** タスク一覧をTSVで出力。未指定なら出力ボタンは表示しない */
+  onExportTsv?: () => void;
 }
 
 /**
@@ -62,6 +65,7 @@ export const QuickActions = ({
   onDuplicateTasks,
   groupBy = "none",
   onGroupByChange,
+  onExportTsv,
 }: QuickActionsProps) => {
   const getGroupIcon = (group: GroupBy) => {
     switch (group) {
@@ -242,6 +246,23 @@ export const QuickActions = ({
           <Calendar className="w-4 h-4" />
         </Button>
       </div>
+
+      {/* 出力 */}
+      {onExportTsv && (
+        <>
+          <Separator orientation="vertical" className="h-6" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onExportTsv}
+            className="gap-2"
+            title="タスク一覧をTSVで出力"
+          >
+            <Download className="w-4 h-4" />
+            TSV出力
+          </Button>
+        </>
+      )}
     </div>
   );
 };

@@ -32,7 +32,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertTriangle,
   Copy,
   Flag,
   Link2,
@@ -55,6 +54,7 @@ import {
   createGanttDependency,
   deleteGanttDependency,
 } from "@/app/wbs/[id]/ganttv3/dependency-actions";
+import { getGanttTasksTsv } from "@/app/wbs/[id]/ganttv3/export-actions";
 import { DependencyType } from "@/components/ganttv3/gantt";
 import { groupTasksByType } from "@/components/ganttv3/utils/groupTasks";
 import { toast } from "@/hooks/use-toast";
@@ -586,6 +586,32 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     setTimelineScale(scale);
   }, []);
 
+  // タスク一覧をTSVで出力（基準/予定/実績/進捗率/依存関係を含む）
+  const handleExportTsv = useCallback(async () => {
+    try {
+      const tsv = await getGanttTasksTsv(wbsId);
+      // Excel等で文字化けしないよう BOM を付与
+      const blob = new Blob(["﻿" + tsv], {
+        type: "text/tab-separated-values;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const date = new Date().toISOString().slice(0, 10);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `wbs-tasks-${date}.tsv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: "TSVの出力に失敗しました",
+        description: error instanceof Error ? error.message : "不明なエラー",
+        variant: "destructive",
+      });
+    }
+  }, [wbsId]);
+
   const handleCategoryToggle = useCallback((categoryName: string) => {
     setExpandedCategories((prev) => {
       const newExpanded = new Set(prev);
@@ -871,6 +897,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
               }
               groupBy={groupBy}
               onGroupByChange={setGroupBy}
+              onExportTsv={handleExportTsv}
             />
 
             {currentView === "gantt" && (
