@@ -7,7 +7,14 @@ import React, {
   useEffect,
   JSX,
 } from "react";
-import { Task, TimelineScale, GanttStyle, GanttPhase, GroupBy } from "./gantt";
+import {
+  Task,
+  TimelineScale,
+  GanttStyle,
+  GanttPhase,
+  GroupBy,
+  TaskSortBy,
+} from "./gantt";
 import { groupTasksByType } from "./utils/groupTasks";
 import { TimelineHeader } from "./TimelineHeader";
 import { TaskBar } from "./TaskBar";
@@ -68,6 +75,8 @@ interface GanttChartProps {
   expandedCategories: Set<string>;
   zoomLevel?: number;
   groupBy?: GroupBy;
+  /** グループ内のタスクの並び順 */
+  sortBy?: TaskSortBy;
   onTaskUpdate: (task: Task) => void;
   onCategoryToggle: (categoryName: string) => void;
   onZoomChange?: (zoom: number) => void;
@@ -106,6 +115,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       expandedCategories,
       zoomLevel = 1.0,
       groupBy = "phase",
+      sortBy = "taskNo",
       onTaskUpdate,
       onCategoryToggle,
       onZoomChange,
@@ -281,8 +291,8 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
 
     // タスクをグループ化
     const taskGroups = useMemo(() => {
-      return groupTasksByType(tasks, groupBy, categories);
-    }, [tasks, groupBy, categories]);
+      return groupTasksByType(tasks, groupBy, categories, sortBy);
+    }, [tasks, groupBy, categories, sortBy]);
 
     // グループごとのタスクマップ（互換性のため）
     const groupedTasks = useMemo(() => {

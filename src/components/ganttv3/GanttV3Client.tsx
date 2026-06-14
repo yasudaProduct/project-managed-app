@@ -10,6 +10,7 @@ import {
   QuickActions,
   GanttChart,
   GroupBy,
+  TaskSortBy,
 } from "@/components/ganttv3";
 import { TaskTable, TaskTableColumn } from "@/components/ganttv3/TaskTable";
 import { DependencyEditModal } from "@/components/ganttv3/DependencyEditModal";
@@ -104,6 +105,9 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
 
   // Add groupBy state
   const [groupBy, setGroupBy] = useState<GroupBy>("phase");
+
+  // グループ内のタスクの並び順
+  const [sortBy, setSortBy] = useState<TaskSortBy>("taskNo");
 
   // 現在のグルーピングにおける実グループ名（GanttChart の groupTasksByType と同一ロジック）
   const groupNames = useMemo(
@@ -1141,6 +1145,8 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
               }
               groupBy={groupBy}
               onGroupByChange={setGroupBy}
+              sortBy={sortBy}
+              onSortByChange={setSortBy}
               onExportTsv={handleExportTsv}
             />
 
@@ -1196,6 +1202,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
             expandedCategories={expandedCategories}
             zoomLevel={zoomLevel}
             groupBy={groupBy}
+            sortBy={sortBy}
             onTaskUpdate={editMode ? handleDraftTaskUpdate : handleTaskUpdate}
             onCategoryToggle={handleCategoryToggle}
             onZoomChange={setZoomLevel}

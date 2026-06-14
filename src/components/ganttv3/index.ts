@@ -22,6 +22,7 @@ export type {
     GanttStyle,
     ProjectData,
     GroupBy,
+    TaskSortBy,
     TaskStatus,
 } from './gantt';
 

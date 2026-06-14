@@ -19,6 +19,7 @@ export interface Task {
   // --- DB永続化用メタ情報（UI表示には使わない） ---
   dbId?: number; // DB上の数値ID（タスク or マイルストーン）
   assigneeId?: number; // 担当者の数値ID
+  assigneeSeq?: number; // 担当者の並び順（wbs_assignee.seq）
   phaseId?: number; // フェーズの数値ID
   taskNo?: string; // タスクNo（"P-0001"形式）
 }
@@ -26,6 +27,9 @@ export interface Task {
 export type TaskStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD';
 
 export type GroupBy = 'none' | 'phase' | 'assignee' | 'status';
+
+// グループ内のタスクの並び順
+export type TaskSortBy = 'taskNo' | 'startDate' | 'assignee' | 'status';
 
 export interface GanttPhase {
   id: string;

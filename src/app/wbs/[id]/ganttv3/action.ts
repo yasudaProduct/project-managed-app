@@ -62,6 +62,30 @@ export async function getGanttTasks(wbsId: number): Promise<GanttTask[]> {
         console.error("フェーズ色の取得に失敗しました", e);
     }
 
+    // 担当者の並び順（wbs_assignee.seq）を各タスクに付与する（グルーピング/ソート用）
+    try {
+        const wbsService = container.get<IWbsApplicationService>(
+            SYMBOL.IWbsApplicationService
+        );
+        const assignees = await wbsService.getAssignees(wbsId);
+        const seqByAssigneeId = new Map<number, number>();
+        (assignees ?? []).forEach((a) => {
+            if (a.assignee) {
+                seqByAssigneeId.set(a.assignee.id, a.assignee.seq);
+            }
+        });
+
+        for (const task of ganttTasks) {
+            if (task.assigneeId === undefined) continue;
+            const seq = seqByAssigneeId.get(task.assigneeId);
+            if (seq !== undefined) {
+                task.assigneeSeq = seq;
+            }
+        }
+    } catch (e) {
+        console.error("担当者の並び順の取得に失敗しました", e);
+    }
+
     // 依存関係を読み込み、後続タスクの predecessors に詰める
     try {
         const dependencyService = container.get<TaskDependencyService>(

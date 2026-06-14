@@ -1,5 +1,5 @@
 import React from "react";
-import { TimelineScale, GanttStyle, GroupBy } from "./gantt";
+import { TimelineScale, GanttStyle, GroupBy, TaskSortBy } from "./gantt";
 import { Button } from "../ui/button";
 import {
   Select,
@@ -22,6 +22,7 @@ import {
   Activity,
   List,
   Download,
+  ArrowUpDown,
 } from "lucide-react";
 
 interface QuickActionsProps {
@@ -35,6 +36,9 @@ interface QuickActionsProps {
   onDuplicateTasks: () => void;
   groupBy?: GroupBy;
   onGroupByChange?: (groupBy: GroupBy) => void;
+  /** グループ内のタスクの並び順 */
+  sortBy?: TaskSortBy;
+  onSortByChange?: (sortBy: TaskSortBy) => void;
   /** タスク一覧をTSVで出力。未指定なら出力ボタンは表示しない */
   onExportTsv?: () => void;
 }
@@ -65,6 +69,8 @@ export const QuickActions = ({
   onDuplicateTasks,
   groupBy = "none",
   onGroupByChange,
+  sortBy = "taskNo",
+  onSortByChange,
   onExportTsv,
 }: QuickActionsProps) => {
   const getGroupIcon = (group: GroupBy) => {
@@ -158,6 +164,34 @@ export const QuickActions = ({
                     <span>ステータス</span>
                   </div>
                 </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Separator orientation="vertical" className="h-6" />
+        </>
+      )}
+
+      {/* 並び順 */}
+      {onSortByChange && (
+        <>
+          <div className="flex items-center gap-2">
+            <Select
+              value={sortBy}
+              onValueChange={(value: TaskSortBy) => {
+                onSortByChange(value);
+              }}
+            >
+              <SelectTrigger className="w-40">
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="w-4 h-4" />
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="taskNo">タスクNo順</SelectItem>
+                <SelectItem value="startDate">開始予定日順</SelectItem>
+                <SelectItem value="assignee">担当者順</SelectItem>
+                <SelectItem value="status">ステータス順</SelectItem>
               </SelectContent>
             </Select>
           </div>
