@@ -12,8 +12,6 @@ import { groupTasksByType } from "./utils/groupTasks";
 import { TimelineHeader } from "./TimelineHeader";
 import { TaskBar } from "./TaskBar";
 import { GridLines } from "./GridLines";
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DependencyArrows } from "./DependencyArrows";
 import { Button } from "../ui/button";
 import {
@@ -24,6 +22,10 @@ import {
   ZoomOut,
   PanelLeftClose,
   PanelLeftOpen,
+  Pencil,
+  Save,
+  X,
+  Link2,
 } from "lucide-react";
 
 // タスクリスト幅の最小・最大（px）
@@ -37,6 +39,18 @@ const BASE_CATEGORY_HEIGHT = 20;
 // 行高さスケール（Ctrl+ホイールで変更）の下限・上限
 const ROW_SCALE_MIN = 0.6;
 const ROW_SCALE_MAX = 3;
+
+// 日付を日数分シフトする（UTC基準でずれないよう epoch で計算）
+const addDays = (date: Date, days: number): Date =>
+  new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+
+// 日付を <input type="date"> 用の YYYY-MM-DD へ（保存はUTC前提）
+const toDateInputValue = (date?: Date): string =>
+  date ? date.toISOString().slice(0, 10) : "";
+
+// <input type="date"> の値（YYYY-MM-DD）を UTC 0時の Date へ
+const fromDateInputValue = (value: string): Date | null =>
+  value ? new Date(`${value}T00:00:00.000Z`) : null;
 
 // 予定日（Date）をタスクリスト表示用に MM/DD へ整形する
 const formatMonthDay = (date?: Date): string => {
@@ -57,6 +71,18 @@ interface GanttChartProps {
   onTaskUpdate: (task: Task) => void;
   onCategoryToggle: (categoryName: string) => void;
   onZoomChange?: (zoom: number) => void;
+  /** 編集モードかどうか（trueのときバーのドラッグ／インライン編集が有効） */
+  editMode?: boolean;
+  /** 編集モードに入る */
+  onEnterEditMode?: () => void;
+  /** 編集内容を保存して編集モードを抜ける */
+  onSaveEdit?: () => void;
+  /** 編集内容を破棄して編集モードを抜ける */
+  onCancelEdit?: () => void;
+  /** 依存関係編集モーダルを開く */
+  onEditDependencies?: (taskId: string) => void;
+  /** 保存処理中かどうか */
+  isSaving?: boolean;
 }
 
 // 単一行タイプ - タスクリストとタイムラインの両方で使用し、完全な1:1整列を保証する
@@ -83,21 +109,37 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       onTaskUpdate,
       onCategoryToggle,
       onZoomChange,
+      editMode = false,
+      onEnterEditMode,
+      onSaveEdit,
+      onCancelEdit,
+      onEditDependencies,
+      isSaving = false,
     },
     ref,
   ) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    onTaskUpdate;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [draggedTask, setDraggedTask] = useState<string | null>(null);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [dragMode, setDragMode] = useState<
-      "move" | "resize-start" | "resize-end" | null
-    >(null);
     const timelineScrollRef = useRef<HTMLDivElement>(null);
     const [scrollLeft, setScrollLeft] = useState(0);
+
+    // 編集モード: バーのドラッグ移動／リサイズ
+    const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+    const [dragPreview, setDragPreview] = useState<{
+      taskId: string;
+      startDate: Date;
+      endDate: Date;
+    } | null>(null);
+    const dragRef = useRef<{
+      taskId: string;
+      mode: "move" | "resize-start" | "resize-end";
+      startClientX: number;
+      origStart: Date;
+      origEnd: Date;
+      curStart: Date;
+      curEnd: Date;
+      moved: boolean;
+    } | null>(null);
+    // 編集モードで選択中（インライン編集パネル表示対象）のタスクID
+    const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
     // 行高さスケール（Ctrl+ホイールで全行の高さを均等に増減）
     const [rowScale, setRowScale] = useState(1);
@@ -352,6 +394,118 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       [timelineBounds.start, columnWidth, scaleMultiplier],
     );
 
+    // バーのドラッグ開始（編集モードのみ）
+    const handleBarDragStart = useCallback(
+      (
+        taskId: string,
+        e: React.MouseEvent,
+        mode: "move" | "resize-start" | "resize-end",
+      ) => {
+        if (!editMode) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const task = tasks.find((t) => t.id === taskId);
+        if (!task) return;
+        dragRef.current = {
+          taskId,
+          mode,
+          startClientX: e.clientX,
+          origStart: task.startDate,
+          origEnd: task.endDate,
+          curStart: task.startDate,
+          curEnd: task.endDate,
+          moved: false,
+        };
+        setDraggedTaskId(taskId);
+        document.body.style.userSelect = "none";
+      },
+      [editMode, tasks],
+    );
+
+    // ドラッグ中の移動・確定（グローバルリスナ）
+    useEffect(() => {
+      const handleMove = (e: MouseEvent) => {
+        const ctx = dragRef.current;
+        if (!ctx) return;
+        const deltaDays = Math.round(
+          ((e.clientX - ctx.startClientX) / columnWidth) * scaleMultiplier,
+        );
+        let ns = ctx.origStart;
+        let ne = ctx.origEnd;
+        if (ctx.mode === "move") {
+          ns = addDays(ctx.origStart, deltaDays);
+          ne = addDays(ctx.origEnd, deltaDays);
+        } else if (ctx.mode === "resize-start") {
+          ns = addDays(ctx.origStart, deltaDays);
+          if (ns.getTime() > ctx.origEnd.getTime()) ns = ctx.origEnd;
+        } else if (ctx.mode === "resize-end") {
+          ne = addDays(ctx.origEnd, deltaDays);
+          if (ne.getTime() < ctx.origStart.getTime()) ne = ctx.origStart;
+        }
+        ctx.curStart = ns;
+        ctx.curEnd = ne;
+        if (deltaDays !== 0) ctx.moved = true;
+        setDragPreview({ taskId: ctx.taskId, startDate: ns, endDate: ne });
+      };
+
+      const handleUp = () => {
+        const ctx = dragRef.current;
+        dragRef.current = null;
+        document.body.style.userSelect = "";
+        setDraggedTaskId(null);
+        setDragPreview(null);
+        if (!ctx) return;
+        if (ctx.moved) {
+          const task = tasks.find((t) => t.id === ctx.taskId);
+          if (task) {
+            onTaskUpdate({
+              ...task,
+              startDate: ctx.curStart,
+              endDate: ctx.curEnd,
+            });
+          }
+        } else {
+          // 動かしていなければ選択（インライン編集パネルを開く）
+          setEditingTaskId(ctx.taskId);
+        }
+      };
+
+      document.addEventListener("mousemove", handleMove);
+      document.addEventListener("mouseup", handleUp);
+      return () => {
+        document.removeEventListener("mousemove", handleMove);
+        document.removeEventListener("mouseup", handleUp);
+      };
+    }, [columnWidth, scaleMultiplier, tasks, onTaskUpdate]);
+
+    // 編集モードを抜けたらドラッグ・選択状態をクリア
+    useEffect(() => {
+      if (!editMode) {
+        setEditingTaskId(null);
+        setDragPreview(null);
+        setDraggedTaskId(null);
+        dragRef.current = null;
+      }
+    }, [editMode]);
+
+    // インライン編集パネル対象のタスク
+    const editingTask = useMemo(
+      () =>
+        editingTaskId
+          ? tasks.find((t) => t.id === editingTaskId) ?? null
+          : null,
+      [editingTaskId, tasks],
+    );
+
+    // インライン編集パネルからのフィールド更新（編集ドラフトへ反映）
+    const updateEditingField = useCallback(
+      (patch: Partial<Task>) => {
+        if (!editingTask) return;
+        onTaskUpdate({ ...editingTask, ...patch });
+      },
+      [editingTask, onTaskUpdate],
+    );
+
     // ナビゲーション用ハンドラ
     const handleScrollLeft = useCallback(() => {
       if (timelineScrollRef.current) {
@@ -548,6 +702,44 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                 <PanelLeftOpen className="w-4 h-4" />
               )}
             </Button>
+
+            {/* 編集モード切り替え／保存・キャンセル */}
+            <div className="w-px h-4 bg-border mx-2" />
+            {editMode ? (
+              <>
+                <Button
+                  size="sm"
+                  onClick={onSaveEdit}
+                  disabled={isSaving}
+                  className="gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {isSaving ? "保存中..." : "保存"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onCancelEdit}
+                  disabled={isSaving}
+                  className="gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  キャンセル
+                </Button>
+              </>
+            ) : (
+              onEnterEditMode && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onEnterEditMode}
+                  className="gap-2"
+                >
+                  <Pencil className="w-4 h-4" />
+                  編集モード
+                </Button>
+              )
+            )}
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span>Zoom: {Math.round(zoomLevel * 100)}%</span>
@@ -570,6 +762,102 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
             </span>
           </div>
         </div>
+
+        {/* 編集モード: 選択タスクのインライン編集パネル */}
+        {editMode && editingTask && (
+          <div className="flex flex-wrap items-end gap-3 border-b border-border bg-blue-50/40 px-4 py-2">
+            <div className="flex items-center gap-1.5 text-sm font-medium">
+              <span
+                className="h-2.5 w-2.5 flex-shrink-0 rounded-sm"
+                style={{ backgroundColor: editingTask.color }}
+              />
+              {editingTask.taskNo ? `${editingTask.taskNo} ` : ""}
+              {editingTask.name}
+            </div>
+
+            <label className="flex flex-col text-[11px] text-muted-foreground">
+              {editingTask.isMilestone ? "予定日" : "予定開始日"}
+              <input
+                type="date"
+                className="h-8 rounded border bg-background px-2 text-sm text-foreground"
+                value={toDateInputValue(editingTask.startDate)}
+                onChange={(e) => {
+                  const d = fromDateInputValue(e.target.value);
+                  if (!d) return;
+                  if (editingTask.isMilestone) {
+                    updateEditingField({ startDate: d, endDate: d });
+                  } else {
+                    const end =
+                      d.getTime() > editingTask.endDate.getTime()
+                        ? d
+                        : editingTask.endDate;
+                    updateEditingField({ startDate: d, endDate: end });
+                  }
+                }}
+              />
+            </label>
+
+            {!editingTask.isMilestone && (
+              <label className="flex flex-col text-[11px] text-muted-foreground">
+                予定終了日
+                <input
+                  type="date"
+                  className="h-8 rounded border bg-background px-2 text-sm text-foreground"
+                  value={toDateInputValue(editingTask.endDate)}
+                  onChange={(e) => {
+                    const d = fromDateInputValue(e.target.value);
+                    if (!d) return;
+                    const start =
+                      d.getTime() < editingTask.startDate.getTime()
+                        ? d
+                        : editingTask.startDate;
+                    updateEditingField({ startDate: start, endDate: d });
+                  }}
+                />
+              </label>
+            )}
+
+            {!editingTask.isMilestone && (
+              <label className="flex flex-col text-[11px] text-muted-foreground">
+                予定工数(h)
+                <input
+                  type="number"
+                  min={0}
+                  className="h-8 w-24 rounded border bg-background px-2 text-sm text-foreground"
+                  value={editingTask.duration}
+                  onChange={(e) =>
+                    updateEditingField({
+                      duration: e.target.valueAsNumber || 0,
+                    })
+                  }
+                />
+              </label>
+            )}
+
+            {!editingTask.isMilestone && onEditDependencies && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => onEditDependencies(editingTask.id)}
+              >
+                <Link2 className="w-4 h-4" />
+                依存関係
+              </Button>
+            )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto h-8 w-8 p-0"
+              onClick={() => setEditingTaskId(null)}
+              title="閉じる"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
         <div ref={ref} className="w-full h-full bg-background gantt-chart">
           <div ref={chartContentRef} className="flex h-full">
             {/* タスクリスト列 */}
@@ -857,21 +1145,31 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                           const task = row.task;
                           const taskBarY =
                             row.y + (row.height - TASK_HEIGHT) / 2;
+                          // ドラッグ中はプレビュー日付でバーを描画
+                          const preview =
+                            dragPreview && dragPreview.taskId === task.id
+                              ? dragPreview
+                              : null;
+                          const barStart = preview
+                            ? preview.startDate
+                            : task.startDate;
+                          const barEnd = preview ? preview.endDate : task.endDate;
 
                           return (
                             <TaskBar
                               key={row.id}
                               task={task}
-                              x={dateToX(task.startDate)}
+                              x={dateToX(barStart)}
                               y={taskBarY}
                               width={Math.max(
-                                dateToX(task.endDate) - dateToX(task.startDate),
+                                dateToX(barEnd) - dateToX(barStart),
                                 task.isMilestone ? 0 : 20,
                               )}
                               height={TASK_HEIGHT}
                               style={style}
-                              onDragStart={() => {}}
-                              isDragging={false}
+                              onDragStart={editMode ? handleBarDragStart : () => {}}
+                              isDragging={draggedTaskId === task.id}
+                              editable={editMode}
                             />
                           );
                         }

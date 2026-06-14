@@ -14,6 +14,8 @@ interface TaskBarProps {
     mode: "move" | "resize-start" | "resize-end"
   ) => void;
   isDragging: boolean;
+  /** 編集モード時のみドラッグ用カーソル・リサイズハンドルを表示 */
+  editable?: boolean;
 }
 
 export const TaskBar = ({
@@ -25,6 +27,7 @@ export const TaskBar = ({
   style,
   onDragStart,
   isDragging,
+  editable = false,
 }: TaskBarProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -53,7 +56,7 @@ export const TaskBar = ({
           fill={taskColor}
           stroke={isDragging || isHovered ? "#000" : taskColor}
           strokeWidth={isDragging || isHovered ? 2 : 1}
-          className="cursor-move"
+          className={editable ? "cursor-move" : "cursor-default"}
           onMouseDown={(e) => onDragStart(task.id, e, "move")}
           opacity={isDragging ? 0.7 : 1}
         />
@@ -114,7 +117,7 @@ export const TaskBar = ({
         fill={`${taskColor}20`}
         stroke={isDragging || isHovered ? "#000" : `${taskColor}60`}
         strokeWidth={isDragging || isHovered ? 2 : 1}
-        className="cursor-move"
+        className={editable ? "cursor-move" : "cursor-default"}
         onMouseDown={(e) => onDragStart(task.id, e, "move")}
         opacity={isDragging ? 0.7 : 1}
       />
@@ -149,8 +152,11 @@ export const TaskBar = ({
         />
       )}
 
-      {/* Resize handles (show on hover) */}
-      {(isHovered || isDragging) && !task.isMilestone && actualWidth > 30 && (
+      {/* Resize handles (編集モードでホバー時のみ表示) */}
+      {editable &&
+        (isHovered || isDragging) &&
+        !task.isMilestone &&
+        actualWidth > 30 && (
         <>
           {/* Left resize handle */}
           <rect
