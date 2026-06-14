@@ -42,7 +42,7 @@ export default async function TaskSchedulingPageWrapper({
       <div className="bg-gray-50 p-4 rounded-lg mb-6">
         <h2 className="font-semibold text-lg">{wbs.name}</h2>
         <p className="text-gray-600 text-sm">
-          プロジェクト開始日から前詰めでタスクの予定開始・終了日を自動計算します
+          タスクの依存関係（FS/SS/FF/SF・ラグ）と担当者の稼働カレンダーを考慮して、起点から前詰めで予定開始・終了日を自動算出します（DB保存はせず画面表示のみ。ラグは営業日換算）
         </p>
       </div>
 

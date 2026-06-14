@@ -10,6 +10,16 @@ import { AssigneeWorkingCalendar } from '@/domains/calendar/assignee-working-cal
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
+import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
+import { TaskDependencyService } from '@/applications/task-dependency/task-dependency.service';
+import { TaskStatus as TaskStatusType } from '@/types/wbs';
+import { DependencyType } from '@/domains/task-dependency/task-dependency';
+import {
+  schedule as runDependencyAwareSchedule,
+  SchedulableTask,
+  DependencyEdge,
+  WorkingCalendar,
+} from '@/domains/task-scheduling/dependency-aware-scheduler';
 
 export interface TaskSchedulingResult {
   taskId: number;
@@ -22,6 +32,13 @@ export interface TaskSchedulingResult {
   plannedManHours?: number;
   hasAssignee: boolean;
   errorMessage?: string;
+  // --- 依存関係考慮版の追加情報（ganttv3 表示用・後方互換のため optional） ---
+  phaseId?: number;
+  phaseName?: string;
+  status?: TaskStatusType;
+  assigneeSeq?: number;
+  /** このタスクの先行依存（taskId は文字列化前の数値） */
+  predecessors?: { taskId: number; type: DependencyType; lag: number }[];
 }
 
 @injectable()
@@ -33,6 +50,8 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     @inject(SYMBOL.IUserScheduleRepository) private userScheduleRepository: IUserScheduleRepository,
     @inject(SYMBOL.IWbsAssigneeRepository) private wbsAssigneeRepository: IWbsAssigneeRepository,
     @inject(SYMBOL.ISystemSettingsRepository) private systemSettingsRepository: ISystemSettingsRepository,
+    @inject(SYMBOL.ITaskDependencyService) private taskDependencyService: TaskDependencyService,
+    @inject(SYMBOL.ICompanyHolidayRepository) private companyHolidayRepository: ICompanyHolidayRepository,
   ) { }
 
   /**
@@ -77,6 +96,182 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     );
 
     return results;
+  }
+
+  /**
+   * WBSのタスクスケジュールを「タスク依存関係（FS/SS/FF/SF + lag）」を考慮して計算する。
+   * - 稼働カレンダー（会社休日・個人予定・稼働率）と依存関係を考慮した前詰め。
+   * - 実績は考慮せず、アンカー日から全タスクを再計算する。
+   * - DB保存はしない（呼び出し側で表示・TSV出力に使う）。
+   * @param wbsId WBS ID
+   * @param anchorDate 前詰めの起点（省略時はプロジェクト開始日）
+   */
+  async calculateWbsTaskSchedulesWithDependencies(
+    wbsId: number,
+    anchorDate?: Date,
+  ): Promise<TaskSchedulingResult[]> {
+    const wbs = await this.wbsRepository.findById(wbsId);
+    if (!wbs) {
+      throw new Error('WBSが見つかりません');
+    }
+    if (!wbs.projectId) {
+      throw new Error('WBSに紐付くプロジェクトが見つかりません');
+    }
+    const project = await this.projectRepository.findById(wbs.projectId);
+    if (!project) {
+      throw new Error('プロジェクトが見つかりません');
+    }
+    const projectStartDate = project.startDate;
+    if (!projectStartDate) {
+      throw new Error('プロジェクトの基準開始日が設定されていません');
+    }
+
+    const anchor = this.startOfDay(anchorDate ?? projectStartDate);
+
+    // データ取得
+    const tasks = await this.taskRepository.findByWbsId(wbsId);
+    const dependencies =
+      await this.taskDependencyService.getDependenciesByWbsId(wbsId);
+    const systemSettings = await this.systemSettingsRepository.get();
+    const standardWorkingHours = systemSettings.standardWorkingHours;
+    // 会社休日を反映（旧メソッドは空配列で未反映だったのをここで修正）
+    const holidays = await this.companyHolidayRepository.findAll();
+    const companyCalendar = new CompanyCalendar(standardWorkingHours, holidays);
+
+    // 担当者ごとの稼働カレンダーを事前構築（N+1回避）
+    const assigneeIds = Array.from(
+      new Set(
+        tasks
+          .map((t) => t.assigneeId)
+          .filter((id): id is number => id != null),
+      ),
+    );
+    const calendarById = new Map<number, AssigneeWorkingCalendar>();
+    const assigneeSeqById = new Map<number, number>();
+    for (const assigneeId of assigneeIds) {
+      const assignee = await this.wbsAssigneeRepository.findById(assigneeId);
+      if (!assignee) continue;
+      const userSchedules = await this.userScheduleRepository.findByUserId(
+        assignee.userId,
+      );
+      calendarById.set(
+        assigneeId,
+        new AssigneeWorkingCalendar(assignee, companyCalendar, userSchedules),
+      );
+      assigneeSeqById.set(assigneeId, assignee.seq);
+    }
+
+    // スケジューラ入力へ変換
+    const schedulableTasks: SchedulableTask[] = tasks
+      .filter((t) => t.id != null)
+      .map((t) => ({
+        taskId: t.id!,
+        taskNo: t.taskNo.getValue(),
+        assigneeId: t.assigneeId,
+        manHours: t.getYoteiKosus(),
+      }));
+    const dependencyEdges: DependencyEdge[] = dependencies.map((d) => ({
+      predId: d.predecessorTaskId,
+      succId: d.successorTaskId,
+      type: d.type,
+      lag: d.lag,
+    }));
+
+    // 依存関係対応スケジューラを実行
+    const scheduleResult = runDependencyAwareSchedule({
+      tasks: schedulableTasks,
+      dependencies: dependencyEdges,
+      anchorDate: anchor,
+      calendarOf: (id): WorkingCalendar | undefined => calendarById.get(id),
+      standardWorkingHours,
+    });
+
+    // 後続タスクID → 先行依存の一覧
+    const predecessorsByTask = new Map<
+      number,
+      { taskId: number; type: DependencyType; lag: number }[]
+    >();
+    for (const d of dependencies) {
+      const list = predecessorsByTask.get(d.successorTaskId) ?? [];
+      list.push({ taskId: d.predecessorTaskId, type: d.type, lag: d.lag });
+      predecessorsByTask.set(d.successorTaskId, list);
+    }
+
+    // DTO へ整形
+    return tasks
+      .filter((t) => t.id != null)
+      .map((t) =>
+        this.toSchedulingResult(
+          t,
+          scheduleResult,
+          predecessorsByTask,
+          assigneeSeqById,
+        ),
+      );
+  }
+
+  /** 算出結果（または各種エラー）を TaskSchedulingResult に整形 */
+  private toSchedulingResult(
+    task: Task,
+    scheduleResult: ReturnType<typeof runDependencyAwareSchedule>,
+    predecessorsByTask: Map<
+      number,
+      { taskId: number; type: DependencyType; lag: number }[]
+    >,
+    assigneeSeqById: Map<number, number>,
+  ): TaskSchedulingResult {
+    const id = task.id!;
+    const hasAssignee = task.assigneeId != null && task.assignee != null;
+    const result: TaskSchedulingResult = {
+      taskId: id,
+      taskNo: task.taskNo.getValue(),
+      taskName: task.name,
+      assigneeId: task.assigneeId,
+      assigneeName: task.assignee?.displayName ?? task.assignee?.name,
+      assigneeSeq:
+        task.assigneeId != null
+          ? assigneeSeqById.get(task.assigneeId)
+          : undefined,
+      plannedManHours: task.getYoteiKosus(),
+      hasAssignee,
+      phaseId: task.phaseId ?? task.phase?.id,
+      phaseName: task.phase?.name,
+      status: task.getStatus(),
+      predecessors: predecessorsByTask.get(id),
+    };
+
+    const range = scheduleResult.scheduled.get(id);
+    if (range) {
+      result.plannedStartDate = range.start;
+      result.plannedEndDate = range.end;
+      return result;
+    }
+
+    const code = scheduleResult.errors.get(id);
+    switch (code) {
+      case 'NO_ASSIGNEE':
+        result.errorMessage = '担当者が設定されていません';
+        break;
+      case 'NO_MANHOURS':
+        result.errorMessage = '予定工数が設定されていません';
+        break;
+      case 'CYCLE':
+        result.errorMessage = '循環依存を含む経路上にあるため計算できません';
+        break;
+      case 'CALENDAR_UNAVAILABLE':
+        result.errorMessage =
+          '稼働可能日が見つからないため計算できません（稼働率・休暇設定を確認してください）';
+        break;
+      default:
+        result.errorMessage = 'スケジュールを計算できませんでした';
+        break;
+    }
+    return result;
+  }
+
+  /** ローカルタイムの0時に正規化 */
+  private startOfDay(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
   }
 
   /**
