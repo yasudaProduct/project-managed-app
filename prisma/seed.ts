@@ -209,6 +209,45 @@ async function main() {
             }
         }
 
+        // タスク依存関係（taskNo → 実タスクIDを解決して登録）
+        for (const dep of mock.taskDependency ?? []) {
+            const wbsId = mock.wbs[0]?.id ?? 0;
+            const predecessor = await prisma.wbsTask.findUnique({
+                where: { taskNo_wbsId: { taskNo: dep.predecessorTaskNo, wbsId } },
+            });
+            const successor = await prisma.wbsTask.findUnique({
+                where: { taskNo_wbsId: { taskNo: dep.successorTaskNo, wbsId } },
+            });
+
+            if (!predecessor || !successor) {
+                console.warn(
+                    `⚠️ 依存関係のタスクが見つかりません: ${dep.predecessorTaskNo} -> ${dep.successorTaskNo} (wbsId: ${wbsId})`
+                );
+                continue;
+            }
+
+            await prisma.taskDependency.upsert({
+                where: {
+                    predecessorTaskId_successorTaskId: {
+                        predecessorTaskId: predecessor.id,
+                        successorTaskId: successor.id,
+                    },
+                },
+                update: {
+                    wbsId,
+                    type: dep.type,
+                    lag: dep.lag,
+                },
+                create: {
+                    predecessorTaskId: predecessor.id,
+                    successorTaskId: successor.id,
+                    wbsId,
+                    type: dep.type,
+                    lag: dep.lag,
+                },
+            })
+        }
+
         for (const buffer of mock.wbsBuffer) {
             await prisma.wbsBuffer.upsert({
                 where: { id: buffer.id },
@@ -346,6 +385,7 @@ async function main() {
         "work_records",
         "user_schedule",
         "company_holidays",
+        "task_dependencies",
     ] as const;
 
     for (const tableName of autoIncrementTables) {

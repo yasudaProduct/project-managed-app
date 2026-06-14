@@ -65,6 +65,13 @@ interface MockData {
         buffer: number;
         bufferType: string;
     }[];
+    /** タスク依存関係（タスクは自動採番のため taskNo で参照し、seed 側で実IDを解決する） */
+    taskDependency?: {
+        predecessorTaskNo: string;
+        successorTaskNo: string;
+        type: string;
+        lag: number;
+    }[];
     workRecords: {
         id: number;
         userId: string;
@@ -1060,6 +1067,241 @@ export function getMockData(): MockData[] {
         };
     };
 
+    // ganttv3 検証用データ
+    // - フェーズ色（フェーズ順に決定的に着色）
+    // - 依存関係（FS/SS/FF/SF・ラグ）→ 依存矢印・クリティカルパス
+    // - 各種ステータス（未着手/進行中/完了/保留）
+    // - マイルストーン（ダイヤ表示）
+    // - 期間: 2026-06-01 ~ 2026-08-31（today=2026-06-14 が期間内なので本日線も確認可能）
+    const mockDataGanttV3 = (projectId: string, wbsId: number, multiId: number): MockData => {
+        const wbsAssigneeId = wbsId * multiId;
+        const wbsPhaseId = wbsId * multiId;
+        const wbsTaskId = wbsId * multiId;
+        const wbsBufferId = wbsId * multiId;
+        const wbsMilestoneId = wbsId * multiId;
+
+        const d = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+        const projectStart = d("2026-06-01");
+        const projectEnd = d("2026-08-31");
+
+        return {
+            project: {
+                id: projectId,
+                name: "ガントチャート検証(ganttv3)",
+                status: "ACTIVE",
+                description:
+                    "ganttv3 の表示確認用。フェーズ色・依存関係(FS/SS/FF/SF+ラグ)・クリティカルパス・各種ステータス・マイルストーンを含む",
+                startDate: projectStart,
+                endDate: projectEnd,
+            },
+            wbs: [
+                {
+                    id: wbsId,
+                    projectId: projectId,
+                    name: "ガントチャート検証WBS",
+                    status: "ACTIVE",
+                },
+            ],
+            wbsAssignee: [
+                { id: wbsAssigneeId, wbsId, assigneeId: "dummy01", rate: 1.0 },
+                { id: wbsAssigneeId + 1, wbsId, assigneeId: "dummy02", rate: 1.0 },
+                { id: wbsAssigneeId + 2, wbsId, assigneeId: "dummy03", rate: 1.0 },
+                { id: wbsAssigneeId + 3, wbsId, assigneeId: "dummy04", rate: 1.0 },
+                { id: wbsAssigneeId + 4, wbsId, assigneeId: "dummy05", rate: 1.0 },
+            ],
+            wbsPhase: [
+                { id: wbsPhaseId, wbsId, name: "要件定義", code: "D1", seq: 1 },
+                { id: wbsPhaseId + 1, wbsId, name: "設計", code: "D2", seq: 2 },
+                { id: wbsPhaseId + 2, wbsId, name: "開発", code: "D3", seq: 3 },
+                { id: wbsPhaseId + 3, wbsId, name: "テスト", code: "D4", seq: 4 },
+            ],
+            wbsTask: [
+                // 要件定義
+                {
+                    id: wbsTaskId,
+                    taskNo: "D1-0001",
+                    wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "要件ヒアリング",
+                    assigneeId: wbsAssigneeId,
+                    status: "COMPLETED",
+                    startDate: d("2026-06-01"),
+                    endDate: d("2026-06-05"),
+                    kosu: 30,
+                    progressRate: 100,
+                },
+                {
+                    id: wbsTaskId + 1,
+                    taskNo: "D1-0002",
+                    wbsId,
+                    phaseId: wbsPhaseId,
+                    name: "要件定義書作成",
+                    assigneeId: wbsAssigneeId,
+                    status: "COMPLETED",
+                    startDate: d("2026-06-08"),
+                    endDate: d("2026-06-12"),
+                    kosu: 25,
+                    progressRate: 100,
+                },
+                // 設計
+                {
+                    id: wbsTaskId + 2,
+                    taskNo: "D2-0001",
+                    wbsId,
+                    phaseId: wbsPhaseId + 1,
+                    name: "基本設計",
+                    assigneeId: wbsAssigneeId + 1,
+                    status: "IN_PROGRESS",
+                    startDate: d("2026-06-15"),
+                    endDate: d("2026-06-24"),
+                    kosu: 50,
+                    progressRate: 40,
+                },
+                {
+                    id: wbsTaskId + 3,
+                    taskNo: "D2-0002",
+                    wbsId,
+                    phaseId: wbsPhaseId + 1,
+                    name: "詳細設計",
+                    assigneeId: wbsAssigneeId + 1,
+                    status: "NOT_STARTED",
+                    startDate: d("2026-06-25"),
+                    endDate: d("2026-07-03"),
+                    kosu: 40,
+                    progressRate: 0,
+                },
+                {
+                    id: wbsTaskId + 4,
+                    taskNo: "D2-0003",
+                    wbsId,
+                    phaseId: wbsPhaseId + 1,
+                    name: "DB設計",
+                    assigneeId: wbsAssigneeId + 2,
+                    status: "NOT_STARTED",
+                    startDate: d("2026-06-17"),
+                    endDate: d("2026-06-23"),
+                    kosu: 20,
+                    progressRate: 0,
+                },
+                // 開発
+                {
+                    id: wbsTaskId + 5,
+                    taskNo: "D3-0001",
+                    wbsId,
+                    phaseId: wbsPhaseId + 2,
+                    name: "バックエンド実装",
+                    assigneeId: wbsAssigneeId + 2,
+                    status: "NOT_STARTED",
+                    startDate: d("2026-07-06"),
+                    endDate: d("2026-07-20"),
+                    kosu: 80,
+                    progressRate: 0,
+                },
+                {
+                    id: wbsTaskId + 6,
+                    taskNo: "D3-0002",
+                    wbsId,
+                    phaseId: wbsPhaseId + 2,
+                    name: "フロントエンド実装",
+                    assigneeId: wbsAssigneeId + 3,
+                    status: "NOT_STARTED",
+                    startDate: d("2026-07-06"),
+                    endDate: d("2026-07-17"),
+                    kosu: 70,
+                    progressRate: 0,
+                },
+                {
+                    id: wbsTaskId + 7,
+                    taskNo: "D3-0003",
+                    wbsId,
+                    phaseId: wbsPhaseId + 2,
+                    name: "API結合",
+                    assigneeId: wbsAssigneeId + 3,
+                    status: "NOT_STARTED",
+                    startDate: d("2026-07-21"),
+                    endDate: d("2026-07-27"),
+                    kosu: 30,
+                    progressRate: 0,
+                },
+                // テスト
+                {
+                    id: wbsTaskId + 8,
+                    taskNo: "D4-0001",
+                    wbsId,
+                    phaseId: wbsPhaseId + 3,
+                    name: "単体テスト",
+                    assigneeId: wbsAssigneeId + 4,
+                    status: "NOT_STARTED",
+                    startDate: d("2026-07-28"),
+                    endDate: d("2026-08-05"),
+                    kosu: 40,
+                    progressRate: 0,
+                },
+                {
+                    id: wbsTaskId + 9,
+                    taskNo: "D4-0002",
+                    wbsId,
+                    phaseId: wbsPhaseId + 3,
+                    name: "結合テスト",
+                    assigneeId: wbsAssigneeId + 4,
+                    status: "NOT_STARTED",
+                    startDate: d("2026-08-06"),
+                    endDate: d("2026-08-14"),
+                    kosu: 35,
+                    progressRate: 0,
+                },
+                {
+                    id: wbsTaskId + 10,
+                    taskNo: "D4-0003",
+                    wbsId,
+                    phaseId: wbsPhaseId + 3,
+                    name: "性能テスト",
+                    assigneeId: wbsAssigneeId + 4,
+                    status: "ON_HOLD",
+                    startDate: d("2026-08-17"),
+                    endDate: d("2026-08-21"),
+                    kosu: 20,
+                    progressRate: 0,
+                },
+            ],
+            taskDependency: [
+                // 主経路（クリティカルパス候補）
+                { predecessorTaskNo: "D1-0001", successorTaskNo: "D1-0002", type: "FS", lag: 0 },
+                { predecessorTaskNo: "D1-0002", successorTaskNo: "D2-0001", type: "FS", lag: 0 },
+                { predecessorTaskNo: "D2-0001", successorTaskNo: "D2-0002", type: "FS", lag: 0 },
+                // SS（開始同時・ラグ2日）の例
+                { predecessorTaskNo: "D2-0001", successorTaskNo: "D2-0003", type: "SS", lag: 2 },
+                { predecessorTaskNo: "D2-0002", successorTaskNo: "D3-0001", type: "FS", lag: 0 },
+                { predecessorTaskNo: "D2-0002", successorTaskNo: "D3-0002", type: "FS", lag: 0 },
+                // 合流（2つの先行）
+                { predecessorTaskNo: "D3-0001", successorTaskNo: "D3-0003", type: "FS", lag: 0 },
+                { predecessorTaskNo: "D3-0002", successorTaskNo: "D3-0003", type: "FS", lag: 0 },
+                { predecessorTaskNo: "D3-0003", successorTaskNo: "D4-0001", type: "FS", lag: 0 },
+                // FS+ラグ1日
+                { predecessorTaskNo: "D4-0001", successorTaskNo: "D4-0002", type: "FS", lag: 1 },
+                { predecessorTaskNo: "D4-0002", successorTaskNo: "D4-0003", type: "FS", lag: 0 },
+            ],
+            wbsBuffer: [
+                {
+                    id: wbsBufferId,
+                    wbsId,
+                    name: "リスク対策工数",
+                    buffer: 40,
+                    bufferType: "RISK",
+                },
+            ],
+            workRecords: [],
+            milestone: [
+                { id: wbsMilestoneId, wbsId, name: "キックオフ", date: projectStart },
+                { id: wbsMilestoneId + 1, wbsId, name: "設計完了", date: d("2026-07-03") },
+                { id: wbsMilestoneId + 2, wbsId, name: "開発完了", date: d("2026-07-27") },
+                { id: wbsMilestoneId + 3, wbsId, name: "リリース", date: projectEnd },
+            ],
+            companyHolidays: [],
+            userSchedules: [],
+        };
+    };
+
     return [
         mockData("test-project-1", 1, 10),
         // mockDataLarge("test-project-2", 2, 1000),
@@ -1068,6 +1310,7 @@ export function getMockData(): MockData[] {
         // mockDataImportValidation("test-project-5", 5, 100),
         mockDataWbsSummary("test-project-6", 6, 100),
         mockDataEvmPrediction("evm-prediction-test", 7, 1000),
+        mockDataGanttV3("ganttv3-test", 8, 2000),
     ]
 }
 // export const mockDataLarge = {
