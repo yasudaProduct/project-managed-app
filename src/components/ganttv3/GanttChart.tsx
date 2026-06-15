@@ -132,6 +132,8 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     ref,
   ) => {
     const timelineScrollRef = useRef<HTMLDivElement>(null);
+    const taskListScrollRef = useRef<HTMLDivElement>(null);
+    const isSyncingVerticalScrollRef = useRef(false);
     const [scrollLeft, setScrollLeft] = useState(0);
 
     // 編集モード: バーのドラッグ移動／リサイズ
@@ -240,19 +242,37 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       };
     }, [tasks, timelineScale]);
 
-    // タイムラインのスクロール同期を処理
+    // タイムラインの横スクロールと左右の縦スクロールを同期
     useEffect(() => {
-      const handleScroll = () => {
-        if (timelineScrollRef.current) {
-          setScrollLeft(timelineScrollRef.current.scrollLeft);
-        }
+      const timeline = timelineScrollRef.current;
+      const taskList = taskListScrollRef.current;
+      if (!timeline || !taskList) return;
+
+      const syncVerticalScroll = (
+        source: HTMLDivElement,
+        target: HTMLDivElement,
+      ) => {
+        if (isSyncingVerticalScrollRef.current) return;
+        isSyncingVerticalScrollRef.current = true;
+        target.scrollTop = source.scrollTop;
+        isSyncingVerticalScrollRef.current = false;
       };
 
-      const scrollElement = timelineScrollRef.current;
-      if (scrollElement) {
-        scrollElement.addEventListener("scroll", handleScroll);
-        return () => scrollElement.removeEventListener("scroll", handleScroll);
-      }
+      const handleTimelineScroll = () => {
+        setScrollLeft(timeline.scrollLeft);
+        syncVerticalScroll(timeline, taskList);
+      };
+
+      const handleTaskListScroll = () => {
+        syncVerticalScroll(taskList, timeline);
+      };
+
+      timeline.addEventListener("scroll", handleTimelineScroll);
+      taskList.addEventListener("scroll", handleTaskListScroll);
+      return () => {
+        timeline.removeEventListener("scroll", handleTimelineScroll);
+        taskList.removeEventListener("scroll", handleTaskListScroll);
+      };
     }, []);
 
     // Ctrl+ホイールで全行の高さを均等に増減（ブラウザのページズームは抑止）
@@ -394,7 +414,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         ? ganttRows[ganttRows.length - 1].y +
           ganttRows[ganttRows.length - 1].height
         : 100;
-    const chartHeight = Math.max(totalContentHeight + 50, 400);
+    const scrollContentHeight = Math.max(totalContentHeight + 50, 400);
 
     // 日付をX座標に変換
     const dateToX = useCallback(
@@ -920,11 +940,12 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
 
               {/* タスクリストの内容 */}
               <div
-                className="overflow-y-auto relative"
+                ref={taskListScrollRef}
+                className="overflow-y-auto overflow-x-hidden relative"
                 style={{ height: `calc(100% - ${HEADER_HEIGHT}px)` }}
               >
                 <div
-                  style={{ height: totalContentHeight, position: "relative" }}
+                  style={{ height: scrollContentHeight, position: "relative" }}
                 >
                   {ganttRows.map((row) => {
                     if (row.type === "category") {
@@ -1067,17 +1088,17 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
 
                 {/* タイムラインコンテンツ - タスクリストと全く同じY座標を使用 */}
                 <div ref={timelineScrollRef} className="flex-1 overflow-auto">
-                  <div style={{ width: chartWidth, height: chartHeight }}>
+                  <div style={{ width: chartWidth, height: scrollContentHeight }}>
                     <svg
                       width={chartWidth}
-                      height={chartHeight}
+                      height={scrollContentHeight}
                       className="block"
                     >
                       {/* 背景とグリッド */}
                       {style.showGrid && (
                         <GridLines
                           width={chartWidth}
-                          height={chartHeight}
+                          height={scrollContentHeight}
                           columnWidth={columnWidth}
                           rowHeight={ROW_HEIGHT}
                           scale={timelineScale}
@@ -1093,7 +1114,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                           x1={todayX}
                           y1={0}
                           x2={todayX}
-                          y2={chartHeight}
+                          y2={scrollContentHeight}
                           stroke={style.colors.today}
                           strokeWidth={2}
                           strokeDasharray="5,5"
