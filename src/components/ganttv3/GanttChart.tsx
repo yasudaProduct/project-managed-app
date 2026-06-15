@@ -941,8 +941,8 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
               {/* タスクリストの内容 */}
               <div
                 ref={taskListScrollRef}
-                className="overflow-y-auto overflow-x-hidden relative"
-                style={{ height: `calc(100% - ${HEADER_HEIGHT}px)` }}
+                className="overflow-y-scroll overflow-x-hidden relative [&::-webkit-scrollbar]:hidden"
+                style={{ height: `calc(100% - ${HEADER_HEIGHT}px)`, scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
               >
                 <div
                   style={{ height: scrollContentHeight, position: "relative" }}
