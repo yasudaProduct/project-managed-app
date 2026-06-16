@@ -126,8 +126,14 @@ function toGanttTasks(
       startDate: r.plannedStartDate!,
       endDate: r.plannedEndDate!,
       duration: r.plannedManHours ?? 0,
+      // 締切超過タスクは危険色（赤）でバーを強調、それ以外はフェーズ色
       color:
-        (r.phaseId != null ? colorById.get(r.phaseId) : undefined) ?? "#6B7280",
+        (r.baselineEndDiffDays ?? 0) > 0 ||
+        (r.projectEndDiffDays ?? 0) > 0 ||
+        (r.missedMilestones?.length ?? 0) > 0
+          ? "#DC2626"
+          : (r.phaseId != null ? colorById.get(r.phaseId) : undefined) ??
+            "#6B7280",
       isMilestone: false,
       // 完了=100%、着手中=進捗率、その他=0%（リスケ表示用）
       progress: r.schedulingKind === "fixed" ? 100 : r.progressRate ?? 0,

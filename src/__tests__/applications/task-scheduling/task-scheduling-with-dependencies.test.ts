@@ -7,6 +7,7 @@ import type { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-re
 import type { ISystemSettingsRepository } from "@/applications/system-settings/isystem-settings-repository";
 import type { ICompanyHolidayRepository } from "@/applications/calendar/icompany-holiday-repository";
 import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import type { IMilestoneApplicationService } from "@/applications/milestone/milestone-application-service";
 import { Task } from "@/domains/task/task";
 import { TaskNo } from "@/domains/task/value-object/task-id";
 import { TaskStatus } from "@/domains/task/value-object/project-status";
@@ -27,16 +28,17 @@ const fmt = (date?: Date) =>
       )}-${String(date.getDate()).padStart(2, "0")}`
     : undefined;
 
-// 予定(YOTEI)期間。SCHEDULE では開始終了は無視されるが、リスケ固定では使う
-const yoteiPeriod = (
+// 指定タイプの期間を作る（SCHEDULE では開始終了は無視されるが、固定/締切判定では使う）
+const periodOf = (
+  type: "YOTEI" | "KIJUN",
   kosu: number,
-  start: Date = new Date(2024, 0, 1),
-  end: Date = new Date(2024, 0, 1),
+  start: Date,
+  end: Date,
 ) =>
   Period.create({
     startDate: start,
     endDate: end,
-    type: new PeriodType({ type: "YOTEI" }),
+    type: new PeriodType({ type }),
     manHours: [
       ManHour.create({ kosu, type: new ManHourType({ type: "NORMAL" }) }),
     ],
@@ -48,7 +50,13 @@ const makeTask = (
   assigneeId: number | undefined,
   kosu: number,
   status: TaskStatusType = "NOT_STARTED",
-  opts?: { progressRate?: number; yoteiStart?: Date; yoteiEnd?: Date },
+  opts?: {
+    progressRate?: number;
+    yoteiStart?: Date;
+    yoteiEnd?: Date;
+    kijunStart?: Date;
+    kijunEnd?: Date;
+  },
 ) =>
   Task.createFromDb({
     id,
@@ -65,7 +73,24 @@ const makeTask = (
         })
       : undefined,
     phaseId: 10,
-    periods: [yoteiPeriod(kosu, opts?.yoteiStart, opts?.yoteiEnd)],
+    periods: [
+      periodOf(
+        "YOTEI",
+        kosu,
+        opts?.yoteiStart ?? new Date(2024, 0, 1),
+        opts?.yoteiEnd ?? new Date(2024, 0, 1),
+      ),
+      ...(opts?.kijunEnd
+        ? [
+            periodOf(
+              "KIJUN",
+              kosu,
+              opts?.kijunStart ?? opts.kijunEnd,
+              opts.kijunEnd,
+            ),
+          ]
+        : []),
+    ],
     progressRate: opts?.progressRate,
   });
 
@@ -79,12 +104,15 @@ describe("TaskSchedulingApplicationService.calculateWbsTaskSchedulesWithDependen
   let findAllHolidays: jest.Mock;
   let findByIdAssignee: jest.Mock;
   let findByUserId: jest.Mock;
+  let getMilestones: jest.Mock;
 
   beforeEach(() => {
     findByIdWbs = jest.fn().mockResolvedValue({ id: 1, projectId: "p1" });
-    findByIdProject = jest
-      .fn()
-      .mockResolvedValue({ id: "p1", startDate: new Date(2024, 0, 10) });
+    findByIdProject = jest.fn().mockResolvedValue({
+      id: "p1",
+      startDate: new Date(2024, 0, 10),
+      endDate: new Date(2024, 11, 31),
+    });
     findByWbsIdTask = jest.fn().mockResolvedValue([]);
     getDependencies = jest.fn().mockResolvedValue([]);
     getSettings = jest.fn().mockResolvedValue({ standardWorkingHours: 8 });
@@ -103,6 +131,7 @@ describe("TaskSchedulingApplicationService.calculateWbsTaskSchedulesWithDependen
       ),
     );
     findByUserId = jest.fn().mockResolvedValue([]);
+    getMilestones = jest.fn().mockResolvedValue([]);
 
     const wbsRepo = { findById: findByIdWbs } as unknown as IWbsRepository;
     const taskRepo = {
@@ -126,6 +155,9 @@ describe("TaskSchedulingApplicationService.calculateWbsTaskSchedulesWithDependen
     const holidayRepo = {
       findAll: findAllHolidays,
     } as unknown as ICompanyHolidayRepository;
+    const milestoneService = {
+      getMilestones,
+    } as unknown as IMilestoneApplicationService;
 
     service = new TaskSchedulingApplicationService(
       wbsRepo,
@@ -136,6 +168,7 @@ describe("TaskSchedulingApplicationService.calculateWbsTaskSchedulesWithDependen
       settingsRepo,
       depService,
       holidayRepo,
+      milestoneService,
     );
   });
 
@@ -275,5 +308,41 @@ describe("TaskSchedulingApplicationService.calculateWbsTaskSchedulesWithDependen
     // plan: 実績/完了を無視して 1/10 から
     expect(fmt(results[0].plannedStartDate)).toBe("2024-01-10");
     expect(results[0].schedulingKind).toBe("scheduled");
+  });
+
+  test("締切超過と差分: 基準/プロジェクト終了/マイルストーンの超過と現行予定差分", async () => {
+    // 現行予定 6/1-6/5、基準終了 6/5 のタスクを 6/10 起点で算出（=6/10終了）
+    findByWbsIdTask.mockResolvedValue([
+      makeTask(1, "A-001", 1, 8, "NOT_STARTED", {
+        yoteiStart: new Date(2024, 5, 1),
+        yoteiEnd: new Date(2024, 5, 5),
+        kijunEnd: new Date(2024, 5, 5),
+      }),
+    ]);
+    findByIdProject.mockResolvedValue({
+      id: "p1",
+      startDate: new Date(2024, 5, 1),
+      endDate: new Date(2024, 5, 8), // 6/8
+    });
+    getMilestones.mockResolvedValue([
+      { id: 1, name: "結合試験", date: new Date(2024, 5, 7) }, // 6/7（committed 6/5 <= 6/7 < 6/10）
+    ]);
+
+    const results = await service.calculateWbsTaskSchedulesWithDependencies(
+      1,
+      new Date(2024, 5, 10), // 6/10(月)
+      "plan",
+    );
+    const a = results[0];
+
+    expect(fmt(a.plannedEndDate)).toBe("2024-06-10");
+    // 現行予定終了 6/5 → 算出 6/10：終了差分 +5
+    expect(a.endDiffDays).toBe(5);
+    // 基準終了 6/5 超過 +5
+    expect(a.baselineEndDiffDays).toBe(5);
+    // プロジェクト終了 6/8 超過 +2
+    expect(a.projectEndDiffDays).toBe(2);
+    // マイルストーン 6/7 に未達
+    expect(a.missedMilestones?.map((m) => m.name)).toEqual(["結合試験"]);
   });
 });

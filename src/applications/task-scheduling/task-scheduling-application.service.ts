@@ -20,6 +20,8 @@ import {
   DependencyEdge,
   WorkingCalendar,
 } from '@/domains/task-scheduling/dependency-aware-scheduler';
+import { analyzeDeadlines } from '@/domains/task-scheduling/schedule-deadline-analysis';
+import type { IMilestoneApplicationService } from '@/applications/milestone/milestone-application-service';
 
 export interface TaskSchedulingResult {
   taskId: number;
@@ -43,6 +45,23 @@ export interface TaskSchedulingResult {
   schedulingKind?: "fixed" | "partial" | "scheduled";
   /** このタスクの先行依存（taskId は文字列化前の数値） */
   predecessors?: { taskId: number; type: DependencyType; lag: number }[];
+  // --- 締切超過の警告 / 現行予定との差分（表示用・暦日） ---
+  /** 現行予定の開始日(yotei) */
+  currentStart?: Date;
+  /** 現行予定の終了日(yotei) */
+  currentEnd?: Date;
+  /** 基準終了日(kijun) */
+  baselineEnd?: Date;
+  /** 算出開始 − 現行予定開始（+ = 後ろ倒し / − = 前倒し） */
+  startDiffDays?: number;
+  /** 算出終了 − 現行予定終了 */
+  endDiffDays?: number;
+  /** 算出終了 − 基準終了（> 0 で超過） */
+  baselineEndDiffDays?: number;
+  /** 算出終了 − プロジェクト終了（> 0 で超過） */
+  projectEndDiffDays?: number;
+  /** 間に合わないマイルストーン */
+  missedMilestones?: { name: string; date: Date }[];
 }
 
 /** スケジュール計算モード */
@@ -59,6 +78,7 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     @inject(SYMBOL.ISystemSettingsRepository) private systemSettingsRepository: ISystemSettingsRepository,
     @inject(SYMBOL.ITaskDependencyService) private taskDependencyService: TaskDependencyService,
     @inject(SYMBOL.ICompanyHolidayRepository) private companyHolidayRepository: ICompanyHolidayRepository,
+    @inject(SYMBOL.IMilestoneApplicationService) private milestoneService: IMilestoneApplicationService,
   ) { }
 
   /**
@@ -141,6 +161,8 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     const tasks = await this.taskRepository.findByWbsId(wbsId);
     const dependencies =
       await this.taskDependencyService.getDependenciesByWbsId(wbsId);
+    const milestones = await this.milestoneService.getMilestones(wbsId);
+    const projectEnd = project.endDate;
     const systemSettings = await this.systemSettingsRepository.get();
     const standardWorkingHours = systemSettings.standardWorkingHours;
     // 会社休日を反映（旧メソッドは空配列で未反映だったのをここで修正）
@@ -248,6 +270,8 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
           predecessorsByTask,
           assigneeSeqById,
           kindByTask,
+          milestones,
+          projectEnd,
         ),
       );
   }
@@ -279,9 +303,14 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
     >,
     assigneeSeqById: Map<number, number>,
     kindByTask: Map<number, "fixed" | "partial" | "scheduled">,
+    milestones: { name: string; date: Date }[],
+    projectEnd?: Date,
   ): TaskSchedulingResult {
     const id = task.id!;
     const hasAssignee = task.assigneeId != null && task.assignee != null;
+    const currentStart = task.getYoteiStart();
+    const currentEnd = task.getYoteiEnd();
+    const baselineEnd = task.getKijunEnd();
     const result: TaskSchedulingResult = {
       taskId: id,
       taskNo: task.taskNo.getValue(),
@@ -300,12 +329,35 @@ export class TaskSchedulingApplicationService implements ITaskSchedulingApplicat
       progressRate: task.progressRate,
       schedulingKind: kindByTask.get(id),
       predecessors: predecessorsByTask.get(id),
+      currentStart,
+      currentEnd,
+      baselineEnd,
     };
 
     const range = scheduleResult.scheduled.get(id);
     if (range) {
       result.plannedStartDate = range.start;
       result.plannedEndDate = range.end;
+
+      // 締切超過 / 現行予定との差分を分析
+      const analysis = analyzeDeadlines({
+        computedStart: range.start,
+        computedEnd: range.end,
+        currentStart,
+        currentEnd,
+        baselineEnd,
+        projectEnd,
+        milestones,
+      });
+      result.startDiffDays = analysis.startDiffDays;
+      result.endDiffDays = analysis.endDiffDays;
+      result.baselineEndDiffDays = analysis.baselineEndDiffDays;
+      result.projectEndDiffDays = analysis.projectEndDiffDays;
+      result.missedMilestones =
+        analysis.missedMilestones.length > 0
+          ? analysis.missedMilestones
+          : undefined;
+
       return result;
     }
 

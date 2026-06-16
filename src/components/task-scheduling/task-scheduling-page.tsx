@@ -41,6 +41,32 @@ const todayStr = (): string => {
   return `${d.getFullYear()}-${m}-${day}`;
 };
 
+// 差分日数を ±n 形式に
+const formatSignedDays = (n: number): string => (n > 0 ? `+${n}` : `${n}`);
+
+// 締切超過しているか
+const isOverdue = (r: TaskSchedulingResult): boolean =>
+  (r.baselineEndDiffDays ?? 0) > 0 ||
+  (r.projectEndDiffDays ?? 0) > 0 ||
+  (r.missedMilestones?.length ?? 0) > 0;
+
+// 超過理由のラベル一覧
+const overrunReasons = (r: TaskSchedulingResult): string[] => {
+  const reasons: string[] = [];
+  if ((r.baselineEndDiffDays ?? 0) > 0) {
+    reasons.push(`基準終了 +${r.baselineEndDiffDays}日`);
+  }
+  if ((r.projectEndDiffDays ?? 0) > 0) {
+    reasons.push(`プロジェクト終了 +${r.projectEndDiffDays}日`);
+  }
+  if (r.missedMilestones?.length) {
+    reasons.push(
+      `MS「${r.missedMilestones.map((m) => m.name).join("・")}」に未達`,
+    );
+  }
+  return reasons;
+};
+
 export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
   const [results, setResults] = useState<TaskSchedulingResult[]>([]);
   const [ganttTasks, setGanttTasks] = useState<Task[]>([]);
@@ -92,6 +118,10 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
       "予定開始日",
       "予定終了日",
       "予定工数",
+      "現行予定終了",
+      "基準終了日",
+      "終了差分(日)",
+      "締切超過(日)",
       "エラー",
     ];
 
@@ -102,6 +132,12 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
       result.plannedStartDate ? formatDate(result.plannedStartDate) : "",
       result.plannedEndDate ? formatDate(result.plannedEndDate) : "",
       result.plannedManHours?.toString() || "",
+      result.currentEnd ? formatDate(result.currentEnd) : "",
+      result.baselineEnd ? formatDate(result.baselineEnd) : "",
+      result.endDiffDays != null ? formatSignedDays(result.endDiffDays) : "",
+      (result.baselineEndDiffDays ?? 0) > 0
+        ? String(result.baselineEndDiffDays)
+        : "",
       result.errorMessage || "",
     ]);
 
@@ -134,6 +170,11 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
   // エラー/未スケジュールのタスク
   const errorResults = results.filter((r) => r.errorMessage);
   const scheduledCount = results.length - errorResults.length;
+
+  // 締切超過 / 差分の集計
+  const overdueResults = results.filter((r) => !r.errorMessage && isOverdue(r));
+  const laterCount = results.filter((r) => (r.endDiffDays ?? 0) > 0).length;
+  const earlierCount = results.filter((r) => (r.endDiffDays ?? 0) < 0).length;
 
   return (
     <div className="space-y-6">
@@ -249,6 +290,28 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
             <CheckCircle className="h-3 w-3" />
             算出 {scheduledCount} 件
           </Badge>
+          {overdueResults.length > 0 && (
+            <Badge variant="destructive" className="flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              締切超過 {overdueResults.length} 件
+            </Badge>
+          )}
+          {laterCount > 0 && (
+            <Badge
+              variant="outline"
+              className="border-red-300 text-red-600"
+            >
+              後ろ倒し {laterCount} 件
+            </Badge>
+          )}
+          {earlierCount > 0 && (
+            <Badge
+              variant="outline"
+              className="border-green-300 text-green-600"
+            >
+              前倒し {earlierCount} 件
+            </Badge>
+          )}
           {errorResults.length > 0 && (
             <Badge variant="destructive" className="flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" />
@@ -256,6 +319,44 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
             </Badge>
           )}
         </div>
+      )}
+
+      {/* 締切超過タスク一覧 */}
+      {isCalculated && overdueResults.length > 0 && (
+        <Card className="border-red-300">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-4 w-4" />
+              締切超過のタスク
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {overdueResults.map((result) => (
+                <div
+                  key={result.taskId}
+                  className="flex items-center gap-2 text-sm flex-wrap"
+                >
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {result.taskNo}
+                  </span>
+                  <span className="font-medium truncate">
+                    {result.taskName}
+                  </span>
+                  {overrunReasons(result).map((reason, i) => (
+                    <Badge
+                      key={i}
+                      variant="outline"
+                      className="border-red-300 text-red-600"
+                    >
+                      {reason}
+                    </Badge>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* エラー/未スケジュール一覧（常時表示） */}
@@ -378,6 +479,32 @@ export function TaskSchedulingPage({ wbsId }: TaskSchedulingPageProps) {
                           {formatDate(result.plannedEndDate)}
                         </div>
                       )}
+
+                      {/* 現行予定との終了差分 */}
+                      {result.endDiffDays != null &&
+                        result.endDiffDays !== 0 && (
+                          <Badge
+                            variant="outline"
+                            className={
+                              result.endDiffDays > 0
+                                ? "border-red-300 text-red-600"
+                                : "border-green-300 text-green-600"
+                            }
+                          >
+                            終了 {formatSignedDays(result.endDiffDays)}日
+                          </Badge>
+                        )}
+
+                      {/* 締切超過の理由 */}
+                      {overrunReasons(result).map((reason, i) => (
+                        <Badge
+                          key={i}
+                          variant="outline"
+                          className="border-red-300 text-red-600"
+                        >
+                          {reason}
+                        </Badge>
+                      ))}
 
                       {result.plannedManHours && (
                         <div className="flex items-center gap-1">
