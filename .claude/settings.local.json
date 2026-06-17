@@ -29,17 +29,12 @@
       "Bash(npm audit:*)",
       "Bash(npm run:*)",
       "Bash(npx jest:*)",
-<<<<<<< HEAD
-      "Bash(python3 *)"
-=======
+      "Bash(python3 *)",
       "Bash(sed -n '200,215p' src/infrastructures/quality/quality-metrics-prisma.repository.ts)",
       "Bash(sed -n '285,300p' src/infrastructures/quality/quality-metrics-prisma.repository.ts)",
       "Bash(sed -n '60,80p' src/infrastructures/phase-repository.ts)"
->>>>>>> evm-improvement
     ],
     "deny": [],
-    "additionalDirectories": [
-      "/model UserSchedule"
-    ]
+    "additionalDirectories": ["/model UserSchedule"]
   }
 }
