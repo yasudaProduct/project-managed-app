@@ -3,15 +3,22 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TaskStatus } from "@prisma/client";
+import { ChevronDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import {
   Table,
   TableBody,
@@ -21,6 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/utils/utils";
 import {
   updateProgressSnapshot,
   type EditableProgressSnapshotData,
@@ -40,13 +48,19 @@ const TASK_STATUS_VALUES: TaskStatus[] = [
   "ON_HOLD",
 ];
 
+const STATUS_BADGE_CLASS: Record<TaskStatus, string> = {
+  NOT_STARTED: "bg-gray-400 text-white hover:bg-gray-400",
+  IN_PROGRESS: "bg-blue-500 text-white hover:bg-blue-500",
+  COMPLETED: "bg-green-500 text-white hover:bg-green-500",
+  ON_HOLD: "bg-yellow-400 text-white hover:bg-yellow-400",
+};
+
 type Props = {
   wbsId: number;
   wbsName: string;
   snapshots: EditableProgressSnapshotData[];
 };
 
-// snapshotAt（ISO 8601 / UTC）をユーザーTZで整形
 function formatSnapshotAt(iso: string): string {
   return new Intl.DateTimeFormat(undefined, {
     year: "numeric",
@@ -60,7 +74,6 @@ function formatSnapshotAt(iso: string): string {
 export function ProgressHistoryContent({ wbsId, wbsName, snapshots }: Props) {
   const router = useRouter();
 
-  // 行ごとの編集状態（progressRate は入力中の文字列、status は enum）
   const [rowState, setRowState] = useState<
     Record<number, { progressRate: string; status: TaskStatus }>
   >(() =>
@@ -75,8 +88,42 @@ export function ProgressHistoryContent({ wbsId, wbsName, snapshots }: Props) {
     )
   );
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
 
-  // タスク（taskNo）単位でグルーピング
+  const originalState = useMemo(
+    () =>
+      Object.fromEntries(
+        snapshots.map((s) => [
+          s.id,
+          {
+            progressRate:
+              s.progressRate !== null ? String(s.progressRate) : "",
+            status: s.status,
+          },
+        ])
+      ),
+    [snapshots]
+  );
+
+  const dirtyIds = useMemo(
+    () =>
+      new Set(
+        Object.keys(rowState)
+          .map(Number)
+          .filter((id) => {
+            const orig = originalState[id];
+            const curr = rowState[id];
+            return (
+              orig &&
+              curr &&
+              (orig.progressRate !== curr.progressRate ||
+                orig.status !== curr.status)
+            );
+          })
+      ),
+    [rowState, originalState]
+  );
+
   const groups = useMemo(() => {
     const map = new Map<
       string,
@@ -92,6 +139,10 @@ export function ProgressHistoryContent({ wbsId, wbsName, snapshots }: Props) {
     return Array.from(map.values());
   }, [snapshots]);
 
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(groups.map((g) => [g.taskNo, true]))
+  );
+
   const setRow = (
     id: number,
     patch: Partial<{ progressRate: string; status: TaskStatus }>
@@ -99,9 +150,9 @@ export function ProgressHistoryContent({ wbsId, wbsName, snapshots }: Props) {
     setRowState((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
   };
 
-  const handleSave = async (id: number) => {
+  const handleSave = async (id: number): Promise<boolean> => {
     const state = rowState[id];
-    if (!state) return;
+    if (!state) return false;
 
     const trimmed = state.progressRate.trim();
     let progressRate: number | null;
@@ -115,7 +166,7 @@ export function ProgressHistoryContent({ wbsId, wbsName, snapshots }: Props) {
           description: "進捗率は0〜100の数値で入力してください。",
           variant: "destructive",
         });
-        return;
+        return false;
       }
       progressRate = parsed;
     }
@@ -130,28 +181,65 @@ export function ProgressHistoryContent({ wbsId, wbsName, snapshots }: Props) {
       });
 
       if (result.success) {
-        toast({ title: "保存しました" });
-        router.refresh();
+        return true;
       } else {
         toast({
           title: "保存に失敗しました",
           description: result.error,
           variant: "destructive",
         });
+        return false;
       }
     } finally {
       setSavingId(null);
     }
   };
 
+  const handleSaveSingle = async (id: number) => {
+    const ok = await handleSave(id);
+    if (ok) {
+      toast({ title: "保存しました" });
+      router.refresh();
+    }
+  };
+
+  const handleBulkSave = async () => {
+    setIsBulkSaving(true);
+    try {
+      const results = await Promise.all([...dirtyIds].map((id) => handleSave(id)));
+      const successCount = results.filter(Boolean).length;
+      if (successCount > 0) {
+        toast({ title: `${successCount} 件を保存しました` });
+        router.refresh();
+      }
+    } finally {
+      setIsBulkSaving(false);
+    }
+  };
+
   return (
     <div className="container mx-auto py-10">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">進捗履歴の訂正</h1>
-        <p className="text-gray-600 mt-1">{wbsName}</p>
-        <p className="text-sm text-gray-500 mt-2">
-          各同期時点に記録された進捗率・ステータスを訂正できます。訂正は過去のEVMにも反映されます。
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">進捗履歴の訂正</h1>
+          <p className="text-gray-600 mt-1">{wbsName}</p>
+          <p className="text-sm text-gray-500 mt-2">
+            各同期時点に記録された進捗率・ステータスを訂正できます。訂正は過去のEVMにも反映されます。
+          </p>
+        </div>
+        {groups.length > 0 && (
+          <Button
+            onClick={handleBulkSave}
+            disabled={dirtyIds.size === 0 || isBulkSaving}
+            className="shrink-0"
+          >
+            {isBulkSaving
+              ? "保存中..."
+              : dirtyIds.size > 0
+              ? `一括保存 (${dirtyIds.size} 件)`
+              : "一括保存"}
+          </Button>
+        )}
       </div>
 
       {groups.length === 0 ? (
@@ -159,74 +247,151 @@ export function ProgressHistoryContent({ wbsId, wbsName, snapshots }: Props) {
           訂正対象のスナップショットがありません。WBSを同期すると履歴が蓄積されます。
         </p>
       ) : (
-        <div className="space-y-8">
-          {groups.map((group) => (
-            <div key={group.taskNo}>
-              <h2 className="text-lg font-semibold mb-2">
-                {group.taskNo} {group.taskName}
-              </h2>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px]">記録時点</TableHead>
-                    <TableHead className="w-[140px]">進捗率(%)</TableHead>
-                    <TableHead className="w-[160px]">ステータス</TableHead>
-                    <TableHead className="w-[100px]">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {group.rows.map((row) => {
-                    const state = rowState[row.id];
-                    return (
-                      <TableRow key={row.id}>
-                        <TableCell>{formatSnapshotAt(row.snapshotAt)}</TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={state?.progressRate ?? ""}
-                            onChange={(e) =>
-                              setRow(row.id, { progressRate: e.target.value })
-                            }
-                            className="w-24"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={state?.status}
-                            onValueChange={(v) =>
-                              setRow(row.id, { status: v as TaskStatus })
-                            }
-                          >
-                            <SelectTrigger className="w-36">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {TASK_STATUS_VALUES.map((s) => (
-                                <SelectItem key={s} value={s}>
-                                  {TASK_STATUS_LABELS[s]}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            onClick={() => handleSave(row.id)}
-                            disabled={savingId === row.id}
-                          >
-                            {savingId === row.id ? "保存中..." : "保存"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          ))}
+        <div className="space-y-4">
+          {groups.map((group) => {
+            const groupDirtyCount = group.rows.filter((r) =>
+              dirtyIds.has(r.id)
+            ).length;
+            const isOpen = openGroups[group.taskNo] ?? true;
+
+            return (
+              <Collapsible
+                key={group.taskNo}
+                open={isOpen}
+                onOpenChange={(open) =>
+                  setOpenGroups((prev) => ({ ...prev, [group.taskNo]: open }))
+                }
+              >
+                <CollapsibleTrigger asChild>
+                  <button className="flex items-center gap-2 w-full text-left py-2 hover:bg-gray-50 rounded px-1 transition-colors">
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 text-gray-500 transition-transform duration-200",
+                        !isOpen && "-rotate-90"
+                      )}
+                    />
+                    <span className="text-lg font-semibold">
+                      {group.taskNo} {group.taskName}
+                    </span>
+                    {groupDirtyCount > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        {groupDirtyCount} 件変更
+                      </Badge>
+                    )}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-2 mb-6">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[180px]">記録時点</TableHead>
+                          <TableHead className="w-[260px]">進捗率(%)</TableHead>
+                          <TableHead className="w-[160px]">ステータス</TableHead>
+                          <TableHead className="w-[100px]">操作</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {group.rows.map((row) => {
+                          const state = rowState[row.id];
+                          const isDirty = dirtyIds.has(row.id);
+                          const sliderValue =
+                            state?.progressRate === ""
+                              ? 0
+                              : Number(state?.progressRate) || 0;
+
+                          return (
+                            <TableRow
+                              key={row.id}
+                              className={cn(isDirty && "bg-yellow-50")}
+                            >
+                              <TableCell className="text-sm">
+                                {formatSnapshotAt(row.snapshotAt)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  <Slider
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    value={[sliderValue]}
+                                    onValueChange={([v]) =>
+                                      setRow(row.id, {
+                                        progressRate: String(v),
+                                      })
+                                    }
+                                    className="w-32"
+                                  />
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    value={state?.progressRate ?? ""}
+                                    onChange={(e) =>
+                                      setRow(row.id, {
+                                        progressRate: e.target.value,
+                                      })
+                                    }
+                                    className="w-16 text-center"
+                                  />
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Select
+                                  value={state?.status}
+                                  onValueChange={(v) =>
+                                    setRow(row.id, { status: v as TaskStatus })
+                                  }
+                                >
+                                  <SelectTrigger className="w-36 border-0 p-0 h-auto shadow-none focus:ring-0">
+                                    <Badge
+                                      className={cn(
+                                        "cursor-pointer",
+                                        state?.status
+                                          ? STATUS_BADGE_CLASS[state.status]
+                                          : ""
+                                      )}
+                                    >
+                                      {state?.status
+                                        ? TASK_STATUS_LABELS[state.status]
+                                        : ""}
+                                    </Badge>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {TASK_STATUS_VALUES.map((s) => (
+                                      <SelectItem key={s} value={s}>
+                                        <Badge
+                                          className={STATUS_BADGE_CLASS[s]}
+                                        >
+                                          {TASK_STATUS_LABELS[s]}
+                                        </Badge>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  size="sm"
+                                  variant={isDirty ? "default" : "outline"}
+                                  onClick={() => handleSaveSingle(row.id)}
+                                  disabled={
+                                    savingId === row.id || isBulkSaving
+                                  }
+                                >
+                                  {savingId === row.id ? "保存中..." : "保存"}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })}
         </div>
       )}
     </div>
