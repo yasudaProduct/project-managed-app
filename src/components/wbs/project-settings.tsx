@@ -53,6 +53,9 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
     useState<boolean>(false);
   const [steadyDailyHoursMode, setSteadyDailyHoursMode] =
     useState<SteadyDailyHoursMode>("PRORATE");
+  const [steadyFixedHours, setSteadyFixedHours] = useState<
+    Record<string, number>
+  >({});
   const [saving, startTransition] = useTransition();
 
   useEffect(() => {
@@ -79,21 +82,37 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         setSteadyKeywordsText(sched.steadyTaskKeywords.join("\n"));
         setConsumeSteadyTaskCapacity(sched.consumeSteadyTaskCapacity);
         setSteadyDailyHoursMode(sched.steadyDailyHoursMode);
+        setSteadyFixedHours(sched.steadyFixedHoursByKeyword ?? {});
       } catch {}
     })();
   }, [projectId]);
 
-  const buildSchedulingSettings = (
-    override: Partial<SchedulingSettings>
-  ): SchedulingSettings => ({
-    steadyTaskKeywords: steadyKeywordsText
+  const parseKeywords = (text: string): string[] =>
+    text
       .split(/[,\n]/)
       .map((s) => s.trim())
-      .filter((s) => s.length > 0),
-    consumeSteadyTaskCapacity,
-    steadyDailyHoursMode,
-    ...override,
-  });
+      .filter((s) => s.length > 0);
+
+  const buildSchedulingSettings = (
+    override: Partial<SchedulingSettings>
+  ): SchedulingSettings => {
+    const keywords = parseKeywords(steadyKeywordsText);
+    // 現在のキーワードに存在するキーのみ固定値を残す
+    const fixedHours: Record<string, number> = {};
+    for (const kw of keywords) {
+      const v = steadyFixedHours[kw];
+      if (typeof v === "number" && Number.isFinite(v)) {
+        fixedHours[kw] = v;
+      }
+    }
+    return {
+      steadyTaskKeywords: keywords,
+      consumeSteadyTaskCapacity,
+      steadyDailyHoursMode,
+      steadyFixedHoursByKeyword: fixedHours,
+      ...override,
+    };
+  };
 
   const onConsumeSteadyToggle = (value: boolean) => {
     setConsumeSteadyTaskCapacity(value);
@@ -116,6 +135,16 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
   };
 
   const onSteadyKeywordsBlur = () => {
+    startTransition(async () => {
+      await updateSchedulingSettings(projectId, buildSchedulingSettings({}));
+    });
+  };
+
+  const onSteadyFixedHourChange = (keyword: string, value: number) => {
+    setSteadyFixedHours((prev) => ({ ...prev, [keyword]: value }));
+  };
+
+  const onSteadyFixedHoursBlur = () => {
     startTransition(async () => {
       await updateSchedulingSettings(projectId, buildSchedulingSettings({}));
     });
@@ -593,6 +622,45 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
                 </Label>
               </div>
             </RadioGroup>
+
+            {steadyDailyHoursMode === "FIXED" && (
+              <div className="space-y-2 pl-6 pt-2">
+                <Label className="text-sm font-medium">
+                  キーワード別の日次固定時間 (h/日)
+                </Label>
+                {parseKeywords(steadyKeywordsText).length === 0 ? (
+                  <div className="text-xs text-gray-500">
+                    先に定常タスク判定キーワードを入力してください。
+                  </div>
+                ) : (
+                  parseKeywords(steadyKeywordsText).map((kw) => (
+                    <div
+                      key={kw}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <span className="text-sm">{kw}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.5}
+                        value={steadyFixedHours[kw] ?? ""}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          onSteadyFixedHourChange(kw, Number.isFinite(v) ? v : 0);
+                        }}
+                        onBlur={onSteadyFixedHoursBlur}
+                        placeholder="按分"
+                        className="w-24 text-right"
+                        disabled={saving}
+                      />
+                    </div>
+                  ))
+                )}
+                <div className="text-xs text-gray-500">
+                  空欄のキーワードは按分にフォールバックします。
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
