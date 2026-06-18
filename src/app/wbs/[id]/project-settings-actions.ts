@@ -1,9 +1,12 @@
 "use server";
 
+import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma/prisma";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import type { ForecastCalculationMethod } from "@/types/forecast-calculation-method";
 import type { EvmForecastMethod } from "@/types/evm-forecast-method";
+import type { SchedulingSettings } from "@/types/scheduling-settings";
+import { parseSchedulingSettings } from "@/types/scheduling-settings";
 
 export async function getProjectSettings(projectId: string) {
     const settings = await prisma.projectSettings.findUnique({ where: { projectId } });
@@ -58,6 +61,30 @@ export async function updateDashboardSettings(
         update: {
             deadlineAlertDays,
             costOverrunThresholdPct,
+        },
+    });
+}
+
+export async function getSchedulingSettings(
+    projectId: string,
+): Promise<SchedulingSettings> {
+    const settings = await prisma.projectSettings.findUnique({ where: { projectId } });
+    return parseSchedulingSettings(settings?.schedulingSettings);
+}
+
+export async function updateSchedulingSettings(
+    projectId: string,
+    schedulingSettings: SchedulingSettings,
+) {
+    const value = schedulingSettings as unknown as Prisma.InputJsonValue;
+    await prisma.projectSettings.upsert({
+        where: { projectId },
+        create: {
+            projectId,
+            schedulingSettings: value,
+        },
+        update: {
+            schedulingSettings: value,
         },
     });
 }

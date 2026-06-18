@@ -87,8 +87,10 @@ import { PushNotificationService } from "@/infrastructures/notification/PushNoti
 import { NotificationEventDetector } from "@/applications/notification/NotificationEventDetector";
 
 // Task Scheduling関連
-import type { ITaskSchedulingApplicationService } from "@/applications/task-scheduling/itask-scheduling-application.service";
-import { TaskSchedulingApplicationService } from "@/applications/task-scheduling/task-scheduling-application.service";
+import type { ISchedulingApplicationService } from "@/applications/task-scheduling/ischeduling-application.service";
+import { SchedulingApplicationService } from "@/applications/task-scheduling/scheduling-application.service";
+import type { ISchedulingSettingsRepository } from "@/applications/task-scheduling/ischeduling-settings-repository";
+import { SchedulingSettingsRepository } from "@/infrastructures/scheduling-settings-repository";
 
 // Prisma
 import { PrismaClient } from '@prisma/client';
@@ -164,7 +166,7 @@ container.bind<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService
 container.bind<INotificationService>(SYMBOL.INotificationService).to(NotificationService).inSingletonScope();
 container.bind<PushNotificationService>('PushNotificationService').to(PushNotificationService).inSingletonScope();
 container.bind<NotificationEventDetector>('NotificationEventDetector').to(NotificationEventDetector).inSingletonScope();
-container.bind<ITaskSchedulingApplicationService>(SYMBOL.ITaskSchedulingApplicationService).to(TaskSchedulingApplicationService).inSingletonScope();
+container.bind<ISchedulingApplicationService>(SYMBOL.ISchedulingApplicationService).to(SchedulingApplicationService).inSingletonScope();
 container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<ISystemSettingsApplicationService>(SYMBOL.ISystemSettingsApplicationService).to(SystemSettingsApplicationService).inSingletonScope();
 container.bind<IWbsTagApplicationService>(SYMBOL.IWbsTagApplicationService).to(WbsTagApplicationService).inSingletonScope();
@@ -197,6 +199,7 @@ container.bind<IWbsEvmRepository>(SYMBOL.IWbsEvmRepository).to(WbsEvmRepository)
 container.bind<IImportJobRepository>(SYMBOL.IImportJobRepository).to(ImportJobPrismaRepository).inSingletonScope();
 container.bind<INotificationRepository>('NotificationRepository').to(NotificationRepository).inSingletonScope();
 container.bind<ISystemSettingsRepository>(SYMBOL.ISystemSettingsRepository).to(SystemSettingsRepository).inSingletonScope();
+container.bind<ISchedulingSettingsRepository>(SYMBOL.ISchedulingSettingsRepository).to(SchedulingSettingsRepository).inSingletonScope();
 container.bind<IWbsTagRepository>(SYMBOL.IWbsTagRepository).to(WbsTagRepository).inSingletonScope();
 container.bind<IWbsCrossQueryRepository>(SYMBOL.IWbsCrossQueryRepository).to(WbsCrossQueryRepository).inSingletonScope();
 

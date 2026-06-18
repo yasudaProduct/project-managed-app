@@ -79,8 +79,8 @@ export const SYMBOL = {
     INotificationRepository: Symbol.for('INotificationRepository'),
 
     // Task Scheduling
-    ITaskSchedulingApplicationService: Symbol.for('ITaskSchedulingApplicationService'),
-    TaskSchedulingService: Symbol.for('TaskSchedulingService'),
+    ISchedulingApplicationService: Symbol.for('ISchedulingApplicationService'),
+    ISchedulingSettingsRepository: Symbol.for('ISchedulingSettingsRepository'),
 
     // System Settings
     ISystemSettingsRepository: Symbol.for('ISystemSettingsRepository'),
