@@ -9,6 +9,9 @@ import { IWbsApplicationService } from "@/applications/wbs/wbs-application-servi
 import { IMilestoneApplicationService } from "@/applications/milestone/milestone-application-service";
 import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
 import { DependencyType } from "@/components/ganttv3/gantt";
+import { TaskProgressCalculator } from "@/domains/task/task-progress-calculator";
+import { ProgressMeasurementMethod } from "@/types/progress-measurement";
+import prisma from "@/lib/prisma/prisma";
 
 // フェーズ色用の固定パレット（seq/index順に決定的に割り当てる）
 const PHASE_COLOR_PALETTE = [
@@ -32,9 +35,12 @@ export async function getGanttTasks(wbsId: number): Promise<GanttTask[]> {
     const tasks = await taskService.getTaskAll(wbsId);
     const milestones = await milestoneService.getMilestones(wbsId);
 
+    // プロジェクトの進捗測定方式を取得（進捗率の算出に使用。未設定は自己申告）
+    const progressMethod = await getProgressMeasurementMethod(wbsId);
+
     const ganttTasks: GanttTask[] = [
         ...milestones.map(convertMilestone).filter((milestone): milestone is GanttTask => milestone !== undefined),
-        ...tasks.map(convertTask).filter((task): task is GanttTask => task !== undefined)
+        ...tasks.map((task) => convertTask(task, progressMethod)).filter((task): task is GanttTask => task !== undefined)
     ];
 
     // タスクバーの色をフェーズ色（getPhases と同じパレット・順序）に合わせる
@@ -151,7 +157,31 @@ export async function getPhases(wbsId: number): Promise<GanttPhase[]> {
     }));
 }
 
-function convertTask(task: WbsTask): GanttTask | undefined {
+// WBS（プロジェクト）の進捗測定方式を取得する。未設定時は自己申告進捗率。
+async function getProgressMeasurementMethod(
+    wbsId: number
+): Promise<ProgressMeasurementMethod> {
+    try {
+        const wbs = await prisma.wbs.findUnique({
+            where: { id: wbsId },
+            select: { projectId: true },
+        });
+        if (!wbs) return "SELF_REPORTED";
+        const settings = await prisma.projectSettings.findUnique({
+            where: { projectId: wbs.projectId },
+            select: { progressMeasurementMethod: true },
+        });
+        return settings?.progressMeasurementMethod ?? "SELF_REPORTED";
+    } catch (e) {
+        console.error("進捗測定方式の取得に失敗しました", e);
+        return "SELF_REPORTED";
+    }
+}
+
+function convertTask(
+    task: WbsTask,
+    progressMethod: ProgressMeasurementMethod
+): GanttTask | undefined {
 
     let color = "red";
     let status: GanntTaskStatus
@@ -176,15 +206,31 @@ function convertTask(task: WbsTask): GanttTask | undefined {
 
     if (task.yoteiStart && task.yoteiEnd && task.yoteiKosu) {
 
+        // プロジェクトの進捗測定方式に基づく実効進捗率（0-100）
+        const progress = TaskProgressCalculator.calculateEffectiveProgress(
+            task.status,
+            task.progressRate ?? null,
+            progressMethod
+        );
+
+        // 実績バー用の期間。実績開始のみ（進行中で終了未入力）の場合は本日までとする
+        const actualStartDate: Date | undefined = task.jissekiStart;
+        let actualEndDate: Date | undefined = task.jissekiEnd;
+        if (actualStartDate && !actualEndDate) {
+            actualEndDate = new Date();
+        }
+
         return {
             id: task.id.toString(),
             name: task.name,
             startDate: task.yoteiStart,
             endDate: task.yoteiEnd,
             duration: task.yoteiKosu,
+            actualStartDate,
+            actualEndDate,
             color: color,
             isMilestone: false,
-            progress: 0,
+            progress,
             predecessors: [],
             level: 0,
             isManuallyScheduled: true,

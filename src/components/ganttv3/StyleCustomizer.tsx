@@ -220,6 +220,22 @@ export const StyleCustomizer = ({
                 />
               </div>
 
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BarChart className="w-4 h-4" />
+                  <Label>実績バーを表示</Label>
+                </div>
+                <Switch
+                  checked={currentStyle.showActual}
+                  onCheckedChange={(checked) =>
+                    setCurrentStyle({
+                      ...currentStyle,
+                      showActual: checked,
+                    })
+                  }
+                />
+              </div>
+
               <div>
                 <Label>タスクの高さ: {currentStyle.taskHeight}px</Label>
                 <Slider

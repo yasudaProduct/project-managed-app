@@ -1,9 +1,11 @@
 export interface Task {
   id: string;
   name: string; // タスク名
-  startDate: Date; // 開始日
-  endDate: Date; // 終了日
+  startDate: Date; // 開始日（予定）
+  endDate: Date; // 終了日（予定）
   duration: number; // 期間
+  actualStartDate?: Date; // 実績開始日
+  actualEndDate?: Date; // 実績終了日（未完了で実績開始のみの場合は本日が入る）
   color: string; // 色
   isMilestone: boolean; // マイルストーンかどうか
   progress: number; // 進捗
@@ -54,6 +56,7 @@ export interface GanttStyle {
   theme: 'modern' | 'classic';
   showGrid: boolean;
   showProgress: boolean;
+  showActual: boolean; // 実績バー（予定の下段）の表示
   showDependencies: boolean;
   showCriticalPath: boolean;
   showWeekends: boolean;

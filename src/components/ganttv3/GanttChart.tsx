@@ -16,6 +16,7 @@ import {
   TaskSortBy,
 } from "./gantt";
 import { groupTasksByType } from "./utils/groupTasks";
+import { getTaskStatusName } from "@/utils/utils";
 import { TimelineHeader } from "./TimelineHeader";
 import { TaskBar } from "./TaskBar";
 import { GridLines } from "./GridLines";
@@ -65,6 +66,21 @@ const formatMonthDay = (date?: Date): string => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${month}/${day}`;
+};
+
+// ステータスを表す色（左リストのステータスドット用）
+const statusColor = (status: Task["status"]): string => {
+  switch (status) {
+    case "COMPLETED":
+      return "#10B981"; // green
+    case "IN_PROGRESS":
+      return "#3B82F6"; // blue
+    case "ON_HOLD":
+      return "#F59E0B"; // amber
+    case "NOT_STARTED":
+    default:
+      return "#9CA3AF"; // gray
+  }
 };
 
 interface GanttChartProps {
@@ -213,7 +229,11 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     // 行の寸法 - rowScale に比例（Ctrl+ホイールで均等に増減）
     const TASK_HEIGHT = Math.round(BASE_TASK_HEIGHT * rowScale);
     const ROW_SPACING = Math.round(BASE_ROW_SPACING * rowScale);
-    const ROW_HEIGHT = TASK_HEIGHT + ROW_SPACING;
+    // 実績バー表示時は予定／実績の2本を縦に並べるため行高を拡張する
+    const ACTUAL_BAR_GAP = Math.max(2, Math.round(2 * rowScale));
+    const ROW_HEIGHT = style.showActual
+      ? TASK_HEIGHT * 2 + ACTUAL_BAR_GAP + ROW_SPACING
+      : TASK_HEIGHT + ROW_SPACING;
     const CATEGORY_HEIGHT = Math.round(BASE_CATEGORY_HEIGHT * rowScale);
     const HEADER_HEIGHT = 50;
     const TASK_LIST_WIDTH = taskListWidth;
@@ -932,6 +952,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                   <span className="w-16 flex-shrink-0 truncate">No.</span>
                   <span className="flex-1 min-w-0 truncate">タスク名</span>
                   <span className="w-20 flex-shrink-0 truncate">担当者</span>
+                  <span className="w-16 flex-shrink-0 truncate">ステータス</span>
                   <span className="w-12 flex-shrink-0 text-right">開始</span>
                   <span className="w-12 flex-shrink-0 text-right">終了</span>
                   <span className="w-12 flex-shrink-0 text-right">工数</span>
@@ -1038,6 +1059,32 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             </div>
                             <div className="w-20 flex-shrink-0 text-xs text-muted-foreground truncate">
                               {task.isMilestone ? "" : task.assignee ?? ""}
+                            </div>
+                            <div className="w-16 flex-shrink-0 text-xs truncate">
+                              {task.isMilestone ? (
+                                ""
+                              ) : (
+                                <span
+                                  className="inline-flex items-center gap-1"
+                                  title={getTaskStatusName(
+                                    task.status ?? "NOT_STARTED",
+                                  )}
+                                >
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                    style={{
+                                      backgroundColor: statusColor(
+                                        task.status ?? "NOT_STARTED",
+                                      ),
+                                    }}
+                                  />
+                                  <span className="truncate text-muted-foreground">
+                                    {getTaskStatusName(
+                                      task.status ?? "NOT_STARTED",
+                                    )}
+                                  </span>
+                                </span>
+                              )}
                             </div>
                             <div className="w-12 flex-shrink-0 text-xs text-muted-foreground text-right tabular-nums">
                               {formatMonthDay(task.startDate)}
@@ -1205,8 +1252,17 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                         } else if (row.type === "task" && row.task) {
                           // タスクバー - タスクリスト行と完全に一致するY位置
                           const task = row.task;
-                          const taskBarY =
-                            row.y + (row.height - TASK_HEIGHT) / 2;
+                          // 実績バー表示時は予定（上段）・実績（下段）を縦に並べる。
+                          // マイルストーンは1本扱いのため常に行中央に配置する。
+                          const showActualBar =
+                            style.showActual && !task.isMilestone;
+                          const blockHeight = showActualBar
+                            ? TASK_HEIGHT * 2 + ACTUAL_BAR_GAP
+                            : TASK_HEIGHT;
+                          const plannedBarY =
+                            row.y + (row.height - blockHeight) / 2;
+                          const actualBarY =
+                            plannedBarY + TASK_HEIGHT + ACTUAL_BAR_GAP;
                           // ドラッグ中はプレビュー日付でバーを描画
                           const preview =
                             dragPreview && dragPreview.taskId === task.id
@@ -1217,22 +1273,57 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             : task.startDate;
                           const barEnd = preview ? preview.endDate : task.endDate;
 
+                          // 実績バー（実績開始がある非マイルストーンのみ）
+                          let actualBar: JSX.Element | null = null;
+                          if (showActualBar && task.actualStartDate) {
+                            const actualX = dateToX(task.actualStartDate);
+                            const actualEndX = task.actualEndDate
+                              ? dateToX(task.actualEndDate)
+                              : actualX;
+                            const actualWidth = Math.max(
+                              actualEndX - actualX,
+                              20,
+                            );
+                            actualBar = (
+                              <g
+                                key={`${row.id}-actual`}
+                                style={{ pointerEvents: "none" }}
+                              >
+                                <rect
+                                  x={actualX}
+                                  y={actualBarY}
+                                  width={actualWidth}
+                                  height={TASK_HEIGHT}
+                                  rx={4}
+                                  fill={task.color}
+                                  fillOpacity={0.55}
+                                  stroke={task.color}
+                                  strokeWidth={1}
+                                />
+                              </g>
+                            );
+                          }
+
                           return (
-                            <TaskBar
-                              key={row.id}
-                              task={task}
-                              x={dateToX(barStart)}
-                              y={taskBarY}
-                              width={Math.max(
-                                dateToX(barEnd) - dateToX(barStart),
-                                task.isMilestone ? 0 : 20,
-                              )}
-                              height={TASK_HEIGHT}
-                              style={style}
-                              onDragStart={editMode ? handleBarDragStart : () => {}}
-                              isDragging={draggedTaskId === task.id}
-                              editable={editMode}
-                            />
+                            <g key={row.id}>
+                              <TaskBar
+                                task={task}
+                                x={dateToX(barStart)}
+                                y={plannedBarY}
+                                width={Math.max(
+                                  dateToX(barEnd) - dateToX(barStart),
+                                  task.isMilestone ? 0 : 20,
+                                )}
+                                height={TASK_HEIGHT}
+                                style={style}
+                                onDragStart={
+                                  editMode ? handleBarDragStart : () => {}
+                                }
+                                isDragging={draggedTaskId === task.id}
+                                editable={editMode}
+                              />
+                              {actualBar}
+                            </g>
                           );
                         }
                         return null;

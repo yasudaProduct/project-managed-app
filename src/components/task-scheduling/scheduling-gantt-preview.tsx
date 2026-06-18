@@ -21,6 +21,7 @@ const previewStyle: GanttStyle = {
   theme: "modern",
   showGrid: true,
   showProgress: false,
+  showActual: false,
   showDependencies: true,
   showCriticalPath: false,
   showWeekends: true,

@@ -68,6 +68,7 @@ const defaultGanttStyle: GanttStyle = {
   theme: "modern",
   showGrid: true,
   showProgress: true,
+  showActual: false,
   showDependencies: true,
   showCriticalPath: true,
   showWeekends: true,

@@ -106,6 +106,7 @@ export class TaskApplicationService implements ITaskApplicationService {
             jissekiStart: task.getJissekiStart(),
             jissekiEnd: task.getJissekiEnd(),
             jissekiKosu: task.getJissekiKosus(),
+            progressRate: task.progressRate,
             createdAt: task.createdAt,
             updatedAt: task.updatedAt,
         }));
