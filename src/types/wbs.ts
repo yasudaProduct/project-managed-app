@@ -40,6 +40,7 @@ export type WbsTask = {
   jissekiStart?: Date
   jissekiEnd?: Date
   jissekiKosu?: number
+  progressRate?: number
   createdAt?: Date
   updatedAt?: Date
 }

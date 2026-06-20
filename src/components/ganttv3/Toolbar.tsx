@@ -78,6 +78,13 @@ export const Toolbar = ({
     });
   };
 
+  const toggleActual = () => {
+    onStyleChange({
+      ...style,
+      showActual: !style.showActual,
+    });
+  };
+
   return (
     <div className="flex items-center gap-2 p-2 bg-card border-b border-border">
       {/* Timeline Scale */}
@@ -141,6 +148,20 @@ export const Toolbar = ({
         >
           <Target className="w-4 h-4" />
           クリティカルパス
+        </Button>
+
+        <Button
+          variant={style.showActual ? "default" : "outline"}
+          size="sm"
+          onClick={toggleActual}
+          className="gap-1"
+        >
+          {style.showActual ? (
+            <Eye className="w-4 h-4" />
+          ) : (
+            <EyeOff className="w-4 h-4" />
+          )}
+          実績
         </Button>
 
         <Button

@@ -23,6 +23,7 @@ import {
   List,
   Download,
   ArrowUpDown,
+  BarChart3,
 } from "lucide-react";
 
 interface QuickActionsProps {
@@ -278,6 +279,22 @@ export const QuickActions = ({
           }
         >
           <Calendar className="w-4 h-4" />
+        </Button>
+
+        <Button
+          variant={style.showActual ? "default" : "outline"}
+          size="sm"
+          title="実績バー表示（予定の下段に実績を表示）"
+          className="gap-1"
+          onClick={() =>
+            onStyleChange({
+              ...style,
+              showActual: !style.showActual,
+            })
+          }
+        >
+          <BarChart3 className="w-4 h-4" />
+          実績
         </Button>
       </div>
 

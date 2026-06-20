@@ -95,4 +95,69 @@ export class TaskDependencyValidator {
         // 現在は特に制約なしで削除可能
         return true;
     }
+
+    /**
+     * 依存関係全体から循環（強連結成分）を検出する。
+     * Tarjanの強連結成分アルゴリズムでサイズ2以上の成分を循環とみなす。
+     * @param dependencies 依存関係一覧
+     * @returns 循環を構成するタスクIDのグループ配列（循環が無ければ空配列）
+     */
+    public static detectCycles(dependencies: TaskDependency[]): number[][] {
+        const adj = new Map<number, number[]>();
+        const nodes = new Set<number>();
+        for (const d of dependencies) {
+            nodes.add(d.predecessorTaskId);
+            nodes.add(d.successorTaskId);
+            if (!adj.has(d.predecessorTaskId)) {
+                adj.set(d.predecessorTaskId, []);
+            }
+            adj.get(d.predecessorTaskId)!.push(d.successorTaskId);
+        }
+
+        let index = 0;
+        const indices = new Map<number, number>();
+        const lowlink = new Map<number, number>();
+        const onStack = new Set<number>();
+        const stack: number[] = [];
+        const cycles: number[][] = [];
+
+        const strongconnect = (v: number): void => {
+            indices.set(v, index);
+            lowlink.set(v, index);
+            index++;
+            stack.push(v);
+            onStack.add(v);
+
+            for (const w of adj.get(v) ?? []) {
+                if (!indices.has(w)) {
+                    strongconnect(w);
+                    lowlink.set(v, Math.min(lowlink.get(v)!, lowlink.get(w)!));
+                } else if (onStack.has(w)) {
+                    lowlink.set(v, Math.min(lowlink.get(v)!, indices.get(w)!));
+                }
+            }
+
+            if (lowlink.get(v) === indices.get(v)) {
+                const component: number[] = [];
+                let w: number;
+                do {
+                    w = stack.pop()!;
+                    onStack.delete(w);
+                    component.push(w);
+                } while (w !== v);
+                // サイズ2以上の強連結成分のみ循環とみなす（自己ループはcreateで禁止済み）
+                if (component.length > 1) {
+                    cycles.push(component);
+                }
+            }
+        };
+
+        for (const v of nodes) {
+            if (!indices.has(v)) {
+                strongconnect(v);
+            }
+        }
+
+        return cycles;
+    }
 }

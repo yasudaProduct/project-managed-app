@@ -248,4 +248,46 @@ describe('TaskDependencyValidator', () => {
             expect(result).toBe(true);
         });
     });
+
+    describe('detectCycles', () => {
+        const dep = (pre: number, suc: number) =>
+            TaskDependency.create({ predecessorTaskId: pre, successorTaskId: suc, wbsId: 1 });
+
+        test('循環がなければ空配列を返す', () => {
+            expect(TaskDependencyValidator.detectCycles([dep(1, 2), dep(2, 3)])).toEqual([]);
+        });
+
+        test('依存が無ければ空配列を返す', () => {
+            expect(TaskDependencyValidator.detectCycles([])).toEqual([]);
+        });
+
+        test('単一の循環(A→B→C→A)を検出する', () => {
+            const cycles = TaskDependencyValidator.detectCycles([dep(1, 2), dep(2, 3), dep(3, 1)]);
+            expect(cycles.length).toBe(1);
+            expect([...cycles[0]].sort((a, b) => a - b)).toEqual([1, 2, 3]);
+        });
+
+        test('直接的な相互依存(A→B→A)を検出する', () => {
+            const cycles = TaskDependencyValidator.detectCycles([dep(1, 2), dep(2, 1)]);
+            expect(cycles.length).toBe(1);
+            expect([...cycles[0]].sort((a, b) => a - b)).toEqual([1, 2]);
+        });
+
+        test('複数の独立した循環を検出する', () => {
+            const cycles = TaskDependencyValidator.detectCycles([
+                dep(1, 2), dep(2, 1),
+                dep(3, 4), dep(4, 3),
+            ]);
+            expect(cycles.length).toBe(2);
+            const flat = cycles.map((c) => [...c].sort((a, b) => a - b));
+            expect(flat).toEqual(expect.arrayContaining([[1, 2], [3, 4]]));
+        });
+
+        test('循環に含まれないノードは結果に含めない', () => {
+            // 2-3が循環、1は循環外
+            const cycles = TaskDependencyValidator.detectCycles([dep(1, 2), dep(2, 3), dep(3, 2)]);
+            expect(cycles.length).toBe(1);
+            expect([...cycles[0]].sort((a, b) => a - b)).toEqual([2, 3]);
+        });
+    });
 });

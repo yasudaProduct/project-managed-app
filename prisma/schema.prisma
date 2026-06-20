@@ -412,6 +412,7 @@ model ProjectSettings {
   costOverrunThresholdPct   Int                        @default(100)  // 工数超過アラートの閾値(%)
   evmExcludeSettings        Json                       @default("{}") // EVM除外設定 (enabled, task_names 等)
   qualityThresholds         Json?                                      // 品質指標の閾値設定
+  schedulingSettings        Json                       @default("{}") // スケジュール計算設定 (steadyTaskKeywords, consumeSteadyTaskCapacity, steadyDailyHoursMode 等)
   createdAt                 DateTime                   @default(now()) @db.Timestamptz
   updatedAt                 DateTime                   @updatedAt @db.Timestamptz
 

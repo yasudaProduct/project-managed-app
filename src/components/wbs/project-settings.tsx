@@ -10,7 +10,13 @@ import {
   getProjectSettings,
   updateProjectSettings,
   updateDashboardSettings,
+  getSchedulingSettings,
+  updateSchedulingSettings,
 } from "@/app/wbs/[id]/project-settings-actions";
+import type {
+  SchedulingSettings,
+  SteadyDailyHoursMode,
+} from "@/types/scheduling-settings";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import {
   PROGRESS_MEASUREMENT_METHOD_LABELS,
@@ -42,6 +48,14 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
   const [deadlineAlertDays, setDeadlineAlertDays] = useState<number>(1);
   const [costOverrunThresholdPct, setCostOverrunThresholdPct] =
     useState<number>(100);
+  const [steadyKeywordsText, setSteadyKeywordsText] = useState<string>("");
+  const [consumeSteadyTaskCapacity, setConsumeSteadyTaskCapacity] =
+    useState<boolean>(false);
+  const [steadyDailyHoursMode, setSteadyDailyHoursMode] =
+    useState<SteadyDailyHoursMode>("PRORATE");
+  const [steadyFixedHours, setSteadyFixedHours] = useState<
+    Record<string, number>
+  >({});
   const [saving, startTransition] = useTransition();
 
   useEffect(() => {
@@ -64,9 +78,77 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         if ("costOverrunThresholdPct" in data) {
           setCostOverrunThresholdPct(data.costOverrunThresholdPct as number);
         }
+        const sched = await getSchedulingSettings(projectId);
+        setSteadyKeywordsText(sched.steadyTaskKeywords.join("\n"));
+        setConsumeSteadyTaskCapacity(sched.consumeSteadyTaskCapacity);
+        setSteadyDailyHoursMode(sched.steadyDailyHoursMode);
+        setSteadyFixedHours(sched.steadyFixedHoursByKeyword ?? {});
       } catch {}
     })();
   }, [projectId]);
+
+  const parseKeywords = (text: string): string[] =>
+    text
+      .split(/[,\n]/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+  const buildSchedulingSettings = (
+    override: Partial<SchedulingSettings>
+  ): SchedulingSettings => {
+    const keywords = parseKeywords(steadyKeywordsText);
+    // 現在のキーワードに存在するキーのみ固定値を残す
+    const fixedHours: Record<string, number> = {};
+    for (const kw of keywords) {
+      const v = steadyFixedHours[kw];
+      if (typeof v === "number" && Number.isFinite(v)) {
+        fixedHours[kw] = v;
+      }
+    }
+    return {
+      steadyTaskKeywords: keywords,
+      consumeSteadyTaskCapacity,
+      steadyDailyHoursMode,
+      steadyFixedHoursByKeyword: fixedHours,
+      ...override,
+    };
+  };
+
+  const onConsumeSteadyToggle = (value: boolean) => {
+    setConsumeSteadyTaskCapacity(value);
+    startTransition(async () => {
+      await updateSchedulingSettings(
+        projectId,
+        buildSchedulingSettings({ consumeSteadyTaskCapacity: value })
+      );
+    });
+  };
+
+  const onSteadyModeChange = (value: SteadyDailyHoursMode) => {
+    setSteadyDailyHoursMode(value);
+    startTransition(async () => {
+      await updateSchedulingSettings(
+        projectId,
+        buildSchedulingSettings({ steadyDailyHoursMode: value })
+      );
+    });
+  };
+
+  const onSteadyKeywordsBlur = () => {
+    startTransition(async () => {
+      await updateSchedulingSettings(projectId, buildSchedulingSettings({}));
+    });
+  };
+
+  const onSteadyFixedHourChange = (keyword: string, value: number) => {
+    setSteadyFixedHours((prev) => ({ ...prev, [keyword]: value }));
+  };
+
+  const onSteadyFixedHoursBlur = () => {
+    startTransition(async () => {
+      await updateSchedulingSettings(projectId, buildSchedulingSettings({}));
+    });
+  };
 
   const onToggle = (value: boolean) => {
     setRoundToQuarter(value);
@@ -450,6 +532,135 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
               className="w-20 text-right"
               disabled={saving}
             />
+          </div>
+        </div>
+
+        {/* スケジュール計算設定 */}
+        <div className="space-y-4 pt-4 border-t">
+          <div>
+            <Label className="text-base font-medium">スケジュール計算設定</Label>
+            <div className="text-sm text-gray-500 mt-1">
+              スケジュールタブの前詰め計算における定常タスクの扱いを設定します。
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="steadyKeywords" className="text-sm font-medium">
+              定常タスク判定キーワード
+            </Label>
+            <div className="text-xs text-gray-500">
+              タスク名にこれらの語を含むタスクは「定常タスク」として前詰めせず、予定期間のまま扱います（改行・カンマ区切り）。
+            </div>
+            <textarea
+              id="steadyKeywords"
+              value={steadyKeywordsText}
+              onChange={(e) => setSteadyKeywordsText(e.target.value)}
+              onBlur={onSteadyKeywordsBlur}
+              rows={3}
+              placeholder={"例: プロジェクト管理\n進捗管理"}
+              className="w-full border rounded px-2 py-1 text-sm"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="consumeSteady" className="text-sm font-medium">
+                定常タスクが稼働を消費する
+              </Label>
+              <div className="text-xs text-gray-500 mt-0.5">
+                オン: 定常タスクの工数が日々の稼働を消費し、通常タスクの前詰めが後ろ倒しになります
+              </div>
+            </div>
+            <Switch
+              id="consumeSteady"
+              checked={consumeSteadyTaskCapacity}
+              onCheckedChange={onConsumeSteadyToggle}
+              disabled={saving}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">定常タスクの日次消費量</Label>
+            <RadioGroup
+              value={steadyDailyHoursMode}
+              onValueChange={(v) =>
+                onSteadyModeChange(v as SteadyDailyHoursMode)
+              }
+              name="steadyDailyHoursMode"
+            >
+              <div className="flex items-start space-x-3">
+                <RadioGroupItem
+                  value="PRORATE"
+                  id="steady-prorate"
+                  disabled={saving}
+                />
+                <Label htmlFor="steady-prorate" className="cursor-pointer">
+                  <div className="flex flex-col">
+                    <span className="font-medium">予定工数を期間で按分</span>
+                    <span className="text-xs text-gray-500 font-normal">
+                      予定工数 ÷ 期間内の稼働日数
+                    </span>
+                  </div>
+                </Label>
+              </div>
+              <div className="flex items-start space-x-3">
+                <RadioGroupItem
+                  value="FIXED"
+                  id="steady-fixed"
+                  disabled={saving}
+                />
+                <Label htmlFor="steady-fixed" className="cursor-pointer">
+                  <div className="flex flex-col">
+                    <span className="font-medium">
+                      日次固定値（キーワード別・今後対応）
+                    </span>
+                    <span className="text-xs text-gray-500 font-normal">
+                      固定値が未設定の場合は按分にフォールバックします
+                    </span>
+                  </div>
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {steadyDailyHoursMode === "FIXED" && (
+              <div className="space-y-2 pl-6 pt-2">
+                <Label className="text-sm font-medium">
+                  キーワード別の日次固定時間 (h/日)
+                </Label>
+                {parseKeywords(steadyKeywordsText).length === 0 ? (
+                  <div className="text-xs text-gray-500">
+                    先に定常タスク判定キーワードを入力してください。
+                  </div>
+                ) : (
+                  parseKeywords(steadyKeywordsText).map((kw) => (
+                    <div
+                      key={kw}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <span className="text-sm">{kw}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.5}
+                        value={steadyFixedHours[kw] ?? ""}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          onSteadyFixedHourChange(kw, Number.isFinite(v) ? v : 0);
+                        }}
+                        onBlur={onSteadyFixedHoursBlur}
+                        placeholder="按分"
+                        className="w-24 text-right"
+                        disabled={saving}
+                      />
+                    </div>
+                  ))
+                )}
+                <div className="text-xs text-gray-500">
+                  空欄のキーワードは按分にフォールバックします。
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

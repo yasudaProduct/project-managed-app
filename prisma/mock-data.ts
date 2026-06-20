@@ -1084,6 +1084,17 @@ export function getMockData(): MockData[] {
         const projectStart = d("2026-06-01");
         const projectEnd = d("2026-08-31");
 
+        // 実績(workRecord)用のID採番。実績バー(予定の下段)の表示確認に使用する。
+        // jissekiStart=最小日 / jissekiEnd=最大日 となるため、複数日のレコードで期間を表現する。
+        let workRecordIdSeq = wbsId * multiId;
+        const rec = (userId: string, taskNo: string, iso: string, hours: number) => ({
+            id: ++workRecordIdSeq,
+            userId,
+            taskNo,
+            date: d(iso),
+            hours_worked: hours,
+        });
+
         return {
             project: {
                 id: projectId,
@@ -1290,7 +1301,24 @@ export function getMockData(): MockData[] {
                     bufferType: "RISK",
                 },
             ],
-            workRecords: [],
+            // 実績データ（予定 vs 実績バーの表示確認用）
+            // - 完了タスク: 予定とずれた実績期間（遅延/前倒し）を表現
+            // - 進行中タスク: 実績開始〜直近までの途中までを表現（予定より短い実績バー）
+            // - 未着手/保留(将来)タスク: 実績なし → 実績バーは表示されない
+            workRecords: [
+                // D1-0001 要件ヒアリング: 予定 06/01〜06/05 / 実績 06/01〜06/08（やや遅延）
+                rec("dummy01", "D1-0001", "2026-06-01", 8),
+                rec("dummy01", "D1-0001", "2026-06-03", 8),
+                rec("dummy01", "D1-0001", "2026-06-05", 8),
+                rec("dummy01", "D1-0001", "2026-06-08", 6),
+                // D1-0002 要件定義書作成: 予定 06/08〜06/12 / 実績 06/10〜06/12（着手が遅れたが予定内に完了）
+                rec("dummy01", "D1-0002", "2026-06-10", 12),
+                rec("dummy01", "D1-0002", "2026-06-12", 13),
+                // D2-0001 基本設計(進行中): 予定 06/15〜06/24 / 実績 06/15〜06/18（途中・進捗40%相当）
+                rec("dummy02", "D2-0001", "2026-06-15", 8),
+                rec("dummy02", "D2-0001", "2026-06-17", 6),
+                rec("dummy02", "D2-0001", "2026-06-18", 6),
+            ],
             milestone: [
                 { id: wbsMilestoneId, wbsId, name: "キックオフ", date: projectStart },
                 { id: wbsMilestoneId + 1, wbsId, name: "設計完了", date: d("2026-07-03") },

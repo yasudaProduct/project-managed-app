@@ -6,6 +6,17 @@ import { DailyWorkAllocation } from './daily-work-allocation';
 import { TaskAllocation } from './task-allocation';
 
 /**
+ * スケジューリング計算結果(擬似日程)から負荷を計算する際の入力
+ */
+export interface ScheduleAllocationInput {
+  taskId: string;
+  taskName: string;
+  start: Date;
+  end: Date;
+  hours: number;
+}
+
+/**
  * 作業負荷計算ドメインサービス
  * 担当者の作業負荷計算に関するビジネスロジックを集約
  */
@@ -183,5 +194,96 @@ export class WorkloadCalculationService {
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
+  }
+
+  /**
+   * スケジューリング計算結果(擬似日程)から担当者の日別作業配分を計算する。
+   * 既存の calculateDailyAllocations が Task(YOTEI)に密結合なのに対し、
+   * こちらは ScheduleAllocationInput(計算結果の開始/終了/工数)を入力にする。
+   */
+  calculateDailyAllocationsFromSchedule(
+    items: ScheduleAllocationInput[],
+    assignee: WbsAssignee,
+    userSchedules: UserSchedule[],
+    companyCalendar: CompanyCalendar,
+    startDate: Date,
+    endDate: Date
+  ): DailyWorkAllocation[] {
+    const dailyAllocations: DailyWorkAllocation[] = [];
+    const workingCalendar = new AssigneeWorkingCalendar(assignee, companyCalendar, userSchedules);
+
+    for (let currentDate = new Date(startDate); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
+      const availableHours = workingCalendar.getAvailableHours(currentDate);
+      const isCompanyHoliday = companyCalendar.isCompanyHoliday(currentDate);
+      const dayOfWeek = currentDate.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+      const schedulesForDay = userSchedules
+        .filter(schedule => schedule.date.toDateString() === currentDate.toDateString())
+        .map(schedule => ({
+          title: schedule.title,
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+          durationHours: this.calculateScheduleDuration(schedule.startTime, schedule.endTime)
+        }));
+
+      const taskAllocations = this.calculateScheduleAllocationsForDate(
+        items,
+        new Date(currentDate),
+        workingCalendar
+      );
+
+      dailyAllocations.push(DailyWorkAllocation.create({
+        date: new Date(currentDate),
+        availableHours,
+        taskAllocations,
+        isWeekend,
+        isCompanyHoliday,
+        userSchedules: schedulesForDay
+      }));
+    }
+
+    return dailyAllocations;
+  }
+
+  /**
+   * 特定日のスケジュール結果のタスク配分を計算（期間内の稼働可能時間比率で按分）
+   */
+  private calculateScheduleAllocationsForDate(
+    items: ScheduleAllocationInput[],
+    date: Date,
+    workingCalendar: AssigneeWorkingCalendar
+  ): TaskAllocation[] {
+    const allocations: TaskAllocation[] = [];
+    const target = this.toYmd(date);
+
+    for (const item of items) {
+      const start = this.toYmd(item.start);
+      const end = this.toYmd(item.end);
+      if (target < start || target > end) continue;
+
+      let totalAvailableInPeriod = 0;
+      for (let d = new Date(item.start); d <= item.end; d.setDate(d.getDate() + 1)) {
+        totalAvailableInPeriod += workingCalendar.getAvailableHours(new Date(d));
+      }
+      if (totalAvailableInPeriod <= 0) continue;
+
+      const availableToday = workingCalendar.getAvailableHours(date);
+      const ratio = availableToday / totalAvailableInPeriod;
+      const allocatedHours = item.hours * ratio;
+
+      if (allocatedHours > 0) {
+        allocations.push(TaskAllocation.create({
+          taskId: item.taskId,
+          taskName: item.taskName,
+          allocatedHours,
+          totalHours: item.hours,
+          periodStart: item.start,
+          periodEnd: item.end
+        }));
+      }
+    }
+
+    return allocations;
   }
 }

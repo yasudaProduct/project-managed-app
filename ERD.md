@@ -205,6 +205,7 @@ erDiagram
   Int costOverrunThresholdPct
   Json evmExcludeSettings
   Json qualityThresholds "nullable"
+  Json schedulingSettings
   DateTime createdAt
   DateTime updatedAt
 }
@@ -610,6 +611,7 @@ erDiagram
   - `costOverrunThresholdPct`: 
   - `evmExcludeSettings`: 
   - `qualityThresholds`: 
+  - `schedulingSettings`: 
   - `createdAt`: 
   - `updatedAt`: 
 

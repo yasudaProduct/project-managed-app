@@ -30,7 +30,7 @@ import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { EvmDashboard } from "@/components/evm/evm-dashboard";
 import { WbsTagInput } from "@/components/wbs/wbs-tag-input";
 import { QualityTabContent } from "@/components/quality/quality-tab-content";
-import { TaskSchedulingPage } from "@/components/task-scheduling/task-scheduling-page";
+import { SchedulingWorkbench } from "@/components/task-scheduling/scheduling-workbench";
 import type { ProjectStatus, WbsTask, Milestone } from "@/types/wbs";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 
@@ -237,7 +237,7 @@ export function WbsManagementContent({
             </TabsContent>
           )}
           <TabsContent value="task-scheduling">
-            <TaskSchedulingPage wbsId={wbsId} />
+            <SchedulingWorkbench wbsId={wbsId} />
           </TabsContent>
           <TabsContent value="settings">
             <ProjectSettings projectId={project.id} />
