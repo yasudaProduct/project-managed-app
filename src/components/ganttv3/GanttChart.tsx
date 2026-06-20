@@ -394,6 +394,15 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       ROW_HEIGHT,
     ]);
 
+    // 水平グリッド線用: 実際の行境界（各行の開始Y＋最終行の下端）
+    // カテゴリ行とタスク行で高さが異なるため、タスクリスト側と一致させる。
+    const rowBoundaries = useMemo(() => {
+      const ys = ganttRows.map((row) => row.y);
+      const last = ganttRows[ganttRows.length - 1];
+      if (last) ys.push(last.y + last.height);
+      return ys;
+    }, [ganttRows]);
+
     // 依存矢印用: 可視タスクと、そのバー中心Y座標（タスクID→Y）
     const visibleTasks = useMemo(
       () =>
@@ -1152,6 +1161,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                           startDate={timelineBounds.start}
                           showWeekends={style.showWeekends}
                           weekendColor={style.colors.weekend}
+                          rowBoundaries={rowBoundaries}
                         />
                       )}
 
