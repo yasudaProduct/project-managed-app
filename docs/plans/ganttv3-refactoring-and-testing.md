@@ -36,17 +36,40 @@
 
 ## 2. 全体ロードマップ
 
-| Stage | 内容 | 成果物 | テスト |
+| Stage | 内容 | 成果物 | 状態 |
 |---|---|---|---|
-| 1 | **コンポーネント設計方針の策定** | [ganttv3-component-design-policy.md](../design/ganttv3-component-design-policy.md)（策定済み） | — |
-| 2 | **純粋ロジック抽出 + ユニットテスト**（TDD） | `utils/` 純粋関数群 + テスト | Unit |
-| 3 | **コンポーネント／hook リファクタ** | hook分離・コンテナ分離・コンポーネント分割 | （既存Unit維持） |
-| 4 | **コンポーネントテスト導入** | RTL テスト + 共通テストユーティリティ | Component |
-| 5 | **E2E テスト導入 + CI 方針決定** | Playwright ganttv3 spec | E2E |
+| 1 | **コンポーネント設計方針の策定** | [ganttv3-component-design-policy.md](../design/ganttv3-component-design-policy.md) | ✅ 完了 |
+| 2 | **純粋ロジック抽出 + ユニットテスト**（TDD） | `utils/` 純粋関数群 + テスト | ✅ 完了 |
+| 3 | **コンポーネント／hook リファクタ** | hook分離・コンテナ分離・コンポーネント分割 | 🔄 進行中（高優先hook完了 / ドラッグ系・分割が残） |
+| 4 | **コンポーネントテスト導入** | RTL テスト + 共通テストユーティリティ | ⬜ 未着手（次に着手） |
+| 5 | **E2E テスト導入 + CI 方針決定** | Playwright ganttv3 spec | ⬜ 未着手 |
 
 - Stage 2 のロジック抽出は他の依存が少なく独立して進められるため**最初に着手**。
 - Stage 3 のリファクタは Stage 1 の方針確定が前提。
 - 各 Stage は独立 PR に分割可能。CLAUDE.md の **TDD 原則**（テスト先行→失敗確認→実装）に従う。
+
+### 進捗状況（2026-06-21 時点）
+
+作業ブランチ `ganttv3-refactoring`。各コミットで build / lint / 全ユニットテスト グリーン・**挙動不変**を確認。
+
+**完了**
+- **Stage 1**: 設計方針策定（[design policy](../design/ganttv3-component-design-policy.md)）。
+- **Stage 2**: 純粋ロジック7モジュールを `utils/` へ抽出 + ユニットテスト計 **59件**。
+  - `criticalPath` / `dependencyGraph` / `diffDependencies` / `taskMapper` / `downloadBlob` / `timelineGeometry` / `timelineHeaders`（+ 既存 `groupTasks` のテスト追加）
+  - コミット: `cf52a10`（純粋ロジック5種）, `d7f7477`（座標計算の統一）
+- **Stage 3（高優先 hook）**: データ/編集系をコンテナから分離。
+  - `useGanttData`（`f2455d7`） / `useGanttMutations`（`1cc0f02`） / `useGanttDraftEditing`（`2f53e87`）
+  - `GanttV3Client.tsx`: **1284 → 565 行**（データ取得・CRUD・編集の実装詳細を hook へ移譲）
+
+**残**
+- **Stage 3（中〜低）**: `useBarDrag`/`usePanelResize`/`useRowScale`/`useScrollSync`（GanttChart のドラッグ/スクロール）、TimelineHeader メモ化（+ ヘッダ生成抽出）、columns ファクトリ化・行/編集パネル分割＋`memo`・TaskBar 分割。
+- **Stage 4 / 5**: テスト安全網（コンポーネント/フックテスト）→ ドラッグ系リファクタ → E2E。
+
+**判明した既存課題（挙動は未変更・別途対応）**
+- `groupBy='phase'` で **phases に無い非空カテゴリのタスクが出力から脱落**（`groupTasks.test.ts` で特性化）。phase ビューでタスクが消えて見える不具合の原因になり得る。
+- `year` スケールの `scaleMultiplier` が GanttChart(90)/TimelineHeader(7) で不整合だった → 座標統一時に GanttChart 基準(90)へ是正（day/week/month/quarter は不変）。
+
+**進め方の調整**: ドラッグ/スクロール系 hook（DOM直結・jsdom非対応）は回帰検知が難しいため、当初計画から順序を調整し **Stage 4 のテスト安全網を先行**させてから着手する。
 
 ---
 
