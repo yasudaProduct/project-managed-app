@@ -5,7 +5,6 @@ import {
   Task,
   TimelineScale,
   GanttStyle,
-  Category,
   ViewSwitcher,
   QuickActions,
   GanttChart,
@@ -41,11 +40,6 @@ import {
   Trash2,
 } from "lucide-react";
 import {
-  getGanttTasks,
-  getPhases,
-  getAssigneeOptions,
-} from "@/app/wbs/[id]/ganttv3/action";
-import {
   createTask,
   updateTask,
   deleteTask,
@@ -62,6 +56,7 @@ import { getGanttTasksTsv } from "@/app/wbs/[id]/ganttv3/export-actions";
 import { DependencyType } from "@/components/ganttv3/gantt";
 import { groupTasksByType } from "@/components/ganttv3/utils/groupTasks";
 import { calculateCriticalPath } from "@/components/ganttv3/utils/criticalPath";
+import { useGanttData } from "@/components/ganttv3/hooks/useGanttData";
 import { toWbsTask } from "@/components/ganttv3/utils/taskMapper";
 import { diffDependencies } from "@/components/ganttv3/utils/diffDependencies";
 import { tsvBlob, downloadBlob } from "@/components/ganttv3/utils/downloadBlob";
@@ -95,14 +90,8 @@ interface GanttV3ClientProps {
 }
 
 export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
-  const [tasks, setTasks] = useState<Task[]>([]);
-
-  const [categories, setCategories] = useState<Category[]>([]);
-
-  // 編集モードの担当者プルダウン用の選択肢（seq昇順）
-  const [assignees, setAssignees] = useState<{ id: number; name: string }[]>(
-    [],
-  );
+  const { tasks, setTasks, categories, assignees, refetchTasks } =
+    useGanttData(wbsId);
 
   const [currentView, setCurrentView] = useState<"gantt" | "table">("gantt");
   const [timelineScale, setTimelineScale] = useState<TimelineScale>("month");
@@ -146,27 +135,6 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   // ドラフトで新規追加した依存関係に振る一時ID（負値）
   const tempDepIdRef = useRef(-1);
-
-  // サーバーから最新タスクを取得してStateへ反映
-  const refetchTasks = useCallback(async () => {
-    const fresh = await getGanttTasks(wbsId);
-    setTasks(calculateCriticalPath(fresh));
-  }, [wbsId]);
-
-  // 初期ロード
-  useEffect(() => {
-    refetchTasks();
-    const fetchPhases = async () => {
-      const phases = await getPhases(wbsId);
-      setCategories(phases);
-    };
-    fetchPhases();
-    const fetchAssignees = async () => {
-      const options = await getAssigneeOptions(wbsId);
-      setAssignees(options);
-    };
-    fetchAssignees();
-  }, [wbsId, refetchTasks]);
 
   // グルーピングの切替やデータ初回ロードでグループ名の集合が変わったら、全グループを展開状態にする
   useEffect(() => {
@@ -223,7 +191,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
         });
       }
     },
-    [tasks, wbsId],
+    [tasks, setTasks, wbsId],
   );
 
   // タスク追加（サーバーに作成 → 再取得）
@@ -323,7 +291,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
         await refetchTasks();
       }
     },
-    [tasks, wbsId, refetchTasks],
+    [tasks, setTasks, wbsId, refetchTasks],
   );
 
   // タスク複製（サーバーに新規作成 → 再取得）。マイルストーンは対象外。
@@ -434,7 +402,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
         });
       }
     },
-    [tasks, wbsId],
+    [tasks, setTasks, wbsId],
   );
 
   // 依存関係を編集（更新APIが無いため 旧依存を削除 → 新依存を作成 → 再取得）
