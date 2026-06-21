@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Task, DependencyType } from "./gantt";
+import { wouldCreateCycle as detectCycle } from "./utils/dependencyGraph";
 import {
   Dialog,
   DialogContent,
@@ -246,17 +247,7 @@ export const DependencyEditModal = ({
   // 先行タスク候補に current.id への依存チェーンが含まれると循環になる
   const wouldCreateCycle = (predecessorId: string): boolean => {
     if (!task) return false;
-    const visited = new Set<string>();
-    const stack = [predecessorId];
-    while (stack.length > 0) {
-      const current = stack.pop()!;
-      if (current === task.id) return true;
-      if (visited.has(current)) continue;
-      visited.add(current);
-      const node = taskById.get(current);
-      node?.predecessors.forEach((p) => stack.push(p.taskId));
-    }
-    return false;
+    return detectCycle(taskById, task.id, predecessorId);
   };
 
   const handleAdd = () => {

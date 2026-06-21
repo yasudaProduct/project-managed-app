@@ -15,7 +15,6 @@ import {
 import { TaskTable, TaskTableColumn } from "@/components/ganttv3/TaskTable";
 import { DependencyEditModal } from "@/components/ganttv3/DependencyEditModal";
 import { TaskModal } from "@/components/wbs/task-modal";
-import { WbsTask } from "@/types/wbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/utils/date-util";
@@ -62,6 +61,10 @@ import {
 import { getGanttTasksTsv } from "@/app/wbs/[id]/ganttv3/export-actions";
 import { DependencyType } from "@/components/ganttv3/gantt";
 import { groupTasksByType } from "@/components/ganttv3/utils/groupTasks";
+import { calculateCriticalPath } from "@/components/ganttv3/utils/criticalPath";
+import { toWbsTask } from "@/components/ganttv3/utils/taskMapper";
+import { diffDependencies } from "@/components/ganttv3/utils/diffDependencies";
+import { tsvBlob, downloadBlob } from "@/components/ganttv3/utils/downloadBlob";
 import { toast } from "@/hooks/use-toast";
 
 const defaultGanttStyle: GanttStyle = {
@@ -144,139 +147,11 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   // ドラフトで新規追加した依存関係に振る一時ID（負値）
   const tempDepIdRef = useRef(-1);
 
-  // クリティカルパス計算
-  const calculateCriticalPath = useCallback((updatedTasks: Task[]): Task[] => {
-    const DAY = 24 * 60 * 60 * 1000;
-    const taskMap = new Map(
-      updatedTasks.map((task) => [
-        task.id,
-        { ...task, isOnCriticalPath: false },
-      ]),
-    );
-
-    // 依存種別とラグから、後続タスクの最早開始の下限を算出する
-    const impliedStart = (
-      predStart: number,
-      predFinish: number,
-      successorDuration: number,
-      type: DependencyType,
-      lag: number,
-    ): number => {
-      const lagMs = lag * DAY;
-      const durMs = successorDuration * DAY;
-      switch (type) {
-        case "SS":
-          return predStart + lagMs;
-        case "FF":
-          return predFinish + lagMs - durMs;
-        case "SF":
-          return predStart + lagMs - durMs;
-        case "FS":
-        default:
-          return predFinish + lagMs;
-      }
-    };
-
-    // 各タスクの最早開始時刻（メモ化）
-    const earliestStartCache = new Map<string, number>();
-    const calculateEarliestStart = (
-      taskId: string,
-      visited = new Set<string>(),
-    ): number => {
-      const cached = earliestStartCache.get(taskId);
-      if (cached !== undefined) return cached;
-      if (visited.has(taskId)) return 0;
-      visited.add(taskId);
-
-      const task = taskMap.get(taskId);
-      if (!task) return 0;
-
-      let earliestStart = task.startDate.getTime();
-
-      for (const pred of task.predecessors) {
-        const predTask = taskMap.get(pred.taskId);
-        if (predTask) {
-          const predStart = calculateEarliestStart(pred.taskId, visited);
-          const predFinish = predStart + predTask.duration * DAY;
-          earliestStart = Math.max(
-            earliestStart,
-            impliedStart(
-              predStart,
-              predFinish,
-              task.duration,
-              pred.type,
-              pred.lag,
-            ),
-          );
-        }
-      }
-
-      earliestStartCache.set(taskId, earliestStart);
-      return earliestStart;
-    };
-
-    // 全タスクの最早開始を確定
-    for (const task of updatedTasks) {
-      calculateEarliestStart(task.id);
-    }
-
-    const criticalTasks = new Set<string>();
-
-    const endTasks = updatedTasks.filter(
-      (t) =>
-        t.isMilestone ||
-        !updatedTasks.some((other) =>
-          other.predecessors.some((pred) => pred.taskId === t.id),
-        ),
-    );
-
-    const markCriticalPath = (taskId: string, visited = new Set<string>()) => {
-      if (visited.has(taskId)) return;
-      visited.add(taskId);
-
-      const task = taskMap.get(taskId);
-      if (!task) return;
-
-      criticalTasks.add(taskId);
-
-      const taskStart = earliestStartCache.get(taskId) ?? 0;
-
-      for (const pred of task.predecessors) {
-        const predTask = taskMap.get(pred.taskId);
-        if (predTask) {
-          const predStart = earliestStartCache.get(pred.taskId) ?? 0;
-          const predFinish = predStart + predTask.duration * DAY;
-          const implied = impliedStart(
-            predStart,
-            predFinish,
-            task.duration,
-            pred.type,
-            pred.lag,
-          );
-
-          // この依存が後続の開始を律速している（余裕ゼロ）ならクリティカル
-          if (Math.abs(implied - taskStart) < DAY) {
-            markCriticalPath(pred.taskId, visited);
-          }
-        }
-      }
-    };
-
-    for (const endTask of endTasks) {
-      markCriticalPath(endTask.id);
-    }
-
-    return updatedTasks.map((task) => ({
-      ...task,
-      isOnCriticalPath: criticalTasks.has(task.id),
-    }));
-  }, []);
-
   // サーバーから最新タスクを取得してStateへ反映
   const refetchTasks = useCallback(async () => {
     const fresh = await getGanttTasks(wbsId);
     setTasks(calculateCriticalPath(fresh));
-  }, [wbsId, calculateCriticalPath]);
+  }, [wbsId]);
 
   // 初期ロード
   useEffect(() => {
@@ -348,7 +223,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
         });
       }
     },
-    [tasks, calculateCriticalPath, wbsId],
+    [tasks, wbsId],
   );
 
   // タスク追加（サーバーに作成 → 再取得）
@@ -448,7 +323,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
         await refetchTasks();
       }
     },
-    [tasks, calculateCriticalPath, wbsId, refetchTasks],
+    [tasks, wbsId, refetchTasks],
   );
 
   // タスク複製（サーバーに新規作成 → 再取得）。マイルストーンは対象外。
@@ -559,7 +434,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
         });
       }
     },
-    [tasks, calculateCriticalPath, wbsId],
+    [tasks, wbsId],
   );
 
   // 依存関係を編集（更新APIが無いため 旧依存を削除 → 新依存を作成 → 再取得）
@@ -616,19 +491,8 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   const handleExportTsv = useCallback(async () => {
     try {
       const tsv = await getGanttTasksTsv(wbsId);
-      // Excel等で文字化けしないよう BOM を付与
-      const blob = new Blob(["﻿" + tsv], {
-        type: "text/tab-separated-values;charset=utf-8",
-      });
-      const url = URL.createObjectURL(blob);
       const date = new Date().toISOString().slice(0, 10);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `wbs-tasks-${date}.tsv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      downloadBlob(tsvBlob(tsv), `wbs-tasks-${date}.tsv`);
     } catch (error) {
       toast({
         title: "TSVの出力に失敗しました",
@@ -670,7 +534,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           : prev,
       );
     },
-    [calculateCriticalPath],
+    [],
   );
 
   // ドラフトへの依存関係の追加（一時IDを付与）
@@ -701,7 +565,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           : prev,
       );
     },
-    [calculateCriticalPath],
+    [],
   );
 
   // ドラフトの依存関係を削除
@@ -720,7 +584,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           : prev,
       );
     },
-    [calculateCriticalPath],
+    [],
   );
 
   // ドラフトの依存関係を更新
@@ -747,7 +611,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           : prev,
       );
     },
-    [calculateCriticalPath],
+    [],
   );
 
   // 編集モードで依存関係編集モーダルを開く
@@ -800,64 +664,12 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
       }
 
       // 2) 依存関係の差分を保存
-      type DepInfo = {
-        succ: string;
-        pred: string;
-        type: DependencyType;
-        lag: number;
-      };
-      const origDeps = new Map<number, DepInfo>();
-      tasks.forEach((t) =>
-        t.predecessors.forEach((p) => {
-          if (p.dbId !== undefined && p.dbId > 0) {
-            origDeps.set(p.dbId, {
-              succ: t.id,
-              pred: p.taskId,
-              type: p.type,
-              lag: p.lag,
-            });
-          }
-        }),
-      );
-      const draftDeps: (DepInfo & { dbId: number })[] = [];
-      draftTasks.forEach((t) =>
-        t.predecessors.forEach((p) =>
-          draftDeps.push({
-            dbId: p.dbId ?? 0,
-            succ: t.id,
-            pred: p.taskId,
-            type: p.type,
-            lag: p.lag,
-          }),
-        ),
-      );
-
-      // 削除・変更（旧分の削除）
-      for (const [dbId, od] of origDeps) {
-        const inDraft = draftDeps.find((d) => d.dbId === dbId);
-        const changed =
-          inDraft &&
-          (inDraft.type !== od.type ||
-            inDraft.lag !== od.lag ||
-            inDraft.pred !== od.pred);
-        if (!inDraft || changed) {
-          await deleteGanttDependency(wbsId, dbId);
-        }
+      const { deletes, creates } = diffDependencies(tasks, draftTasks);
+      for (const dbId of deletes) {
+        await deleteGanttDependency(wbsId, dbId);
       }
-      // 追加・変更（新分の作成）
-      for (const d of draftDeps) {
-        const od = d.dbId > 0 ? origDeps.get(d.dbId) : undefined;
-        const isNew = d.dbId <= 0;
-        const changed =
-          od && (od.type !== d.type || od.lag !== d.lag || od.pred !== d.pred);
-        if (isNew || changed) {
-          await createGanttDependency(wbsId, {
-            successorTaskId: Number(d.succ),
-            predecessorTaskId: Number(d.pred),
-            type: d.type,
-            lag: d.lag,
-          });
-        }
+      for (const input of creates) {
+        await createGanttDependency(wbsId, input);
       }
 
       toast({ title: "編集内容を保存しました" });
@@ -894,31 +706,6 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
 
   const handleCollapseAllCategories = useCallback(() => {
     setExpandedCategories(new Set());
-  }, []);
-
-  // gantt の Task を TaskModal が要求する WbsTask 形へ変換
-  const toWbsTask = useCallback((task: Task): WbsTask => {
-    return {
-      id: Number(task.dbId ?? task.id),
-      taskNo: task.taskNo,
-      name: task.name,
-      status: task.status ?? "NOT_STARTED",
-      assigneeId: task.assigneeId,
-      assignee: task.assigneeId
-        ? {
-            id: task.assigneeId,
-            name: task.assignee ?? "",
-            displayName: task.assignee ?? "",
-          }
-        : undefined,
-      phaseId: task.phaseId,
-      phase: task.phaseId
-        ? { id: task.phaseId, name: task.category ?? "", seq: 0 }
-        : undefined,
-      yoteiStart: task.startDate,
-      yoteiEnd: task.endDate,
-      yoteiKosu: task.duration,
-    };
   }, []);
 
   // 編集・依存モーダルの対象タスク（最新stateから引く）
