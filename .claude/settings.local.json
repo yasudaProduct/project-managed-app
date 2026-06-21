@@ -32,9 +32,12 @@
       "Bash(python3 *)",
       "Bash(sed -n '200,215p' src/infrastructures/quality/quality-metrics-prisma.repository.ts)",
       "Bash(sed -n '285,300p' src/infrastructures/quality/quality-metrics-prisma.repository.ts)",
-      "Bash(sed -n '60,80p' src/infrastructures/phase-repository.ts)"
+      "Bash(sed -n '60,80p' src/infrastructures/phase-repository.ts)",
+      "Bash(echo \"exit=$?\")"
     ],
     "deny": [],
-    "additionalDirectories": ["/model UserSchedule"]
+    "additionalDirectories": [
+      "/model UserSchedule"
+    ]
   }
 }
