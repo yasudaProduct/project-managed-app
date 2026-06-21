@@ -53,6 +53,8 @@ const BASE_CATEGORY_HEIGHT = 20;
 // 行高さスケール（Ctrl+ホイールで変更）の下限・上限
 const ROW_SCALE_MIN = 0.6;
 const ROW_SCALE_MAX = 3;
+/** メモ化を効かせるための安定参照の空ハンドラ（非編集時の onDragStart 用） */
+const noop = () => {};
 
 // 日付を日数分シフトする（UTC基準でずれないよう epoch で計算）
 const addDays = (date: Date, days: number): Date =>
@@ -1316,7 +1318,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                 height={TASK_HEIGHT}
                                 style={style}
                                 onDragStart={
-                                  editMode ? handleBarDragStart : () => {}
+                                  editMode ? handleBarDragStart : noop
                                 }
                                 isDragging={draggedTaskId === task.id}
                                 editable={editMode}

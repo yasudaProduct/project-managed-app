@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Task, GanttStyle } from "./gantt";
 
 interface TaskBarProps {
@@ -18,7 +18,7 @@ interface TaskBarProps {
   editable?: boolean;
 }
 
-export const TaskBar = ({
+export const TaskBar = memo(function TaskBar({
   task,
   x,
   y,
@@ -28,7 +28,7 @@ export const TaskBar = ({
   onDragStart,
   isDragging,
   editable = false,
-}: TaskBarProps) => {
+}: TaskBarProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   const isOnCriticalPath = task.isOnCriticalPath && style.showCriticalPath;
@@ -229,4 +229,4 @@ export const TaskBar = ({
       )}
     </g>
   );
-};
+});
