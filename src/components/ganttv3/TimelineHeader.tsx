@@ -1,4 +1,10 @@
 import { TimelineScale } from "./gantt";
+import {
+  getTotalDays,
+  getScaleMultiplier,
+  getTotalColumns,
+} from "./utils/timelineGeometry";
+import { getWeekNumber } from "./utils/timelineHeaders";
 
 interface TimelineHeaderProps {
   start: Date;
@@ -118,30 +124,8 @@ export const TimelineHeader = ({
     }[] = [];
 
     // Calculate the total width available and number of columns needed
-    const totalDays = Math.ceil(
-      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    let scaleMultiplier: number;
-
-    switch (scale) {
-      case "day":
-        scaleMultiplier = 1;
-        break;
-      case "week":
-        scaleMultiplier = 7;
-        break;
-      case "month":
-        scaleMultiplier = 30; // Approximate days per month
-        break;
-      case "quarter":
-        scaleMultiplier = 90; // Approximate days per quarter
-        break;
-      default:
-        scaleMultiplier = 7;
-    }
-
-    const totalColumns = Math.ceil(totalDays / scaleMultiplier);
+    const totalDays = getTotalDays(start, end);
+    const totalColumns = getTotalColumns(totalDays, getScaleMultiplier(scale));
     const current = new Date(start);
 
     for (let i = 0; i < totalColumns; i++) {
@@ -207,12 +191,6 @@ export const TimelineHeader = ({
     }
 
     return headers;
-  };
-
-  const getWeekNumber = (date: Date): number => {
-    const startOfYear = new Date(date.getFullYear(), 0, 1);
-    const pastDaysOfYear = (date.getTime() - startOfYear.getTime()) / 86400000;
-    return Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
   };
 
   const parentScale = getParentScale(scale);

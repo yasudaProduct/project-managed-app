@@ -16,6 +16,12 @@ import {
   TaskSortBy,
 } from "./gantt";
 import { groupTasksByType } from "./utils/groupTasks";
+import {
+  getScaleMultiplier,
+  getTotalDays,
+  getChartWidth,
+  dateToX as computeDateX,
+} from "./utils/timelineGeometry";
 import { getTaskStatusName } from "@/utils/utils";
 import { TimelineHeader } from "./TimelineHeader";
 import { TaskBar } from "./TaskBar";
@@ -422,22 +428,9 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     }, [ganttRows]);
 
     // 各種寸法を計算
-    const totalDays = Math.ceil(
-      (timelineBounds.end.getTime() - timelineBounds.start.getTime()) /
-        (24 * 60 * 60 * 1000),
-    );
-    const scaleMultiplier =
-      timelineScale === "day"
-        ? 1
-        : timelineScale === "week"
-          ? 7
-          : timelineScale === "month"
-            ? 30
-            : 90;
-    const chartWidth = Math.max(
-      (totalDays / scaleMultiplier) * columnWidth,
-      1200,
-    );
+    const totalDays = getTotalDays(timelineBounds.start, timelineBounds.end);
+    const scaleMultiplier = getScaleMultiplier(timelineScale);
+    const chartWidth = getChartWidth(totalDays, scaleMultiplier, columnWidth);
     const totalContentHeight =
       ganttRows.length > 0
         ? ganttRows[ganttRows.length - 1].y +
@@ -447,12 +440,8 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
 
     // 日付をX座標に変換
     const dateToX = useCallback(
-      (date: Date) => {
-        const daysDiff =
-          (date.getTime() - timelineBounds.start.getTime()) /
-          (24 * 60 * 60 * 1000);
-        return (daysDiff / scaleMultiplier) * columnWidth;
-      },
+      (date: Date) =>
+        computeDateX(date, timelineBounds.start, scaleMultiplier, columnWidth),
       [timelineBounds.start, columnWidth, scaleMultiplier],
     );
 
