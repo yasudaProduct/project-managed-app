@@ -22,9 +22,9 @@ import {
   getChartWidth,
   dateToX as computeDateX,
 } from "./utils/timelineGeometry";
-import { getTaskStatusName } from "@/utils/utils";
 import { TimelineHeader } from "./TimelineHeader";
 import { TaskBar } from "./TaskBar";
+import { TaskListRow } from "./TaskListRow";
 import { GridLines } from "./GridLines";
 import { DependencyArrows } from "./DependencyArrows";
 import { Button } from "../ui/button";
@@ -67,29 +67,6 @@ const toDateInputValue = (date?: Date): string =>
 // <input type="date"> の値（YYYY-MM-DD）を UTC 0時の Date へ
 const fromDateInputValue = (value: string): Date | null =>
   value ? new Date(`${value}T00:00:00.000Z`) : null;
-
-// 予定日（Date）をタスクリスト表示用に MM/DD へ整形する
-const formatMonthDay = (date?: Date): string => {
-  if (!date) return "";
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${month}/${day}`;
-};
-
-// ステータスを表す色（左リストのステータスドット用）
-const statusColor = (status: Task["status"]): string => {
-  switch (status) {
-    case "COMPLETED":
-      return "#10B981"; // green
-    case "IN_PROGRESS":
-      return "#3B82F6"; // blue
-    case "ON_HOLD":
-      return "#F59E0B"; // amber
-    case "NOT_STARTED":
-    default:
-      return "#9CA3AF"; // gray
-  }
-};
 
 interface GanttChartProps {
   tasks: Task[];
@@ -1029,76 +1006,13 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                         </div>
                       );
                     } else if (row.type === "task" && row.task) {
-                      const task = row.task;
                       return (
-                        <div
+                        <TaskListRow
                           key={row.id}
-                          className={`px-4 py-0 border-b border-border hover:bg-muted/30 transition-colors absolute w-full flex items-center `}
-                          style={{
-                            top: row.y,
-                            height: row.height,
-                            paddingLeft: `${16 + task.level * 16}px`,
-                            lineHeight: `${row.height}px`,
-                          }}
-                        >
-                          <div className="flex items-center gap-2 w-full h-full">
-                            {task.level > 0 && (
-                              <div className="w-3 h-3 border-l border-b border-muted-foreground/30 flex-shrink-0" />
-                            )}
-                            <div
-                              className="w-2 h-2 flex-shrink-0"
-                              style={{
-                                backgroundColor: task.color,
-                              }}
-                            />
-                            <div className="w-16 flex-shrink-0 text-xs text-muted-foreground truncate">
-                              {task.taskNo ?? ""}
-                            </div>
-                            <div className="flex-1 min-w-0 font-medium truncate text-xs leading-tight">
-                              {task.name}
-                            </div>
-                            <div className="w-20 flex-shrink-0 text-xs text-muted-foreground truncate">
-                              {task.isMilestone ? "" : task.assignee ?? ""}
-                            </div>
-                            <div className="w-16 flex-shrink-0 text-xs truncate">
-                              {task.isMilestone ? (
-                                ""
-                              ) : (
-                                <span
-                                  className="inline-flex items-center gap-1"
-                                  title={getTaskStatusName(
-                                    task.status ?? "NOT_STARTED",
-                                  )}
-                                >
-                                  <span
-                                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                                    style={{
-                                      backgroundColor: statusColor(
-                                        task.status ?? "NOT_STARTED",
-                                      ),
-                                    }}
-                                  />
-                                  <span className="truncate text-muted-foreground">
-                                    {getTaskStatusName(
-                                      task.status ?? "NOT_STARTED",
-                                    )}
-                                  </span>
-                                </span>
-                              )}
-                            </div>
-                            <div className="w-12 flex-shrink-0 text-xs text-muted-foreground text-right tabular-nums">
-                              {formatMonthDay(task.startDate)}
-                            </div>
-                            <div className="w-12 flex-shrink-0 text-xs text-muted-foreground text-right tabular-nums">
-                              {task.isMilestone
-                                ? ""
-                                : formatMonthDay(task.endDate)}
-                            </div>
-                            <div className="w-12 flex-shrink-0 text-xs text-muted-foreground text-right tabular-nums">
-                              {task.isMilestone ? "M" : `${task.duration}h`}
-                            </div>
-                          </div>
-                        </div>
+                          task={row.task}
+                          top={row.y}
+                          height={row.height}
+                        />
                       );
                     }
                     return null;
