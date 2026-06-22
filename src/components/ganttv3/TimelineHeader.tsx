@@ -1,10 +1,10 @@
+import { useMemo } from "react";
 import { TimelineScale } from "./gantt";
 import {
-  getTotalDays,
-  getScaleMultiplier,
-  getTotalColumns,
-} from "./utils/timelineGeometry";
-import { getWeekNumber } from "./utils/timelineHeaders";
+  getParentScale,
+  buildChildHeaders,
+  buildParentHeaders,
+} from "./utils/timelineHeaders";
 
 interface TimelineHeaderProps {
   start: Date;
@@ -25,177 +25,16 @@ export const TimelineHeader = ({
   showWeekends,
   scrollLeft = 0,
 }: TimelineHeaderProps) => {
-  // Get parent scale for hierarchical display
-  const getParentScale = (scale: TimelineScale): TimelineScale | null => {
-    switch (scale) {
-      case "day":
-        return "month";
-      case "week":
-        return "month";
-      case "month":
-        return "year";
-      case "quarter":
-        return "year";
-      default:
-        return null;
-    }
-  };
-
-  const generateParentHeaders = (parentScale: TimelineScale) => {
-    const parentHeaders: {
-      date: Date;
-      label: string;
-      span: number; // How many child columns this parent spans
-    }[] = [];
-
-    let currentParentDate: Date | null = null;
-    let currentSpan = 0;
-
-    const childHeaders = generateChildHeaders();
-
-    childHeaders.forEach((childHeader, index) => {
-      let parentDate: Date;
-
-      switch (parentScale) {
-        case "month":
-          parentDate = new Date(
-            childHeader.date.getFullYear(),
-            childHeader.date.getMonth(),
-            1
-          );
-          break;
-        case "year":
-          parentDate = new Date(childHeader.date.getFullYear(), 0, 1);
-          break;
-        default:
-          return;
-      }
-
-      if (
-        !currentParentDate ||
-        parentDate.getTime() !== currentParentDate.getTime()
-      ) {
-        if (currentParentDate) {
-          parentHeaders.push({
-            date: currentParentDate,
-            label: getCurrentParentLabel(currentParentDate, parentScale),
-            span: currentSpan,
-          });
-        }
-        currentParentDate = parentDate;
-        currentSpan = 1;
-      } else {
-        currentSpan++;
-      }
-
-      // Add the last parent header
-      if (index === childHeaders.length - 1) {
-        parentHeaders.push({
-          date: currentParentDate,
-          label: getCurrentParentLabel(currentParentDate, parentScale),
-          span: currentSpan,
-        });
-      }
-    });
-
-    return parentHeaders;
-  };
-
-  const getCurrentParentLabel = (
-    date: Date,
-    parentScale: TimelineScale
-  ): string => {
-    switch (parentScale) {
-      case "month":
-        return date.toLocaleDateString("ja-JP", { month: "short" });
-      case "year":
-        return date.getFullYear().toString();
-      default:
-        return "";
-    }
-  };
-
-  const generateChildHeaders = () => {
-    const headers: {
-      date: Date;
-      label: string;
-      isWeekend: boolean;
-      isMainHeader: boolean;
-    }[] = [];
-
-    // Calculate the total width available and number of columns needed
-    const totalDays = getTotalDays(start, end);
-    const totalColumns = getTotalColumns(totalDays, getScaleMultiplier(scale));
-    const current = new Date(start);
-
-    for (let i = 0; i < totalColumns; i++) {
-      const isWeekend = current.getDay() === 0 || current.getDay() === 6;
-
-      switch (scale) {
-        case "day":
-          headers.push({
-            date: new Date(current),
-            label: current
-              .toLocaleDateString("ja-JP", {
-                month: "numeric",
-                day: "numeric",
-              })
-              .replace(/\./g, "/"),
-            isWeekend,
-            isMainHeader: current.getDate() === 1,
-          });
-          current.setDate(current.getDate() + 1);
-          break;
-
-        case "week":
-          // Align to Monday
-          const dayOfWeek = current.getDay();
-          const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-          const weekStart = new Date(current);
-          weekStart.setDate(current.getDate() - daysToMonday);
-
-          const weekNumber = getWeekNumber(weekStart);
-
-          headers.push({
-            date: new Date(weekStart),
-            label: `W${weekNumber}`,
-            isWeekend: false,
-            isMainHeader: weekStart.getDate() <= 7, // First week of month
-          });
-          current.setDate(current.getDate() + 7);
-          break;
-
-        case "month":
-          headers.push({
-            date: new Date(current),
-            label: current.toLocaleDateString("ja-JP", { month: "short" }),
-            isWeekend: false,
-            isMainHeader: current.getMonth() % 3 === 0, // Quarterly
-          });
-          current.setMonth(current.getMonth() + 1);
-          current.setDate(1);
-          break;
-
-        case "quarter":
-          const quarter = Math.floor(current.getMonth() / 3) + 1;
-          headers.push({
-            date: new Date(current),
-            label: `Q${quarter} ${current.getFullYear()}`,
-            isWeekend: false,
-            isMainHeader: quarter === 1, // Yearly
-          });
-          current.setMonth(current.getMonth() + 3);
-          current.setDate(1);
-          break;
-      }
-    }
-
-    return headers;
-  };
-
   const parentScale = getParentScale(scale);
-  const childHeaders = generateChildHeaders();
-  const parentHeaders = parentScale ? generateParentHeaders(parentScale) : [];
+  // ヘッダ配列は start/end/scale のみに依存（scrollLeft では再計算しない）
+  const childHeaders = useMemo(
+    () => buildChildHeaders(start, end, scale),
+    [start, end, scale],
+  );
+  const parentHeaders = useMemo(
+    () => (parentScale ? buildParentHeaders(childHeaders, parentScale) : []),
+    [childHeaders, parentScale],
+  );
 
   return (
     <div
