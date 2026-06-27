@@ -13,37 +13,14 @@ import {
 import { TaskTable, TaskTableColumn } from "@/components/ganttv3/TaskTable";
 import { DependencyEditModal } from "@/components/ganttv3/DependencyEditModal";
 import { TaskModal } from "@/components/wbs/task-modal";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { formatDate } from "@/utils/date-util";
-import { getTaskStatusName } from "@/utils/utils";
-import {
-  HoursUnit,
-  HOURS_UNIT_LABELS,
-  formatHoursWithUnit,
-} from "@/utils/hours-converter";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Copy,
-  Flag,
-  Link2,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { HoursUnit, HOURS_UNIT_LABELS } from "@/utils/hours-converter";
 import { getGanttTasksTsv } from "@/app/wbs/[id]/ganttv3/export-actions";
 import { groupTasksByType } from "@/components/ganttv3/utils/groupTasks";
 import { useGanttData } from "@/components/ganttv3/hooks/useGanttData";
 import { useGanttMutations } from "@/components/ganttv3/hooks/useGanttMutations";
 import { useGanttDraftEditing } from "@/components/ganttv3/hooks/useGanttDraftEditing";
 import { toWbsTask } from "@/components/ganttv3/utils/taskMapper";
+import { createTaskColumns } from "@/components/ganttv3/taskTableColumns";
 import { tsvBlob, downloadBlob } from "@/components/ganttv3/utils/downloadBlob";
 import { toast } from "@/hooks/use-toast";
 
@@ -212,193 +189,24 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     [chartTasks, dependencyTaskId],
   );
 
-  // テーブルの列定義（ヘッダー名・幅・表示データを全てここで組み立てて渡す）
+  // 先行タスク名の引き当て用（O(1) ルックアップ）
+  const taskById = useMemo(
+    () => new Map(tasks.map((t) => [t.id, t])),
+    [tasks],
+  );
+
+  // テーブルの列定義（組み立ては taskTableColumns ファクトリへ委譲）
   const columns = useMemo<TaskTableColumn[]>(
-    () => [
-      {
-        key: "name",
-        header: "タスク名",
-        width: 260,
-        renderCell: (task) => (
-          <div
-            className="flex items-center gap-2"
-            style={{ paddingLeft: `${task.level * 16}px` }}
-          >
-            {task.isMilestone && (
-              <Flag className="w-3 h-3 shrink-0 text-muted-foreground" />
-            )}
-            <span className="font-medium truncate">{task.name}</span>
-          </div>
-        ),
-      },
-      {
-        key: "assignee",
-        header: "担当者",
-        width: 120,
-        renderCell: (task) => (
-          <span className="text-sm">{task.assignee ?? "-"}</span>
-        ),
-      },
-      {
-        key: "phase",
-        header: "フェーズ",
-        width: 130,
-        renderCell: (task) => (
-          <div className="flex items-center gap-2">
-            <span
-              className="w-3 h-3 rounded-sm shrink-0"
-              style={{ backgroundColor: task.color }}
-            />
-            <span className="text-sm truncate">{task.category ?? "-"}</span>
-          </div>
-        ),
-      },
-      {
-        key: "startDate",
-        header: "開始日",
-        width: 110,
-        renderCell: (task) => (
-          <span className="text-sm">
-            {formatDate(task.startDate, "YYYY/MM/DD")}
-          </span>
-        ),
-      },
-      {
-        key: "endDate",
-        header: "終了日",
-        width: 110,
-        renderCell: (task) =>
-          task.isMilestone ? (
-            <span className="text-muted-foreground">-</span>
-          ) : (
-            <span className="text-sm">
-              {formatDate(task.endDate, "YYYY/MM/DD")}
-            </span>
-          ),
-      },
-      {
-        key: "kosu",
-        header: "工数",
-        width: 90,
-        align: "right",
-        renderCell: (task) =>
-          task.isMilestone ? (
-            <span className="text-muted-foreground">-</span>
-          ) : (
-            <span className="text-sm">
-              {formatHoursWithUnit(task.duration, kosuUnit)}
-            </span>
-          ),
-      },
-      {
-        key: "progress",
-        header: "進捗",
-        width: 70,
-        align: "right",
-        renderCell: (task) => <span className="text-sm">{task.progress}%</span>,
-      },
-      {
-        key: "status",
-        header: "ステータス",
-        width: 110,
-        renderCell: (task) =>
-          task.isMilestone ? (
-            <span className="text-muted-foreground">-</span>
-          ) : (
-            <Badge variant="outline">
-              {getTaskStatusName(task.status ?? "NOT_STARTED")}
-            </Badge>
-          ),
-      },
-      {
-        key: "dependencies",
-        header: "依存関係",
-        width: 220,
-        interactive: true,
-        renderCell: (task) => (
-          <div className="flex items-center gap-1 flex-wrap">
-            {task.predecessors.length === 0 ? (
-              <span className="text-xs text-muted-foreground">なし</span>
-            ) : (
-              task.predecessors.map((dep, i) => {
-                const pred = tasks.find((t) => t.id === dep.taskId);
-                return (
-                  <Badge key={i} variant="secondary" className="text-xs">
-                    {pred?.name ?? "不明"} ({dep.type}
-                    {dep.lag !== 0
-                      ? `${dep.lag > 0 ? "+" : ""}${dep.lag}d`
-                      : ""}
-                    )
-                  </Badge>
-                );
-              })
-            )}
-            {!task.isMilestone && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0"
-                onClick={() => setDependencyTaskId(task.id)}
-              >
-                <Plus className="w-3 h-3" />
-              </Button>
-            )}
-          </div>
-        ),
-      },
-      {
-        key: "actions",
-        header: "操作",
-        width: 70,
-        align: "center",
-        interactive: true,
-        renderCell: (task) => (
-          <div className="flex items-center justify-center">
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">メニューを開く</span>
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {!task.isMilestone && (
-                  <DropdownMenuItem onClick={() => setEditingTaskId(task.id)}>
-                    <Pencil className="w-4 h-4" />
-                    編集
-                  </DropdownMenuItem>
-                )}
-                {!task.isMilestone && (
-                  <DropdownMenuItem
-                    onClick={() => setDependencyTaskId(task.id)}
-                  >
-                    <Link2 className="w-4 h-4" />
-                    依存関係を編集
-                  </DropdownMenuItem>
-                )}
-                {!task.isMilestone && (
-                  <DropdownMenuItem
-                    onClick={() => handleTaskDuplicate([task.id])}
-                  >
-                    <Copy className="w-4 h-4" />
-                    複製
-                  </DropdownMenuItem>
-                )}
-                {!task.isMilestone && <DropdownMenuSeparator />}
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => handleTaskDelete([task.id])}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  削除
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ),
-      },
-    ],
-    [tasks, handleTaskDuplicate, handleTaskDelete, kosuUnit],
+    () =>
+      createTaskColumns({
+        taskById,
+        kosuUnit,
+        onEditTask: setEditingTaskId,
+        onEditDependencies: setDependencyTaskId,
+        onDuplicate: handleTaskDuplicate,
+        onDelete: handleTaskDelete,
+      }),
+    [taskById, kosuUnit, handleTaskDuplicate, handleTaskDelete],
   );
 
   return (
