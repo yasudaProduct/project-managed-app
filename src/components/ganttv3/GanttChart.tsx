@@ -25,6 +25,7 @@ import {
 import { TimelineHeader } from "./TimelineHeader";
 import { TaskBar } from "./TaskBar";
 import { TaskListRow } from "./TaskListRow";
+import { InlineTaskEditPanel } from "./InlineTaskEditPanel";
 import { GridLines } from "./GridLines";
 import { DependencyArrows } from "./DependencyArrows";
 import { Button } from "../ui/button";
@@ -39,7 +40,6 @@ import {
   Pencil,
   Save,
   X,
-  Link2,
 } from "lucide-react";
 
 // タスクリスト幅の最小・最大（px）
@@ -59,14 +59,6 @@ const noop = () => {};
 // 日付を日数分シフトする（UTC基準でずれないよう epoch で計算）
 const addDays = (date: Date, days: number): Date =>
   new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-
-// 日付を <input type="date"> 用の YYYY-MM-DD へ（保存はUTC前提）
-const toDateInputValue = (date?: Date): string =>
-  date ? date.toISOString().slice(0, 10) : "";
-
-// <input type="date"> の値（YYYY-MM-DD）を UTC 0時の Date へ
-const fromDateInputValue = (value: string): Date | null =>
-  value ? new Date(`${value}T00:00:00.000Z`) : null;
 
 interface GanttChartProps {
   tasks: Task[];
@@ -795,121 +787,13 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
 
         {/* 編集モード: 選択タスクのインライン編集パネル */}
         {editMode && editingTask && (
-          <div className="flex flex-wrap items-end gap-3 border-b border-border bg-blue-50/40 px-4 py-2">
-            <div className="flex items-center gap-1.5 text-sm font-medium">
-              <span
-                className="h-2.5 w-2.5 flex-shrink-0 rounded-sm"
-                style={{ backgroundColor: editingTask.color }}
-              />
-              {editingTask.taskNo ? `${editingTask.taskNo} ` : ""}
-              {editingTask.name}
-            </div>
-
-            <label className="flex flex-col text-[11px] text-muted-foreground">
-              {editingTask.isMilestone ? "予定日" : "予定開始日"}
-              <input
-                type="date"
-                className="h-8 rounded border bg-background px-2 text-sm text-foreground"
-                value={toDateInputValue(editingTask.startDate)}
-                onChange={(e) => {
-                  const d = fromDateInputValue(e.target.value);
-                  if (!d) return;
-                  if (editingTask.isMilestone) {
-                    updateEditingField({ startDate: d, endDate: d });
-                  } else {
-                    const end =
-                      d.getTime() > editingTask.endDate.getTime()
-                        ? d
-                        : editingTask.endDate;
-                    updateEditingField({ startDate: d, endDate: end });
-                  }
-                }}
-              />
-            </label>
-
-            {!editingTask.isMilestone && (
-              <label className="flex flex-col text-[11px] text-muted-foreground">
-                予定終了日
-                <input
-                  type="date"
-                  className="h-8 rounded border bg-background px-2 text-sm text-foreground"
-                  value={toDateInputValue(editingTask.endDate)}
-                  onChange={(e) => {
-                    const d = fromDateInputValue(e.target.value);
-                    if (!d) return;
-                    const start =
-                      d.getTime() < editingTask.startDate.getTime()
-                        ? d
-                        : editingTask.startDate;
-                    updateEditingField({ startDate: start, endDate: d });
-                  }}
-                />
-              </label>
-            )}
-
-            {!editingTask.isMilestone && (
-              <label className="flex flex-col text-[11px] text-muted-foreground">
-                予定工数(h)
-                <input
-                  type="number"
-                  min={0}
-                  className="h-8 w-24 rounded border bg-background px-2 text-sm text-foreground"
-                  value={editingTask.duration}
-                  onChange={(e) =>
-                    updateEditingField({
-                      duration: e.target.valueAsNumber || 0,
-                    })
-                  }
-                />
-              </label>
-            )}
-
-            {!editingTask.isMilestone && (
-              <label className="flex flex-col text-[11px] text-muted-foreground">
-                担当者
-                <select
-                  className="h-8 w-36 rounded border bg-background px-2 text-sm text-foreground"
-                  value={editingTask.assigneeId ?? ""}
-                  onChange={(e) => {
-                    const id = e.target.value
-                      ? Number(e.target.value)
-                      : undefined;
-                    const name = assignees.find((a) => a.id === id)?.name;
-                    updateEditingField({ assigneeId: id, assignee: name });
-                  }}
-                >
-                  <option value="">未割当</option>
-                  {assignees.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            {!editingTask.isMilestone && onEditDependencies && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => onEditDependencies(editingTask.id)}
-              >
-                <Link2 className="w-4 h-4" />
-                依存関係
-              </Button>
-            )}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="ml-auto h-8 w-8 p-0"
-              onClick={() => setEditingTaskId(null)}
-              title="閉じる"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <InlineTaskEditPanel
+            task={editingTask}
+            assignees={assignees}
+            onChange={updateEditingField}
+            onEditDependencies={onEditDependencies}
+            onClose={() => setEditingTaskId(null)}
+          />
         )}
 
         <div ref={ref} className="w-full h-full bg-background gantt-chart">
