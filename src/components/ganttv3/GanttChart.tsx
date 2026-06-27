@@ -796,7 +796,11 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
           />
         )}
 
-        <div ref={ref} className="w-full h-full bg-background gantt-chart">
+        <div
+          ref={ref}
+          data-testid="ganttv3-chart"
+          className="w-full h-full bg-background gantt-chart"
+        >
           <div ref={chartContentRef} className="flex h-full">
             {/* タスクリスト列 */}
             <div

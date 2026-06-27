@@ -17,6 +17,8 @@ export const ViewSwitcher = ({
         size="sm"
         onClick={() => onViewChange("gantt")}
         className="gap-2"
+        data-testid="view-switcher-gantt"
+        aria-label="ガント表示"
       >
         <BarChart3 className="w-4 h-4" />
       </Button>
@@ -25,6 +27,8 @@ export const ViewSwitcher = ({
         size="sm"
         onClick={() => onViewChange("table")}
         className="gap-2"
+        data-testid="view-switcher-table"
+        aria-label="テーブル表示"
       >
         <Table2 className="w-4 h-4" />
       </Button>
