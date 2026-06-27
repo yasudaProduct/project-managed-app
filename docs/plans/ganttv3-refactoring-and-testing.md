@@ -40,45 +40,47 @@
 |---|---|---|---|
 | 1 | **コンポーネント設計方針の策定** | [ganttv3-component-design-policy.md](../design/ganttv3-component-design-policy.md) | ✅ 完了 |
 | 2 | **純粋ロジック抽出 + ユニットテスト**（TDD） | `utils/` 純粋関数群 + テスト | ✅ 完了 |
-| 3 | **コンポーネント／hook リファクタ** | hook分離・コンテナ分離・コンポーネント分割 | 🔄 進行中（hook分離・memo化完了 / ドラッグ系hook・SVG行分割が残） |
-| 4 | **コンポーネントテスト導入** | RTL テスト + 共通テストユーティリティ | 🔄 進行中（hook/プレゼン系完了 / GanttChart統合テストが残） |
+| 3 | **コンポーネント／hook リファクタ** | hook分離・コンテナ分離・コンポーネント分割 | 🔄 進行中（hook分離・memo化・分割完了 / ドラッグ系hook・SVG行分割が残） |
+| 4 | **コンポーネントテスト導入** | RTL テスト + 共通テストユーティリティ | ✅ 完了（hook/プレゼン系/統合スモーク） |
 | 5 | **E2E テスト導入 + CI 方針決定** | Playwright ganttv3 spec | ⬜ 未着手 |
 
 - Stage 2 のロジック抽出は他の依存が少なく独立して進められるため**最初に着手**。
 - Stage 3 のリファクタは Stage 1 の方針確定が前提。
 - 各 Stage は独立 PR に分割可能。CLAUDE.md の **TDD 原則**（テスト先行→失敗確認→実装）に従う。
 
-### 進捗状況（2026-06-23 時点）
+### 進捗状況（2026-06-27 時点）
 
-作業ブランチ `ganttv3-refactoring`、**11コミット**（ロジック→hook→memo化→テスト）。各コミットで build / lint / 全ユニットテスト グリーン・**挙動不変**を確認。ganttv3 関連で **+102 テスト**（全体 **1277** パス）。
+作業ブランチ `ganttv3-refactoring`、**16コミット**（ロジック→hook→memo化→テスト→分割）。各コミットで build / lint / 全ユニットテスト グリーン・**挙動不変**を確認。ganttv3 関連で **+128 テスト**（全体 **1303** パス）。
 
 **完了**
 - **Stage 1**: 設計方針策定（[design policy](../design/ganttv3-component-design-policy.md)）。
-- **Stage 2**: 純粋ロジック7モジュールを `utils/` へ抽出 + ユニットテスト **59件**。
+- **Stage 2**: 純粋ロジック7モジュールを `utils/` へ抽出 + ユニットテスト。
   - `criticalPath` / `dependencyGraph` / `diffDependencies` / `taskMapper` / `downloadBlob` / `timelineGeometry` / `timelineHeaders`（+ 既存 `groupTasks` のテスト追加）
-  - コミット: `cf52a10`（純粋ロジック5種）, `d7f7477`（座標計算の統一）
+  - コミット: `cf52a10`, `d7f7477`
 - **Stage 3（hook 分離）**: データ/編集系をコンテナから分離。
   - `useGanttData`（`f2455d7`） / `useGanttMutations`（`1cc0f02`） / `useGanttDraftEditing`（`2f53e87`）
-  - `GanttV3Client.tsx`: **1284 → 565 行**（データ取得・CRUD・編集の実装詳細を hook へ移譲）
-- **Stage 3（memo 化・行分割）**: ドラッグ/スクロール中の再レンダー抑制。
-  - `TaskBar` を `React.memo` 化 + `onDragStart` 安定参照化（`674e6be`）
-  - 左タスク行を `TaskListRow`（memo）へ分離、`utils/taskFormat` 抽出（`cd1ee55`）
-  - `GanttChart.tsx`: **1365 → 1270 行**
-- **Stage 4（テスト安全網）**: リファクタ範囲を保護。
-  - 抽出 hook 3種に `renderHook` + Server Actions モックで **22件**（`1c938ac`）
-  - プレゼン系（TaskBar/GridLines/DependencyArrows/TimelineHeader）に **14件** + 共通フィクスチャ（`313b69e`）
-  - `TaskListRow`/`taskFormat` に **7件**（`cd1ee55`）
+- **Stage 3（memo 化・コンポーネント分割）**: 再レンダー抑制と責務分割。
+  - `TaskBar` memo 化 + `onDragStart` 安定参照化（`674e6be`）
+  - `TaskListRow`（memo）分離 + `utils/taskFormat`（`cd1ee55`）
+  - `TimelineHeader` のヘッダ生成抽出 + `scrollLeft` 非依存 `useMemo`（`02fef37`）
+  - テーブル列定義を `taskTableColumns` ファクトリへ分離 + 依存引き Map 化（`85afdbd`）
+  - インライン編集パネルを `InlineTaskEditPanel` へ分離 + `utils/dateInput`（`26feaa2`）
+  - **`GanttV3Client.tsx`: 1284 → 373 行（-71%）** / **`GanttChart.tsx`: 1365 → 1154 行**
+- **Stage 4（テスト安全網）**: ✅ 完了。
+  - 抽出 hook 3種に `renderHook` + Server Actions モック **22件**（`1c938ac`）
+  - プレゼン系（TaskBar/GridLines/DependencyArrows/TimelineHeader）**14件** + 共通フィクスチャ（`313b69e`）
+  - `TaskListRow`/`taskFormat` **7件**（`cd1ee55`）、`InlineTaskEditPanel`/`dateInput` **11件**（`26feaa2`）、`taskTableColumns` **4件**（`85afdbd`）、ヘッダ生成 **9件**（`02fef37`）
+  - `GanttV3Client` 統合スモークテスト **4件**（`fe920ae`）
 
 **残**
-- **Stage 3（中〜低・要 E2E 安全網）**: `useBarDrag`/`usePanelResize`/`useRowScale`/`useScrollSync`（GanttChart のドラッグ/スクロールを hook 化）、SVG 側の `TimelineRow` 分割、TimelineHeader メモ化（+ ヘッダ生成抽出）、columns ファクトリ化・インライン編集パネル分割。
-- **Stage 4（残）**: `GanttV3Client` の統合スモークテスト（jsdom polyfill ＋ action モック）。
+- **Stage 3（中〜低・要 E2E 安全網）**: `useBarDrag`/`usePanelResize`/`useRowScale`/`useScrollSync`（GanttChart のドラッグ/スクロールを hook 化）、SVG 側の `TimelineRow` 分割。
 - **Stage 5**: ganttv3 E2E（Playwright）。着手には §8 の判断（データ準備=実DB/モック・CI 実行有無）が必要。
 
 **判明した既存課題（挙動は未変更・別途対応）**
 - `groupBy='phase'` で **phases に無い非空カテゴリのタスクが出力から脱落**（`groupTasks.test.ts` で特性化）。phase ビューでタスクが消えて見える不具合の原因になり得る。
 - `year` スケールの `scaleMultiplier` が GanttChart(90)/TimelineHeader(7) で不整合だった → 座標統一時に GanttChart 基準(90)へ是正（day/week/month/quarter は不変）。
 
-**進め方の調整**: ドラッグ/スクロール系 hook（DOM直結・jsdom非対応）は回帰検知が難しいため、当初計画から順序を調整し **Stage 4 のテスト安全網を先行**させた。ドラッグ最重要要素（TaskBar/左行）の memo 化は完了済み。残るドラッグ系 hook 化は **Stage 5 の E2E を整備してから**着手する。
+**進め方の調整**: ドラッグ/スクロール系 hook（DOM直結・jsdom非対応）は回帰検知が難しいため、テスト安全網（Stage 4）と低リスクな分割（ヘッダ/列/編集パネル）を先行。ドラッグ最重要要素（TaskBar/左行）の memo 化は完了済み。残るドラッグ系 hook 化（A1）と SVG 行分割（A2）は **Stage 5 の E2E を整備してから**着手する。
 
 ---
 
