@@ -52,7 +52,7 @@ interface GanttV3ClientProps {
 }
 
 export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
-  const { tasks, setTasks, categories, assignees, refetchTasks } =
+  const { tasks, setTasks, categories, assignees, refetchTasks, isLoading } =
     useGanttData(wbsId);
 
   const [currentView, setCurrentView] = useState<"gantt" | "table">("gantt");
@@ -318,6 +318,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
             onCancelEdit={handleCancelEdit}
             onEditDependencies={handleEditDependencies}
             isSaving={isSavingEdit}
+            isDataLoading={isLoading}
           />
         ) : (
           <TaskTable

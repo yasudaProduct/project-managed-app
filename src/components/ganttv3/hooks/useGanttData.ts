@@ -21,6 +21,9 @@ export function useGanttData(wbsId: number) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<GanttPhase[]>([]);
   const [assignees, setAssignees] = useState<AssigneeOption[]>([]);
+  // 初回（および wbsId 切替時）のタスク取得が完了するまで true。
+  // ロード前は tasks が空のため、この間に編集モードへ入ると空ドラフトになる。
+  const [isLoading, setIsLoading] = useState(true);
 
   // サーバーから最新タスクを取得してStateへ反映
   const refetchTasks = useCallback(async () => {
@@ -30,7 +33,8 @@ export function useGanttData(wbsId: number) {
 
   // 初期ロード
   useEffect(() => {
-    refetchTasks();
+    setIsLoading(true);
+    refetchTasks().finally(() => setIsLoading(false));
     const fetchPhases = async () => {
       const phases = await getPhases(wbsId);
       setCategories(phases);
@@ -43,5 +47,5 @@ export function useGanttData(wbsId: number) {
     fetchAssignees();
   }, [wbsId, refetchTasks]);
 
-  return { tasks, setTasks, categories, assignees, refetchTasks };
+  return { tasks, setTasks, categories, assignees, refetchTasks, isLoading };
 }

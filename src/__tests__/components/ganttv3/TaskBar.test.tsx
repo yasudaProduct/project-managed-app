@@ -70,6 +70,13 @@ describe("TaskBar", () => {
     ).toBeInTheDocument();
   });
 
+  it("data-task-id 属性を持つ（E2E用フック）", () => {
+    const { container } = renderInSvg(
+      <TaskBar {...baseProps} task={makeTask({ id: "task-9" })} style={makeStyle()} />,
+    );
+    expect(container.querySelector('[data-task-id="task-9"]')).toBeInTheDocument();
+  });
+
   it("バーの mousedown で onDragStart(move) が発火", () => {
     const onDragStart = jest.fn();
     const task = makeTask({ id: "abc" });

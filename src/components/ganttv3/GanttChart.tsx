@@ -87,6 +87,8 @@ interface GanttChartProps {
   onEditDependencies?: (taskId: string) => void;
   /** 保存処理中かどうか */
   isSaving?: boolean;
+  /** 初回データ読込中か（trueの間は編集モードに入れない） */
+  isDataLoading?: boolean;
 }
 
 // 単一行タイプ - タスクリストとタイムラインの両方で使用し、完全な1:1整列を保証する
@@ -121,6 +123,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       onCancelEdit,
       onEditDependencies,
       isSaving = false,
+      isDataLoading = false,
     },
     ref,
   ) => {
@@ -734,6 +737,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                   onClick={onSaveEdit}
                   disabled={isSaving}
                   className="gap-2"
+                  data-testid="ganttv3-edit-save"
                 >
                   <Save className="w-4 h-4" />
                   {isSaving ? "保存中..." : "保存"}
@@ -744,6 +748,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                   onClick={onCancelEdit}
                   disabled={isSaving}
                   className="gap-2"
+                  data-testid="ganttv3-edit-cancel"
                 >
                   <X className="w-4 h-4" />
                   キャンセル
@@ -755,7 +760,9 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                   variant="outline"
                   size="sm"
                   onClick={onEnterEditMode}
+                  disabled={isDataLoading}
                   className="gap-2"
+                  data-testid="ganttv3-edit-toggle"
                 >
                   <Pencil className="w-4 h-4" />
                   編集モード

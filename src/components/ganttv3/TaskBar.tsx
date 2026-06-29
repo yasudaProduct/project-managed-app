@@ -43,6 +43,7 @@ export const TaskBar = memo(function TaskBar({
 
     return (
       <g
+        data-task-id={task.id}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -104,6 +105,7 @@ export const TaskBar = memo(function TaskBar({
 
   return (
     <g
+      data-task-id={task.id}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
