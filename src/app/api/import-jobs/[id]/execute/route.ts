@@ -11,7 +11,6 @@ import { NotificationType } from '@/types/notification'
 import { NotificationPriority } from '@/domains/notification/notification-priority'
 import { NotificationChannel } from '@/domains/notification/notification-channel'
 import { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
-import { SyncQualityTargetsService } from '@/applications/quality/sync-quality-targets.service'
 
 interface Params {
   id: string
@@ -186,17 +185,6 @@ async function executeWbsImport(jobId: string, job: ImportJob) {
 
     if (result.success) {
 
-      // 品質評価対象の自動同期（PostgreSQLに取り込まれたWbsTaskのtantoRev由来）
-      try {
-        await syncQualityTargetsFromWbs(jobId, job.wbsId)
-      } catch (qualityError) {
-        // 品質同期の失敗はWBSインポート自体の成功を妨げない
-        await importJobService.addProgress(jobId, {
-          message: `品質評価対象の同期でエラーが発生しました: ${qualityError instanceof Error ? qualityError.message : String(qualityError)}`,
-          level: 'warning',
-        })
-      }
-
       // 完了（同期結果の実数を反映）
       await importJobService.completeJob(jobId, {
         recordCount: result.recordCount,
@@ -227,23 +215,6 @@ async function executeWbsImport(jobId: string, job: ImportJob) {
   } catch (error) {
     throw error
   }
-}
-
-/**
- * WBSインポート完了後、PostgreSQLに取り込まれたWbsTaskを起点に
- * 品質評価対象(QualityReviewTarget)を自動同期する。
- * （MySQLを再参照せず、常にPostgreSQLのWbsTaskを唯一のソースとする）
- */
-async function syncQualityTargetsFromWbs(jobId: string, wbsId: number) {
-  const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
-  const syncQualityService = container.get<SyncQualityTargetsService>(SYMBOL.SyncQualityTargetsService)
-
-  const qualityResult = await syncQualityService.syncForWbs(wbsId)
-
-  await importJobService.addProgress(jobId, {
-    message: `品質評価対象を同期しました（新規: ${qualityResult.created}件 / 更新: ${qualityResult.updated}件 / 無効化: ${qualityResult.deactivated}件）`,
-    level: 'info',
-  })
 }
 
 /**
