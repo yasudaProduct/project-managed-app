@@ -23,24 +23,6 @@ export async function getWbsPhases(wbsId: number) {
     return phases
 }
 
-export async function createWbsPhase(wbsId: number, phaseData: { name: string; code: string; seq: number }): Promise<{ success: boolean; phase?: WbsPhase; error?: string }> {
-
-    const cheackPhase = await prisma.wbsPhase.findFirst({ where: { name: phaseData.name } });
-    if (cheackPhase) {
-        return { success: false, error: "同じ工程がすでに存在します。" };
-    }
-
-    const newPhase = await prisma.wbsPhase.create({
-        data: {
-            wbsId,
-            name: phaseData.name,
-            code: phaseData.code,
-            seq: phaseData.seq,
-        },
-    })
-    return { success: true, phase: newPhase }
-}
-
 export async function updateWbsPhase(id: number, phaseData: { name?: string; code?: string; seq?: number }): Promise<{ success: boolean; phase?: WbsPhase; error?: string }> {
     const updatedPhase = await prisma.wbsPhase.update({
         where: { id },

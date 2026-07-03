@@ -217,28 +217,6 @@ export async function sendTestNotification(
 }
 
 /**
- * 通知の未読数を取得する
- */
-export async function getUnreadCount(): Promise<NotificationActionResult> {
-  try {
-    const userId = await getCurrentUserIdOrThrow();
-
-    const count = await notificationService.getUnreadCount(userId);
-
-    return {
-      success: true,
-      data: { count }
-    };
-  } catch (error) {
-    console.error('Failed to get unread count:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to get unread count'
-    };
-  }
-}
-
-/**
  * 通知設定を取得する
  */
 export async function getNotificationPreferences(): Promise<NotificationActionResult> {

@@ -35,12 +35,3 @@ export async function getWorkRecords() {
 
     return formattedWorkRecords;
 }
-
-// TODO: サービス呼び出し
-export async function getWorkRecordById(id: string) {
-    return await prisma.workRecord.findUnique({
-        where: {
-            id: parseInt(id),
-        },
-    });
-}
