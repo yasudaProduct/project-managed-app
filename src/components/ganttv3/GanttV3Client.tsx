@@ -1,67 +1,28 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import {
-  Task,
+import { useState, useCallback, useEffect, useMemo } from "react";
+import type {
   TimelineScale,
   GanttStyle,
-  Category,
-  ViewSwitcher,
-  QuickActions,
-  GanttChart,
   GroupBy,
   TaskSortBy,
-} from "@/components/ganttv3";
+} from "@/components/ganttv3/gantt";
+import { ViewSwitcher } from "@/components/ganttv3/ViewSwitcher";
+import { QuickActions } from "@/components/ganttv3/QuickActions";
+import { GanttChart } from "@/components/ganttv3/GanttChart";
 import { TaskTable, TaskTableColumn } from "@/components/ganttv3/TaskTable";
 import { DependencyEditModal } from "@/components/ganttv3/DependencyEditModal";
 import { TaskModal } from "@/components/wbs/task-modal";
-import { WbsTask } from "@/types/wbs";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { formatDate } from "@/utils/date-util";
-import { getTaskStatusName } from "@/utils/utils";
-import {
-  HoursUnit,
-  HOURS_UNIT_LABELS,
-  formatHoursWithUnit,
-} from "@/utils/hours-converter";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Copy,
-  Flag,
-  Link2,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import {
-  getGanttTasks,
-  getPhases,
-  getAssigneeOptions,
-} from "@/app/wbs/[id]/ganttv3/action";
-import {
-  createTask,
-  updateTask,
-  deleteTask,
-} from "@/app/wbs/[id]/actions/wbs-task-actions";
-import {
-  updateMilestone,
-  deleteMilestone,
-} from "@/app/wbs/[id]/actions/milestone-actions";
-import {
-  createGanttDependency,
-  deleteGanttDependency,
-} from "@/app/wbs/[id]/ganttv3/dependency-actions";
+import { HoursUnit, HOURS_UNIT_LABELS } from "@/utils/hours-converter";
 import { getGanttTasksTsv } from "@/app/wbs/[id]/ganttv3/export-actions";
-import { DependencyType } from "@/components/ganttv3/gantt";
 import { groupTasksByType } from "@/components/ganttv3/utils/groupTasks";
+import { useGanttData } from "@/components/ganttv3/hooks/useGanttData";
+import { useGanttMutations } from "@/components/ganttv3/hooks/useGanttMutations";
+import { useGanttDraftEditing } from "@/components/ganttv3/hooks/useGanttDraftEditing";
+import { toWbsTask } from "@/components/ganttv3/utils/taskMapper";
+import { createTaskColumns } from "@/components/ganttv3/taskTableColumns";
+import { tsvBlob, downloadBlob } from "@/components/ganttv3/utils/downloadBlob";
+import { toErrorMessage } from "@/components/ganttv3/utils/toErrorMessage";
 import { toast } from "@/hooks/use-toast";
 
 const defaultGanttStyle: GanttStyle = {
@@ -92,206 +53,57 @@ interface GanttV3ClientProps {
 }
 
 export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { tasks, setTasks, categories, assignees, refetchTasks, isLoading } =
+    useGanttData(wbsId); // タスクデータ
 
-  const [categories, setCategories] = useState<Category[]>([]);
-
-  // 編集モードの担当者プルダウン用の選択肢（seq昇順）
-  const [assignees, setAssignees] = useState<{ id: number; name: string }[]>(
-    [],
-  );
-
-  const [currentView, setCurrentView] = useState<"gantt" | "table">("gantt");
-  const [timelineScale, setTimelineScale] = useState<TimelineScale>("month");
-  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [currentView, setCurrentView] = useState<"gantt" | "table">("gantt"); // チャート/テーブル表示
+  const [timelineScale, setTimelineScale] = useState<TimelineScale>("month"); // タイムラインのスケール
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set()); // 選択されたタスク
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(),
-  );
-
-  // Add zoom level state
-  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
-
-  const [ganttStyle, setGanttStyle] = useState<GanttStyle>(defaultGanttStyle);
-
-  // Add groupBy state
-  const [groupBy, setGroupBy] = useState<GroupBy>("phase");
-
-  // グループ内のタスクの並び順
-  const [sortBy, setSortBy] = useState<TaskSortBy>("taskNo");
-
-  // 現在のグルーピングにおける実グループ名（GanttChart の groupTasksByType と同一ロジック）
-  const groupNames = useMemo(
-    () => groupTasksByType(tasks, groupBy, categories).map((g) => g.name),
-    [tasks, groupBy, categories],
-  );
-  // グループ名の集合（順不同で同一性を判定するためのキー）
-  const groupNamesKey = useMemo(
-    () => [...groupNames].sort().join("\u001f"),
-    [groupNames],
-  );
+  ); // 展開されたカテゴリ
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0); // ズームレベル
+  const [ganttStyle, setGanttStyle] = useState<GanttStyle>(defaultGanttStyle); // グラントチャートのスタイル
+  const [groupBy, setGroupBy] = useState<GroupBy>("phase"); // グループ化の基準
+  const [sortBy, setSortBy] = useState<TaskSortBy>("taskNo"); // グループ内のタスクの並び順
 
   // モーダル制御（編集対象はIDで保持し、最新の tasks から都度引き直す）
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [dependencyTaskId, setDependencyTaskId] = useState<string | null>(null);
 
   // テーブルの工数表示単位（時間 / 人日）
-  const [kosuUnit, setKosuUnit] = useState<HoursUnit>("hours");
+  const [kosuUnit, setKosuUnit] = useState<HoursUnit>("hours"); // 工数表示単位
 
-  // チャート編集モード（保存するまでDBへ反映しないドラフト方式）
-  const [editMode, setEditMode] = useState(false);
-  const [draftTasks, setDraftTasks] = useState<Task[] | null>(null);
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
-  // ドラフトで新規追加した依存関係に振る一時ID（負値）
-  const tempDepIdRef = useRef(-1);
+  // チャート編集モード（ドラフト方式）。確定タスクへの即時反映は useGanttMutations 側。
+  const {
+    editMode,
+    isSavingEdit,
+    chartTasks,
+    handleEnterEditMode,
+    handleCancelEdit,
+    handleDraftTaskUpdate,
+    handleDraftDependencyAdd,
+    handleDraftDependencyRemove,
+    handleDraftDependencyUpdate,
+    handleSaveEdit,
+  } = useGanttDraftEditing({
+    tasks,
+    wbsId,
+    refetchTasks,
+    onExitEditMode: () => setDependencyTaskId(null),
+  });
 
-  // クリティカルパス計算
-  const calculateCriticalPath = useCallback((updatedTasks: Task[]): Task[] => {
-    const DAY = 24 * 60 * 60 * 1000;
-    const taskMap = new Map(
-      updatedTasks.map((task) => [
-        task.id,
-        { ...task, isOnCriticalPath: false },
-      ]),
-    );
-
-    // 依存種別とラグから、後続タスクの最早開始の下限を算出する
-    const impliedStart = (
-      predStart: number,
-      predFinish: number,
-      successorDuration: number,
-      type: DependencyType,
-      lag: number,
-    ): number => {
-      const lagMs = lag * DAY;
-      const durMs = successorDuration * DAY;
-      switch (type) {
-        case "SS":
-          return predStart + lagMs;
-        case "FF":
-          return predFinish + lagMs - durMs;
-        case "SF":
-          return predStart + lagMs - durMs;
-        case "FS":
-        default:
-          return predFinish + lagMs;
-      }
-    };
-
-    // 各タスクの最早開始時刻（メモ化）
-    const earliestStartCache = new Map<string, number>();
-    const calculateEarliestStart = (
-      taskId: string,
-      visited = new Set<string>(),
-    ): number => {
-      const cached = earliestStartCache.get(taskId);
-      if (cached !== undefined) return cached;
-      if (visited.has(taskId)) return 0;
-      visited.add(taskId);
-
-      const task = taskMap.get(taskId);
-      if (!task) return 0;
-
-      let earliestStart = task.startDate.getTime();
-
-      for (const pred of task.predecessors) {
-        const predTask = taskMap.get(pred.taskId);
-        if (predTask) {
-          const predStart = calculateEarliestStart(pred.taskId, visited);
-          const predFinish = predStart + predTask.duration * DAY;
-          earliestStart = Math.max(
-            earliestStart,
-            impliedStart(
-              predStart,
-              predFinish,
-              task.duration,
-              pred.type,
-              pred.lag,
-            ),
-          );
-        }
-      }
-
-      earliestStartCache.set(taskId, earliestStart);
-      return earliestStart;
-    };
-
-    // 全タスクの最早開始を確定
-    for (const task of updatedTasks) {
-      calculateEarliestStart(task.id);
-    }
-
-    const criticalTasks = new Set<string>();
-
-    const endTasks = updatedTasks.filter(
-      (t) =>
-        t.isMilestone ||
-        !updatedTasks.some((other) =>
-          other.predecessors.some((pred) => pred.taskId === t.id),
-        ),
-    );
-
-    const markCriticalPath = (taskId: string, visited = new Set<string>()) => {
-      if (visited.has(taskId)) return;
-      visited.add(taskId);
-
-      const task = taskMap.get(taskId);
-      if (!task) return;
-
-      criticalTasks.add(taskId);
-
-      const taskStart = earliestStartCache.get(taskId) ?? 0;
-
-      for (const pred of task.predecessors) {
-        const predTask = taskMap.get(pred.taskId);
-        if (predTask) {
-          const predStart = earliestStartCache.get(pred.taskId) ?? 0;
-          const predFinish = predStart + predTask.duration * DAY;
-          const implied = impliedStart(
-            predStart,
-            predFinish,
-            task.duration,
-            pred.type,
-            pred.lag,
-          );
-
-          // この依存が後続の開始を律速している（余裕ゼロ）ならクリティカル
-          if (Math.abs(implied - taskStart) < DAY) {
-            markCriticalPath(pred.taskId, visited);
-          }
-        }
-      }
-    };
-
-    for (const endTask of endTasks) {
-      markCriticalPath(endTask.id);
-    }
-
-    return updatedTasks.map((task) => ({
-      ...task,
-      isOnCriticalPath: criticalTasks.has(task.id),
-    }));
-  }, []);
-
-  // サーバーから最新タスクを取得してStateへ反映
-  const refetchTasks = useCallback(async () => {
-    const fresh = await getGanttTasks(wbsId);
-    setTasks(calculateCriticalPath(fresh));
-  }, [wbsId, calculateCriticalPath]);
-
-  // 初期ロード
-  useEffect(() => {
-    refetchTasks();
-    const fetchPhases = async () => {
-      const phases = await getPhases(wbsId);
-      setCategories(phases);
-    };
-    fetchPhases();
-    const fetchAssignees = async () => {
-      const options = await getAssigneeOptions(wbsId);
-      setAssignees(options);
-    };
-    fetchAssignees();
-  }, [wbsId, refetchTasks]);
+  // 現在のグルーピングにおける実グループ名。チャートは chartTasks を描画するため、
+  // 編集モード中のドラフトで増減したグループも展開対象に含める。
+  const groupNames = useMemo(
+    () => groupTasksByType(chartTasks, groupBy, categories).map((g) => g.name),
+    [chartTasks, groupBy, categories],
+  );
+  // グループ名の集合（順不同で同一性を判定するためのキー）
+  const groupNamesKey = useMemo(
+    () => [...groupNames].sort().join("\u001f"),
+    [groupNames],
+  );
 
   // グルーピングの切替やデータ初回ロードでグループ名の集合が変わったら、全グループを展開状態にする
   useEffect(() => {
@@ -300,313 +112,23 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupNamesKey]);
 
-  // イベントハンドラ
-  // タスク/マイルストーンの更新（楽観的更新 → サーバー保存 → 失敗時ロールバック）
-  const handleTaskUpdate = useCallback(
-    async (updatedTask: Task) => {
-      const prevTasks = tasks;
-      const newTasks = tasks.map((task) =>
-        task.id === updatedTask.id ? updatedTask : task,
-      );
-      setTasks(calculateCriticalPath(newTasks));
-
-      try {
-        const dbId = Number(updatedTask.dbId ?? updatedTask.id);
-        const result = updatedTask.isMilestone
-          ? await updateMilestone({
-              id: dbId,
-              name: updatedTask.name,
-              date: updatedTask.startDate,
-              wbsId,
-            })
-          : await updateTask(wbsId, {
-              id: dbId,
-              taskNo: updatedTask.taskNo,
-              name: updatedTask.name,
-              yoteiStart: updatedTask.startDate,
-              yoteiEnd: updatedTask.endDate,
-              yoteiKosu: updatedTask.duration,
-              status: updatedTask.status ?? "NOT_STARTED",
-              assigneeId: updatedTask.assigneeId,
-              phaseId: updatedTask.phaseId,
-            });
-
-        if (!result.success) {
-          setTasks(calculateCriticalPath(prevTasks));
-          toast({
-            title: "更新に失敗しました",
-            description: result.error,
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        setTasks(calculateCriticalPath(prevTasks));
-        toast({
-          title: "更新に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
-          variant: "destructive",
-        });
-      }
-    },
-    [tasks, calculateCriticalPath, wbsId],
-  );
-
-  // タスク追加（サーバーに作成 → 再取得）
-  const handleTaskAdd = useCallback(
-    async (newTask: Omit<Task, "id">) => {
-      const phaseId =
-        newTask.phaseId ??
-        (categories[0] ? Number(categories[0].id) : undefined);
-      if (!phaseId) {
-        toast({
-          title: "タスクを追加できません",
-          description: "フェーズが存在しません",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      try {
-        const result = await createTask(wbsId, {
-          name: newTask.name,
-          periods: [
-            {
-              startDate: newTask.startDate.toISOString(),
-              endDate: newTask.endDate.toISOString(),
-              type: "YOTEI",
-              kosus: [{ kosu: newTask.duration ?? 0, type: "NORMAL" }],
-            },
-          ],
-          status: newTask.status ?? "NOT_STARTED",
-          assigneeId: newTask.assigneeId
-            ? String(newTask.assigneeId)
-            : undefined,
-          phaseId,
-        });
-
-        if (result.success) {
-          await refetchTasks();
-        } else {
-          toast({
-            title: "タスクの追加に失敗しました",
-            description: result.error,
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "タスクの追加に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
-          variant: "destructive",
-        });
-      }
-    },
-    [wbsId, categories, refetchTasks],
-  );
-
-  // タスク/マイルストーン削除（楽観的削除 → サーバー削除 → 失敗時は再取得で同期）
-  const handleTaskDelete = useCallback(
-    async (taskIds: string[]) => {
-      const targets = tasks.filter((task) => taskIds.includes(task.id));
-      const prevTasks = tasks;
-
-      const filtered = prevTasks.filter((task) => !taskIds.includes(task.id));
-      setTasks(
-        calculateCriticalPath(
-          filtered.map((task) => ({
-            ...task,
-            predecessors: task.predecessors.filter(
-              (pred) => !taskIds.includes(pred.taskId),
-            ),
-          })),
-        ),
-      );
-      setSelectedTasks(new Set());
-
-      try {
-        const results = await Promise.all(
-          targets.map((task) => {
-            const dbId = Number(task.dbId ?? task.id);
-            return task.isMilestone
-              ? deleteMilestone(dbId, wbsId)
-              : deleteTask(dbId);
-          }),
-        );
-        if (results.some((r) => !r.success)) {
-          toast({
-            title: "一部のタスクの削除に失敗しました",
-            variant: "destructive",
-          });
-          await refetchTasks();
-        }
-      } catch (error) {
-        toast({
-          title: "タスクの削除に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
-          variant: "destructive",
-        });
-        await refetchTasks();
-      }
-    },
-    [tasks, calculateCriticalPath, wbsId, refetchTasks],
-  );
-
-  // タスク複製（サーバーに新規作成 → 再取得）。マイルストーンは対象外。
-  const handleTaskDuplicate = useCallback(
-    async (taskIds: string[]) => {
-      const targets = tasks.filter(
-        (task) => taskIds.includes(task.id) && !task.isMilestone,
-      );
-      if (targets.length === 0) return;
-
-      try {
-        for (const task of targets) {
-          const phaseId =
-            task.phaseId ??
-            (categories[0] ? Number(categories[0].id) : undefined);
-          if (!phaseId) continue;
-          await createTask(wbsId, {
-            name: `${task.name} (Copy)`,
-            periods: [
-              {
-                startDate: task.startDate.toISOString(),
-                endDate: task.endDate.toISOString(),
-                type: "YOTEI",
-                kosus: [{ kosu: task.duration ?? 0, type: "NORMAL" }],
-              },
-            ],
-            status: task.status ?? "NOT_STARTED",
-            assigneeId: task.assigneeId ? String(task.assigneeId) : undefined,
-            phaseId,
-          });
-        }
-        await refetchTasks();
-      } catch (error) {
-        toast({
-          title: "タスクの複製に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
-          variant: "destructive",
-        });
-      }
-    },
-    [tasks, wbsId, categories, refetchTasks],
-  );
-
-  // 依存関係を追加（サーバーに作成 → 再取得）
-  const handleDependencyAdd = useCallback(
-    async (
-      successorTaskId: string,
-      predecessorTaskId: string,
-      type: DependencyType,
-      lag: number,
-    ) => {
-      try {
-        const result = await createGanttDependency(wbsId, {
-          successorTaskId: Number(successorTaskId),
-          predecessorTaskId: Number(predecessorTaskId),
-          type,
-          lag,
-        });
-
-        if (result.success) {
-          await refetchTasks();
-        } else {
-          toast({
-            title: "依存関係の追加に失敗しました",
-            description: result.error,
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "依存関係の追加に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
-          variant: "destructive",
-        });
-      }
-    },
-    [wbsId, refetchTasks],
-  );
-
-  // 依存関係を削除（楽観的更新 → サーバー削除）
-  const handleDependencyRemove = useCallback(
-    async (dependencyDbId: number) => {
-      const prevTasks = tasks;
-      const newTasks = tasks.map((task) => ({
-        ...task,
-        predecessors: task.predecessors.filter(
-          (pred) => pred.dbId !== dependencyDbId,
-        ),
-      }));
-      setTasks(calculateCriticalPath(newTasks));
-
-      try {
-        const result = await deleteGanttDependency(wbsId, dependencyDbId);
-        if (!result.success) {
-          setTasks(calculateCriticalPath(prevTasks));
-          toast({
-            title: "依存関係の削除に失敗しました",
-            description: result.error,
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        setTasks(calculateCriticalPath(prevTasks));
-        toast({
-          title: "依存関係の削除に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
-          variant: "destructive",
-        });
-      }
-    },
-    [tasks, calculateCriticalPath, wbsId],
-  );
-
-  // 依存関係を編集（更新APIが無いため 旧依存を削除 → 新依存を作成 → 再取得）
-  const handleDependencyUpdate = useCallback(
-    async (
-      dependencyDbId: number,
-      successorTaskId: string,
-      predecessorTaskId: string,
-      type: DependencyType,
-      lag: number,
-    ) => {
-      try {
-        const deleted = await deleteGanttDependency(wbsId, dependencyDbId);
-        if (!deleted.success) {
-          toast({
-            title: "依存関係の更新に失敗しました",
-            description: deleted.error,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        const created = await createGanttDependency(wbsId, {
-          successorTaskId: Number(successorTaskId),
-          predecessorTaskId: Number(predecessorTaskId),
-          type,
-          lag,
-        });
-        if (!created.success) {
-          toast({
-            title: "依存関係の更新に失敗しました",
-            description: created.error,
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "依存関係の更新に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
-          variant: "destructive",
-        });
-      } finally {
-        await refetchTasks();
-      }
-    },
-    [wbsId, refetchTasks],
-  );
+  // 確定タスク/依存関係のサーバー反映（楽観的更新＋ロールバック）
+  const {
+    handleTaskUpdate,
+    handleTaskAdd,
+    handleTaskDelete,
+    handleTaskDuplicate,
+    handleDependencyAdd,
+    handleDependencyRemove,
+    handleDependencyUpdate,
+  } = useGanttMutations({
+    wbsId,
+    tasks,
+    setTasks,
+    categories,
+    refetchTasks,
+    onAfterDelete: () => setSelectedTasks(new Set()),
+  });
 
   const handleTimelineScaleChange = useCallback((scale: TimelineScale) => {
     setTimelineScale(scale);
@@ -616,266 +138,23 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   const handleExportTsv = useCallback(async () => {
     try {
       const tsv = await getGanttTasksTsv(wbsId);
-      // Excel等で文字化けしないよう BOM を付与
-      const blob = new Blob(["﻿" + tsv], {
-        type: "text/tab-separated-values;charset=utf-8",
-      });
-      const url = URL.createObjectURL(blob);
       const date = new Date().toISOString().slice(0, 10);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `wbs-tasks-${date}.tsv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      downloadBlob(tsvBlob(tsv), `wbs-tasks-${date}.tsv`);
     } catch (error) {
       toast({
         title: "TSVの出力に失敗しました",
-        description: error instanceof Error ? error.message : "不明なエラー",
+        description: toErrorMessage(error),
         variant: "destructive",
       });
     }
   }, [wbsId]);
-
-  // チャートで表示・編集するタスク（編集中はドラフト、それ以外は確定タスク）
-  const chartTasks = editMode && draftTasks ? draftTasks : tasks;
-
-  // 編集モードに入る（現在のタスクをドラフトへ複製）
-  const handleEnterEditMode = useCallback(() => {
-    setDraftTasks(
-      tasks.map((t) => ({
-        ...t,
-        predecessors: t.predecessors.map((p) => ({ ...p })),
-      })),
-    );
-    setEditMode(true);
-  }, [tasks]);
-
-  // 編集を破棄して編集モードを抜ける
-  const handleCancelEdit = useCallback(() => {
-    setEditMode(false);
-    setDraftTasks(null);
-    setDependencyTaskId(null);
-  }, []);
-
-  // ドラフトのタスクを更新（ドラッグ／インライン編集／依存関係編集の共通反映）
-  const handleDraftTaskUpdate = useCallback(
-    (updatedTask: Task) => {
-      setDraftTasks((prev) =>
-        prev
-          ? calculateCriticalPath(
-              prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)),
-            )
-          : prev,
-      );
-    },
-    [calculateCriticalPath],
-  );
-
-  // ドラフトへの依存関係の追加（一時IDを付与）
-  const handleDraftDependencyAdd = useCallback(
-    (
-      successorTaskId: string,
-      predecessorTaskId: string,
-      type: DependencyType,
-      lag: number,
-    ) => {
-      const tempId = tempDepIdRef.current;
-      tempDepIdRef.current -= 1;
-      setDraftTasks((prev) =>
-        prev
-          ? calculateCriticalPath(
-              prev.map((t) =>
-                t.id === successorTaskId
-                  ? {
-                      ...t,
-                      predecessors: [
-                        ...t.predecessors,
-                        { taskId: predecessorTaskId, type, lag, dbId: tempId },
-                      ],
-                    }
-                  : t,
-              ),
-            )
-          : prev,
-      );
-    },
-    [calculateCriticalPath],
-  );
-
-  // ドラフトの依存関係を削除
-  const handleDraftDependencyRemove = useCallback(
-    (dependencyDbId: number) => {
-      setDraftTasks((prev) =>
-        prev
-          ? calculateCriticalPath(
-              prev.map((t) => ({
-                ...t,
-                predecessors: t.predecessors.filter(
-                  (p) => p.dbId !== dependencyDbId,
-                ),
-              })),
-            )
-          : prev,
-      );
-    },
-    [calculateCriticalPath],
-  );
-
-  // ドラフトの依存関係を更新
-  const handleDraftDependencyUpdate = useCallback(
-    (
-      dependencyDbId: number,
-      successorTaskId: string,
-      predecessorTaskId: string,
-      type: DependencyType,
-      lag: number,
-    ) => {
-      setDraftTasks((prev) =>
-        prev
-          ? calculateCriticalPath(
-              prev.map((t) => ({
-                ...t,
-                predecessors: t.predecessors.map((p) =>
-                  p.dbId === dependencyDbId
-                    ? { taskId: predecessorTaskId, type, lag, dbId: dependencyDbId }
-                    : p,
-                ),
-              })),
-            )
-          : prev,
-      );
-    },
-    [calculateCriticalPath],
-  );
 
   // 編集モードで依存関係編集モーダルを開く
   const handleEditDependencies = useCallback((taskId: string) => {
     setDependencyTaskId(taskId);
   }, []);
 
-  // 編集内容をまとめて保存（日付・工数 → タスク更新、依存関係 → 差分で作成/削除）
-  const handleSaveEdit = useCallback(async () => {
-    if (!draftTasks) {
-      setEditMode(false);
-      return;
-    }
-    setIsSavingEdit(true);
-    try {
-      const origById = new Map(tasks.map((t) => [t.id, t]));
-
-      // 1) 予定開始日・終了日・工数（マイルストーンは日付）の変更を保存
-      for (const dt of draftTasks) {
-        const orig = origById.get(dt.id);
-        if (!orig) continue;
-        const dateChanged =
-          dt.startDate.getTime() !== orig.startDate.getTime() ||
-          dt.endDate.getTime() !== orig.endDate.getTime();
-        const kosuChanged = dt.duration !== orig.duration;
-        const assigneeChanged = dt.assigneeId !== orig.assigneeId;
-        if (!dateChanged && !kosuChanged && !assigneeChanged) continue;
-
-        const dbId = Number(dt.dbId ?? dt.id);
-        if (dt.isMilestone) {
-          await updateMilestone({
-            id: dbId,
-            name: dt.name,
-            date: dt.startDate,
-            wbsId,
-          });
-        } else {
-          await updateTask(wbsId, {
-            id: dbId,
-            taskNo: dt.taskNo,
-            name: dt.name,
-            yoteiStart: dt.startDate,
-            yoteiEnd: dt.endDate,
-            yoteiKosu: dt.duration,
-            status: dt.status ?? "NOT_STARTED",
-            assigneeId: dt.assigneeId,
-            phaseId: dt.phaseId,
-          });
-        }
-      }
-
-      // 2) 依存関係の差分を保存
-      type DepInfo = {
-        succ: string;
-        pred: string;
-        type: DependencyType;
-        lag: number;
-      };
-      const origDeps = new Map<number, DepInfo>();
-      tasks.forEach((t) =>
-        t.predecessors.forEach((p) => {
-          if (p.dbId !== undefined && p.dbId > 0) {
-            origDeps.set(p.dbId, {
-              succ: t.id,
-              pred: p.taskId,
-              type: p.type,
-              lag: p.lag,
-            });
-          }
-        }),
-      );
-      const draftDeps: (DepInfo & { dbId: number })[] = [];
-      draftTasks.forEach((t) =>
-        t.predecessors.forEach((p) =>
-          draftDeps.push({
-            dbId: p.dbId ?? 0,
-            succ: t.id,
-            pred: p.taskId,
-            type: p.type,
-            lag: p.lag,
-          }),
-        ),
-      );
-
-      // 削除・変更（旧分の削除）
-      for (const [dbId, od] of origDeps) {
-        const inDraft = draftDeps.find((d) => d.dbId === dbId);
-        const changed =
-          inDraft &&
-          (inDraft.type !== od.type ||
-            inDraft.lag !== od.lag ||
-            inDraft.pred !== od.pred);
-        if (!inDraft || changed) {
-          await deleteGanttDependency(wbsId, dbId);
-        }
-      }
-      // 追加・変更（新分の作成）
-      for (const d of draftDeps) {
-        const od = d.dbId > 0 ? origDeps.get(d.dbId) : undefined;
-        const isNew = d.dbId <= 0;
-        const changed =
-          od && (od.type !== d.type || od.lag !== d.lag || od.pred !== d.pred);
-        if (isNew || changed) {
-          await createGanttDependency(wbsId, {
-            successorTaskId: Number(d.succ),
-            predecessorTaskId: Number(d.pred),
-            type: d.type,
-            lag: d.lag,
-          });
-        }
-      }
-
-      toast({ title: "編集内容を保存しました" });
-    } catch (error) {
-      toast({
-        title: "保存に失敗しました",
-        description: error instanceof Error ? error.message : "不明なエラー",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSavingEdit(false);
-      setEditMode(false);
-      setDraftTasks(null);
-      setDependencyTaskId(null);
-      await refetchTasks();
-    }
-  }, [draftTasks, tasks, wbsId, refetchTasks]);
-
+  // カテゴリの展開/折りたたみ
   const handleCategoryToggle = useCallback((categoryName: string) => {
     setExpandedCategories((prev) => {
       const newExpanded = new Set(prev);
@@ -888,37 +167,14 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     });
   }, []);
 
+  // 全てのカテゴリを展開
   const handleExpandAllCategories = useCallback(() => {
     setExpandedCategories(new Set(groupNames));
   }, [groupNames]);
 
+  // 全てのカテゴリを折りたたみ
   const handleCollapseAllCategories = useCallback(() => {
     setExpandedCategories(new Set());
-  }, []);
-
-  // gantt の Task を TaskModal が要求する WbsTask 形へ変換
-  const toWbsTask = useCallback((task: Task): WbsTask => {
-    return {
-      id: Number(task.dbId ?? task.id),
-      taskNo: task.taskNo,
-      name: task.name,
-      status: task.status ?? "NOT_STARTED",
-      assigneeId: task.assigneeId,
-      assignee: task.assigneeId
-        ? {
-            id: task.assigneeId,
-            name: task.assignee ?? "",
-            displayName: task.assignee ?? "",
-          }
-        : undefined,
-      phaseId: task.phaseId,
-      phase: task.phaseId
-        ? { id: task.phaseId, name: task.category ?? "", seq: 0 }
-        : undefined,
-      yoteiStart: task.startDate,
-      yoteiEnd: task.endDate,
-      yoteiKosu: task.duration,
-    };
   }, []);
 
   // 編集・依存モーダルの対象タスク（最新stateから引く）
@@ -931,193 +187,21 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     [chartTasks, dependencyTaskId],
   );
 
-  // テーブルの列定義（ヘッダー名・幅・表示データを全てここで組み立てて渡す）
+  // 先行タスク名の引き当て用（O(1) ルックアップ）
+  const taskById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
+
+  // テーブルの列定義（組み立ては taskTableColumns ファクトリへ委譲）
   const columns = useMemo<TaskTableColumn[]>(
-    () => [
-      {
-        key: "name",
-        header: "タスク名",
-        width: 260,
-        renderCell: (task) => (
-          <div
-            className="flex items-center gap-2"
-            style={{ paddingLeft: `${task.level * 16}px` }}
-          >
-            {task.isMilestone && (
-              <Flag className="w-3 h-3 shrink-0 text-muted-foreground" />
-            )}
-            <span className="font-medium truncate">{task.name}</span>
-          </div>
-        ),
-      },
-      {
-        key: "assignee",
-        header: "担当者",
-        width: 120,
-        renderCell: (task) => (
-          <span className="text-sm">{task.assignee ?? "-"}</span>
-        ),
-      },
-      {
-        key: "phase",
-        header: "フェーズ",
-        width: 130,
-        renderCell: (task) => (
-          <div className="flex items-center gap-2">
-            <span
-              className="w-3 h-3 rounded-sm shrink-0"
-              style={{ backgroundColor: task.color }}
-            />
-            <span className="text-sm truncate">{task.category ?? "-"}</span>
-          </div>
-        ),
-      },
-      {
-        key: "startDate",
-        header: "開始日",
-        width: 110,
-        renderCell: (task) => (
-          <span className="text-sm">
-            {formatDate(task.startDate, "YYYY/MM/DD")}
-          </span>
-        ),
-      },
-      {
-        key: "endDate",
-        header: "終了日",
-        width: 110,
-        renderCell: (task) =>
-          task.isMilestone ? (
-            <span className="text-muted-foreground">-</span>
-          ) : (
-            <span className="text-sm">
-              {formatDate(task.endDate, "YYYY/MM/DD")}
-            </span>
-          ),
-      },
-      {
-        key: "kosu",
-        header: "工数",
-        width: 90,
-        align: "right",
-        renderCell: (task) =>
-          task.isMilestone ? (
-            <span className="text-muted-foreground">-</span>
-          ) : (
-            <span className="text-sm">
-              {formatHoursWithUnit(task.duration, kosuUnit)}
-            </span>
-          ),
-      },
-      {
-        key: "progress",
-        header: "進捗",
-        width: 70,
-        align: "right",
-        renderCell: (task) => <span className="text-sm">{task.progress}%</span>,
-      },
-      {
-        key: "status",
-        header: "ステータス",
-        width: 110,
-        renderCell: (task) =>
-          task.isMilestone ? (
-            <span className="text-muted-foreground">-</span>
-          ) : (
-            <Badge variant="outline">
-              {getTaskStatusName(task.status ?? "NOT_STARTED")}
-            </Badge>
-          ),
-      },
-      {
-        key: "dependencies",
-        header: "依存関係",
-        width: 220,
-        interactive: true,
-        renderCell: (task) => (
-          <div className="flex items-center gap-1 flex-wrap">
-            {task.predecessors.length === 0 ? (
-              <span className="text-xs text-muted-foreground">なし</span>
-            ) : (
-              task.predecessors.map((dep, i) => {
-                const pred = tasks.find((t) => t.id === dep.taskId);
-                return (
-                  <Badge key={i} variant="secondary" className="text-xs">
-                    {pred?.name ?? "不明"} ({dep.type}
-                    {dep.lag !== 0
-                      ? `${dep.lag > 0 ? "+" : ""}${dep.lag}d`
-                      : ""}
-                    )
-                  </Badge>
-                );
-              })
-            )}
-            {!task.isMilestone && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0"
-                onClick={() => setDependencyTaskId(task.id)}
-              >
-                <Plus className="w-3 h-3" />
-              </Button>
-            )}
-          </div>
-        ),
-      },
-      {
-        key: "actions",
-        header: "操作",
-        width: 70,
-        align: "center",
-        interactive: true,
-        renderCell: (task) => (
-          <div className="flex items-center justify-center">
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">メニューを開く</span>
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {!task.isMilestone && (
-                  <DropdownMenuItem onClick={() => setEditingTaskId(task.id)}>
-                    <Pencil className="w-4 h-4" />
-                    編集
-                  </DropdownMenuItem>
-                )}
-                {!task.isMilestone && (
-                  <DropdownMenuItem
-                    onClick={() => setDependencyTaskId(task.id)}
-                  >
-                    <Link2 className="w-4 h-4" />
-                    依存関係を編集
-                  </DropdownMenuItem>
-                )}
-                {!task.isMilestone && (
-                  <DropdownMenuItem
-                    onClick={() => handleTaskDuplicate([task.id])}
-                  >
-                    <Copy className="w-4 h-4" />
-                    複製
-                  </DropdownMenuItem>
-                )}
-                {!task.isMilestone && <DropdownMenuSeparator />}
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => handleTaskDelete([task.id])}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  削除
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ),
-      },
-    ],
-    [tasks, handleTaskDuplicate, handleTaskDelete, kosuUnit],
+    () =>
+      createTaskColumns({
+        taskById,
+        kosuUnit,
+        onEditTask: setEditingTaskId,
+        onEditDependencies: setDependencyTaskId,
+        onDuplicate: handleTaskDuplicate,
+        onDelete: handleTaskDelete,
+      }),
+    [taskById, kosuUnit, handleTaskDuplicate, handleTaskDelete],
   );
 
   return (
@@ -1125,12 +209,15 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
       {/* Main Navigation */}
       <div className="border-b bg-card px-2 py-2">
         <div className="flex items-center justify-between">
+          {/* チャート/テーブル表示の切替 */}
           <ViewSwitcher
             currentView={currentView}
             onViewChange={setCurrentView}
+            disabled={editMode}
           />
 
           <div className="flex items-center gap-4">
+            {/* クイックアクション */}
             <QuickActions
               timelineScale={timelineScale}
               onTimelineScaleChange={handleTimelineScaleChange}
@@ -1164,8 +251,10 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
               sortBy={sortBy}
               onSortByChange={setSortBy}
               onExportTsv={handleExportTsv}
+              taskOpsDisabled={editMode}
             />
 
+            {/* カテゴリの展開/折りたたみ */}
             {currentView === "gantt" && (
               <div className="flex items-center gap-2 border-l pl-4">
                 <button
@@ -1183,6 +272,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
               </div>
             )}
 
+            {/* 工数単位の切替 */}
             {currentView === "table" && (
               <div className="flex items-center gap-2 border-l pl-4">
                 <span className="text-xs text-muted-foreground">工数単位</span>
@@ -1207,7 +297,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* チャート/テーブル表示の内容 */}
       <div className="flex-1 overflow-hidden">
         {currentView === "gantt" ? (
           <GanttChart
@@ -1229,6 +319,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
             onCancelEdit={handleCancelEdit}
             onEditDependencies={handleEditDependencies}
             isSaving={isSavingEdit}
+            isDataLoading={isLoading}
           />
         ) : (
           <TaskTable
@@ -1257,8 +348,9 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           isOpen={true}
           onClose={() => {
             setEditingTaskId(null);
-            // モーダル内で更新された場合に備えて再取得
-            refetchTasks();
+            // モーダル内で更新された場合に備えて再取得。ただし編集モード中は
+            // ドラフトが陳腐化する（保存時に古い値で上書きされる）ため抑止する。
+            if (!editMode) refetchTasks();
           }}
         />
       )}
@@ -1274,8 +366,12 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           (t) => !t.isMilestone && t.id !== dependencyTaskId,
         )}
         onAdd={editMode ? handleDraftDependencyAdd : handleDependencyAdd}
-        onRemove={editMode ? handleDraftDependencyRemove : handleDependencyRemove}
-        onUpdate={editMode ? handleDraftDependencyUpdate : handleDependencyUpdate}
+        onRemove={
+          editMode ? handleDraftDependencyRemove : handleDependencyRemove
+        }
+        onUpdate={
+          editMode ? handleDraftDependencyUpdate : handleDependencyUpdate
+        }
       />
     </div>
   );

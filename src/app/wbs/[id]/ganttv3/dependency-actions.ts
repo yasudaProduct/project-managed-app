@@ -70,7 +70,7 @@ export async function deleteGanttDependency(
             SYMBOL.ITaskDependencyService
         );
 
-        await service.deleteDependency(dependencyId);
+        await service.deleteDependency(dependencyId, wbsId);
 
         revalidatePath(`/wbs/${wbsId}/ganttv3`);
 

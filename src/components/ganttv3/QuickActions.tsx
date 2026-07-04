@@ -42,6 +42,8 @@ interface QuickActionsProps {
   onSortByChange?: (sortBy: TaskSortBy) => void;
   /** タスク一覧をTSVで出力。未指定なら出力ボタンは表示しない */
   onExportTsv?: () => void;
+  /** タスクの追加・複製・削除を無効化する（編集モード中はドラフト整合性のため抑止） */
+  taskOpsDisabled?: boolean;
 }
 
 /**
@@ -73,6 +75,7 @@ export const QuickActions = ({
   sortBy = "taskNo",
   onSortByChange,
   onExportTsv,
+  taskOpsDisabled = false,
 }: QuickActionsProps) => {
   const getGroupIcon = (group: GroupBy) => {
     switch (group) {
@@ -96,7 +99,7 @@ export const QuickActions = ({
           onClick={onAddTask}
           className="gap-2 disabled:bg-gray-400"
           variant="outline"
-          disabled={false}
+          disabled={taskOpsDisabled}
         >
           <Plus className="w-4 h-4" />
           🚧タスク追加
@@ -108,6 +111,7 @@ export const QuickActions = ({
               variant="outline"
               size="sm"
               onClick={onDuplicateTasks}
+              disabled={taskOpsDisabled}
               className="gap-2"
             >
               <Copy className="w-4 h-4" />
@@ -117,6 +121,7 @@ export const QuickActions = ({
               variant="destructive"
               size="sm"
               onClick={onDeleteTasks}
+              disabled={taskOpsDisabled}
               className="gap-2"
             >
               <Trash2 className="w-4 h-4" />

@@ -42,11 +42,19 @@ export class TaskDependencyService {
     }
 
     /**
-     * 依存関係を削除する
+     * 依存関係を削除する。
+     *
+     * `wbsId` を指定した場合は、対象の依存関係がその WBS に属することを検証する。
+     * サーバーアクション/APIは任意の依存IDで直接呼び出せるため、別WBSの依存IDを
+     * 渡して削除される（越境削除）のを防ぐスコープチェックとして機能する。
      */
-    async deleteDependency(id: number): Promise<void> {
+    async deleteDependency(id: number, wbsId?: number): Promise<void> {
         const dependency = await this.taskDependencyRepository.findById(id);
         if (!dependency) {
+            throw new Error("指定された依存関係が見つかりません");
+        }
+
+        if (wbsId !== undefined && dependency.wbsId !== wbsId) {
             throw new Error("指定された依存関係が見つかりません");
         }
 
