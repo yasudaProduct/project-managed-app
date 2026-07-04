@@ -61,6 +61,68 @@
 - `src/utils/**`, `src/types/**`（共有ユーティリティ）
   - 原則として他レイヤに依存しない。どのレイヤからも参照可。
 
+### 境界運用の決まりごと
+
+#### リポジトリインターフェースの配置
+
+- リポジトリIF（ポート）は **Application層**（`src/applications/<feature>/i<feature>-repository.ts`）に置く。
+  - 純粋なオニオンアーキテクチャではDomain層に置く流儀もあるが、本リポジトリではApplication層に統一する（現行実装24ファイル全てがApplication層にあることを追認した決定）。
+- この決定の帰結として、**Domain層のコード（ドメインサービスを含む）はリポジトリIFに依存できない**。
+  - リポジトリを組み合わせるオーケストレーション（取得→計算→保存）はApplication層の責務。
+  - ドメインサービスは「渡されたデータに対して計算・判定する」純粋なロジックに限定する。I/Oが必要になったら、それはApplication Serviceである。
+
+#### Prisma依存の境界
+
+- `@prisma/client` および `@/lib/prisma` を import してよいのは **`src/infrastructures/**` と `src/lib/**` のみ**。
+- Server Action・page.tsx・API Route（UI層）からのPrisma直接使用は禁止。必ずApplication Service経由。
+- Prismaのenum（`TaskStatus` 等）をDomain/Application/UI層で参照しない。共有enumは `src/types/` にstring unionで一箇所定義し、リポジトリ実装内で相互変換する（詳細: docs/08 §7）。
+
+#### DIトークン
+
+- バインド・解決は必ず `SYMBOL`（`src/types/symbol.ts`）を使う。文字列リテラルトークンは禁止。
+- 不要になったSYMBOLエントリ・バインドは即削除する（コメントアウトで残さない）。
+
+#### CQRSの適用基準
+
+- 既定は「Application Service + Repository」。**迷ったらCQRSを使わない**。
+- 複数集約を横断する読み取り専用の集計・一覧（ダッシュボード統計、WBSサマリー等）のみ QueryBus + QueryHandler + 専用QueryRepository を使う。
+- Handlerは必ず `IQueryHandler` を実装し、QueryBusにregisterして `queryBus.execute()` 経由で呼ぶ。DIからHandlerを直接取得して独自メソッドを呼ぶ実装は不可。
+
+### 依存ルールの機械的強制（導入予定）
+
+現状ESLintにレイヤー境界のルールはなく、レビュー頼みである。`docs/09-refactoring-backlog.md` のP1（レイヤー違反）解消後、`no-restricted-imports` を導入する。設定例:
+
+```js
+// eslint.config.mjs に追加する設定例
+{
+  files: ["src/domains/**"],
+  rules: {
+    "no-restricted-imports": ["error", { patterns: [
+      { group: ["@/applications/*", "@/infrastructures/*", "@/app/*", "@/components/*", "@/hooks/*", "@/lib/*", "@prisma/client"],
+        message: "Domain層は domains/types 以外に依存できません (docs/04)" },
+    ]}],
+  },
+},
+{
+  files: ["src/applications/**"],
+  rules: {
+    "no-restricted-imports": ["error", { patterns: [
+      { group: ["@/infrastructures/*", "@/app/*", "@/components/*", "@/hooks/*", "@prisma/client", "@/lib/prisma/*"],
+        message: "Application層は infrastructures/UI/Prisma に依存できません (docs/04)" },
+    ]}],
+  },
+},
+{
+  files: ["src/app/**", "src/components/**", "src/hooks/**"],
+  rules: {
+    "no-restricted-imports": ["error", { patterns: [
+      { group: ["@/infrastructures/*", "@/domains/*", "@prisma/client", "@/lib/prisma/*"],
+        message: "UI層は Application Service 経由でアクセスしてください (docs/04)" },
+    ]}],
+  },
+},
+```
+
 ## エラーハンドリング
 
 本プロジェクトでは、レイヤごとに責務を分離しつつ、ユーザー体験と運用性を損なわない一貫したエラーハンドリングを行う。
@@ -83,13 +145,15 @@
 - DependencyError: 外部API/DB障害・タイムアウト → 503/504
 - Unknown/Internal: それ以外 → 500
 
-現状の実装では以下が利用されているため、これをベースに統一する。
+標準として以下を用いる。
 
 - APIルートの標準レスポンスヘルパー: `src/lib/api-response.ts`
   - `createApiResponse`, `createApiError`, `createImportResponse`, `createImportError`
+  - **注意（2026-07時点）: このファイルは未実装**。全APIルートが生の `NextResponse.json` を使っており、レスポンス形も統一されていない。ヘルパーの新設と移行は `docs/09-refactoring-backlog.md` P2-2 を参照。
 - 入力検証: Zod（例: `src/app/api/company-holidays/*`）
 - ドメイン固有の同期エラー: `SyncError` + `SyncErrorType`（`src/domains/sync/ExcelWbs.ts`）
-- サーバーアクション/アプリケーションサービスの結果: `{ success: boolean, error?: string }` を返す（例: プロジェクト/WBS/タスク）
+- サーバーアクションの結果: 共通型 `ActionResult<T>`（`src/types/action-result.ts`・新設対象）を返す。`{ success: true, data }` または `{ success: false, error }`。エラーメッセージのキーは `error` に統一（`message` は不可）。実装例は docs/03 の「Server Action」を参照。
+- アプリケーションサービスの結果: 予見可能な失敗は `{ success: boolean, error?: string }` を返す（例: プロジェクト/WBS/タスク）
 
 ### レイヤ別の方針
 

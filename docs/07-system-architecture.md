@@ -35,15 +35,14 @@ graph TB
 
     subgraph "データストア"
         PostgreSQL[(PostgreSQL)]
-        Redis[(Redis Cache)]
+        MySQL[(MySQL 参照用)]
         FileStorage[File Storage]
     end
 
     subgraph "外部システム"
-        Email[メール配信]
-        Auth[認証サービス]
         Geppo[月報システム]
         Excel[Excel連携]
+        Push[Web Push]
     end
 
     Browser --> AppRouter
@@ -59,12 +58,11 @@ graph TB
     AS --> Repos
     Repos --> Prisma
     Prisma --> PostgreSQL
-    AS --> Redis
+    Prisma --> MySQL
     AS --> ExtAPI
-    ExtAPI --> Email
-    ExtAPI --> Auth
     ExtAPI --> Geppo
     ExtAPI --> Excel
+    ExtAPI --> Push
     AS --> FileStorage
 ```
 
@@ -214,7 +212,6 @@ graph LR
     subgraph "通知システム"
         Notification[Notification Service]
         Push[Push Notification]
-        Email[Email Service]
     end
 
     Project --> WBS
@@ -353,7 +350,6 @@ graph TD
 
     subgraph "Infrastructure"
         Prisma[Prisma Client]
-        Redis[Redis Client]
     end
 
     Container --> ProjectApp
@@ -371,7 +367,6 @@ graph TD
     WbsRepo --> Prisma
     TaskRepo --> Prisma
     UserRepo --> Prisma
-    DashboardApp --> Redis
 ```
 
 ## 8. 主要機能の相関図
@@ -441,15 +436,14 @@ graph TB
 ### バックエンド
 
 - **Runtime**: Node.js
-- **API**: Next.js API Routes
+- **API**: Next.js Server Actions / API Routes
 - **ORM**: Prisma
-- **Database**: PostgreSQL / MySQL
+- **Database**: PostgreSQL（主系）/ MySQL（Geppo参照用・読み取り専用）
 - **DI Container**: Inversify
 
 ### インフラストラクチャ
 
 - **Container**: Docker
-- **Cache**: Redis (オプション)
 - **File Storage**: ローカルファイルシステム
 - **CI/CD**: GitHub Actions (想定)
 
@@ -460,7 +454,9 @@ graph TB
 - **Build Tool**: Turbopack
 - **Package Manager**: npm
 
-## 10. セキュリティアーキテクチャ
+## 10. セキュリティアーキテクチャ（想定・整備中）
+
+※以下は目標構成。レート制限・監査ログ等は未実装のものを含む。
 
 ```mermaid
 graph TD
@@ -515,7 +511,9 @@ graph LR
     ProdDB --> Backup
 ```
 
-## 12. モニタリング・ログ構成
+## 12. モニタリング・ログ構成（想定・未実装）
+
+※現状は console ベースの ad hoc なログのみ（docs/08 §6 参照）。以下は目標構成。
 
 ```mermaid
 graph TD
