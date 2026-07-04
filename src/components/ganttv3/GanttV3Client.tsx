@@ -54,32 +54,25 @@ interface GanttV3ClientProps {
 
 export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   const { tasks, setTasks, categories, assignees, refetchTasks, isLoading } =
-    useGanttData(wbsId);
+    useGanttData(wbsId); // タスクデータ
 
-  const [currentView, setCurrentView] = useState<"gantt" | "table">("gantt");
-  const [timelineScale, setTimelineScale] = useState<TimelineScale>("month");
-  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [currentView, setCurrentView] = useState<"gantt" | "table">("gantt"); // チャート/テーブル表示
+  const [timelineScale, setTimelineScale] = useState<TimelineScale>("month"); // タイムラインのスケール
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set()); // 選択されたタスク
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(),
-  );
-
-  // Add zoom level state
-  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
-
-  const [ganttStyle, setGanttStyle] = useState<GanttStyle>(defaultGanttStyle);
-
-  // Add groupBy state
-  const [groupBy, setGroupBy] = useState<GroupBy>("phase");
-
-  // グループ内のタスクの並び順
-  const [sortBy, setSortBy] = useState<TaskSortBy>("taskNo");
+  ); // 展開されたカテゴリ
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0); // ズームレベル
+  const [ganttStyle, setGanttStyle] = useState<GanttStyle>(defaultGanttStyle); // グラントチャートのスタイル
+  const [groupBy, setGroupBy] = useState<GroupBy>("phase"); // グループ化の基準
+  const [sortBy, setSortBy] = useState<TaskSortBy>("taskNo"); // グループ内のタスクの並び順
 
   // モーダル制御（編集対象はIDで保持し、最新の tasks から都度引き直す）
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [dependencyTaskId, setDependencyTaskId] = useState<string | null>(null);
 
   // テーブルの工数表示単位（時間 / 人日）
-  const [kosuUnit, setKosuUnit] = useState<HoursUnit>("hours");
+  const [kosuUnit, setKosuUnit] = useState<HoursUnit>("hours"); // 工数表示単位
 
   // チャート編集モード（ドラフト方式）。確定タスクへの即時反映は useGanttMutations 側。
   const {
@@ -161,6 +154,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     setDependencyTaskId(taskId);
   }, []);
 
+  // カテゴリの展開/折りたたみ
   const handleCategoryToggle = useCallback((categoryName: string) => {
     setExpandedCategories((prev) => {
       const newExpanded = new Set(prev);
@@ -173,10 +167,12 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     });
   }, []);
 
+  // 全てのカテゴリを展開
   const handleExpandAllCategories = useCallback(() => {
     setExpandedCategories(new Set(groupNames));
   }, [groupNames]);
 
+  // 全てのカテゴリを折りたたみ
   const handleCollapseAllCategories = useCallback(() => {
     setExpandedCategories(new Set());
   }, []);
@@ -192,10 +188,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   );
 
   // 先行タスク名の引き当て用（O(1) ルックアップ）
-  const taskById = useMemo(
-    () => new Map(tasks.map((t) => [t.id, t])),
-    [tasks],
-  );
+  const taskById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
 
   // テーブルの列定義（組み立ては taskTableColumns ファクトリへ委譲）
   const columns = useMemo<TaskTableColumn[]>(
@@ -216,6 +209,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
       {/* Main Navigation */}
       <div className="border-b bg-card px-2 py-2">
         <div className="flex items-center justify-between">
+          {/* チャート/テーブル表示の切替 */}
           <ViewSwitcher
             currentView={currentView}
             onViewChange={setCurrentView}
@@ -223,6 +217,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           />
 
           <div className="flex items-center gap-4">
+            {/* クイックアクション */}
             <QuickActions
               timelineScale={timelineScale}
               onTimelineScaleChange={handleTimelineScaleChange}
@@ -259,6 +254,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
               taskOpsDisabled={editMode}
             />
 
+            {/* カテゴリの展開/折りたたみ */}
             {currentView === "gantt" && (
               <div className="flex items-center gap-2 border-l pl-4">
                 <button
@@ -276,6 +272,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
               </div>
             )}
 
+            {/* 工数単位の切替 */}
             {currentView === "table" && (
               <div className="flex items-center gap-2 border-l pl-4">
                 <span className="text-xs text-muted-foreground">工数単位</span>
@@ -300,7 +297,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* チャート/テーブル表示の内容 */}
       <div className="flex-1 overflow-hidden">
         {currentView === "gantt" ? (
           <GanttChart
@@ -369,8 +366,12 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           (t) => !t.isMilestone && t.id !== dependencyTaskId,
         )}
         onAdd={editMode ? handleDraftDependencyAdd : handleDependencyAdd}
-        onRemove={editMode ? handleDraftDependencyRemove : handleDependencyRemove}
-        onUpdate={editMode ? handleDraftDependencyUpdate : handleDependencyUpdate}
+        onRemove={
+          editMode ? handleDraftDependencyRemove : handleDependencyRemove
+        }
+        onUpdate={
+          editMode ? handleDraftDependencyUpdate : handleDependencyUpdate
+        }
       />
     </div>
   );
