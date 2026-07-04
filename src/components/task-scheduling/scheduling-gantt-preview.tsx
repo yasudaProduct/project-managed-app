@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GanttChart } from "@/components/ganttv3/GanttChart";
 import type {
   Task as GanttTask,
@@ -58,6 +58,19 @@ export function SchedulingGanttPreview({
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     () => new Set(categories.map((c) => c.name))
   );
+
+  // 再計算などで親から渡るフェーズ（categories）の集合が変わったら全展開に同期する。
+  // 初期化(useState)は初回しか走らないため、これがないと新フェーズが折りたたまれた
+  // ままになりタスク行が表示されない。
+  const categoryKey = categories
+    .map((c) => c.name)
+    .sort()
+    .join("\u001f");
+  useEffect(() => {
+    setExpandedCategories(new Set(categories.map((c) => c.name)));
+    // categoryKey が変わったときのみ実質再計算されるため categories は依存に含めない
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryKey]);
 
   const handleCategoryToggle = (name: string) => {
     setExpandedCategories((prev) => {

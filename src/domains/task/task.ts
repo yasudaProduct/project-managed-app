@@ -100,13 +100,8 @@ export class Task {
             throw new Error("タスクステータスは必須です");
         }
 
-        if (!args.assigneeId) {
-            throw new Error("担当者は必須です");
-        }
-
-        if (!args.phaseId) {
-            throw new Error("フェーズは必須です");
-        }
+        // 担当者・フェーズは未割当を許容する（DBは nullable、UIも「未割当」を正式サポート）。
+        // 以前は必須検証で throw していたが、未割当タスクの日付編集が保存できない不具合の原因だった。
 
         this.name = args.name;
         this.assigneeId = args.assigneeId;

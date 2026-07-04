@@ -16,9 +16,16 @@ import {
   TaskSortBy,
 } from "./gantt";
 import { groupTasksByType } from "./utils/groupTasks";
-import { getTaskStatusName } from "@/utils/utils";
+import {
+  getScaleMultiplier,
+  getTotalDays,
+  getChartWidth,
+  dateToX as computeDateX,
+} from "./utils/timelineGeometry";
 import { TimelineHeader } from "./TimelineHeader";
 import { TaskBar } from "./TaskBar";
+import { TaskListRow } from "./TaskListRow";
+import { InlineTaskEditPanel } from "./InlineTaskEditPanel";
 import { GridLines } from "./GridLines";
 import { DependencyArrows } from "./DependencyArrows";
 import { Button } from "../ui/button";
@@ -33,7 +40,6 @@ import {
   Pencil,
   Save,
   X,
-  Link2,
 } from "lucide-react";
 
 // タスクリスト幅の最小・最大（px）
@@ -47,41 +53,12 @@ const BASE_CATEGORY_HEIGHT = 20;
 // 行高さスケール（Ctrl+ホイールで変更）の下限・上限
 const ROW_SCALE_MIN = 0.6;
 const ROW_SCALE_MAX = 3;
+/** メモ化を効かせるための安定参照の空ハンドラ（非編集時の onDragStart 用） */
+const noop = () => {};
 
 // 日付を日数分シフトする（UTC基準でずれないよう epoch で計算）
 const addDays = (date: Date, days: number): Date =>
   new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-
-// 日付を <input type="date"> 用の YYYY-MM-DD へ（保存はUTC前提）
-const toDateInputValue = (date?: Date): string =>
-  date ? date.toISOString().slice(0, 10) : "";
-
-// <input type="date"> の値（YYYY-MM-DD）を UTC 0時の Date へ
-const fromDateInputValue = (value: string): Date | null =>
-  value ? new Date(`${value}T00:00:00.000Z`) : null;
-
-// 予定日（Date）をタスクリスト表示用に MM/DD へ整形する
-const formatMonthDay = (date?: Date): string => {
-  if (!date) return "";
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${month}/${day}`;
-};
-
-// ステータスを表す色（左リストのステータスドット用）
-const statusColor = (status: Task["status"]): string => {
-  switch (status) {
-    case "COMPLETED":
-      return "#10B981"; // green
-    case "IN_PROGRESS":
-      return "#3B82F6"; // blue
-    case "ON_HOLD":
-      return "#F59E0B"; // amber
-    case "NOT_STARTED":
-    default:
-      return "#9CA3AF"; // gray
-  }
-};
 
 interface GanttChartProps {
   tasks: Task[];
@@ -110,6 +87,8 @@ interface GanttChartProps {
   onEditDependencies?: (taskId: string) => void;
   /** 保存処理中かどうか */
   isSaving?: boolean;
+  /** 初回データ読込中か（trueの間は編集モードに入れない） */
+  isDataLoading?: boolean;
 }
 
 // 単一行タイプ - タスクリストとタイムラインの両方で使用し、完全な1:1整列を保証する
@@ -144,6 +123,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       onCancelEdit,
       onEditDependencies,
       isSaving = false,
+      isDataLoading = false,
     },
     ref,
   ) => {
@@ -422,22 +402,9 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     }, [ganttRows]);
 
     // 各種寸法を計算
-    const totalDays = Math.ceil(
-      (timelineBounds.end.getTime() - timelineBounds.start.getTime()) /
-        (24 * 60 * 60 * 1000),
-    );
-    const scaleMultiplier =
-      timelineScale === "day"
-        ? 1
-        : timelineScale === "week"
-          ? 7
-          : timelineScale === "month"
-            ? 30
-            : 90;
-    const chartWidth = Math.max(
-      (totalDays / scaleMultiplier) * columnWidth,
-      1200,
-    );
+    const totalDays = getTotalDays(timelineBounds.start, timelineBounds.end);
+    const scaleMultiplier = getScaleMultiplier(timelineScale);
+    const chartWidth = getChartWidth(totalDays, scaleMultiplier, columnWidth);
     const totalContentHeight =
       ganttRows.length > 0
         ? ganttRows[ganttRows.length - 1].y +
@@ -447,13 +414,17 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
 
     // 日付をX座標に変換
     const dateToX = useCallback(
-      (date: Date) => {
-        const daysDiff =
-          (date.getTime() - timelineBounds.start.getTime()) /
-          (24 * 60 * 60 * 1000);
-        return (daysDiff / scaleMultiplier) * columnWidth;
-      },
+      (date: Date) =>
+        computeDateX(date, timelineBounds.start, scaleMultiplier, columnWidth),
       [timelineBounds.start, columnWidth, scaleMultiplier],
+    );
+
+    // バー右端用のX座標。予定/実績の終了日は「当日を含む(inclusive)」ため、
+    // 翌日0時（＝終了日セルの右端）を右端とする。これを使わないとバーが
+    // 終了日の手前で終わり、左タスクリストの終了予定日と1日ズレる。
+    const dateToXEnd = useCallback(
+      (date: Date) => dateToX(addDays(date, 1)),
+      [dateToX],
     );
 
     // バーのドラッグ開始（編集モードのみ）
@@ -774,6 +745,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                   onClick={onSaveEdit}
                   disabled={isSaving}
                   className="gap-2"
+                  data-testid="ganttv3-edit-save"
                 >
                   <Save className="w-4 h-4" />
                   {isSaving ? "保存中..." : "保存"}
@@ -784,6 +756,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                   onClick={onCancelEdit}
                   disabled={isSaving}
                   className="gap-2"
+                  data-testid="ganttv3-edit-cancel"
                 >
                   <X className="w-4 h-4" />
                   キャンセル
@@ -795,7 +768,9 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                   variant="outline"
                   size="sm"
                   onClick={onEnterEditMode}
+                  disabled={isDataLoading}
                   className="gap-2"
+                  data-testid="ganttv3-edit-toggle"
                 >
                   <Pencil className="w-4 h-4" />
                   編集モード
@@ -827,124 +802,20 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
 
         {/* 編集モード: 選択タスクのインライン編集パネル */}
         {editMode && editingTask && (
-          <div className="flex flex-wrap items-end gap-3 border-b border-border bg-blue-50/40 px-4 py-2">
-            <div className="flex items-center gap-1.5 text-sm font-medium">
-              <span
-                className="h-2.5 w-2.5 flex-shrink-0 rounded-sm"
-                style={{ backgroundColor: editingTask.color }}
-              />
-              {editingTask.taskNo ? `${editingTask.taskNo} ` : ""}
-              {editingTask.name}
-            </div>
-
-            <label className="flex flex-col text-[11px] text-muted-foreground">
-              {editingTask.isMilestone ? "予定日" : "予定開始日"}
-              <input
-                type="date"
-                className="h-8 rounded border bg-background px-2 text-sm text-foreground"
-                value={toDateInputValue(editingTask.startDate)}
-                onChange={(e) => {
-                  const d = fromDateInputValue(e.target.value);
-                  if (!d) return;
-                  if (editingTask.isMilestone) {
-                    updateEditingField({ startDate: d, endDate: d });
-                  } else {
-                    const end =
-                      d.getTime() > editingTask.endDate.getTime()
-                        ? d
-                        : editingTask.endDate;
-                    updateEditingField({ startDate: d, endDate: end });
-                  }
-                }}
-              />
-            </label>
-
-            {!editingTask.isMilestone && (
-              <label className="flex flex-col text-[11px] text-muted-foreground">
-                予定終了日
-                <input
-                  type="date"
-                  className="h-8 rounded border bg-background px-2 text-sm text-foreground"
-                  value={toDateInputValue(editingTask.endDate)}
-                  onChange={(e) => {
-                    const d = fromDateInputValue(e.target.value);
-                    if (!d) return;
-                    const start =
-                      d.getTime() < editingTask.startDate.getTime()
-                        ? d
-                        : editingTask.startDate;
-                    updateEditingField({ startDate: start, endDate: d });
-                  }}
-                />
-              </label>
-            )}
-
-            {!editingTask.isMilestone && (
-              <label className="flex flex-col text-[11px] text-muted-foreground">
-                予定工数(h)
-                <input
-                  type="number"
-                  min={0}
-                  className="h-8 w-24 rounded border bg-background px-2 text-sm text-foreground"
-                  value={editingTask.duration}
-                  onChange={(e) =>
-                    updateEditingField({
-                      duration: e.target.valueAsNumber || 0,
-                    })
-                  }
-                />
-              </label>
-            )}
-
-            {!editingTask.isMilestone && (
-              <label className="flex flex-col text-[11px] text-muted-foreground">
-                担当者
-                <select
-                  className="h-8 w-36 rounded border bg-background px-2 text-sm text-foreground"
-                  value={editingTask.assigneeId ?? ""}
-                  onChange={(e) => {
-                    const id = e.target.value
-                      ? Number(e.target.value)
-                      : undefined;
-                    const name = assignees.find((a) => a.id === id)?.name;
-                    updateEditingField({ assigneeId: id, assignee: name });
-                  }}
-                >
-                  <option value="">未割当</option>
-                  {assignees.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            {!editingTask.isMilestone && onEditDependencies && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => onEditDependencies(editingTask.id)}
-              >
-                <Link2 className="w-4 h-4" />
-                依存関係
-              </Button>
-            )}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="ml-auto h-8 w-8 p-0"
-              onClick={() => setEditingTaskId(null)}
-              title="閉じる"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <InlineTaskEditPanel
+            task={editingTask}
+            assignees={assignees}
+            onChange={updateEditingField}
+            onEditDependencies={onEditDependencies}
+            onClose={() => setEditingTaskId(null)}
+          />
         )}
 
-        <div ref={ref} className="w-full h-full bg-background gantt-chart">
+        <div
+          ref={ref}
+          data-testid="ganttv3-chart"
+          className="w-full h-full bg-background gantt-chart"
+        >
           <div ref={chartContentRef} className="flex h-full">
             {/* タスクリスト列 */}
             <div
@@ -1038,76 +909,13 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                         </div>
                       );
                     } else if (row.type === "task" && row.task) {
-                      const task = row.task;
                       return (
-                        <div
+                        <TaskListRow
                           key={row.id}
-                          className={`px-4 py-0 border-b border-border hover:bg-muted/30 transition-colors absolute w-full flex items-center `}
-                          style={{
-                            top: row.y,
-                            height: row.height,
-                            paddingLeft: `${16 + task.level * 16}px`,
-                            lineHeight: `${row.height}px`,
-                          }}
-                        >
-                          <div className="flex items-center gap-2 w-full h-full">
-                            {task.level > 0 && (
-                              <div className="w-3 h-3 border-l border-b border-muted-foreground/30 flex-shrink-0" />
-                            )}
-                            <div
-                              className="w-2 h-2 flex-shrink-0"
-                              style={{
-                                backgroundColor: task.color,
-                              }}
-                            />
-                            <div className="w-16 flex-shrink-0 text-xs text-muted-foreground truncate">
-                              {task.taskNo ?? ""}
-                            </div>
-                            <div className="flex-1 min-w-0 font-medium truncate text-xs leading-tight">
-                              {task.name}
-                            </div>
-                            <div className="w-20 flex-shrink-0 text-xs text-muted-foreground truncate">
-                              {task.isMilestone ? "" : task.assignee ?? ""}
-                            </div>
-                            <div className="w-16 flex-shrink-0 text-xs truncate">
-                              {task.isMilestone ? (
-                                ""
-                              ) : (
-                                <span
-                                  className="inline-flex items-center gap-1"
-                                  title={getTaskStatusName(
-                                    task.status ?? "NOT_STARTED",
-                                  )}
-                                >
-                                  <span
-                                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                                    style={{
-                                      backgroundColor: statusColor(
-                                        task.status ?? "NOT_STARTED",
-                                      ),
-                                    }}
-                                  />
-                                  <span className="truncate text-muted-foreground">
-                                    {getTaskStatusName(
-                                      task.status ?? "NOT_STARTED",
-                                    )}
-                                  </span>
-                                </span>
-                              )}
-                            </div>
-                            <div className="w-12 flex-shrink-0 text-xs text-muted-foreground text-right tabular-nums">
-                              {formatMonthDay(task.startDate)}
-                            </div>
-                            <div className="w-12 flex-shrink-0 text-xs text-muted-foreground text-right tabular-nums">
-                              {task.isMilestone
-                                ? ""
-                                : formatMonthDay(task.endDate)}
-                            </div>
-                            <div className="w-12 flex-shrink-0 text-xs text-muted-foreground text-right tabular-nums">
-                              {task.isMilestone ? "M" : `${task.duration}h`}
-                            </div>
-                          </div>
-                        </div>
+                          task={row.task}
+                          top={row.y}
+                          height={row.height}
+                        />
                       );
                     }
                     return null;
@@ -1143,7 +951,23 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                 </div>
 
                 {/* タイムラインコンテンツ - タスクリストと全く同じY座標を使用 */}
-                <div ref={timelineScrollRef} className="flex-1 overflow-auto">
+                {/*
+                  スクロールバーを非表示にする（タスクリスト側と同じ処理）。
+                  スクロールバーが実領域を消費するOS/ブラウザだと、横スクロールバーの
+                  帯の分だけこの要素のclientHeightが減り、タスクリスト側（横スクロール
+                  バーを持たない）より最大スクロール量が大きくなって、最下部までスク
+                  ロールしたときに両ペインの行がズレてしまう。
+                */}
+                <div
+                  ref={timelineScrollRef}
+                  className="flex-1 overflow-auto [&::-webkit-scrollbar]:hidden"
+                  style={
+                    {
+                      scrollbarWidth: "none",
+                      msOverflowStyle: "none",
+                    } as React.CSSProperties
+                  }
+                >
                   <div style={{ width: chartWidth, height: scrollContentHeight }}>
                     <svg
                       width={chartWidth}
@@ -1202,7 +1026,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             categoryRanges[row.categoryName!];
                           if (categoryRange) {
                             const categoryStartX = dateToX(categoryRange.start);
-                            const categoryEndX = dateToX(categoryRange.end);
+                            const categoryEndX = dateToXEnd(categoryRange.end);
                             const categoryWidth = Math.max(
                               categoryEndX - categoryStartX,
                               20,
@@ -1287,9 +1111,9 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                           let actualBar: JSX.Element | null = null;
                           if (showActualBar && task.actualStartDate) {
                             const actualX = dateToX(task.actualStartDate);
-                            const actualEndX = task.actualEndDate
-                              ? dateToX(task.actualEndDate)
-                              : actualX;
+                            const actualEndX = dateToXEnd(
+                              task.actualEndDate ?? task.actualStartDate,
+                            );
                             const actualWidth = Math.max(
                               actualEndX - actualX,
                               20,
@@ -1321,13 +1145,15 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                 x={dateToX(barStart)}
                                 y={plannedBarY}
                                 width={Math.max(
-                                  dateToX(barEnd) - dateToX(barStart),
+                                  (task.isMilestone
+                                    ? dateToX(barEnd)
+                                    : dateToXEnd(barEnd)) - dateToX(barStart),
                                   task.isMilestone ? 0 : 20,
                                 )}
                                 height={TASK_HEIGHT}
                                 style={style}
                                 onDragStart={
-                                  editMode ? handleBarDragStart : () => {}
+                                  editMode ? handleBarDragStart : noop
                                 }
                                 isDragging={draggedTaskId === task.id}
                                 editable={editMode}
@@ -1344,6 +1170,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                         <DependencyArrows
                           tasks={visibleTasks}
                           dateToX={dateToX}
+                          dateToXEnd={dateToXEnd}
                           rowHeight={ROW_HEIGHT}
                           taskHeight={TASK_HEIGHT}
                           style={style}

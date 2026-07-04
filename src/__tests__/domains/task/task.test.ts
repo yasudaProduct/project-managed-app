@@ -404,26 +404,30 @@ describe('Task', () => {
         }).toThrow('タスクステータスは必須です');
       });
 
-      it('担当者が空の場合、エラーを返すこと', () => {
-        expect(() => {
-          task.update({
-            name: '更新後タスク',
-            status: new TaskStatus({ status: 'NOT_STARTED' }),
-            assigneeId: undefined,
-            phaseId: 1,
-          });
-        }).toThrow('担当者は必須です');
+      it('担当者が未設定でも更新できること（未割当を許容）', () => {
+        task.update({
+          name: '更新後タスク',
+          status: new TaskStatus({ status: 'NOT_STARTED' }),
+          assigneeId: undefined,
+          phaseId: 1,
+        });
+
+        expect(task.name).toBe('更新後タスク');
+        expect(task.assigneeId).toBeUndefined();
+        expect(task.phaseId).toBe(1);
       });
 
-      it('フェーズが空の場合、エラーを返すこと', () => {
-        expect(() => {
-          task.update({
-            name: '更新後タスク',
-            status: new TaskStatus({ status: 'NOT_STARTED' }),
-            assigneeId: 1,
-            phaseId: undefined,
-          });
-        }).toThrow('フェーズは必須です');
+      it('フェーズが未設定でも更新できること（未割当を許容）', () => {
+        task.update({
+          name: '更新後タスク',
+          status: new TaskStatus({ status: 'NOT_STARTED' }),
+          assigneeId: 1,
+          phaseId: undefined,
+        });
+
+        expect(task.name).toBe('更新後タスク');
+        expect(task.assigneeId).toBe(1);
+        expect(task.phaseId).toBeUndefined();
       });
     });
 

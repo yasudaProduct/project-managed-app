@@ -16,12 +16,20 @@ export async function DELETE(
                 { status: 400 }
             );
         }
+        const wbsId = parseInt(resolvedParams.id);
+        if (isNaN(wbsId)) {
+            return NextResponse.json(
+                { error: "無効なWBSIDです" },
+                { status: 400 }
+            );
+        }
 
         const taskDependencyService = container.get<TaskDependencyService>(
             SYMBOL.ITaskDependencyService
         );
 
-        await taskDependencyService.deleteDependency(dependencyId);
+        // 別WBSの依存IDを渡して越境削除されないよう wbsId でスコープ検証する
+        await taskDependencyService.deleteDependency(dependencyId, wbsId);
 
         return NextResponse.json({ success: true });
     } catch (error) {
