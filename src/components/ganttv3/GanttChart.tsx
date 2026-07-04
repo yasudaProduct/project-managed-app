@@ -943,7 +943,23 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                 </div>
 
                 {/* タイムラインコンテンツ - タスクリストと全く同じY座標を使用 */}
-                <div ref={timelineScrollRef} className="flex-1 overflow-auto">
+                {/*
+                  スクロールバーを非表示にする（タスクリスト側と同じ処理）。
+                  スクロールバーが実領域を消費するOS/ブラウザだと、横スクロールバーの
+                  帯の分だけこの要素のclientHeightが減り、タスクリスト側（横スクロール
+                  バーを持たない）より最大スクロール量が大きくなって、最下部までスク
+                  ロールしたときに両ペインの行がズレてしまう。
+                */}
+                <div
+                  ref={timelineScrollRef}
+                  className="flex-1 overflow-auto [&::-webkit-scrollbar]:hidden"
+                  style={
+                    {
+                      scrollbarWidth: "none",
+                      msOverflowStyle: "none",
+                    } as React.CSSProperties
+                  }
+                >
                   <div style={{ width: chartWidth, height: scrollContentHeight }}>
                     <svg
                       width={chartWidth}

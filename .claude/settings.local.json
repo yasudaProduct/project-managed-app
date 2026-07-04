@@ -36,7 +36,8 @@
       "Bash(echo \"exit=$?\")",
       "Bash(echo \"lint exit=$?\")",
       "Bash(break)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Skill(code-review)"
     ],
     "deny": [],
     "additionalDirectories": [
