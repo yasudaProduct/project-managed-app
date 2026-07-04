@@ -10,6 +10,8 @@ import { IMilestoneApplicationService } from "@/applications/milestone/milestone
 import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
 import { DependencyType } from "@/components/ganttv3/gantt";
 import { statusColor } from "@/components/ganttv3/utils/taskFormat";
+// TODO(docs/09-refactoring-backlog.md P1-7): UI層からDomainサービスを直接呼び出している。Application Serviceでラップして置き換える。
+// eslint-disable-next-line no-restricted-imports
 import { TaskProgressCalculator } from "@/domains/task/task-progress-calculator";
 import { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import type { IProjectSettingsApplicationService } from "@/applications/project-settings/project-settings-application-service";

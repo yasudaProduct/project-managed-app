@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
 import { EvmService } from '@/applications/evm/evm-service';
-import { TaskStatus } from '@prisma/client';
+import type { TaskStatus } from '@/types/wbs';
 
 const evmService = container.get<EvmService>(SYMBOL.EvmService);
 
@@ -34,7 +34,7 @@ const UpdateSnapshotSchema = z.object({
   wbsId: z.number(),
   id: z.number(),
   progressRate: z.number().min(0).max(100).nullable(),
-  status: z.nativeEnum(TaskStatus),
+  status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "ON_HOLD"]),
 });
 
 /**

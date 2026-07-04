@@ -3,7 +3,8 @@ import { SYMBOL } from '@/types/symbol';
 import type { IWbsEvmRepository, WbsEvmData, TaskProgressSnapshotRecord, EditableProgressSnapshot } from './iwbs-evm-repository';
 import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
-import { ProgressMeasurementMethod, TaskStatus } from '@prisma/client';
+import type { ProgressMeasurementMethod } from '@/types/progress-measurement';
+import { TASK_STATUSES, type TaskStatus } from '@/types/wbs';
 import type { EvmForecastMethod } from '@/types/evm-forecast-method';
 
 /**
@@ -50,7 +51,7 @@ export class EvmService {
         throw new Error('進捗率は0〜100の範囲で指定してください。');
       }
     }
-    if (!Object.values(TaskStatus).includes(status)) {
+    if (!TASK_STATUSES.includes(status)) {
       throw new Error(`不正なステータスです: ${status}`);
     }
     await this.wbsEvmRepository.updateProgressSnapshot(id, progressRate, status);

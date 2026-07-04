@@ -5,27 +5,17 @@
  */
 
 import { ForecastCalculationService } from '@/domains/forecast/forecast-calculation.service';
-import { WbsTaskData } from '@/applications/wbs/query/wbs-query-repository';
+import { ForecastTaskInput } from '@/domains/forecast/forecast-task-input';
 
-// テスト用WbsTaskDataファクトリ
-function createTask(overrides: Partial<WbsTaskData> = {}): WbsTaskData {
+// テスト用ForecastTaskInputファクトリ
+function createTask(overrides: Partial<ForecastTaskInput> = {}): ForecastTaskInput {
   return {
     id: 'task-1',
-    no: '001',
     name: 'テストタスク',
-    kijunKosu: null,
     yoteiKosu: 100,
     jissekiKosu: 0,
-    kijunStart: null,
-    kijunEnd: null,
-    yoteiStart: new Date('2025-01-01T00:00:00.000Z'),
-    yoteiEnd: new Date('2025-03-31T00:00:00.000Z'),
-    jissekiStart: null,
-    jissekiEnd: null,
     progressRate: 0,
     status: 'NOT_STARTED',
-    phase: null,
-    assignee: null,
     ...overrides,
   };
 }

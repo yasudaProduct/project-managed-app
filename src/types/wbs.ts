@@ -1,5 +1,7 @@
 export type TaskStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "ON_HOLD"
 
+export const TASK_STATUSES: TaskStatus[] = ["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "ON_HOLD"]
+
 export type ProjectStatus = "INACTIVE" | "ACTIVE" | "DONE" | "CANCELLED" | "PENDING"
 
 export type PeriodType = "KIJUN" | "YOTEI"

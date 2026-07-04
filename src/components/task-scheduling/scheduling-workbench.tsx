@@ -15,6 +15,8 @@ import { Play, Download, AlertTriangle, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { calculateSchedule } from "./scheduling-actions";
 import type { ScheduleCalculationResult } from "@/applications/task-scheduling/ischeduling-application.service";
+// TODO(docs/09-refactoring-backlog.md P1-7): UI層からのDomain直接import。src/types/ へ型を移設し置き換える。
+// eslint-disable-next-line no-restricted-imports
 import type { BaselineMode } from "@/domains/task-scheduling/scheduling-options";
 import {
   scheduledToGanttTasks,

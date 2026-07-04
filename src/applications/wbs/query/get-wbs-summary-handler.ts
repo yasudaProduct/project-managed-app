@@ -16,6 +16,7 @@ import { AllocationQuantizer } from "@/domains/wbs/allocation-quantizer";
 import { MonthlySummaryAccumulator } from "./monthly-summary-accumulator";
 import { MonthlyPhaseSummaryAccumulator } from "./monthly-phase-summary-accumulator";
 import { ForecastCalculationService } from "@/domains/forecast/forecast-calculation.service";
+import { toForecastTaskInput } from "@/applications/wbs/query/to-forecast-task-input";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import { toForecastMethodOption } from "@/types/forecast-calculation-method";
 import { distributeForecastAcrossMonths } from "./monthly-forecast-distributor";
@@ -287,10 +288,13 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           quantizer
         );
 
-        const forecastResult = ForecastCalculationService.calculateTaskForecast(task, {
-          method: forecastMethodOption,
-          progressMeasurementMethod
-        });
+        const forecastResult = ForecastCalculationService.calculateTaskForecast(
+          toForecastTaskInput(task),
+          {
+            method: forecastMethodOption,
+            progressMeasurementMethod
+          }
+        );
         totalForecastHours = forecastResult.forecastHours;
       }
 
@@ -497,10 +501,13 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         const date = new Date(task.yoteiStart);
         plannedYearMonth = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
 
-        const forecastResult = ForecastCalculationService.calculateTaskForecast(task, {
-          method: forecastMethodOption,
-          progressMeasurementMethod
-        });
+        const forecastResult = ForecastCalculationService.calculateTaskForecast(
+          toForecastTaskInput(task),
+          {
+            method: forecastMethodOption,
+            progressMeasurementMethod
+          }
+        );
         totalForecastHours = forecastResult.forecastHours;
       }
 

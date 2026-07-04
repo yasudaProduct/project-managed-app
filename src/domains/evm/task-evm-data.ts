@@ -1,5 +1,5 @@
 import { ProgressMeasurementMethod } from '@/types/progress-measurement';
-import { TaskStatus } from '@prisma/client'; //TODO: prismaに依存している
+import { TaskStatus } from '@/types/wbs';
 
 export type EvmCalculationMode = 'hours' | 'cost';
 

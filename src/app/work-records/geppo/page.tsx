@@ -42,6 +42,8 @@ import {
 } from "lucide-react";
 import { Project } from "@/types/project";
 import { User } from "@/types/user";
+// TODO(docs/09-refactoring-backlog.md P1-7): UI層からのDomain直接import。src/types/ へ型を移設し置き換える。
+// eslint-disable-next-line no-restricted-imports
 import { Geppo } from "@/domains/geppo/types";
 import { MonthPicker } from "@/components/month-picker";
 import { useSearchParams } from "next/navigation";

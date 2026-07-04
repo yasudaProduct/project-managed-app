@@ -5,7 +5,10 @@ import { KosuType, PeriodType, TaskStatus, WbsTask } from "@/types/wbs"
 import { SYMBOL } from "@/types/symbol";
 import { container } from "@/lib/inversify.config"
 import { ITaskApplicationService } from "@/applications/task/task-application-service";
+// TODO(docs/09-refactoring-backlog.md P1-7): UI層からのDomain直接import。Application層にDTO/IFを新設し置き換える。
+// eslint-disable-next-line no-restricted-imports
 import { TaskStatus as TaskStatusDomain } from "@/domains/task/value-object/project-status";
+// eslint-disable-next-line no-restricted-imports
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 import { IPhaseApplicationService } from "@/applications/phase/phase-application-service";
 

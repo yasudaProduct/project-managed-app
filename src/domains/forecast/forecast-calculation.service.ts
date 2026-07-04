@@ -3,8 +3,8 @@
  * 設計書：/docs/feature/forecast-hours-specification.md
  */
 
-import { WbsTaskData } from "@/applications/wbs/query/wbs-query-repository";
-import { TaskProgressCalculator, TaskStatus } from "@/domains/task/task-progress-calculator";
+import { ForecastTaskInput } from "@/domains/forecast/forecast-task-input";
+import { TaskProgressCalculator } from "@/domains/task/task-progress-calculator";
 import { ProgressMeasurementMethod } from "@/types/progress-measurement";
 
 export interface ForecastCalculationOptions {
@@ -34,7 +34,7 @@ export class ForecastCalculationService {
    * 進捗測定方式は3つ：0/100法、50/50法、自己申告進捗率
    */
   static calculateTaskForecast(
-    task: WbsTaskData,
+    task: ForecastTaskInput,
     options: ForecastCalculationOptions = {
       method: 'realistic',
       progressMeasurementMethod: 'SELF_REPORTED'
@@ -50,7 +50,7 @@ export class ForecastCalculationService {
 
     // TaskProgressCalculatorを使用して実効進捗率を計算
     const effectiveProgressRate = TaskProgressCalculator.calculateEffectiveProgress(
-      task.status as TaskStatus,
+      task.status,
       task.progressRate,
       options.progressMeasurementMethod || 'SELF_REPORTED'
     );
@@ -91,7 +91,7 @@ export class ForecastCalculationService {
    * 複数タスクの見通し工数を一括計算
    */
   static calculateMultipleTasksForecast(
-    tasks: WbsTaskData[],
+    tasks: ForecastTaskInput[],
     options: ForecastCalculationOptions = {
       method: 'realistic',
       progressMeasurementMethod: 'SELF_REPORTED'
@@ -186,7 +186,7 @@ export class ForecastCalculationService {
    * 基準工数を取得（task_period.type='KIJUN'）
    * TODO: 基準工数データの取得が必要な場合に実装
    */
-  static getBaselineHours(task: WbsTaskData): number {
+  static getBaselineHours(task: ForecastTaskInput): number {
     // 現在の実装では基準工数は取得していないため、予定工数を代用
     // 必要に応じて task_period テーブルから KIJUN タイプの工数を取得する実装を追加
     return task.yoteiKosu || 0;

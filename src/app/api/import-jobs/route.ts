@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { container } from '@/lib/inversify.config'
 import { SYMBOL } from '@/types/symbol'
 import { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service'
+// TODO(docs/09-refactoring-backlog.md P1-7): UI層からのDomain直接import。src/types/ へ型を移設し置き換える。
+// eslint-disable-next-line no-restricted-imports
 import type { ImportJobType } from '@/domains/import-job/import-job-enums'
 import type { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
 

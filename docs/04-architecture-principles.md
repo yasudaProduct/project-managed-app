@@ -88,17 +88,17 @@
 - 複数集約を横断する読み取り専用の集計・一覧（ダッシュボード統計、WBSサマリー等）のみ QueryBus + QueryHandler + 専用QueryRepository を使う。
 - Handlerは必ず `IQueryHandler` を実装し、QueryBusにregisterして `queryBus.execute()` 経由で呼ぶ。DIからHandlerを直接取得して独自メソッドを呼ぶ実装は不可。
 
-### 依存ルールの機械的強制（導入予定）
+### 依存ルールの機械的強制（導入済み）
 
-現状ESLintにレイヤー境界のルールはなく、レビュー頼みである。`docs/09-refactoring-backlog.md` のP1（レイヤー違反）解消後、`no-restricted-imports` を導入する。設定例:
+`docs/09-refactoring-backlog.md` のP1（レイヤー違反）解消後、`eslint.config.mjs` に `no-restricted-imports` を導入済み。設定:
 
 ```js
-// eslint.config.mjs に追加する設定例
+// eslint.config.mjs
 {
   files: ["src/domains/**"],
   rules: {
     "no-restricted-imports": ["error", { patterns: [
-      { group: ["@/applications/*", "@/infrastructures/*", "@/app/*", "@/components/*", "@/hooks/*", "@/lib/*", "@prisma/client"],
+      { group: ["@/applications/**", "@/infrastructures/**", "@/app/**", "@/components/**", "@/hooks/**", "@/lib/**", "@prisma/client"],
         message: "Domain層は domains/types 以外に依存できません (docs/04)" },
     ]}],
   },
@@ -107,7 +107,7 @@
   files: ["src/applications/**"],
   rules: {
     "no-restricted-imports": ["error", { patterns: [
-      { group: ["@/infrastructures/*", "@/app/*", "@/components/*", "@/hooks/*", "@prisma/client", "@/lib/prisma/*"],
+      { group: ["@/infrastructures/**", "@/app/**", "@/components/**", "@/hooks/**", "@prisma/client", "@/lib/prisma/**"],
         message: "Application層は infrastructures/UI/Prisma に依存できません (docs/04)" },
     ]}],
   },
@@ -116,12 +116,14 @@
   files: ["src/app/**", "src/components/**", "src/hooks/**"],
   rules: {
     "no-restricted-imports": ["error", { patterns: [
-      { group: ["@/infrastructures/*", "@/domains/*", "@prisma/client", "@/lib/prisma/*"],
+      { group: ["@/infrastructures/**", "@/domains/**", "@prisma/client", "@/lib/prisma/**"],
         message: "UI層は Application Service 経由でアクセスしてください (docs/04)" },
     ]}],
   },
 },
 ```
+
+導入時に発覚した UI→Domain 直接依存の既存違反（11 ファイル）は `docs/09-refactoring-backlog.md` の P1-7 に記録し、`eslint-disable-next-line no-restricted-imports` ＋ TODO コメントで個別に一時抑制している。新規コードでは抑制を追加せず、Application Service 経由でアクセスすること。
 
 ## エラーハンドリング
 

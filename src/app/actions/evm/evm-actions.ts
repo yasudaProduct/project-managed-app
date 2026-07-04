@@ -4,9 +4,12 @@ import { z } from 'zod';
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
 import { EvmService } from '@/applications/evm/evm-service';
+// TODO(docs/09-refactoring-backlog.md P1-7): UI層からのDomain直接import。Application層にDTO/IFを新設し置き換える。
+// eslint-disable-next-line no-restricted-imports
 import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
+// eslint-disable-next-line no-restricted-imports
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
-import { ProgressMeasurementMethod } from '@prisma/client';
+import type { ProgressMeasurementMethod } from '@/types/progress-measurement';
 import type { EvmForecastMethod } from '@/types/evm-forecast-method';
 
 const evmService = container.get<EvmService>(SYMBOL.EvmService);

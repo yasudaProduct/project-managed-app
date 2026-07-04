@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
 import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+// TODO(docs/09-refactoring-backlog.md P1-7): UI層からのDomain直接import。src/types/ へ型を移設し置き換える。
+// eslint-disable-next-line no-restricted-imports
 import { DependencyType } from "@/domains/task-dependency/task-dependency";
 
 export async function createGanttDependency(

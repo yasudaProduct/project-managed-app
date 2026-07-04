@@ -5,10 +5,14 @@ import { IImportJobApplicationService } from '@/applications/import-job/import-j
 import { IGeppoImportApplicationService } from '@/applications/geppo-import/geppo-import-application-service'
 import { IWbsSyncApplicationService } from '@/applications/wbs-sync/IWbsSyncApplicationService'
 import { resolveWbsSyncMode } from '@/applications/wbs-sync/wbs-sync-mode'
+// TODO(docs/09-refactoring-backlog.md P1-7): UI層からのDomain直接import。Application層にDTO/IFを新設し置き換える。
+// eslint-disable-next-line no-restricted-imports
 import { ImportJob } from '@/domains/import-job/import-job'
 import { INotificationService } from '@/applications/notification/INotificationService'
 import { NotificationType } from '@/types/notification'
+// eslint-disable-next-line no-restricted-imports
 import { NotificationPriority } from '@/domains/notification/notification-priority'
+// eslint-disable-next-line no-restricted-imports
 import { NotificationChannel } from '@/domains/notification/notification-channel'
 import { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
 

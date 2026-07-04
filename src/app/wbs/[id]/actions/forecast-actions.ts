@@ -3,6 +3,9 @@
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
 import { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-repository';
+import { toForecastTaskInput } from '@/applications/wbs/query/to-forecast-task-input';
+// TODO(docs/09-refactoring-backlog.md P1-7): UI層からDomainサービスを直接呼び出している。Application Serviceでラップして置き換える。
+// eslint-disable-next-line no-restricted-imports
 import {
   ForecastCalculationService,
   ForecastCalculationOptions,
@@ -25,7 +28,7 @@ export async function calculateTasksForecast(
 
     // 見通し工数を計算
     const forecastResults = ForecastCalculationService.calculateMultipleTasksForecast(
-      tasks,
+      tasks.map(toForecastTaskInput),
       options
     );
 
@@ -61,7 +64,10 @@ export async function calculateSingleTaskForecast(
     }
 
     // 見通し工数を計算
-    const forecastResult = ForecastCalculationService.calculateTaskForecast(task, options);
+    const forecastResult = ForecastCalculationService.calculateTaskForecast(
+      toForecastTaskInput(task),
+      options
+    );
 
     return forecastResult;
   } catch (error) {
