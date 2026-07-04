@@ -1,20 +1,12 @@
 import { injectable, inject } from 'inversify'
 import { SYMBOL } from '@/types/symbol'
 import type { ITaskRepository } from '@/applications/task/itask-repository'
+import type { ITaskMappingService, TaskMappingEntry } from '@/applications/geppo-import/itask-mapping-service'
+import { buildTaskMapKey } from '@/applications/geppo-import/itask-mapping-service'
 import { Task } from '@/domains/task/task'
 
-export type TaskMappingEntry = {
-  projectId: string
-  wbsNo: string
-  wbsId: number
-}
-
-export function buildTaskMapKey(projectId: string, wbsNo: string): string {
-  return `${projectId}::${wbsNo}`
-}
-
 @injectable()
-export class TaskMappingService {
+export class TaskMappingService implements ITaskMappingService {
   constructor(
     @inject(SYMBOL.ITaskRepository) private taskRepository: ITaskRepository
   ) { }

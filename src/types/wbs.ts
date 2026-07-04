@@ -6,6 +6,16 @@ export type PeriodType = "KIJUN" | "YOTEI"
 
 export type KosuType = "NORMAL" | "RISK"
 
+export type BufferType = "RISK" | "OTHER"
+
+export type WbsBuffer = {
+  id: number
+  wbsId: number
+  name: string
+  buffer: number
+  bufferType: BufferType
+}
+
 export type WbsPhase = {
   id: number
   seq: number

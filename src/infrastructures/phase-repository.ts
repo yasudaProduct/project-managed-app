@@ -53,6 +53,20 @@ export class PhaseRepository implements IPhaseRepository {
         }));
     }
 
+    async findTemplateById(id: number): Promise<Phase | null> {
+        const phaseDb = await prisma.phaseTemplate.findUnique({
+            where: { id },
+        });
+
+        if (!phaseDb) return null;
+        return Phase.createFromDb({
+            id: phaseDb.id,
+            name: phaseDb.name,
+            code: new PhaseCode(phaseDb.code),
+            seq: phaseDb.seq,
+        });
+    }
+
     async findByWbsId(wbsId: number): Promise<Phase[]> {
         console.log("repository: findByWbsId")
         const phasesDb = await prisma.wbsPhase.findMany({
@@ -162,6 +176,12 @@ export class PhaseRepository implements IPhaseRepository {
             name: phaseDb.name,
             code: new PhaseCode(phaseDb.code),
             seq: phaseDb.seq,
+        });
+    }
+
+    async deleteTemplate(id: number): Promise<void> {
+        await prisma.phaseTemplate.delete({
+            where: { id },
         });
     }
 

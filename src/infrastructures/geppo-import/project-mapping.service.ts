@@ -4,9 +4,10 @@ import { Geppo } from '@/domains/geppo/types'
 import { ProjectImportOption, ProjectMappingValidation } from '@/domains/geppo-import/geppo-import-result'
 import type { IGeppoRepository } from '@/applications/geppo/repositories/igeppo.repository'
 import type { IWbsRepository } from '@/applications/wbs/iwbs-repository'
+import type { IProjectMappingService } from '@/applications/geppo-import/iproject-mapping-service'
 
 @injectable()
-export class ProjectMappingService {
+export class ProjectMappingService implements IProjectMappingService {
   constructor(
     @inject(SYMBOL.IWbsRepository) private wbsRepository: IWbsRepository,
     @inject(SYMBOL.IGeppoRepository) private geppoRepository: IGeppoRepository

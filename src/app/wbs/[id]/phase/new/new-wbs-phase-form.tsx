@@ -85,7 +85,7 @@ export function NewWbsPhaseForm({ wbsId }: NewWbsPhaseFormProps) {
       } else {
         toast({
           title: "エラー",
-          description: result.message,
+          description: result.error,
           variant: "destructive",
         });
       }

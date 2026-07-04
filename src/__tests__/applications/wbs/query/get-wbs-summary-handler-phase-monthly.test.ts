@@ -6,19 +6,7 @@ import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
-
-jest.mock('@/lib/prisma/prisma', () => ({
-  __esModule: true,
-  default: {
-    projectSettings: {
-      findUnique: jest.fn().mockResolvedValue({
-        roundToQuarter: true,
-        progressMeasurementMethod: 'SELF_REPORTED',
-        forecastCalculationMethod: 'REALISTIC',
-      }),
-    },
-  },
-}));
+import type { IProjectSettingsRepository } from '@/applications/project-settings/iproject-settings-repository';
 
 const makeTask = (overrides: Partial<WbsTaskData>): WbsTaskData => ({
   id: 't1',
@@ -46,6 +34,7 @@ describe('GetWbsSummaryHandler monthlyPhaseSummary (server-side pre-aggregation)
   let scheduleRepo: IUserScheduleRepository;
   let assigneeRepo: IWbsAssigneeRepository;
   let systemRepo: ISystemSettingsRepository;
+  let projectSettingsRepo: IProjectSettingsRepository;
 
   beforeEach(() => {
     const tasks: WbsTaskData[] = [
@@ -73,16 +62,21 @@ describe('GetWbsSummaryHandler monthlyPhaseSummary (server-side pre-aggregation)
       getWbsTasks: jest.fn().mockResolvedValue(tasks),
       getPhases: jest.fn().mockResolvedValue(phases),
       getTaskActualHoursByMonth: jest.fn().mockResolvedValue([]),
+      getUnlinkedWorkRecordsCount: jest.fn().mockResolvedValue(0),
     };
     holidayRepo = {
       findAll: jest.fn().mockResolvedValue([]),
+      findById: jest.fn().mockResolvedValue(null),
       findByDateRange: jest.fn().mockResolvedValue([]),
       findByDate: jest.fn().mockResolvedValue(null),
+      findByDateExcludingId: jest.fn().mockResolvedValue(null),
       save: jest.fn(),
       saveMany: jest.fn(),
+      update: jest.fn(),
       delete: jest.fn(),
     } as ICompanyHolidayRepository;
     scheduleRepo = {
+      findAll: jest.fn().mockResolvedValue([]),
       findByUserId: jest.fn().mockResolvedValue([]),
       findByUserIdAndDateRange: jest.fn().mockResolvedValue([]),
       findByUsersAndDateRange: jest.fn().mockResolvedValue([]),
@@ -90,6 +84,7 @@ describe('GetWbsSummaryHandler monthlyPhaseSummary (server-side pre-aggregation)
       save: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      replaceAll: jest.fn(),
     } as IUserScheduleRepository;
     assigneeRepo = {
       findById: jest.fn().mockResolvedValue(null),
@@ -103,6 +98,21 @@ describe('GetWbsSummaryHandler monthlyPhaseSummary (server-side pre-aggregation)
       get: jest.fn().mockResolvedValue({ standardWorkingHours: 7.5 }),
       update: jest.fn(),
     } as ISystemSettingsRepository;
+    projectSettingsRepo = {
+      findByProjectId: jest.fn().mockResolvedValue({
+        projectId: 'proj-1',
+        roundToQuarter: true,
+        progressMeasurementMethod: 'SELF_REPORTED',
+        forecastCalculationMethod: 'REALISTIC',
+        evmForecastMethod: 'CPI_ONLY',
+        deadlineAlertDays: 1,
+        costOverrunThresholdPct: 100,
+      }),
+      upsertProjectSettings: jest.fn(),
+      upsertDashboardSettings: jest.fn(),
+      findSchedulingSettings: jest.fn(),
+      upsertSchedulingSettings: jest.fn(),
+    } as IProjectSettingsRepository;
   });
 
   it('returns monthlyPhaseSummary alongside monthlyAssigneeSummary and forecast totals match across pivots (START_DATE_BASED)', async () => {
@@ -112,6 +122,7 @@ describe('GetWbsSummaryHandler monthlyPhaseSummary (server-side pre-aggregation)
       scheduleRepo,
       assigneeRepo,
       systemRepo,
+      projectSettingsRepo,
     );
 
     const query = new GetWbsSummaryQuery('proj-1', 123, AllocationCalculationMode.START_DATE_BASED);

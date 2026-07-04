@@ -32,9 +32,15 @@ describe('TaskFactory', () => {
       findById: jest.fn(),
       findAll: jest.fn(),
       findByWbsId: jest.fn(),
+      findPhasesUsedInWbs: jest.fn(),
       findAllTemplates: jest.fn(),
+      findTemplateById: jest.fn(),
       createTemplate: jest.fn(),
       updateTemplate: jest.fn(),
+      deleteTemplate: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
 
     taskFactory = new TaskFactory(taskRepository, phaseRepository);

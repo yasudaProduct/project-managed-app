@@ -1,25 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma/prisma";
+import { container } from "@/lib/inversify.config";
+import { ICompanyHolidayRepository } from "@/applications/calendar/icompany-holiday-repository";
+import { SYMBOL } from "@/types/symbol";
 import { z } from "zod";
+
+const companyHolidayRepository = container.get<ICompanyHolidayRepository>(
+  SYMBOL.ICompanyHolidayRepository
+);
+
+function formatHoliday(holiday: {
+  id?: number;
+  date: Date;
+  name: string;
+  type: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}) {
+  return {
+    id: holiday.id,
+    date: holiday.date.toISOString().split("T")[0],
+    name: holiday.name,
+    type: holiday.type,
+    createdAt: holiday.createdAt?.toISOString(),
+    updatedAt: holiday.updatedAt?.toISOString(),
+  };
+}
 
 // GET: 会社休日一覧取得
 export async function GET() {
   try {
-    const holidays = await prisma.companyHoliday.findMany({
-      orderBy: {
-        date: "asc",
-      },
-    });
+    const holidays = await companyHolidayRepository.findAll();
 
-    // 日付をISO文字列として返す
-    const formattedHolidays = holidays.map((holiday) => ({
-      ...holiday,
-      date: holiday.date.toISOString().split("T")[0],
-      createdAt: holiday.createdAt.toISOString(),
-      updatedAt: holiday.updatedAt.toISOString(),
-    }));
-
-    return NextResponse.json(formattedHolidays);
+    return NextResponse.json(holidays.map(formatHoliday));
   } catch (error) {
     console.error("会社休日取得エラー:", error);
     return NextResponse.json(
@@ -44,11 +56,9 @@ export async function POST(request: NextRequest) {
     const validatedData = createSchema.parse(body);
 
     // 日付の重複チェック
-    const existingHoliday = await prisma.companyHoliday.findUnique({
-      where: {
-        date: new Date(validatedData.date),
-      },
-    });
+    const existingHoliday = await companyHolidayRepository.findByDate(
+      new Date(validatedData.date)
+    );
 
     if (existingHoliday) {
       return NextResponse.json(
@@ -58,23 +68,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 会社休日を作成
-    const holiday = await prisma.companyHoliday.create({
-      data: {
-        date: new Date(validatedData.date),
-        name: validatedData.name,
-        type: validatedData.type,
-      },
+    const holiday = await companyHolidayRepository.save({
+      date: new Date(validatedData.date),
+      name: validatedData.name,
+      type: validatedData.type,
     });
 
-    // レスポンス用のフォーマット
-    const formattedHoliday = {
-      ...holiday,
-      date: holiday.date.toISOString().split("T")[0],
-      createdAt: holiday.createdAt.toISOString(),
-      updatedAt: holiday.updatedAt.toISOString(),
-    };
-
-    return NextResponse.json(formattedHoliday, { status: 201 });
+    return NextResponse.json(formatHoliday(holiday), { status: 201 });
   } catch (error) {
     console.error("会社休日作成エラー:", error);
 

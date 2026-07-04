@@ -12,7 +12,7 @@ import { DependencyType } from "@/components/ganttv3/gantt";
 import { statusColor } from "@/components/ganttv3/utils/taskFormat";
 import { TaskProgressCalculator } from "@/domains/task/task-progress-calculator";
 import { ProgressMeasurementMethod } from "@/types/progress-measurement";
-import prisma from "@/lib/prisma/prisma";
+import type { IProjectSettingsApplicationService } from "@/applications/project-settings/project-settings-application-service";
 
 // フェーズ色用の固定パレット（seq/index順に決定的に割り当てる）
 const PHASE_COLOR_PALETTE = [
@@ -164,16 +164,16 @@ async function getProgressMeasurementMethod(
     wbsId: number
 ): Promise<ProgressMeasurementMethod> {
     try {
-        const wbs = await prisma.wbs.findUnique({
-            where: { id: wbsId },
-            select: { projectId: true },
-        });
+        const wbsService = container.get<IWbsApplicationService>(
+            SYMBOL.IWbsApplicationService
+        );
+        const wbs = await wbsService.getWbsById(wbsId);
         if (!wbs) return "SELF_REPORTED";
-        const settings = await prisma.projectSettings.findUnique({
-            where: { projectId: wbs.projectId },
-            select: { progressMeasurementMethod: true },
-        });
-        return settings?.progressMeasurementMethod ?? "SELF_REPORTED";
+
+        const projectSettingsService = container.get<IProjectSettingsApplicationService>(
+            SYMBOL.IProjectSettingsApplicationService
+        );
+        return await projectSettingsService.getProgressMeasurementMethod(wbs.projectId);
     } catch (e) {
         console.error("進捗測定方式の取得に失敗しました", e);
         return "SELF_REPORTED";

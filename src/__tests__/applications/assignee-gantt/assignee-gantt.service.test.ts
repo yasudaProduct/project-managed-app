@@ -47,9 +47,12 @@ describe('AssigneeGanttService', () => {
     mockCompanyHolidayRepository = {
       findByDateRange: jest.fn(),
       findAll: jest.fn(),
+      findById: jest.fn(),
       findByDate: jest.fn(),
+      findByDateExcludingId: jest.fn(),
       save: jest.fn(),
       saveMany: jest.fn(),
+      update: jest.fn(),
       delete: jest.fn(),
     } as jest.Mocked<ICompanyHolidayRepository>;
 

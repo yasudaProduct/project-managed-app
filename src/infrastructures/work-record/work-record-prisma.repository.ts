@@ -2,12 +2,44 @@ import prisma from "@/lib/prisma/prisma";
 import { injectable} from 'inversify'
 import { WorkRecord } from '@/domains/work-records/work-recoed'
 import { IWorkRecordRepository } from '@/applications/work-record/repositories/iwork-record.repository'
+import type { WorkRecordDetail } from '@/types/work-record'
 
 @injectable()
 export class WorkRecordPrismaRepository implements IWorkRecordRepository {
   constructor(
     // @inject(SYMBOL.PrismaClient) private prisma: PrismaClient
   ) { }
+
+  async findAll(): Promise<WorkRecordDetail[]> {
+    const workRecords = await prisma.workRecord.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        task: {
+          select: {
+            id: true,
+            name: true,
+            taskNo: true,
+          },
+        },
+      },
+    })
+
+    return workRecords.map((workRecord) => ({
+      id: workRecord.id,
+      userId: workRecord.userId,
+      userName: workRecord.user.name,
+      taskId: workRecord.task?.id ?? null,
+      taskNo: workRecord.task?.taskNo ?? null,
+      taskName: workRecord.task?.name ?? null,
+      date: workRecord.date,
+      hoursWorked: Number(workRecord.hours_worked),
+    }))
+  }
 
   async bulkCreate(workRecords: WorkRecord[]): Promise<void> {
     try {

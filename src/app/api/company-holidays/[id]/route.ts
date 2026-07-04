@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma/prisma";
+import { container } from "@/lib/inversify.config";
+import { ICompanyHolidayRepository } from "@/applications/calendar/icompany-holiday-repository";
+import { SYMBOL } from "@/types/symbol";
 import { z } from "zod";
+
+const companyHolidayRepository = container.get<ICompanyHolidayRepository>(
+  SYMBOL.ICompanyHolidayRepository
+);
+
+function formatHoliday(holiday: {
+  id?: number;
+  date: Date;
+  name: string;
+  type: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}) {
+  return {
+    id: holiday.id,
+    date: holiday.date.toISOString().split("T")[0],
+    name: holiday.name,
+    type: holiday.type,
+    createdAt: holiday.createdAt?.toISOString(),
+    updatedAt: holiday.updatedAt?.toISOString(),
+  };
+}
 
 // PUT: 会社休日更新
 const updateSchema = z.object({
@@ -29,9 +53,7 @@ export async function PUT(
     const validatedData = updateSchema.parse(body);
 
     // 更新対象の休日が存在するかチェック
-    const existingHoliday = await prisma.companyHoliday.findUnique({
-      where: { id: holidayId },
-    });
+    const existingHoliday = await companyHolidayRepository.findById(holidayId);
 
     if (!existingHoliday) {
       return NextResponse.json(
@@ -41,12 +63,10 @@ export async function PUT(
     }
 
     // 日付の重複チェック（自分以外で同じ日付がないかチェック）
-    const dateConflict = await prisma.companyHoliday.findFirst({
-      where: {
-        date: new Date(validatedData.date),
-        id: { not: holidayId },
-      },
-    });
+    const dateConflict = await companyHolidayRepository.findByDateExcludingId(
+      new Date(validatedData.date),
+      holidayId
+    );
 
     if (dateConflict) {
       return NextResponse.json(
@@ -56,24 +76,13 @@ export async function PUT(
     }
 
     // 会社休日を更新
-    const updatedHoliday = await prisma.companyHoliday.update({
-      where: { id: holidayId },
-      data: {
-        date: new Date(validatedData.date),
-        name: validatedData.name,
-        type: validatedData.type,
-      },
+    const updatedHoliday = await companyHolidayRepository.update(holidayId, {
+      date: new Date(validatedData.date),
+      name: validatedData.name,
+      type: validatedData.type,
     });
 
-    // レスポンス用のフォーマット
-    const formattedHoliday = {
-      ...updatedHoliday,
-      date: updatedHoliday.date.toISOString().split("T")[0],
-      createdAt: updatedHoliday.createdAt.toISOString(),
-      updatedAt: updatedHoliday.updatedAt.toISOString(),
-    };
-
-    return NextResponse.json(formattedHoliday);
+    return NextResponse.json(formatHoliday(updatedHoliday));
   } catch (error) {
     console.error("会社休日更新エラー:", error);
 
@@ -107,9 +116,7 @@ export async function DELETE(
     }
 
     // 削除対象の休日が存在するかチェック
-    const existingHoliday = await prisma.companyHoliday.findUnique({
-      where: { id: holidayId },
-    });
+    const existingHoliday = await companyHolidayRepository.findById(holidayId);
 
     if (!existingHoliday) {
       return NextResponse.json(
@@ -119,9 +126,7 @@ export async function DELETE(
     }
 
     // 会社休日を削除
-    await prisma.companyHoliday.delete({
-      where: { id: holidayId },
-    });
+    await companyHolidayRepository.delete(holidayId);
 
     return NextResponse.json(
       { message: "会社休日を削除しました" },
@@ -151,9 +156,7 @@ export async function GET(
       );
     }
 
-    const holiday = await prisma.companyHoliday.findUnique({
-      where: { id: holidayId },
-    });
+    const holiday = await companyHolidayRepository.findById(holidayId);
 
     if (!holiday) {
       return NextResponse.json(
@@ -162,15 +165,7 @@ export async function GET(
       );
     }
 
-    // レスポンス用のフォーマット
-    const formattedHoliday = {
-      ...holiday,
-      date: holiday.date.toISOString().split("T")[0],
-      createdAt: holiday.createdAt.toISOString(),
-      updatedAt: holiday.updatedAt.toISOString(),
-    };
-
-    return NextResponse.json(formattedHoliday);
+    return NextResponse.json(formatHoliday(holiday));
   } catch (error) {
     console.error("会社休日取得エラー:", error);
     return NextResponse.json(

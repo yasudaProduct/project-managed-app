@@ -61,6 +61,52 @@ class MockPhaseRepository implements IPhaseRepository {
     void wbsId;
     return this.phases;
   }
+
+  async findPhasesUsedInWbs(wbsId: number): Promise<Phase[]> {
+    void wbsId;
+    return this.phases;
+  }
+
+  async findAllTemplates(): Promise<Phase[]> {
+    return this.phases;
+  }
+
+  async findTemplateById(id: number): Promise<Phase | null> {
+    return this.phases.find(phase => phase.id === id) || null;
+  }
+
+  async createTemplate(phase: Phase): Promise<Phase> {
+    this.phases.push(phase);
+    return phase;
+  }
+
+  async updateTemplate(phase: Phase): Promise<Phase> {
+    const index = this.phases.findIndex(p => p.id === phase.id);
+    if (index !== -1) this.phases[index] = phase;
+    return phase;
+  }
+
+  async deleteTemplate(id: number): Promise<void> {
+    this.phases = this.phases.filter(phase => phase.id !== id);
+  }
+
+  async create(wbsId: number, phase: Phase): Promise<Phase> {
+    void wbsId;
+    this.phases.push(phase);
+    return phase;
+  }
+
+  async update(wbsId: number, id: string, phase: Phase): Promise<Phase> {
+    void wbsId;
+    void id;
+    const index = this.phases.findIndex(p => p.id === phase.id);
+    if (index !== -1) this.phases[index] = phase;
+    return phase;
+  }
+
+  async delete(id: string): Promise<void> {
+    this.phases = this.phases.filter(phase => String(phase.id) !== id);
+  }
 }
 
 describe("TaskFactory", () => {

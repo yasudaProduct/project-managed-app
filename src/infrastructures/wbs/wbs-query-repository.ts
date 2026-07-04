@@ -139,6 +139,12 @@ export class WbsQueryRepository implements IWbsQueryRepository {
     }));
   }
 
+  async getUnlinkedWorkRecordsCount(wbsId: number): Promise<number> {
+    return prisma.workRecord.count({
+      where: { taskId: null, wbsId },
+    });
+  }
+
   async getPhases(wbsId: number): Promise<PhaseData[]> {
     const phases = await prisma.wbsPhase.findMany({
       where: {

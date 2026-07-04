@@ -9,6 +9,7 @@ export const SYMBOL = {
     IDashboardApplicationService: Symbol.for('IDashboardApplicationService'),
     IPhaseApplicationService: Symbol.for('IPhaseApplicationService'),
     IMilestoneApplicationService: Symbol.for('IMilestoneApplicationService'),
+    IScheduleApplicationService: Symbol.for('IScheduleApplicationService'),
 
     // ドメインサービス
     GetOperationPossible: Symbol.for('GetOperationPossible'),
@@ -18,6 +19,7 @@ export const SYMBOL = {
     IProjectRepository: Symbol.for('IProjectRepository'),
     IWbsRepository: Symbol.for('IWbsRepository'),
     IWbsAssigneeRepository: Symbol.for('IWbsAssigneeRepository'),
+    IWbsBufferRepository: Symbol.for('IWbsBufferRepository'),
     IPhaseRepository: Symbol.for('IPhaseRepository'),
     ITaskRepository: Symbol.for('ITaskRepository'),
     IDashboardQueryRepository: Symbol.for('IDashboardQueryRepository'),
@@ -28,6 +30,7 @@ export const SYMBOL = {
     IQueryBus: Symbol.for('IQueryBus'),
     GetDashboardStatsHandler: Symbol.for('GetDashboardStatsHandler'),
     GetWbsSummaryHandler: Symbol.for('GetWbsSummaryHandler'),
+    GetWbsTaskSummaryHandler: Symbol.for('GetWbsTaskSummaryHandler'),
     IWbsQueryRepository: Symbol.for('IWbsQueryRepository'),
 
     // Auth
@@ -77,6 +80,7 @@ export const SYMBOL = {
     // Notification
     INotificationService: Symbol.for('INotificationService'),
     INotificationRepository: Symbol.for('INotificationRepository'),
+    IPushNotificationService: Symbol.for('IPushNotificationService'),
 
     // Task Scheduling
     ISchedulingApplicationService: Symbol.for('ISchedulingApplicationService'),
@@ -85,6 +89,10 @@ export const SYMBOL = {
     // System Settings
     ISystemSettingsRepository: Symbol.for('ISystemSettingsRepository'),
     ISystemSettingsApplicationService: Symbol.for('ISystemSettingsApplicationService'),
+
+    // Project Settings
+    IProjectSettingsRepository: Symbol.for('IProjectSettingsRepository'),
+    IProjectSettingsApplicationService: Symbol.for('IProjectSettingsApplicationService'),
 
     // WBS Tags
     IWbsTagRepository: Symbol.for('IWbsTagRepository'),

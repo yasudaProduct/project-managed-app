@@ -68,13 +68,15 @@ export function Header() {
 
             // WBSが存在する場合はタスクサマリーも取得
             if (wbsData?.id) {
-              import("@/app/actions/get-wbs-summary").then(({ getWbsTasksSummary }) => {
-                getWbsTasksSummary(String(wbsData.id)).then((summaryData) => {
-                  if (summaryData) {
-                    setTasksSummary(summaryData);
-                  }
-                });
-              });
+              import("@/app/wbs/[id]/actions/wbs-summary-actions").then(
+                ({ getWbsTaskSummary }) => {
+                  getWbsTaskSummary(wbsData.id).then((summaryData) => {
+                    if (summaryData) {
+                      setTasksSummary(summaryData);
+                    }
+                  });
+                }
+              );
             }
           }
         })

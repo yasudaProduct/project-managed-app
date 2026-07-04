@@ -10,6 +10,7 @@ import { ITaskApplicationService, TaskApplicationService } from "@/applications/
 import { TaskFactory } from "@/applications/task/task-factory";
 import { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-repository";
 import { IWbsRepository } from "@/applications/wbs/iwbs-repository";
+import type { IWbsBufferRepository } from "@/applications/wbs/iwbs-buffer-repository";
 import { IWbsApplicationService, WbsApplicationService } from "@/applications/wbs/wbs-application-service";
 import { IDashboardApplicationService, DashboardApplicationService } from "@/applications/dashboard/dashboard-application-service";
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
@@ -20,6 +21,7 @@ import { ProjectRepository } from "@/infrastructures/project-repository";
 import { TaskRepository } from "@/infrastructures/task-repository";
 import { WbsAssigneeRepository } from "@/infrastructures/wbs-assignee-repository";
 import { WbsRepository } from "@/infrastructures/wbs-repository";
+import { WbsBufferRepository } from "@/infrastructures/wbs-buffer-repository";
 import { SYMBOL } from "@/types/symbol";
 import { Container } from "inversify";
 import { IPhaseApplicationService, PhaseApplicationService } from "@/applications/phase/phase-application-service";
@@ -31,6 +33,8 @@ import type { IDashboardQueryRepository } from "@/applications/dashboard/reposit
 import { DashboardQueryRepository } from "@/infrastructures/dashboard-query.repository";
 import { GetWbsSummaryHandler } from "@/applications/wbs/query/get-wbs-summary-handler";
 import { GetWbsSummaryQuery } from "@/applications/wbs/query/get-wbs-summary-query";
+import { GetWbsTaskSummaryHandler } from "@/applications/wbs/query/get-wbs-task-summary-handler";
+import { GetWbsTaskSummaryQuery } from "@/applications/wbs/query/get-wbs-task-summary-query";
 import type { IWbsQueryRepository } from "@/applications/wbs/query/wbs-query-repository";
 import { WbsQueryRepository } from "@/infrastructures/wbs/wbs-query-repository";
 import type { IAuthApplicationService } from "@/applications/auth/auth-application-service";
@@ -56,8 +60,11 @@ import { WorkRecordApplicationService } from "@/applications/work-record/work-re
 // Geppo Import関連
 import type { IGeppoImportApplicationService } from "@/applications/geppo-import/geppo-import-application-service";
 import { GeppoImportApplicationService } from "@/applications/geppo-import/geppo-import-application-service";
+import type { IProjectMappingService } from "@/applications/geppo-import/iproject-mapping-service";
 import { ProjectMappingService } from "@/infrastructures/geppo-import/project-mapping.service";
+import type { IUserMappingService } from "@/applications/geppo-import/iuser-mapping-service";
 import { UserMappingService } from "@/infrastructures/geppo-import/user-mapping.service";
+import type { ITaskMappingService } from "@/applications/geppo-import/itask-mapping-service";
 import { TaskMappingService } from "@/infrastructures/geppo-import/task-mapping.service";
 
 // Task Dependency関連
@@ -83,6 +90,7 @@ import type { INotificationService } from "@/applications/notification/INotifica
 import { NotificationService } from "@/applications/notification/NotificationService";
 import type { INotificationRepository } from "@/applications/notification/INotificationRepository";
 import { NotificationRepository } from "@/infrastructures/notification/NotificationRepository";
+import type { IPushNotificationService } from "@/applications/notification/IPushNotificationService";
 import { PushNotificationService } from "@/infrastructures/notification/PushNotificationService";
 import { NotificationEventDetector } from "@/applications/notification/NotificationEventDetector";
 
@@ -92,11 +100,18 @@ import { SchedulingApplicationService } from "@/applications/task-scheduling/sch
 import type { ISchedulingSettingsRepository } from "@/applications/task-scheduling/ischeduling-settings-repository";
 import { SchedulingSettingsRepository } from "@/infrastructures/scheduling-settings-repository";
 
+// Project Settings関連
+import type { IProjectSettingsRepository } from "@/applications/project-settings/iproject-settings-repository";
+import { ProjectSettingsRepository } from "@/infrastructures/project-settings/project-settings-repository";
+import type { IProjectSettingsApplicationService } from "@/applications/project-settings/project-settings-application-service";
+import { ProjectSettingsApplicationService } from "@/applications/project-settings/project-settings-application-service";
+
 // Prisma
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma/prisma';
 import { IMilestoneApplicationService, MilestoneApplicationService } from '@/applications/milestone/milestone-application-service';
 import { IMilestoneRepository } from '@/applications/milestone/milestone.interfase';
+import { IScheduleApplicationService, ScheduleApplicationService } from '@/applications/schedule/schedule-application-service';
 import { MilestoneRepository } from '@/infrastructures/milestone/milestone.repository';
 
 // EVM関連
@@ -150,17 +165,19 @@ container.bind<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationSer
 container.bind<TaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDependencyService).inSingletonScope();
 // container.bind<IWbsSyncService>(SYMBOL.IWbsSyncService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<IMilestoneApplicationService>(SYMBOL.IMilestoneApplicationService).to(MilestoneApplicationService).inSingletonScope();
+container.bind<IScheduleApplicationService>(SYMBOL.IScheduleApplicationService).to(ScheduleApplicationService).inSingletonScope();
 // container.bind<EvmApplicationService>(SYMBOL.IEvmApplicationService).to(EvmApplicationService).inSingletonScope();
 container.bind<EvmService>(SYMBOL.EvmService).to(EvmService).inSingletonScope();
 container.bind<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService).to(ImportJobApplicationService).inSingletonScope();
 container.bind<INotificationService>(SYMBOL.INotificationService).to(NotificationService).inSingletonScope();
-container.bind<PushNotificationService>('PushNotificationService').to(PushNotificationService).inSingletonScope();
+container.bind<IPushNotificationService>(SYMBOL.IPushNotificationService).to(PushNotificationService).inSingletonScope();
 container.bind<NotificationEventDetector>('NotificationEventDetector').to(NotificationEventDetector).inSingletonScope();
 container.bind<ISchedulingApplicationService>(SYMBOL.ISchedulingApplicationService).to(SchedulingApplicationService).inSingletonScope();
 container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<ISystemSettingsApplicationService>(SYMBOL.ISystemSettingsApplicationService).to(SystemSettingsApplicationService).inSingletonScope();
 container.bind<IWbsTagApplicationService>(SYMBOL.IWbsTagApplicationService).to(WbsTagApplicationService).inSingletonScope();
 container.bind<WbsAnalyticsHandler>(SYMBOL.WbsAnalyticsHandler).to(WbsAnalyticsHandler).inSingletonScope();
+container.bind<IProjectSettingsApplicationService>(SYMBOL.IProjectSettingsApplicationService).to(ProjectSettingsApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
@@ -172,6 +189,7 @@ container.bind<IWbsRepository>(SYMBOL.IWbsRepository).to(WbsRepository).inSingle
 container.bind<IPhaseRepository>(SYMBOL.IPhaseRepository).to(PhaseRepository).inSingletonScope();
 container.bind<ITaskRepository>(SYMBOL.ITaskRepository).to(TaskRepository).inSingletonScope();
 container.bind<IWbsAssigneeRepository>(SYMBOL.IWbsAssigneeRepository).to(WbsAssigneeRepository).inSingletonScope();
+container.bind<IWbsBufferRepository>(SYMBOL.IWbsBufferRepository).to(WbsBufferRepository).inSingletonScope();
 container.bind<IDashboardQueryRepository>(SYMBOL.IDashboardQueryRepository).to(DashboardQueryRepository).inSingletonScope();
 container.bind<IAuthRepository>(SYMBOL.IAuthRepository).to(AuthRepository).inSingletonScope();
 container.bind<IWbsQueryRepository>(SYMBOL.IWbsQueryRepository).to(WbsQueryRepository).inSingletonScope();
@@ -190,14 +208,15 @@ container.bind<IImportJobRepository>(SYMBOL.IImportJobRepository).to(ImportJobPr
 container.bind<INotificationRepository>('NotificationRepository').to(NotificationRepository).inSingletonScope();
 container.bind<ISystemSettingsRepository>(SYMBOL.ISystemSettingsRepository).to(SystemSettingsRepository).inSingletonScope();
 container.bind<ISchedulingSettingsRepository>(SYMBOL.ISchedulingSettingsRepository).to(SchedulingSettingsRepository).inSingletonScope();
+container.bind<IProjectSettingsRepository>(SYMBOL.IProjectSettingsRepository).to(ProjectSettingsRepository).inSingletonScope();
 container.bind<IWbsTagRepository>(SYMBOL.IWbsTagRepository).to(WbsTagRepository).inSingletonScope();
 container.bind<IWbsCrossQueryRepository>(SYMBOL.IWbsCrossQueryRepository).to(WbsCrossQueryRepository).inSingletonScope();
 
 
 // Geppo Import関連サービス
-container.bind<ProjectMappingService>(SYMBOL.ProjectMappingService).to(ProjectMappingService).inSingletonScope();
-container.bind<UserMappingService>(SYMBOL.UserMappingService).to(UserMappingService).inSingletonScope();
-container.bind<TaskMappingService>(SYMBOL.TaskMappingService).to(TaskMappingService).inSingletonScope();
+container.bind<IProjectMappingService>(SYMBOL.ProjectMappingService).to(ProjectMappingService).inSingletonScope();
+container.bind<IUserMappingService>(SYMBOL.UserMappingService).to(UserMappingService).inSingletonScope();
+container.bind<ITaskMappingService>(SYMBOL.TaskMappingService).to(TaskMappingService).inSingletonScope();
 
 // インフラストラクチャ
 container.bind<PrismaClient>(SYMBOL.PrismaClient).toConstantValue(prisma as unknown as PrismaClient);
@@ -209,6 +228,7 @@ container.bind<ITaskFactory>(SYMBOL.ITaskFactory).to(TaskFactory).inSingletonSco
 container.bind<IQueryBus>(SYMBOL.IQueryBus).to(QueryBus).inSingletonScope();
 container.bind<GetDashboardStatsHandler>(SYMBOL.GetDashboardStatsHandler).to(GetDashboardStatsHandler).inSingletonScope();
 container.bind<GetWbsSummaryHandler>(SYMBOL.GetWbsSummaryHandler).to(GetWbsSummaryHandler).inSingletonScope();
+container.bind<GetWbsTaskSummaryHandler>(SYMBOL.GetWbsTaskSummaryHandler).to(GetWbsTaskSummaryHandler).inSingletonScope();
 
 // QueryBusの初期化（ハンドラーの登録）
 const queryBus = container.get<QueryBus>(SYMBOL.IQueryBus);
@@ -217,5 +237,8 @@ queryBus.register(GetDashboardStatsQuery as new (...args: unknown[]) => GetDashb
 
 const wbsSummaryHandler = container.get<GetWbsSummaryHandler>(SYMBOL.GetWbsSummaryHandler);
 queryBus.register(GetWbsSummaryQuery as new (...args: unknown[]) => GetWbsSummaryQuery, wbsSummaryHandler);
+
+const wbsTaskSummaryHandler = container.get<GetWbsTaskSummaryHandler>(SYMBOL.GetWbsTaskSummaryHandler);
+queryBus.register(GetWbsTaskSummaryQuery as new (...args: unknown[]) => GetWbsTaskSummaryQuery, wbsTaskSummaryHandler);
 
 export { container };

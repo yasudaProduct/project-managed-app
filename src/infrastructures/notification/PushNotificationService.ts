@@ -2,6 +2,7 @@ import { injectable, inject } from 'inversify';
 import webpush from 'web-push';
 import { Notification } from '@/domains/notification/notification';
 import type { INotificationRepository, PushSubscriptionData } from '@/applications/notification/INotificationRepository';
+import type { IPushNotificationService } from '@/applications/notification/IPushNotificationService';
 
 export interface PushPayload {
   title: string;
@@ -17,7 +18,7 @@ export interface PushPayload {
 }
 
 @injectable()
-export class PushNotificationService {
+export class PushNotificationService implements IPushNotificationService {
   constructor(
     @inject('NotificationRepository') private notificationRepository: INotificationRepository
   ) {

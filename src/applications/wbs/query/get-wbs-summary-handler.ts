@@ -19,7 +19,8 @@ import { ForecastCalculationService } from "@/domains/forecast/forecast-calculat
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import { toForecastMethodOption } from "@/types/forecast-calculation-method";
 import { distributeForecastAcrossMonths } from "./monthly-forecast-distributor";
-import prisma from "@/lib/prisma/prisma";
+import type { IProjectSettingsRepository } from "@/applications/project-settings/iproject-settings-repository";
+import { withProjectSettingsDefaults } from "@/types/project-settings";
 
 @injectable()
 export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, WbsSummaryResult> {
@@ -33,7 +34,9 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     @inject(SYMBOL.IWbsAssigneeRepository)
     private readonly wbsAssigneeRepository: IWbsAssigneeRepository,
     @inject(SYMBOL.ISystemSettingsRepository)
-    private readonly systemSettingsRepository: ISystemSettingsRepository
+    private readonly systemSettingsRepository: ISystemSettingsRepository,
+    @inject(SYMBOL.IProjectSettingsRepository)
+    private readonly projectSettingsRepository: IProjectSettingsRepository
   ) { }
 
   /**
@@ -64,10 +67,11 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     const assigneeTotal = this.calculateTotal(assigneeSummaries);
 
     // プロジェクト設定を取得（量子化フラグ、進捗測定方式、見通し算出方式）
-    const settings = await prisma.projectSettings.findUnique({ where: { projectId: query.projectId } }); // TODO: Repositroyから取得する
-    const roundToQuarter = settings?.roundToQuarter === true;
-    const progressMeasurementMethod = settings?.progressMeasurementMethod || 'SELF_REPORTED';
-    const forecastCalculationMethod = settings?.forecastCalculationMethod || 'REALISTIC';
+    const rawSettings = await this.projectSettingsRepository.findByProjectId(query.projectId);
+    const settings = withProjectSettingsDefaults(query.projectId, rawSettings);
+    const roundToQuarter = settings.roundToQuarter;
+    const progressMeasurementMethod = settings.progressMeasurementMethod;
+    const forecastCalculationMethod = settings.forecastCalculationMethod;
     const forecastMethodOption = toForecastMethodOption(forecastCalculationMethod);
 
     // 月別・担当者別集計

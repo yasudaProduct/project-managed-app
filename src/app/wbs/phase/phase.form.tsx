@@ -109,7 +109,7 @@ export function PhaseForm({ phase, wbsId }: PhaseFormProps) {
         // WBS工程
         if (phase) {
           // 更新
-          const result = await updateWbsPhase(phase.id, values);
+          const result = await updateWbsPhase(phase.id, wbsId, values);
           if (result.success) {
             toast({
               title: "更新しました。",

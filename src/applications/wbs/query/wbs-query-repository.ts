@@ -8,6 +8,10 @@ export interface IWbsQueryRepository {
    * 実作業月・実作業者ベースで算出するために使用する。
    */
   getTaskActualHoursByMonth(wbsId: number): Promise<TaskActualMonthly[]>;
+  /**
+   * 指定 WBS 配下で、タスクに紐付いていない（taskId が null の）作業実績件数を返す。
+   */
+  getUnlinkedWorkRecordsCount(wbsId: number): Promise<number>;
 }
 
 export interface TaskActualMonthly {

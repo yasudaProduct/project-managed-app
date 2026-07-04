@@ -1,4 +1,5 @@
 import { injectable, inject } from 'inversify';
+import { SYMBOL } from '@/types/symbol';
 import { Notification } from '@/domains/notification/notification';
 import { NotificationPreference } from '@/domains/notification/notification-preference';
 import { NotificationType } from '@/types/notification';
@@ -17,7 +18,7 @@ import type {
   PushSubscriptionData,
   NotificationFilter
 } from './INotificationRepository';
-import { PushNotificationService } from '@/infrastructures/notification/PushNotificationService';
+import type { IPushNotificationService } from './IPushNotificationService';
 
 @injectable()
 export class NotificationService implements INotificationService {
@@ -25,7 +26,7 @@ export class NotificationService implements INotificationService {
 
   constructor(
     @inject('NotificationRepository') private notificationRepository: INotificationRepository,
-    @inject('PushNotificationService') private pushNotificationService: PushNotificationService
+    @inject(SYMBOL.IPushNotificationService) private pushNotificationService: IPushNotificationService
   ) { }
 
   /**

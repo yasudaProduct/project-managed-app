@@ -1,9 +1,10 @@
 import { injectable, inject } from 'inversify'
 import { SYMBOL } from '@/types/symbol'
 import type { IUserRepository } from '@/applications/user/iuser-repositroy'
+import type { IUserMappingService } from '@/applications/geppo-import/iuser-mapping-service'
 
 @injectable()
-export class UserMappingService {
+export class UserMappingService implements IUserMappingService {
   constructor(
     @inject(SYMBOL.IUserRepository) private userRepository: IUserRepository
   ) { }

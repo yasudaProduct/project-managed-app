@@ -10,6 +10,10 @@ jest.mock('@/lib/prisma/prisma', () => ({
       findUnique: jest.fn(),
       findMany: jest.fn(),
     },
+    phaseTemplate: {
+      findUnique: jest.fn(),
+      delete: jest.fn(),
+    },
   },
 }));
 
@@ -162,6 +166,55 @@ describe('PhaseRepository', () => {
           }
         },
         orderBy: { seq: 'asc' },
+      });
+    });
+  });
+
+  describe('findTemplateById', () => {
+    it('存在するIDの工程テンプレートを取得できること', async () => {
+      prismaMock.phaseTemplate.findUnique.mockResolvedValue({
+        id: 1,
+        name: '設計',
+        code: 'D1',
+        seq: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const phase = await phaseRepository.findTemplateById(1);
+
+      expect(prismaMock.phaseTemplate.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
+      expect(phase?.id).toBe(1);
+      expect(phase?.name).toBe('設計');
+      expect(phase?.code.value()).toBe('D1');
+    });
+
+    it('存在しないIDの場合はnullを返すこと', async () => {
+      prismaMock.phaseTemplate.findUnique.mockResolvedValue(null);
+
+      const phase = await phaseRepository.findTemplateById(999);
+
+      expect(phase).toBeNull();
+    });
+  });
+
+  describe('deleteTemplate', () => {
+    it('工程テンプレートを削除すること', async () => {
+      prismaMock.phaseTemplate.delete.mockResolvedValue({
+        id: 1,
+        name: '設計',
+        code: 'D1',
+        seq: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await phaseRepository.deleteTemplate(1);
+
+      expect(prismaMock.phaseTemplate.delete).toHaveBeenCalledWith({
+        where: { id: 1 },
       });
     });
   });

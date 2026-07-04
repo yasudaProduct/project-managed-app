@@ -16,6 +16,34 @@ export class MilestoneRepository implements IMilestoneRepository {
         return milestones.map(milestone => this.convertMilestone(milestone));
     }
 
+    async create(wbsId: number, data: { name: string; date: Date }): Promise<Milestone> {
+        const milestone = await prisma.milestone.create({
+            data: {
+                wbsId,
+                name: data.name,
+                date: data.date,
+            },
+        });
+        return this.convertMilestone(milestone);
+    }
+
+    async update(id: number, data: { name: string; date: Date }): Promise<Milestone> {
+        const milestone = await prisma.milestone.update({
+            where: { id },
+            data: {
+                name: data.name,
+                date: data.date,
+            },
+        });
+        return this.convertMilestone(milestone);
+    }
+
+    async delete(id: number): Promise<void> {
+        await prisma.milestone.delete({
+            where: { id },
+        });
+    }
+
     private convertMilestone(milestone: MilestoneDbType): Milestone {
         return Milestone.create({
             id: milestone.id,

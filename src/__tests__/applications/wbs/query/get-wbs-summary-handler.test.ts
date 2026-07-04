@@ -1,13 +1,3 @@
-// Prismaモジュールをモック化（インポート前にモックする必要がある）
-jest.mock('@/lib/prisma/prisma', () => ({
-  __esModule: true,
-  default: {
-    projectSettings: {
-      findUnique: jest.fn().mockResolvedValue(null),
-    },
-  },
-}));
-
 import { GetWbsSummaryHandler } from '@/applications/wbs/query/get-wbs-summary-handler';
 import { GetWbsSummaryQuery } from '@/applications/wbs/query/get-wbs-summary-query';
 import { AllocationCalculationMode } from '@/applications/wbs/query/allocation-calculation-mode';
@@ -17,6 +7,7 @@ import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
+import type { IProjectSettingsRepository } from '@/applications/project-settings/iproject-settings-repository';
 
 describe('GetWbsSummaryHandler', () => {
   let handler: GetWbsSummaryHandler;
@@ -25,6 +16,7 @@ describe('GetWbsSummaryHandler', () => {
   let mockUserScheduleRepository: jest.Mocked<IUserScheduleRepository>;
   let mockWbsAssigneeRepository: jest.Mocked<IWbsAssigneeRepository>;
   let mockSystemSettingsRepository: jest.Mocked<ISystemSettingsRepository>;
+  let mockProjectSettingsRepository: jest.Mocked<IProjectSettingsRepository>;
 
   const mockTasks: WbsTaskData[] = [
     {
@@ -87,10 +79,19 @@ describe('GetWbsSummaryHandler', () => {
       getWbsTasks: jest.fn(),
       getPhases: jest.fn(),
       getTaskActualHoursByMonth: jest.fn().mockResolvedValue([]),
+      getUnlinkedWorkRecordsCount: jest.fn().mockResolvedValue(0),
     } as jest.Mocked<IWbsQueryRepository>;
 
     mockCompanyHolidayRepository = {
       findAll: jest.fn(),
+      findById: jest.fn(),
+      findByDateRange: jest.fn(),
+      findByDate: jest.fn(),
+      findByDateExcludingId: jest.fn(),
+      save: jest.fn(),
+      saveMany: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     } as jest.Mocked<ICompanyHolidayRepository>;
 
     mockUserScheduleRepository = {
@@ -106,12 +107,21 @@ describe('GetWbsSummaryHandler', () => {
       update: jest.fn(),
     } as jest.Mocked<ISystemSettingsRepository>;
 
+    mockProjectSettingsRepository = {
+      findByProjectId: jest.fn(),
+      upsertProjectSettings: jest.fn(),
+      upsertDashboardSettings: jest.fn(),
+      findSchedulingSettings: jest.fn(),
+      upsertSchedulingSettings: jest.fn(),
+    } as jest.Mocked<IProjectSettingsRepository>;
+
     handler = new GetWbsSummaryHandler(
       mockWbsQueryRepository,
       mockCompanyHolidayRepository,
       mockUserScheduleRepository,
       mockWbsAssigneeRepository,
-      mockSystemSettingsRepository
+      mockSystemSettingsRepository,
+      mockProjectSettingsRepository
     );
 
     // デフォルトのモック設定
@@ -126,6 +136,8 @@ describe('GetWbsSummaryHandler', () => {
       standardWorkingHours: 7.5,
       roundToQuarter: false,
     });
+    // ProjectSettingsはデフォルト（未設定）
+    mockProjectSettingsRepository.findByProjectId.mockResolvedValue(null);
   });
 
   describe('execute', () => {

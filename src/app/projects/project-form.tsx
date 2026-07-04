@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createProject, deleteProject, updateProject } from "./actions";
-import { ProjectStatus } from "@prisma/client";
+import type { ProjectStatus } from "@/types/wbs";
 import { toast } from "@/hooks/use-toast";
 import { DatePicker } from "@/components/date-picker";
 import { formatDate } from "@/utils/date-util";
@@ -42,7 +42,9 @@ const formSchema = z.object({
   endDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
     message: "終了予定日は YYYY/MM/DD 形式で入力してください。",
   }),
-  status: z.nativeEnum(ProjectStatus).optional(), // TODO: 更新の場合は必須にする
+  status: z
+    .enum(["INACTIVE", "ACTIVE", "DONE", "CANCELLED", "PENDING"])
+    .optional(), // TODO: 更新の場合は必須にする
 });
 
 type ProjectFormProps = {
@@ -73,7 +75,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
         description: undefined,
         startDate: "",
         endDate: "",
-        status: ProjectStatus.INACTIVE,
+        status: "INACTIVE",
       },
   });
 

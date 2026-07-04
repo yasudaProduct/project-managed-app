@@ -1,27 +1,33 @@
 "use server"
 
-import prisma from '@/lib/prisma/prisma'
+import { container } from "@/lib/inversify.config"
+import { IWbsApplicationService } from "@/applications/wbs/wbs-application-service"
+import { SYMBOL } from "@/types/symbol"
 import { WbsAssignee } from '../assignee/columns'
 
+const wbsApplicationService = container.get<IWbsApplicationService>(SYMBOL.IWbsApplicationService);
+
 export async function getWbsAssignees(wbsId: number): Promise<WbsAssignee[]> {
-    const assignees = await prisma.wbsAssignee.findMany({
-        include: { assignee: true },
-        where: { wbsId },
-    })
-    return assignees.map((assignee) => ({
-        id: assignee.id,
-        assignee: {
-            id: assignee.assignee.id,
-            name: assignee.assignee.name,
-            rate: assignee.rate,
-            seq: assignee.seq,
-        },
-        wbsId: assignee.wbsId,
-    }))
+    const assignees = await wbsApplicationService.getAssignees(wbsId);
+
+    return (assignees ?? [])
+        .filter((a) => a.assignee !== null)
+        .map((a) => ({
+            id: a.assignee!.id,
+            assignee: {
+                id: a.assignee!.userId,
+                name: a.assignee!.name,
+                rate: a.assignee!.rate,
+                seq: a.assignee!.seq,
+            },
+            wbsId: a.wbsId,
+        }));
 }
 
 export async function deleteWbsAssignee(id: number): Promise<{ success: boolean, error?: string }> {
-    //TODO 担当者が担当しているタスクは担当者IDをnullにする
-    await prisma.wbsAssignee.delete({ where: { id } })
-    return { success: true }
+    const result = await wbsApplicationService.deleteAssignee(id);
+    if (!result.success) {
+        return { success: false, error: result.error };
+    }
+    return { success: true };
 }
