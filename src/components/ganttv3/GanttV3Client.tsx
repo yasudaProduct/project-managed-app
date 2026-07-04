@@ -57,7 +57,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     useGanttData(wbsId); // タスクデータ
 
   const [currentView, setCurrentView] = useState<"gantt" | "table">("gantt"); // チャート/テーブル表示
-  const [timelineScale, setTimelineScale] = useState<TimelineScale>("month"); // タイムラインのスケール
+  const [timelineScale, setTimelineScale] = useState<TimelineScale>("day"); // タイムラインのスケール
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set()); // 選択されたタスク
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(),
