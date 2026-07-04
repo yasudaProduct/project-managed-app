@@ -113,14 +113,6 @@ export function WbsManagementContent({
             <CalendarCheck className="h-4 w-4" />
           </Button>
         </TaskModal>
-        {/* <TaskDependencyModal
-          wbsId={wbsId}
-          tasks={tasks.map((task) => ({
-            id: task.id,
-            taskNo: task.taskNo || "",
-            name: task.name,
-          }))}
-        /> */}
         <WbsImportJobButtons wbsId={wbsId} wbsName={wbsName} />
       </div>
 
