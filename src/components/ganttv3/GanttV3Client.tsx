@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
-import {
+import type {
   TimelineScale,
   GanttStyle,
-  ViewSwitcher,
-  QuickActions,
-  GanttChart,
   GroupBy,
   TaskSortBy,
-} from "@/components/ganttv3";
+} from "@/components/ganttv3/gantt";
+import { ViewSwitcher } from "@/components/ganttv3/ViewSwitcher";
+import { QuickActions } from "@/components/ganttv3/QuickActions";
+import { GanttChart } from "@/components/ganttv3/GanttChart";
 import { TaskTable, TaskTableColumn } from "@/components/ganttv3/TaskTable";
 import { DependencyEditModal } from "@/components/ganttv3/DependencyEditModal";
 import { TaskModal } from "@/components/wbs/task-modal";

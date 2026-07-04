@@ -138,6 +138,38 @@ describe('TaskDependencyService', () => {
             await expect(service.deleteDependency(1))
                 .rejects.toThrow('指定された依存関係が見つかりません');
         });
+
+        test('wbsId指定時、対象の依存が同一WBSなら削除できる', async () => {
+            const dependency = TaskDependency.createFromDb({
+                id: 1,
+                predecessorTaskId: 1,
+                successorTaskId: 2,
+                wbsId: 5,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            });
+            mockTaskDependencyRepository.findById.mockResolvedValue(dependency);
+
+            await service.deleteDependency(1, 5);
+
+            expect(mockTaskDependencyRepository.delete).toHaveBeenCalledWith(1);
+        });
+
+        test('wbsId指定時、別WBSの依存IDを渡すと削除されずエラーになる（越境削除の防止）', async () => {
+            const dependency = TaskDependency.createFromDb({
+                id: 1,
+                predecessorTaskId: 1,
+                successorTaskId: 2,
+                wbsId: 99, // 別WBSに属する依存
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            });
+            mockTaskDependencyRepository.findById.mockResolvedValue(dependency);
+
+            await expect(service.deleteDependency(1, 5))
+                .rejects.toThrow('指定された依存関係が見つかりません');
+            expect(mockTaskDependencyRepository.delete).not.toHaveBeenCalled();
+        });
     });
 
     describe('canStartTask', () => {

@@ -31,36 +31,38 @@ jest.mock("@/app/wbs/[id]/ganttv3/export-actions", () => ({
 }));
 jest.mock("@/hooks/use-toast", () => ({ toast: jest.fn() }));
 
-// 子コンポーネントは軽量モック（GanttChart は jsdom 非対応APIを多用するため）
-jest.mock("@/components/ganttv3", () => {
-  const actual = jest.requireActual("@/components/ganttv3");
-  return {
-    ...actual,
-    GanttChart: ({
-      tasks,
-      onEditDependencies,
-    }: {
-      tasks: unknown[];
-      onEditDependencies: (id: string) => void;
-    }) => (
-      <div data-testid="gantt-chart">
-        <span>gantt-tasks:{tasks.length}</span>
-        <button onClick={() => onEditDependencies("1")}>edit-deps</button>
-      </div>
-    ),
-    ViewSwitcher: ({
-      onViewChange,
-    }: {
-      onViewChange: (v: "gantt" | "table") => void;
-    }) => (
-      <div>
-        <button onClick={() => onViewChange("gantt")}>to-gantt</button>
-        <button onClick={() => onViewChange("table")}>to-table</button>
-      </div>
-    ),
-    QuickActions: () => <div data-testid="quick-actions" />,
-  };
-});
+// 子コンポーネントは軽量モック（GanttChart は jsdom 非対応APIを多用するため）。
+// GanttV3Client は barrel ではなく各ファイルから直接 import しているため、
+// モックも各モジュールパスに対して行う。
+jest.mock("@/components/ganttv3/GanttChart", () => ({
+  GanttChart: ({
+    tasks,
+    onEditDependencies,
+  }: {
+    tasks: unknown[];
+    onEditDependencies: (id: string) => void;
+  }) => (
+    <div data-testid="gantt-chart">
+      <span>gantt-tasks:{tasks.length}</span>
+      <button onClick={() => onEditDependencies("1")}>edit-deps</button>
+    </div>
+  ),
+}));
+jest.mock("@/components/ganttv3/ViewSwitcher", () => ({
+  ViewSwitcher: ({
+    onViewChange,
+  }: {
+    onViewChange: (v: "gantt" | "table") => void;
+  }) => (
+    <div>
+      <button onClick={() => onViewChange("gantt")}>to-gantt</button>
+      <button onClick={() => onViewChange("table")}>to-table</button>
+    </div>
+  ),
+}));
+jest.mock("@/components/ganttv3/QuickActions", () => ({
+  QuickActions: () => <div data-testid="quick-actions" />,
+}));
 
 jest.mock("@/components/ganttv3/TaskTable", () => ({
   TaskTable: ({ tasks }: { tasks: unknown[] }) => (
