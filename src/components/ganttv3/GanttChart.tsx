@@ -419,6 +419,14 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       [timelineBounds.start, columnWidth, scaleMultiplier],
     );
 
+    // バー右端用のX座標。予定/実績の終了日は「当日を含む(inclusive)」ため、
+    // 翌日0時（＝終了日セルの右端）を右端とする。これを使わないとバーが
+    // 終了日の手前で終わり、左タスクリストの終了予定日と1日ズレる。
+    const dateToXEnd = useCallback(
+      (date: Date) => dateToX(addDays(date, 1)),
+      [dateToX],
+    );
+
     // バーのドラッグ開始（編集モードのみ）
     const handleBarDragStart = useCallback(
       (
@@ -1018,7 +1026,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             categoryRanges[row.categoryName!];
                           if (categoryRange) {
                             const categoryStartX = dateToX(categoryRange.start);
-                            const categoryEndX = dateToX(categoryRange.end);
+                            const categoryEndX = dateToXEnd(categoryRange.end);
                             const categoryWidth = Math.max(
                               categoryEndX - categoryStartX,
                               20,
@@ -1103,9 +1111,9 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                           let actualBar: JSX.Element | null = null;
                           if (showActualBar && task.actualStartDate) {
                             const actualX = dateToX(task.actualStartDate);
-                            const actualEndX = task.actualEndDate
-                              ? dateToX(task.actualEndDate)
-                              : actualX;
+                            const actualEndX = dateToXEnd(
+                              task.actualEndDate ?? task.actualStartDate,
+                            );
                             const actualWidth = Math.max(
                               actualEndX - actualX,
                               20,
@@ -1137,7 +1145,9 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                 x={dateToX(barStart)}
                                 y={plannedBarY}
                                 width={Math.max(
-                                  dateToX(barEnd) - dateToX(barStart),
+                                  (task.isMilestone
+                                    ? dateToX(barEnd)
+                                    : dateToXEnd(barEnd)) - dateToX(barStart),
                                   task.isMilestone ? 0 : 20,
                                 )}
                                 height={TASK_HEIGHT}
@@ -1160,6 +1170,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                         <DependencyArrows
                           tasks={visibleTasks}
                           dateToX={dateToX}
+                          dateToXEnd={dateToXEnd}
                           rowHeight={ROW_HEIGHT}
                           taskHeight={TASK_HEIGHT}
                           style={style}

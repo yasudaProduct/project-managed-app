@@ -6,6 +6,8 @@ import { makeTask, makeStyle, makeDependency } from "./_fixtures";
 const EPOCH = Date.UTC(2024, 0, 1);
 const day = (n: number) => new Date(EPOCH + n * 86400000);
 const dateToX = (d: Date) => ((d.getTime() - EPOCH) / 86400000) * 40;
+// バー右端用（終了日を含む inclusive 終端）: 翌日0時のX
+const dateToXEnd = (d: Date) => dateToX(new Date(d.getTime() + 86400000));
 
 function renderInSvg(ui: React.ReactElement) {
   return render(<svg>{ui}</svg>);
@@ -26,6 +28,7 @@ describe("DependencyArrows", () => {
       <DependencyArrows
         tasks={tasks}
         dateToX={dateToX}
+        dateToXEnd={dateToXEnd}
         rowHeight={30}
         taskHeight={20}
         style={makeStyle()}
@@ -40,6 +43,7 @@ describe("DependencyArrows", () => {
       <DependencyArrows
         tasks={tasks}
         dateToX={dateToX}
+        dateToXEnd={dateToXEnd}
         rowHeight={30}
         taskHeight={20}
         style={makeStyle()}

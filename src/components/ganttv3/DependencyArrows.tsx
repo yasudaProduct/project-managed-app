@@ -4,6 +4,8 @@ import { Task, GanttStyle } from "./gantt";
 interface DependencyArrowsProps {
   tasks: Task[];
   dateToX: (date: Date) => number;
+  /** バー右端用のX変換（終了日を含む inclusive 終端）。GanttChart と共有し矢印がバー右端から出るようにする */
+  dateToXEnd: (date: Date) => number;
   rowHeight: number;
   taskHeight: number;
   style: GanttStyle;
@@ -13,11 +15,16 @@ interface DependencyArrowsProps {
 export const DependencyArrows = ({
   tasks,
   dateToX,
+  dateToXEnd,
   rowHeight,
   taskHeight,
   style,
   taskPositions: customTaskPositions,
 }: DependencyArrowsProps) => {
+  // タスクバー右端に対応するX。マイルストーンは点（ダイヤ中心）なので inclusive にしない。
+  const endXOf = (task: Task) =>
+    task.isMilestone ? dateToX(task.endDate) : dateToXEnd(task.endDate);
+
   const taskPositions = customTaskPositions
     ? new Map(
         tasks.map((task) => [
@@ -25,11 +32,8 @@ export const DependencyArrows = ({
           {
             x: dateToX(task.startDate),
             y: customTaskPositions.get(task.id) || 0,
-            endX: dateToX(task.endDate),
-            width: Math.max(
-              dateToX(task.endDate) - dateToX(task.startDate),
-              20
-            ),
+            endX: endXOf(task),
+            width: Math.max(endXOf(task) - dateToX(task.startDate), 20),
           },
         ])
       )
@@ -39,11 +43,8 @@ export const DependencyArrows = ({
           {
             x: dateToX(task.startDate),
             y: index * rowHeight + taskHeight / 2,
-            endX: dateToX(task.endDate),
-            width: Math.max(
-              dateToX(task.endDate) - dateToX(task.startDate),
-              20
-            ),
+            endX: endXOf(task),
+            width: Math.max(endXOf(task) - dateToX(task.startDate), 20),
           },
         ])
       );
