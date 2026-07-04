@@ -3,7 +3,7 @@ export interface Task {
   name: string; // タスク名
   startDate: Date; // 開始日（予定）
   endDate: Date; // 終了日（予定）
-  duration: number; // 期間
+  duration: number; // 予定工数(時間)。暦日数ではない（実日程は startDate/endDate）
   actualStartDate?: Date; // 実績開始日
   actualEndDate?: Date; // 実績終了日（未完了で実績開始のみの場合は本日が入る）
   color: string; // 色

@@ -63,6 +63,19 @@ describe("QuickActions", () => {
     });
   });
 
+  it("taskOpsDisabled のとき追加・複製・削除が無効化される", () => {
+    render(
+      <QuickActions
+        {...baseProps}
+        selectedTasks={new Set(["1"])}
+        taskOpsDisabled
+      />,
+    );
+    expect(screen.getByText("🚧タスク追加").closest("button")).toBeDisabled();
+    expect(screen.getByText(/複製/).closest("button")).toBeDisabled();
+    expect(screen.getByText(/削除/).closest("button")).toBeDisabled();
+  });
+
   it("onExportTsv 未指定なら TSV出力ボタンは表示しない", () => {
     render(<QuickActions {...baseProps} />);
     expect(screen.queryByText("TSV出力")).not.toBeInTheDocument();

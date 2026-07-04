@@ -29,42 +29,42 @@ function dep(taskId: string, type: DependencyType = "FS", lag = 0): Dependency {
 }
 
 describe("impliedStart", () => {
-  // 先行: 開始=10日目, 終了=15日目 / 後続: 期間=2日 と仮定
+  // 先行: 開始=10日目, 終了=15日目 / 後続: 所要期間=2日(ms) と仮定
   const predStart = day(10).getTime();
   const predFinish = day(15).getTime();
-  const successorDuration = 2;
+  const successorDurationMs = 2 * DAY;
 
   it("FS: 先行終了 + ラグ", () => {
-    expect(impliedStart(predStart, predFinish, successorDuration, "FS", 0)).toBe(
-      predFinish,
-    );
-    expect(impliedStart(predStart, predFinish, successorDuration, "FS", 3)).toBe(
-      predFinish + 3 * DAY,
-    );
+    expect(
+      impliedStart(predStart, predFinish, successorDurationMs, "FS", 0),
+    ).toBe(predFinish);
+    expect(
+      impliedStart(predStart, predFinish, successorDurationMs, "FS", 3),
+    ).toBe(predFinish + 3 * DAY);
   });
 
   it("SS: 先行開始 + ラグ", () => {
-    expect(impliedStart(predStart, predFinish, successorDuration, "SS", 0)).toBe(
-      predStart,
-    );
-    expect(impliedStart(predStart, predFinish, successorDuration, "SS", 2)).toBe(
-      predStart + 2 * DAY,
-    );
+    expect(
+      impliedStart(predStart, predFinish, successorDurationMs, "SS", 0),
+    ).toBe(predStart);
+    expect(
+      impliedStart(predStart, predFinish, successorDurationMs, "SS", 2),
+    ).toBe(predStart + 2 * DAY);
   });
 
-  it("FF: 先行終了 + ラグ - 後続期間", () => {
-    expect(impliedStart(predStart, predFinish, successorDuration, "FF", 0)).toBe(
-      predFinish - successorDuration * DAY,
-    );
-    expect(impliedStart(predStart, predFinish, successorDuration, "FF", 1)).toBe(
-      predFinish + 1 * DAY - successorDuration * DAY,
-    );
+  it("FF: 先行終了 + ラグ - 後続所要期間", () => {
+    expect(
+      impliedStart(predStart, predFinish, successorDurationMs, "FF", 0),
+    ).toBe(predFinish - successorDurationMs);
+    expect(
+      impliedStart(predStart, predFinish, successorDurationMs, "FF", 1),
+    ).toBe(predFinish + 1 * DAY - successorDurationMs);
   });
 
-  it("SF: 先行開始 + ラグ - 後続期間", () => {
-    expect(impliedStart(predStart, predFinish, successorDuration, "SF", 0)).toBe(
-      predStart - successorDuration * DAY,
-    );
+  it("SF: 先行開始 + ラグ - 後続所要期間", () => {
+    expect(
+      impliedStart(predStart, predFinish, successorDurationMs, "SF", 0),
+    ).toBe(predStart - successorDurationMs);
   });
 });
 
@@ -196,5 +196,27 @@ describe("calculateCriticalPath", () => {
     for (const t of result) {
       expect(typeof t.isOnCriticalPath).toBe("boolean");
     }
+  });
+
+  it("並列先行: 実日程(endDate-startDate)で律速する先行のみをクリティカルにする", () => {
+    // A: 実スパン1日・工数(duration)8 / C: 実スパン3日・工数1。
+    // B は day3 開始で A,C を先行(FS)に持つ。実日程では C(終了day3)が B(開始day3)を
+    // 律速し A(終了day1)には余裕がある。duration を日数扱いする実装だと A(8日)が
+    // 律速と誤判定されるため、この期待値で回帰を固定する。
+    const a = makeTask({ id: "A", startDate: day(0), duration: 8, endDate: day(1) });
+    const c = makeTask({ id: "C", startDate: day(0), duration: 1, endDate: day(3) });
+    const b = makeTask({
+      id: "B",
+      startDate: day(3),
+      duration: 2,
+      endDate: day(5),
+      predecessors: [dep("A", "FS", 0), dep("C", "FS", 0)],
+    });
+    const byId = new Map(
+      calculateCriticalPath([a, c, b]).map((t) => [t.id, t.isOnCriticalPath]),
+    );
+    expect(byId.get("B")).toBe(true);
+    expect(byId.get("C")).toBe(true);
+    expect(byId.get("A")).toBe(false);
   });
 });

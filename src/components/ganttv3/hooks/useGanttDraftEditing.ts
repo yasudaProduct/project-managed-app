@@ -8,6 +8,8 @@ import {
 } from "@/app/wbs/[id]/ganttv3/dependency-actions";
 import { calculateCriticalPath } from "../utils/criticalPath";
 import { diffDependencies } from "../utils/diffDependencies";
+import { parseDbId } from "../utils/taskId";
+import { toErrorMessage } from "../utils/toErrorMessage";
 import { toast } from "@/hooks/use-toast";
 
 export type UseGanttDraftEditingParams = {
@@ -168,16 +170,19 @@ export function useGanttDraftEditing({
         const assigneeChanged = dt.assigneeId !== orig.assigneeId;
         if (!dateChanged && !kosuChanged && !assigneeChanged) continue;
 
-        const dbId = Number(dt.dbId ?? dt.id);
+        const dbId = dt.dbId ?? parseDbId(dt.id);
         if (dt.isMilestone) {
-          await updateMilestone({
+          const res = await updateMilestone({
             id: dbId,
             name: dt.name,
             date: dt.startDate,
             wbsId,
           });
+          if (!res.success) {
+            throw new Error(res.error ?? `「${dt.name}」の保存に失敗しました`);
+          }
         } else {
-          await updateTask(wbsId, {
+          const res = await updateTask(wbsId, {
             id: dbId,
             taskNo: dt.taskNo,
             name: dt.name,
@@ -188,31 +193,42 @@ export function useGanttDraftEditing({
             assigneeId: dt.assigneeId,
             phaseId: dt.phaseId,
           });
+          if (!res.success) {
+            throw new Error(res.error ?? `「${dt.name}」の保存に失敗しました`);
+          }
         }
       }
 
       // 2) 依存関係の差分を保存
       const { deletes, creates } = diffDependencies(tasks, draftTasks);
       for (const dbId of deletes) {
-        await deleteGanttDependency(wbsId, dbId);
+        const res = await deleteGanttDependency(wbsId, dbId);
+        if (!res.success) {
+          throw new Error(res.error ?? "依存関係の削除に失敗しました");
+        }
       }
       for (const input of creates) {
-        await createGanttDependency(wbsId, input);
+        const res = await createGanttDependency(wbsId, input);
+        if (!res.success) {
+          throw new Error(res.error ?? "依存関係の作成に失敗しました");
+        }
       }
 
+      // 全て成功したときのみ編集モードを終了しドラフトを破棄する
       toast({ title: "編集内容を保存しました" });
-    } catch (error) {
-      toast({
-        title: "保存に失敗しました",
-        description: error instanceof Error ? error.message : "不明なエラー",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSavingEdit(false);
       setEditMode(false);
       setDraftTasks(null);
       onExitEditMode?.();
       await refetchTasks();
+    } catch (error) {
+      // 失敗時はドラフト・編集モードを保持し、ユーザーが修正して再試行できるようにする
+      toast({
+        title: "保存に失敗しました",
+        description: toErrorMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingEdit(false);
     }
   }, [draftTasks, tasks, wbsId, refetchTasks, onExitEditMode]);
 

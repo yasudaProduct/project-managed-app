@@ -22,6 +22,7 @@ import { useGanttDraftEditing } from "@/components/ganttv3/hooks/useGanttDraftEd
 import { toWbsTask } from "@/components/ganttv3/utils/taskMapper";
 import { createTaskColumns } from "@/components/ganttv3/taskTableColumns";
 import { tsvBlob, downloadBlob } from "@/components/ganttv3/utils/downloadBlob";
+import { toErrorMessage } from "@/components/ganttv3/utils/toErrorMessage";
 import { toast } from "@/hooks/use-toast";
 
 const defaultGanttStyle: GanttStyle = {
@@ -73,17 +74,6 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   // グループ内のタスクの並び順
   const [sortBy, setSortBy] = useState<TaskSortBy>("taskNo");
 
-  // 現在のグルーピングにおける実グループ名（GanttChart の groupTasksByType と同一ロジック）
-  const groupNames = useMemo(
-    () => groupTasksByType(tasks, groupBy, categories).map((g) => g.name),
-    [tasks, groupBy, categories],
-  );
-  // グループ名の集合（順不同で同一性を判定するためのキー）
-  const groupNamesKey = useMemo(
-    () => [...groupNames].sort().join("\u001f"),
-    [groupNames],
-  );
-
   // モーダル制御（編集対象はIDで保持し、最新の tasks から都度引き直す）
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [dependencyTaskId, setDependencyTaskId] = useState<string | null>(null);
@@ -109,6 +99,18 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     refetchTasks,
     onExitEditMode: () => setDependencyTaskId(null),
   });
+
+  // 現在のグルーピングにおける実グループ名。チャートは chartTasks を描画するため、
+  // 編集モード中のドラフトで増減したグループも展開対象に含める。
+  const groupNames = useMemo(
+    () => groupTasksByType(chartTasks, groupBy, categories).map((g) => g.name),
+    [chartTasks, groupBy, categories],
+  );
+  // グループ名の集合（順不同で同一性を判定するためのキー）
+  const groupNamesKey = useMemo(
+    () => [...groupNames].sort().join("\u001f"),
+    [groupNames],
+  );
 
   // グルーピングの切替やデータ初回ロードでグループ名の集合が変わったら、全グループを展開状態にする
   useEffect(() => {
@@ -148,7 +150,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     } catch (error) {
       toast({
         title: "TSVの出力に失敗しました",
-        description: error instanceof Error ? error.message : "不明なエラー",
+        description: toErrorMessage(error),
         variant: "destructive",
       });
     }
@@ -217,6 +219,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           <ViewSwitcher
             currentView={currentView}
             onViewChange={setCurrentView}
+            disabled={editMode}
           />
 
           <div className="flex items-center gap-4">
@@ -253,6 +256,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
               sortBy={sortBy}
               onSortByChange={setSortBy}
               onExportTsv={handleExportTsv}
+              taskOpsDisabled={editMode}
             />
 
             {currentView === "gantt" && (
@@ -347,8 +351,9 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           isOpen={true}
           onClose={() => {
             setEditingTaskId(null);
-            // モーダル内で更新された場合に備えて再取得
-            refetchTasks();
+            // モーダル内で更新された場合に備えて再取得。ただし編集モード中は
+            // ドラフトが陳腐化する（保存時に古い値で上書きされる）ため抑止する。
+            if (!editMode) refetchTasks();
           }}
         />
       )}

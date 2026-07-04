@@ -59,6 +59,29 @@ describe("buildChildHeaders", () => {
     expect(headers.length).toBeGreaterThanOrEqual(3);
     expect(headers[0].label).toMatch(/^W\d+$/);
   });
+
+  it("month: 開始日が31日でも月がロールオーバーせず連続する（2月が欠落しない）", () => {
+    const headers = buildChildHeaders(
+      new Date(2024, 0, 31), // 2024-01-31（29〜31日開始でロールオーバーの温床）
+      new Date(2024, 4, 1), // 2024-05-01
+      "month",
+    );
+    // 各ヘッダの月が 1月(0),2月(1),3月(2),4月(3) と欠落なく連続する
+    const months = headers.map((h) => h.date.getMonth());
+    expect(months.slice(0, 4)).toEqual([0, 1, 2, 3]);
+  });
+
+  it("quarter: 開始日が31日でも四半期の開始月がずれない", () => {
+    const headers = buildChildHeaders(
+      new Date(2024, 0, 31),
+      new Date(2024, 9, 1),
+      "quarter",
+    );
+    // 3ヶ月ずつ進む（0→3→6...）。ロールオーバーすると 4 になり崩れる
+    const months = headers.map((h) => h.date.getMonth());
+    expect(months[0]).toBe(0);
+    expect(months[1]).toBe(3);
+  });
 });
 
 describe("buildParentHeaders", () => {

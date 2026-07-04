@@ -112,8 +112,10 @@ export function buildChildHeaders(
           isWeekend: false,
           isMainHeader: current.getMonth() % 3 === 0, // Quarterly
         });
-        current.setMonth(current.getMonth() + 1);
+        // 先に日を1にしてから月を進める（29〜31日開始だと Feb 31 → Mar へ
+        // ロールオーバーして月ヘッダが欠落するため順序が重要）
         current.setDate(1);
+        current.setMonth(current.getMonth() + 1);
         break;
 
       case "quarter": {
@@ -124,8 +126,9 @@ export function buildChildHeaders(
           isWeekend: false,
           isMainHeader: quarter === 1, // Yearly
         });
-        current.setMonth(current.getMonth() + 3);
+        // month と同様、先に日を1にしてから月を進める
         current.setDate(1);
+        current.setMonth(current.getMonth() + 3);
         break;
       }
     }

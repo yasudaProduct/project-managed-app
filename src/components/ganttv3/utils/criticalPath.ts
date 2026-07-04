@@ -2,24 +2,27 @@ import type { Task, DependencyType } from "../gantt";
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/** タスクの予定所要期間(ms) = 予定終了日 - 予定開始日。CP計算はこの実日程を基準にする。 */
+const spanMs = (t: Task): number => t.endDate.getTime() - t.startDate.getTime();
+
 /**
  * 依存種別とラグから、後続タスクの最早開始の下限を算出する。
  *
  * @param predStart 先行タスクの開始時刻(ms)
  * @param predFinish 先行タスクの終了時刻(ms)
- * @param successorDuration 後続タスクの期間(日)
+ * @param successorDurationMs 後続タスクの所要期間(ms) = 予定終了日 - 予定開始日
  * @param type 依存種別(FS/SS/FF/SF)
  * @param lag ラグ(日)
  */
 export function impliedStart(
   predStart: number,
   predFinish: number,
-  successorDuration: number,
+  successorDurationMs: number,
   type: DependencyType,
   lag: number,
 ): number {
   const lagMs = lag * DAY;
-  const durMs = successorDuration * DAY;
+  const durMs = successorDurationMs;
   switch (type) {
     case "SS":
       return predStart + lagMs;
@@ -65,13 +68,13 @@ export function calculateCriticalPath(updatedTasks: Task[]): Task[] {
       const predTask = taskMap.get(pred.taskId);
       if (predTask) {
         const predStart = calculateEarliestStart(pred.taskId, visited);
-        const predFinish = predStart + predTask.duration * DAY;
+        const predFinish = predStart + spanMs(predTask);
         earliestStart = Math.max(
           earliestStart,
           impliedStart(
             predStart,
             predFinish,
-            task.duration,
+            spanMs(task),
             pred.type,
             pred.lag,
           ),
@@ -113,11 +116,11 @@ export function calculateCriticalPath(updatedTasks: Task[]): Task[] {
       const predTask = taskMap.get(pred.taskId);
       if (predTask) {
         const predStart = earliestStartCache.get(pred.taskId) ?? 0;
-        const predFinish = predStart + predTask.duration * DAY;
+        const predFinish = predStart + spanMs(predTask);
         const implied = impliedStart(
           predStart,
           predFinish,
-          task.duration,
+          spanMs(task),
           pred.type,
           pred.lag,
         );

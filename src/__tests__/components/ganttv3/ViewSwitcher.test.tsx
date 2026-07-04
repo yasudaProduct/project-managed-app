@@ -31,4 +31,15 @@ describe("ViewSwitcher", () => {
       "bg-primary",
     );
   });
+
+  it("disabled のとき両ボタンが無効化されクリックしても発火しない", () => {
+    const onViewChange = jest.fn();
+    render(<ViewSwitcher onViewChange={onViewChange} disabled />);
+    const gantt = screen.getByTestId("view-switcher-gantt");
+    const table = screen.getByTestId("view-switcher-table");
+    expect(gantt).toBeDisabled();
+    expect(table).toBeDisabled();
+    fireEvent.click(table);
+    expect(onViewChange).not.toHaveBeenCalled();
+  });
 });

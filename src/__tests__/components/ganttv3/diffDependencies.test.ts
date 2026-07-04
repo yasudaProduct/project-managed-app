@@ -36,6 +36,17 @@ describe("diffDependencies", () => {
     expect(diffDependencies(orig, draft)).toEqual({ deletes: [], creates: [] });
   });
 
+  it("接頭辞付きID(task-<dbId>)から数値のdbIdを取り出して作成する", () => {
+    const orig = [task("task-10"), task("task-20")];
+    const draft = [task("task-10"), task("task-20", [{ taskId: "task-10" }])];
+    expect(diffDependencies(orig, draft)).toEqual({
+      deletes: [],
+      creates: [
+        { successorTaskId: 20, predecessorTaskId: 10, type: "FS", lag: 0 },
+      ],
+    });
+  });
+
   it("新規依存（dbId未設定）は作成のみ", () => {
     const orig = [task("10"), task("20")];
     const draft = [task("10"), task("20", [{ taskId: "10" }])];

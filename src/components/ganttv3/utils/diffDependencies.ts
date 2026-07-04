@@ -1,4 +1,5 @@
 import type { Task, DependencyType } from "../gantt";
+import { parseDbId } from "./taskId";
 
 /** 依存関係を作成するための入力（createGanttDependency の引数形） */
 export type CreateDependencyInput = {
@@ -86,8 +87,8 @@ export function diffDependencies(
       od && (od.type !== d.type || od.lag !== d.lag || od.pred !== d.pred);
     if (isNew || changed) {
       creates.push({
-        successorTaskId: Number(d.succ),
-        predecessorTaskId: Number(d.pred),
+        successorTaskId: parseDbId(d.succ),
+        predecessorTaskId: parseDbId(d.pred),
         type: d.type,
         lag: d.lag,
       });

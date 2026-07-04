@@ -9,6 +9,7 @@ import { IWbsApplicationService } from "@/applications/wbs/wbs-application-servi
 import { IMilestoneApplicationService } from "@/applications/milestone/milestone-application-service";
 import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
 import { DependencyType } from "@/components/ganttv3/gantt";
+import { statusColor } from "@/components/ganttv3/utils/taskFormat";
 import { TaskProgressCalculator } from "@/domains/task/task-progress-calculator";
 import { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import prisma from "@/lib/prisma/prisma";
@@ -101,10 +102,11 @@ export async function getGanttTasks(wbsId: number): Promise<GanttTask[]> {
         const tasksById = new Map(ganttTasks.map((t) => [t.id, t]));
 
         for (const dep of dependencies) {
-            const successor = tasksById.get(dep.successorTaskId.toString());
+            // 依存はタスク間のみ。gantt Task.id は `task-<dbId>` 接頭辞を持つ
+            const successor = tasksById.get(`task-${dep.successorTaskId}`);
             if (successor) {
                 successor.predecessors.push({
-                    taskId: dep.predecessorTaskId.toString(),
+                    taskId: `task-${dep.predecessorTaskId}`,
                     type: dep.type as DependencyType,
                     lag: dep.lag,
                     dbId: dep.id,
@@ -183,28 +185,27 @@ function convertTask(
     progressMethod: ProgressMeasurementMethod
 ): GanttTask | undefined {
 
-    let color = "red";
-    let status: GanntTaskStatus
+    let status: GanntTaskStatus | undefined;
     switch (task.status) {
         case "COMPLETED":
-            color = "green";
             status = "COMPLETED";
             break;
         case "IN_PROGRESS":
-            color = "blue";
             status = "IN_PROGRESS";
             break;
         case "NOT_STARTED":
-            color = "gray";
             status = "NOT_STARTED";
             break;
         case "ON_HOLD":
-            color = "yellow";
             status = "ON_HOLD";
             break;
     }
+    // フェーズ未割当タスク（phaseId===undefined でフェーズ色上書きの対象外）でも
+    // 有効な hex 色になるよう、ステータス色（hex）を使う。名前色だと TaskBar の
+    // `${color}20` が "gray20" のような不正値になり黒バーで描画されてしまう。
+    const color = statusColor(status);
 
-    if (task.yoteiStart && task.yoteiEnd && task.yoteiKosu) {
+    if (task.yoteiStart && task.yoteiEnd) {
 
         // プロジェクトの進捗測定方式に基づく実効進捗率（0-100）
         const progress = TaskProgressCalculator.calculateEffectiveProgress(
@@ -221,11 +222,11 @@ function convertTask(
         }
 
         return {
-            id: task.id.toString(),
+            id: `task-${task.id}`,
             name: task.name,
             startDate: task.yoteiStart,
             endDate: task.yoteiEnd,
-            duration: task.yoteiKosu,
+            duration: task.yoteiKosu ?? 0,
             actualStartDate,
             actualEndDate,
             color: color,
@@ -251,7 +252,7 @@ function convertTask(
 function convertMilestone(milestone: Milestone): GanttTask | undefined {
 
     return {
-        id: milestone.id.toString(),
+        id: `ms-${milestone.id}`,
         name: milestone.name,
         startDate: milestone.date,
         endDate: milestone.date,

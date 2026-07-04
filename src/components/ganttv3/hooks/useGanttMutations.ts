@@ -1,5 +1,5 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
-import type { Task, GanttPhase, DependencyType } from "../gantt";
+import type { Task, GanttPhase, DependencyType, Dependency } from "../gantt";
 import {
   createTask,
   updateTask,
@@ -14,6 +14,9 @@ import {
   deleteGanttDependency,
 } from "@/app/wbs/[id]/ganttv3/dependency-actions";
 import { calculateCriticalPath } from "../utils/criticalPath";
+import type { CreateDependencyInput } from "../utils/diffDependencies";
+import { parseDbId } from "../utils/taskId";
+import { toErrorMessage } from "../utils/toErrorMessage";
 import { toast } from "@/hooks/use-toast";
 
 export type UseGanttMutationsParams = {
@@ -41,14 +44,22 @@ export function useGanttMutations({
   // タスク/マイルストーンの更新（楽観的更新 → サーバー保存 → 失敗時ロールバック）
   const handleTaskUpdate = useCallback(
     async (updatedTask: Task) => {
-      const prevTasks = tasks;
-      const newTasks = tasks.map((task) =>
-        task.id === updatedTask.id ? updatedTask : task,
+      // 失敗時は該当タスクのみ元へ戻す（丸ごと復元だと await 中の別更新を巻き戻すため）
+      const origTask = tasks.find((t) => t.id === updatedTask.id);
+      const rollback = () =>
+        setTasks((prev) =>
+          calculateCriticalPath(
+            prev.map((t) => (t.id === updatedTask.id ? origTask ?? t : t)),
+          ),
+        );
+      setTasks((prev) =>
+        calculateCriticalPath(
+          prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)),
+        ),
       );
-      setTasks(calculateCriticalPath(newTasks));
 
       try {
-        const dbId = Number(updatedTask.dbId ?? updatedTask.id);
+        const dbId = updatedTask.dbId ?? parseDbId(updatedTask.id);
         const result = updatedTask.isMilestone
           ? await updateMilestone({
               id: dbId,
@@ -69,7 +80,7 @@ export function useGanttMutations({
             });
 
         if (!result.success) {
-          setTasks(calculateCriticalPath(prevTasks));
+          rollback();
           toast({
             title: "更新に失敗しました",
             description: result.error,
@@ -77,10 +88,10 @@ export function useGanttMutations({
           });
         }
       } catch (error) {
-        setTasks(calculateCriticalPath(prevTasks));
+        rollback();
         toast({
           title: "更新に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
+          description: toErrorMessage(error),
           variant: "destructive",
         });
       }
@@ -133,7 +144,7 @@ export function useGanttMutations({
       } catch (error) {
         toast({
           title: "タスクの追加に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
+          description: toErrorMessage(error),
           variant: "destructive",
         });
       }
@@ -163,7 +174,7 @@ export function useGanttMutations({
       try {
         const results = await Promise.all(
           targets.map((task) => {
-            const dbId = Number(task.dbId ?? task.id);
+            const dbId = task.dbId ?? parseDbId(task.id);
             return task.isMilestone
               ? deleteMilestone(dbId, wbsId)
               : deleteTask(dbId);
@@ -179,7 +190,7 @@ export function useGanttMutations({
       } catch (error) {
         toast({
           title: "タスクの削除に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
+          description: toErrorMessage(error),
           variant: "destructive",
         });
         await refetchTasks();
@@ -221,7 +232,7 @@ export function useGanttMutations({
       } catch (error) {
         toast({
           title: "タスクの複製に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
+          description: toErrorMessage(error),
           variant: "destructive",
         });
       }
@@ -239,8 +250,8 @@ export function useGanttMutations({
     ) => {
       try {
         const result = await createGanttDependency(wbsId, {
-          successorTaskId: Number(successorTaskId),
-          predecessorTaskId: Number(predecessorTaskId),
+          successorTaskId: parseDbId(successorTaskId),
+          predecessorTaskId: parseDbId(predecessorTaskId),
           type,
           lag,
         });
@@ -257,7 +268,7 @@ export function useGanttMutations({
       } catch (error) {
         toast({
           title: "依存関係の追加に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
+          description: toErrorMessage(error),
           variant: "destructive",
         });
       }
@@ -268,19 +279,43 @@ export function useGanttMutations({
   // 依存関係を削除（楽観的更新 → サーバー削除）
   const handleDependencyRemove = useCallback(
     async (dependencyDbId: number) => {
-      const prevTasks = tasks;
-      const newTasks = tasks.map((task) => ({
-        ...task,
-        predecessors: task.predecessors.filter(
-          (pred) => pred.dbId !== dependencyDbId,
+      // 失敗時にこの依存だけ復元するための元データ（丸ごと復元はしない）
+      let removedFromTaskId: string | undefined;
+      let removedPred: Dependency | undefined;
+      for (const t of tasks) {
+        const p = t.predecessors.find((pred) => pred.dbId === dependencyDbId);
+        if (p) {
+          removedFromTaskId = t.id;
+          removedPred = p;
+          break;
+        }
+      }
+      const rollback = () =>
+        setTasks((prev) =>
+          calculateCriticalPath(
+            prev.map((t) =>
+              t.id === removedFromTaskId && removedPred
+                ? { ...t, predecessors: [...t.predecessors, removedPred] }
+                : t,
+            ),
+          ),
+        );
+
+      setTasks((prev) =>
+        calculateCriticalPath(
+          prev.map((task) => ({
+            ...task,
+            predecessors: task.predecessors.filter(
+              (pred) => pred.dbId !== dependencyDbId,
+            ),
+          })),
         ),
-      }));
-      setTasks(calculateCriticalPath(newTasks));
+      );
 
       try {
         const result = await deleteGanttDependency(wbsId, dependencyDbId);
         if (!result.success) {
-          setTasks(calculateCriticalPath(prevTasks));
+          rollback();
           toast({
             title: "依存関係の削除に失敗しました",
             description: result.error,
@@ -288,10 +323,10 @@ export function useGanttMutations({
           });
         }
       } catch (error) {
-        setTasks(calculateCriticalPath(prevTasks));
+        rollback();
         toast({
           title: "依存関係の削除に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
+          description: toErrorMessage(error),
           variant: "destructive",
         });
       }
@@ -308,6 +343,22 @@ export function useGanttMutations({
       type: DependencyType,
       lag: number,
     ) => {
+      // 更新APIが無いため「削除→作成」で行う。作成失敗時に旧依存を復元できるよう
+      // 削除前の値を控える（そうしないと削除だけ成功して依存が消失する）。
+      let oldDep: CreateDependencyInput | undefined;
+      for (const t of tasks) {
+        const p = t.predecessors.find((pred) => pred.dbId === dependencyDbId);
+        if (p) {
+          oldDep = {
+            successorTaskId: parseDbId(t.id),
+            predecessorTaskId: parseDbId(p.taskId),
+            type: p.type,
+            lag: p.lag,
+          };
+          break;
+        }
+      }
+
       try {
         const deleted = await deleteGanttDependency(wbsId, dependencyDbId);
         if (!deleted.success) {
@@ -320,12 +371,16 @@ export function useGanttMutations({
         }
 
         const created = await createGanttDependency(wbsId, {
-          successorTaskId: Number(successorTaskId),
-          predecessorTaskId: Number(predecessorTaskId),
+          successorTaskId: parseDbId(successorTaskId),
+          predecessorTaskId: parseDbId(predecessorTaskId),
           type,
           lag,
         });
         if (!created.success) {
+          // ロールバック: 削除済みの旧依存を復元し、依存が消えないようにする
+          if (oldDep) {
+            await createGanttDependency(wbsId, oldDep);
+          }
           toast({
             title: "依存関係の更新に失敗しました",
             description: created.error,
@@ -335,14 +390,14 @@ export function useGanttMutations({
       } catch (error) {
         toast({
           title: "依存関係の更新に失敗しました",
-          description: error instanceof Error ? error.message : "不明なエラー",
+          description: toErrorMessage(error),
           variant: "destructive",
         });
       } finally {
         await refetchTasks();
       }
     },
-    [wbsId, refetchTasks],
+    [tasks, wbsId, refetchTasks],
   );
 
   return {
