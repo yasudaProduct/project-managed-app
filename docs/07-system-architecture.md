@@ -399,7 +399,6 @@ graph TB
     subgraph "分析・レポート"
         EVM[EVM分析]
         PH[進捗履歴]
-        QA[品質評価]
     end
 
     subgraph "システム連携"
@@ -419,7 +418,6 @@ graph TB
     WR --> EVM
     TM --> PH
     PH --> EVM
-    EVM --> QA
     IMP --> WM
     IMP --> WR
     WM --> EXP

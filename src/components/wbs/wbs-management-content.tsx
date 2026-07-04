@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   List,
   Loader2,
-  ShieldCheck,
   Table,
   Trello,
   Users,
@@ -29,7 +28,6 @@ import WbsImportJobButtons from "@/components/wbs/wbs-import-job-buttons";
 import { TaskTableViewPage } from "@/components/wbs/task-table-view";
 import { EvmDashboard } from "@/components/evm/evm-dashboard";
 import { WbsTagInput } from "@/components/wbs/wbs-tag-input";
-import { QualityTabContent } from "@/components/quality/quality-tab-content";
 import { SchedulingWorkbench } from "@/components/task-scheduling/scheduling-workbench";
 import type { ProjectStatus, WbsTask, Milestone } from "@/types/wbs";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
@@ -57,7 +55,6 @@ type WbsManagementContentProps = {
   defaultTab?: string;
   showEvm?: boolean;
   showTags?: boolean;
-  showQuality?: boolean;
   defaultProgressMethod?: ProgressMeasurementMethod;
   deadlineAlertDays?: number;
   costOverrunThresholdPct?: number;
@@ -75,7 +72,6 @@ export function WbsManagementContent({
   defaultTab,
   showEvm = true,
   showTags = true,
-  showQuality = true,
   defaultProgressMethod,
   deadlineAlertDays = 1,
   costOverrunThresholdPct = 100,
@@ -117,14 +113,6 @@ export function WbsManagementContent({
             <CalendarCheck className="h-4 w-4" />
           </Button>
         </TaskModal>
-        {/* <TaskDependencyModal
-          wbsId={wbsId}
-          tasks={tasks.map((task) => ({
-            id: task.id,
-            taskNo: task.taskNo || "",
-            name: task.name,
-          }))}
-        /> */}
         <WbsImportJobButtons wbsId={wbsId} wbsName={wbsName} />
       </div>
 
@@ -162,11 +150,6 @@ export function WbsManagementContent({
             {showEvm && (
               <TabsTrigger value="evm" className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
-              </TabsTrigger>
-            )}
-            {showQuality && (
-              <TabsTrigger value="quality" className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" />
               </TabsTrigger>
             )}
             <TabsTrigger value="task-scheduling" className="flex items-center gap-2">
@@ -229,11 +212,6 @@ export function WbsManagementContent({
                 wbsId={wbsId}
                 defaultProgressMethod={defaultProgressMethod}
               />
-            </TabsContent>
-          )}
-          {showQuality && (
-            <TabsContent value="quality">
-              <QualityTabContent wbsId={wbsId} />
             </TabsContent>
           )}
           <TabsContent value="task-scheduling">

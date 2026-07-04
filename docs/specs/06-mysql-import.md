@@ -270,13 +270,6 @@ MySQLの `wbs` テーブルを [`ExcelWbsRepository`](../../src/infrastructures/
 - 差分適用・SyncLog採番・スナップショット追記を**単一トランザクション**で行い、整合性を担保する。
 - 進捗スナップショットは EVM の過去メトリクス再構築（[02: EVM仕様書](./02-evm.md) 付録）の入力となる。消失タスクは `isRemoved=true` の tombstone スナップショットとして記録される。
 
-### 6.5 WBS同期後の品質評価対象の自動同期
-
-WBS同期が成功すると、PostgreSQLに取り込まれた `WbsTask`（`tantoRev` 由来）を起点に **品質評価対象（QualityReviewTarget）** を自動同期する（[`SyncQualityTargetsService.syncForWbs`](../../src/applications/quality/sync-quality-targets.service.ts)）。
-
-- この同期は **MySQLを再参照せず、常にPostgreSQLの `WbsTask` を唯一のソース**とする。
-- 品質同期の失敗はWBSインポート自体の成功を妨げない（警告ログのみ）。
-
 ### 6.6 結果型（SyncResult）
 
 | フィールド                                     | 説明                         |
@@ -326,7 +319,6 @@ WBS同期が成功すると、PostgreSQLに取り込まれた `WbsTask`（`tanto
 | Geppoレコードが10,000件超                  | 取得上限10,000件で打ち切られる（1ページ取得のため）                                  |
 | WBS同期でExcel側データなし                 | `SyncError(VALIDATION_ERROR/CONNECTION_ERROR)`                                       |
 | WBS同期で1行でも検証エラー                 | DBを変更せず中断（原子性担保）                                                       |
-| WBS同期後の品質同期が失敗                  | WBSインポートは成功扱い（警告ログのみ）                                              |
 | ジョブが `PENDING` 以外で execute 呼び出し | 400 エラー                                                                           |
 | `type` が `WBS`/`GEPPO` 以外               | 400 エラー（作成・実行とも）                                                         |
 
@@ -378,7 +370,6 @@ WBS同期が成功すると、PostgreSQLに取り込まれた `WbsTask`（`tanto
 | `GeppoPrismaRepository`         | `src/infrastructures/geppo/geppo-prisma.repository.ts`              | MySQL `geppo` の検索・接続確認            |
 | `ExcelWbsRepository`            | `src/infrastructures/sync/ExcelWbsRepository.ts`                    | MySQL `wbs` の取得                        |
 | `geppoPrisma`                   | `src/lib/prisma/geppo.ts`                                           | Geppo月報用 Prisma クライアント（MySQL）  |
-| `SyncQualityTargetsService`     | `src/applications/quality/sync-quality-targets.service.ts`          | WBS同期後の品質評価対象の自動同期         |
 
 ### DI登録シンボル
 
