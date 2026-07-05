@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 import { IProjectRepository } from "@/applications/projects/iproject-repository";
 import { IProjectApplicationService, ProjectApplicationService } from "@/applications/projects/project-application-service";
-import { IScheduleGenerateService, ScheduleGenerateService } from "@/applications/schedule-generator/schedule-generate-service";
 import { IAssigneeGanttService } from "@/applications/assignee-gantt/iassignee-gantt-service";
 import { AssigneeGanttService } from "@/applications/assignee-gantt/assignee-gantt-service";
 import { IPhaseRepository } from "@/applications/task/iphase-repository";
@@ -14,8 +13,6 @@ import type { IWbsBufferRepository } from "@/applications/wbs/iwbs-buffer-reposi
 import { IWbsApplicationService, WbsApplicationService } from "@/applications/wbs/wbs-application-service";
 import { IDashboardApplicationService, DashboardApplicationService } from "@/applications/dashboard/dashboard-application-service";
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
-import { GetOperationPossible } from "@/domains/wbs/get-operation-possible";
-import { ScheduleGenerate } from "@/domains/wbs/schedule-generate";
 import { PhaseRepository } from "@/infrastructures/phase-repository";
 import { ProjectRepository } from "@/infrastructures/project-repository";
 import { TaskRepository } from "@/infrastructures/task-repository";
@@ -155,7 +152,6 @@ const container: Container = new Container();
 container.bind<IProjectApplicationService>(SYMBOL.IProjectApplicationService).to(ProjectApplicationService).inSingletonScope();
 container.bind<IWbsApplicationService>(SYMBOL.IWbsApplicationService).to(WbsApplicationService).inSingletonScope();
 container.bind<ITaskApplicationService>(SYMBOL.ITaskApplicationService).to(TaskApplicationService).inSingletonScope();
-container.bind<IScheduleGenerateService>(SYMBOL.IScheduleGenerateService).to(ScheduleGenerateService).inSingletonScope();
 container.bind<IAssigneeGanttService>(SYMBOL.IAssigneeGanttService).to(AssigneeGanttService).inSingletonScope();
 container.bind<IDashboardApplicationService>(SYMBOL.IDashboardApplicationService).to(DashboardApplicationService).inSingletonScope();
 container.bind<IPhaseApplicationService>(SYMBOL.IPhaseApplicationService).to(PhaseApplicationService).inSingletonScope();
@@ -180,10 +176,6 @@ container.bind<IWbsAnalyticsApplicationService>(SYMBOL.IWbsAnalyticsApplicationS
 container.bind<IProjectSettingsApplicationService>(SYMBOL.IProjectSettingsApplicationService).to(ProjectSettingsApplicationService).inSingletonScope();
 container.bind<IForecastApplicationService>(SYMBOL.IForecastApplicationService).to(ForecastApplicationService).inSingletonScope();
 container.bind<ICompanyHolidayApplicationService>(SYMBOL.ICompanyHolidayApplicationService).to(CompanyHolidayApplicationService).inSingletonScope();
-
-// ドメインサービス
-container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
-container.bind<ScheduleGenerate>(SYMBOL.ScheduleGenerate).to(ScheduleGenerate).inSingletonScope();
 
 // リポジトリ
 container.bind<IProjectRepository>(SYMBOL.IProjectRepository).to(ProjectRepository).inSingletonScope();
