@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import type { WbsSyncMode } from "@/applications/wbs-sync/wbs-sync-mode";
+import { createImportJob } from "@/app/import-jobs/actions";
 
 type Props = {
   wbsId: number;
@@ -32,28 +33,22 @@ export default function WbsImportJobButtons({
   const createWbsJob = async (syncMode: WbsSyncMode = "diff") => {
     setCreating(true);
     try {
-      const res = await fetch(`/api/import-jobs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "WBS",
-          wbsId,
-          options: { syncMode },
-        }),
+      const result = await createImportJob({
+        type: "WBS",
+        wbsId,
+        options: { syncMode },
       });
-      if (res.ok) {
-        const json = await res.json();
-        const data = json.data ?? json;
+      if (result.success) {
         toast({
           title: "ジョブ作成",
           description: `WBS(${wbsId})のジョブを作成しました（${syncMode === "replace" ? "洗い替え" : "差分"}）。`,
         });
-        onCreated?.(data.id);
+        onCreated?.(result.data.id);
         onRefresh?.();
       } else {
         toast({
           title: "エラー",
-          description: await res.text(),
+          description: result.error,
           variant: "destructive",
         });
       }
