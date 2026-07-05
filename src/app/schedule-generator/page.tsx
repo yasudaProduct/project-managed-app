@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { ScheduleGenerator } from "@/app/schedule-generator/schedule-generator";
-import { getProjects } from "./action";
+import { getProjects } from "./actions";
 
 export default async function ScheduleGeneratorPage() {
   const projects = await getProjects();

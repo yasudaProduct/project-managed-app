@@ -9,7 +9,7 @@ import {
   savePushSubscription,
   removePushSubscription,
   type NotificationActionResult
-} from '@/app/actions/notification-actions';
+} from '@/app/notifications/notification-actions';
 
 export interface NotificationPreferences {
   id?: number;

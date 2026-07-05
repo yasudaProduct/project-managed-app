@@ -5,7 +5,7 @@ import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { parse } from "csv-parse/sync";
 import { useState, useRef } from "react";
-import { importScheduleTsv } from "../action";
+import { importScheduleTsv } from "../actions";
 import { Upload } from "lucide-react";
 
 export default function ScheduleImportPage() {

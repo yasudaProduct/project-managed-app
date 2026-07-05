@@ -11,7 +11,7 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
 HTMLElement.prototype.scrollIntoView = jest.fn();
 
 // Server Actions はモック（hook 自体は実物を使い配線を検証する）
-jest.mock("@/app/wbs/[id]/ganttv3/action", () => ({
+jest.mock("@/app/wbs/[id]/ganttv3/actions", () => ({
   getGanttTasks: jest.fn(),
   getPhases: jest.fn(),
   getAssigneeOptions: jest.fn(),
@@ -83,7 +83,7 @@ import {
   getGanttTasks,
   getPhases,
   getAssigneeOptions,
-} from "@/app/wbs/[id]/ganttv3/action";
+} from "@/app/wbs/[id]/ganttv3/actions";
 import { makeTask, makePhase } from "./_fixtures";
 
 const mockGetGanttTasks = getGanttTasks as jest.Mock;

@@ -10,7 +10,7 @@ import {
   markAllAsRead,
   deleteNotification,
   sendTestNotification,
-} from '@/app/actions/notification-actions';
+} from '@/app/notifications/notification-actions';
 
 export interface NotificationData {
   id: number;

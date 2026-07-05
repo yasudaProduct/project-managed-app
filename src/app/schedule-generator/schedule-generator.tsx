@@ -6,7 +6,7 @@ import { parse } from "csv-parse/sync";
 import {
   generateSchedule,
   getOperationPossible,
-} from "@/app/schedule-generator/action";
+} from "@/app/schedule-generator/actions";
 import {
   Select,
   SelectContent,

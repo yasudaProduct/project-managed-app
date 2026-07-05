@@ -2,7 +2,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { useGanttData } from "@/components/ganttv3/hooks/useGanttData";
 import { makeTask, makePhase } from "./_fixtures";
 
-jest.mock("@/app/wbs/[id]/ganttv3/action", () => ({
+jest.mock("@/app/wbs/[id]/ganttv3/actions", () => ({
   getGanttTasks: jest.fn(),
   getPhases: jest.fn(),
   getAssigneeOptions: jest.fn(),
@@ -12,7 +12,7 @@ import {
   getGanttTasks,
   getPhases,
   getAssigneeOptions,
-} from "@/app/wbs/[id]/ganttv3/action";
+} from "@/app/wbs/[id]/ganttv3/actions";
 
 const mockGetGanttTasks = getGanttTasks as jest.Mock;
 const mockGetPhases = getPhases as jest.Mock;

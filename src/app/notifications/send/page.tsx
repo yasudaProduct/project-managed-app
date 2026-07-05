@@ -20,7 +20,7 @@ import {
   getNotificationTypeDisplayName,
   NotificationType,
 } from "@/types/notification";
-import { createNotification } from "@/app/actions/notification-actions";
+import { createNotification } from "@/app/notifications/notification-actions";
 
 type Channel = "PUSH" | "IN_APP" | "EMAIL";
 

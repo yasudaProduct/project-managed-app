@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { ModernCalendar } from "@/components/modern-calendar";
-import { getSchedules, getUsers } from "./action";
+import { getSchedules, getUsers } from "./actions";
 
 export default async function SchedulePage() {
   const [schedules, users] = await Promise.all([
