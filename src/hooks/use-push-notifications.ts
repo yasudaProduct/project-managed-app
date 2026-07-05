@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { pushNotificationManager, type PushSubscriptionData } from '@/lib/push-notification';
-import { useNotificationPreferences } from './useNotificationPreferences';
+import { useNotificationPreferences } from './use-notification-preferences';
 
 interface PushNotificationStatus {
   isSupported: boolean;

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Settings, RefreshCw, CheckCheck } from "lucide-react";
 import Link from "next/link";
-import { useNotifications } from "@/hooks/useNotifications";
+import { useNotifications } from "@/hooks/use-notifications";
 import { NotificationList } from "@/components/notification/NotificationList";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

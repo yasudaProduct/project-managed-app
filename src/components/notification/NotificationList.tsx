@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { NotificationItem } from './NotificationItem';
-import { NotificationData } from '@/hooks/useNotifications';
+import { NotificationData } from '@/hooks/use-notifications';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface NotificationListProps {

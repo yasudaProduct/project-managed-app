@@ -5,7 +5,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Check, X, ExternalLink } from "lucide-react";
-import { NotificationData, useNotifications } from "@/hooks/useNotifications";
+import { NotificationData, useNotifications } from "@/hooks/use-notifications";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 
