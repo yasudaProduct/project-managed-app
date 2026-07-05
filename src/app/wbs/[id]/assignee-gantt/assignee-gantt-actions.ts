@@ -2,7 +2,7 @@
 
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
-import { IAssigneeGanttService } from '@/applications/assignee-gantt/iassignee-gantt.service';
+import { IAssigneeGanttService } from '@/applications/assignee-gantt/iassignee-gantt-service';
 
 // Server Actionの戻り値用の型定義
 export interface WorkloadData {

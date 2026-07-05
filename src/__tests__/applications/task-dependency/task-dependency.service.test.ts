@@ -1,4 +1,4 @@
-import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import { TaskDependencyService } from "@/applications/task-dependency/task-dependency-service";
 import type { ITaskDependencyRepository } from "@/applications/task-dependency/itask-dependency-repository";
 import type { ITaskRepository } from "@/applications/task/itask-repository";
 import { TaskDependency } from "@/domains/task-dependency/task-dependency";

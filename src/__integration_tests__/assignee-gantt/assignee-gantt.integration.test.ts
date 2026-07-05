@@ -1,6 +1,6 @@
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
-import { IAssigneeGanttService } from '@/applications/assignee-gantt/iassignee-gantt.service';
+import { IAssigneeGanttService } from '@/applications/assignee-gantt/iassignee-gantt-service';
 import { ITaskRepository } from '@/applications/task/itask-repository';
 import { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';

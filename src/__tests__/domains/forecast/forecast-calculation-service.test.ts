@@ -4,7 +4,7 @@
  * 仕様書: docs/specs/03-forecast-calculation.md セクション4〜6
  */
 
-import { ForecastCalculationService } from '@/domains/forecast/forecast-calculation.service';
+import { ForecastCalculationService } from '@/domains/forecast/forecast-calculation-service';
 import { ForecastTaskInput } from '@/domains/forecast/forecast-task-input';
 
 // テスト用ForecastTaskInputファクトリ

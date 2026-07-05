@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { container } from '@/lib/inversify.config'
 import { SYMBOL } from '@/types/symbol'
-import { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service'
+import { IImportJobApplicationService } from '@/applications/import-job/import-job-application-service'
 import type { ImportJobType } from '@/types/import-job'
 import type { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
 import { createApiResponse, createApiError, createImportResponse, validateRequiredFields } from '@/lib/api-response'

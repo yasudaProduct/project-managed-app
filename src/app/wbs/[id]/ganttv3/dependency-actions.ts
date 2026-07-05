@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
-import type { ITaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import type { ITaskDependencyService } from "@/applications/task-dependency/task-dependency-service";
 import type { DependencyType } from "@/types/task-dependency";
 import type { ActionResult } from "@/types/action-result";
 

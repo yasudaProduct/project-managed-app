@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 import { IProjectRepository } from "@/applications/projects/iproject-repository";
 import { IProjectApplicationService, ProjectApplicationService } from "@/applications/projects/project-application-service";
-import { IScheduleGenerateService, ScheduleGenerateService } from "@/applications/schedule-generator/schedule-generate.service";
-import { IAssigneeGanttService } from "@/applications/assignee-gantt/iassignee-gantt.service";
-import { AssigneeGanttService } from "@/applications/assignee-gantt/assignee-gantt.service";
+import { IScheduleGenerateService, ScheduleGenerateService } from "@/applications/schedule-generator/schedule-generate-service";
+import { IAssigneeGanttService } from "@/applications/assignee-gantt/iassignee-gantt-service";
+import { AssigneeGanttService } from "@/applications/assignee-gantt/assignee-gantt-service";
 import { IPhaseRepository } from "@/applications/task/iphase-repository";
 import { ITaskRepository } from "@/applications/task/itask-repository";
 import { ITaskApplicationService, TaskApplicationService } from "@/applications/task/task-application-service";
@@ -61,19 +61,19 @@ import { WorkRecordApplicationService } from "@/applications/work-record/work-re
 import type { IGeppoImportApplicationService } from "@/applications/geppo-import/geppo-import-application-service";
 import { GeppoImportApplicationService } from "@/applications/geppo-import/geppo-import-application-service";
 import type { IProjectMappingService } from "@/applications/geppo-import/iproject-mapping-service";
-import { ProjectMappingService } from "@/infrastructures/geppo-import/project-mapping.service";
+import { ProjectMappingService } from "@/infrastructures/geppo-import/project-mapping-service";
 import type { IUserMappingService } from "@/applications/geppo-import/iuser-mapping-service";
-import { UserMappingService } from "@/infrastructures/geppo-import/user-mapping.service";
+import { UserMappingService } from "@/infrastructures/geppo-import/user-mapping-service";
 import type { ITaskMappingService } from "@/applications/geppo-import/itask-mapping-service";
-import { TaskMappingService } from "@/infrastructures/geppo-import/task-mapping.service";
+import { TaskMappingService } from "@/infrastructures/geppo-import/task-mapping-service";
 
 // Task Dependency関連
 import type { ITaskDependencyRepository } from "@/applications/task-dependency/itask-dependency-repository";
 import { TaskDependencyRepository } from "@/infrastructures/task-dependency-repository";
-import { ITaskDependencyService, TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import { ITaskDependencyService, TaskDependencyService } from "@/applications/task-dependency/task-dependency-service";
 
 // WBS Sync関連
-import { WbsSyncApplicationService } from "@/applications/wbs-sync/wbs-sync-application.service";
+import { WbsSyncApplicationService } from "@/applications/wbs-sync/wbs-sync-application-service";
 import type { IExcelWbsRepository } from "@/applications/wbs-sync/iexcel-wbs-repository";
 import { ExcelWbsRepository } from "@/infrastructures/sync/excel-wbs-repository";
 import type { ISyncLogRepository } from "@/applications/wbs-sync/isync-log-repository";
@@ -96,8 +96,8 @@ import { PushNotificationService } from "@/infrastructures/notification/push-not
 import { NotificationEventDetector } from "@/applications/notification/notification-event-detector";
 
 // Task Scheduling関連
-import type { ISchedulingApplicationService } from "@/applications/task-scheduling/ischeduling-application.service";
-import { SchedulingApplicationService } from "@/applications/task-scheduling/scheduling-application.service";
+import type { ISchedulingApplicationService } from "@/applications/task-scheduling/ischeduling-application-service";
+import { SchedulingApplicationService } from "@/applications/task-scheduling/scheduling-application-service";
 import type { ISchedulingSettingsRepository } from "@/applications/task-scheduling/ischeduling-settings-repository";
 import { SchedulingSettingsRepository } from "@/infrastructures/scheduling-settings-repository";
 
@@ -127,8 +127,8 @@ import { IEvmService, EvmService } from '@/applications/evm/evm-service';
 // Import Job関連
 import type { IImportJobRepository } from '@/applications/import-job/iimport-job.repository';
 import { ImportJobPrismaRepository } from '@/infrastructures/import-job/import-job-prisma.repository';
-import type { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service';
-import { ImportJobApplicationService } from '@/applications/import-job/import-job-application.service';
+import type { IImportJobApplicationService } from '@/applications/import-job/import-job-application-service';
+import { ImportJobApplicationService } from '@/applications/import-job/import-job-application-service';
 import { IWbsSyncApplicationService } from '@/applications/wbs-sync/iwbs-sync-application-service';
 
 // System Settings関連

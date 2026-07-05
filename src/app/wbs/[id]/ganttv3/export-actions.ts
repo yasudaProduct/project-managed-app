@@ -3,7 +3,7 @@
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
 import { ITaskRepository } from "@/applications/task/itask-repository";
-import type { ITaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import type { ITaskDependencyService } from "@/applications/task-dependency/task-dependency-service";
 
 // TSVのヘッダー（出力列の順序）
 const HEADERS = [

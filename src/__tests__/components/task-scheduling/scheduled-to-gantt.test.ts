@@ -2,7 +2,7 @@ import {
   scheduledToGanttTasks,
   scheduledToGanttPhases,
 } from "@/components/task-scheduling/adapters/scheduled-to-gantt";
-import type { ScheduledTaskDto } from "@/applications/task-scheduling/ischeduling-application.service";
+import type { ScheduledTaskDto } from "@/applications/task-scheduling/ischeduling-application-service";
 
 const dto = (over: Partial<ScheduledTaskDto>): ScheduledTaskDto => ({
   taskId: 1,

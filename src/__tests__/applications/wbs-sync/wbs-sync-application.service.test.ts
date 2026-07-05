@@ -1,4 +1,4 @@
-import { WbsSyncApplicationService } from '@/applications/wbs-sync/wbs-sync-application.service';
+import { WbsSyncApplicationService } from '@/applications/wbs-sync/wbs-sync-application-service';
 import { ExcelWbs } from '@/domains/sync/excel-wbs';
 import type { IWbsRepository } from '@/applications/wbs/iwbs-repository';
 import type { IExcelWbsRepository } from '@/applications/wbs-sync/iexcel-wbs-repository';

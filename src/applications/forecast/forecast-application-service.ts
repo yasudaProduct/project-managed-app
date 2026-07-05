@@ -2,7 +2,7 @@ import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
 import type { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-repository';
 import { toForecastTaskInput } from '@/applications/wbs/query/to-forecast-task-input';
-import { ForecastCalculationService } from '@/domains/forecast/forecast-calculation.service';
+import { ForecastCalculationService } from '@/domains/forecast/forecast-calculation-service';
 import type {
   ForecastCalculationOptions,
   ForecastCalculationResult,

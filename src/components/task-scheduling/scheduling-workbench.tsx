@@ -14,7 +14,7 @@ import {
 import { Play, Download, AlertTriangle, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { calculateSchedule } from "./scheduling-actions";
-import type { ScheduleCalculationResult } from "@/applications/task-scheduling/ischeduling-application.service";
+import type { ScheduleCalculationResult } from "@/applications/task-scheduling/ischeduling-application-service";
 import type { BaselineMode } from "@/types/scheduling-settings";
 import {
   scheduledToGanttTasks,

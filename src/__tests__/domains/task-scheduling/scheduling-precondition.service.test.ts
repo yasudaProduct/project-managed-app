@@ -1,4 +1,4 @@
-import { SchedulingPreconditionService } from "@/domains/task-scheduling/scheduling-precondition.service";
+import { SchedulingPreconditionService } from "@/domains/task-scheduling/scheduling-precondition-service";
 import type { SchedulingTask } from "@/domains/task-scheduling/scheduling-task";
 import { TaskDependency } from "@/domains/task-dependency/task-dependency";
 

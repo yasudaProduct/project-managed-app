@@ -1,4 +1,4 @@
-import { AssigneeGanttService } from '@/applications/assignee-gantt/assignee-gantt.service';
+import { AssigneeGanttService } from '@/applications/assignee-gantt/assignee-gantt-service';
 import { ITaskRepository } from '@/applications/task/itask-repository';
 import { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';

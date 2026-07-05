@@ -1,4 +1,4 @@
-import { WorkloadWarningService } from '@/domains/assignee-workload/workload-warning.service';
+import { WorkloadWarningService } from '@/domains/assignee-workload/workload-warning-service';
 import { Task } from '@/domains/task/task';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/task-status';

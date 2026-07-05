@@ -1,4 +1,4 @@
-import type { ScheduledTaskDto } from "@/applications/task-scheduling/ischeduling-application.service";
+import type { ScheduledTaskDto } from "@/applications/task-scheduling/ischeduling-application-service";
 import type { Task as GanttTask, GanttPhase } from "@/components/ganttv3/gantt";
 import { phaseColor } from "@/components/ganttv3/utils/phase-colors";
 

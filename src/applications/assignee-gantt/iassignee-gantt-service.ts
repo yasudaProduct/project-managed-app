@@ -1,5 +1,5 @@
 import { AssigneeWorkload } from '@/domains/assignee-workload/assignee-workload';
-import { WorkloadWarning } from '@/domains/assignee-workload/workload-warning.service';
+import { WorkloadWarning } from '@/domains/assignee-workload/workload-warning-service';
 
 export interface IAssigneeGanttService {
   /**

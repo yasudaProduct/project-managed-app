@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
-import { IImportJobApplicationService } from "@/applications/import-job/import-job-application.service";
+import { IImportJobApplicationService } from "@/applications/import-job/import-job-application-service";
 import type { IWbsApplicationService } from "@/applications/wbs/wbs-application-service";
 import type { ImportJobType, ImportJobDto } from "@/types/import-job";
 import type { ActionResult } from "@/types/action-result";

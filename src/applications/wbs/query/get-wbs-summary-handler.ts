@@ -6,7 +6,7 @@ import { AllocationCalculationMode } from "./allocation-calculation-mode";
 import { SYMBOL } from "@/types/symbol";
 import { WbsTaskData, PhaseData, TaskActualMonthly } from "@/applications/wbs/query/wbs-query-repository";
 import type { IWbsQueryRepository } from "@/applications/wbs/query/wbs-query-repository";
-import { WorkingHoursAllocationService } from "@/domains/calendar/working-hours-allocation.service";
+import { WorkingHoursAllocationService } from "@/domains/calendar/working-hours-allocation-service";
 import { CompanyCalendar } from "@/domains/calendar/company-calendar";
 import type { ICompanyHolidayRepository } from "@/applications/calendar/icompany-holiday-repository";
 import type { IUserScheduleRepository } from "@/applications/calendar/iuser-schedule-repository";
@@ -15,7 +15,7 @@ import type { ISystemSettingsRepository } from "@/applications/system-settings/i
 import { AllocationQuantizer } from "@/domains/wbs/allocation-quantizer";
 import { MonthlySummaryAccumulator } from "./monthly-summary-accumulator";
 import { MonthlyPhaseSummaryAccumulator } from "./monthly-phase-summary-accumulator";
-import { ForecastCalculationService } from "@/domains/forecast/forecast-calculation.service";
+import { ForecastCalculationService } from "@/domains/forecast/forecast-calculation-service";
 import { toForecastTaskInput } from "@/applications/wbs/query/to-forecast-task-input";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import { toForecastMethodOption } from "@/types/forecast-calculation-method";

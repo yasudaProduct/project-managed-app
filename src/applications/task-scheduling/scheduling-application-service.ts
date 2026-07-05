@@ -14,7 +14,7 @@ import type {
   ScheduleCalculationParams,
   ScheduleCalculationResult,
   ScheduledTaskDto,
-} from "./ischeduling-application.service";
+} from "./ischeduling-application-service";
 import { CompanyCalendar } from "@/domains/calendar/company-calendar";
 import {
   AssigneeWorkingCalendar,
@@ -26,13 +26,13 @@ import {
   type WorkingCalendar,
   addCalendarDays,
 } from "@/domains/task-scheduling/working-calendar-walker";
-import { SchedulingPreconditionService } from "@/domains/task-scheduling/scheduling-precondition.service";
+import { SchedulingPreconditionService } from "@/domains/task-scheduling/scheduling-precondition-service";
 import type { ScheduledTask } from "@/domains/task-scheduling/scheduled-result";
 import type { SchedulingTask } from "@/domains/task-scheduling/scheduling-task";
 import {
   WorkloadCalculationService,
   type ScheduleAllocationInput,
-} from "@/domains/assignee-workload/workload-calculation.service";
+} from "@/domains/assignee-workload/workload-calculation-service";
 import type { DailyWorkAllocation } from "@/domains/assignee-workload/daily-work-allocation";
 import { toSchedulingTask } from "./scheduling-task-mapper";
 import { resolveBaselineDate } from "./baseline-resolver";

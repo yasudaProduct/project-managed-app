@@ -1,4 +1,4 @@
-import { PhaseProportionService, PhaseHoursInput } from "@/domains/wbs/phase-proportion.service";
+import { PhaseProportionService, PhaseHoursInput } from "@/domains/wbs/phase-proportion-service";
 
 describe('PhaseProportionService', () => {
   describe('calculate', () => {

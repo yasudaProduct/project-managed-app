@@ -1,5 +1,5 @@
 import type { BaselineMode } from "@/domains/task-scheduling/scheduling-options";
-import type { PreconditionWarning } from "@/domains/task-scheduling/scheduling-precondition.service";
+import type { PreconditionWarning } from "@/domains/task-scheduling/scheduling-precondition-service";
 import type { ScheduledTaskNote } from "@/domains/task-scheduling/scheduled-result";
 import type { TaskStatus } from "@/types/wbs";
 import type { DependencyType } from "@/domains/task-dependency/task-dependency";

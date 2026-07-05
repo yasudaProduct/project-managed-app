@@ -1,4 +1,4 @@
-import { SchedulingApplicationService } from "@/applications/task-scheduling/scheduling-application.service";
+import { SchedulingApplicationService } from "@/applications/task-scheduling/scheduling-application-service";
 import { Task } from "@/domains/task/task";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
 import { TaskNo } from "@/domains/task/value-object/task-id";

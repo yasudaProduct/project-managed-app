@@ -1,8 +1,8 @@
 import { injectable, inject } from 'inversify';
-import { IAssigneeGanttService } from './iassignee-gantt.service';
+import { IAssigneeGanttService } from './iassignee-gantt-service';
 import { AssigneeWorkload } from '@/domains/assignee-workload/assignee-workload';
-import { WorkloadCalculationService } from '@/domains/assignee-workload/workload-calculation.service';
-import { WorkloadWarningService, WorkloadWarning } from '@/domains/assignee-workload/workload-warning.service';
+import { WorkloadCalculationService } from '@/domains/assignee-workload/workload-calculation-service';
+import { WorkloadWarningService, WorkloadWarning } from '@/domains/assignee-workload/workload-warning-service';
 import type { ITaskRepository } from '@/applications/task/itask-repository';
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';

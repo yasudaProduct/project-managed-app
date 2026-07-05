@@ -1,5 +1,5 @@
 import { container } from "@/lib/inversify.config";
-import type { ITaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import type { ITaskDependencyService } from "@/applications/task-dependency/task-dependency-service";
 import { SYMBOL } from "@/types/symbol";
 import { NextRequest } from "next/server";
 import { createApiResponse, createApiError } from "@/lib/api-response";

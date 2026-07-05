@@ -1,7 +1,7 @@
 import {
   WorkloadCalculationService,
   type ScheduleAllocationInput,
-} from "@/domains/assignee-workload/workload-calculation.service";
+} from "@/domains/assignee-workload/workload-calculation-service";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
 import { CompanyCalendar } from "@/domains/calendar/company-calendar";
 

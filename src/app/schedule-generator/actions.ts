@@ -5,7 +5,7 @@ import { IProjectApplicationService } from "@/applications/projects/project-appl
 import { taskCsvData } from "@/types/csv";
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
-import { IScheduleGenerateService, ScheduleGenerateResult } from "@/applications/schedule-generator/schedule-generate.service";
+import { IScheduleGenerateService, ScheduleGenerateResult } from "@/applications/schedule-generator/schedule-generate-service";
 import { IWbsApplicationService } from "@/applications/wbs/wbs-application-service";
 import { ProjectStatus } from "@/types/wbs";
 

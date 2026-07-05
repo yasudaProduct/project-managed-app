@@ -1,4 +1,4 @@
-import { WorkloadCalculationService } from '@/domains/assignee-workload/workload-calculation.service';
+import { WorkloadCalculationService } from '@/domains/assignee-workload/workload-calculation-service';
 import { Task } from '@/domains/task/task';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/task-status';
