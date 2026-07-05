@@ -1,11 +1,11 @@
 // Main component exports
-export { GanttChart } from './GanttChart';
-export { TaskBar } from './TaskBar';
-export { TimelineHeader } from './TimelineHeader';
-export { GridLines } from './GridLines';
-export { DependencyArrows } from './DependencyArrows';
-export { ViewSwitcher } from './ViewSwitcher';
-export { QuickActions } from './QuickActions';
+export { GanttChart } from './gantt-chart';
+export { TaskBar } from './task-bar';
+export { TimelineHeader } from './timeline-header';
+export { GridLines } from './grid-lines';
+export { DependencyArrows } from './dependency-arrows';
+export { ViewSwitcher } from './view-switcher';
+export { QuickActions } from './quick-actions';
 
 // Type exports
 export type {
@@ -22,4 +22,4 @@ export type {
 } from './gantt';
 
 // Default export for convenience
-export { GanttChart as default } from './GanttChart';
+export { GanttChart as default } from './gantt-chart';

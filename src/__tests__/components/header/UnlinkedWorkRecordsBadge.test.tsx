@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 
-import { UnlinkedWorkRecordsBadge } from "@/components/header/UnlinkedWorkRecordsBadge";
+import { UnlinkedWorkRecordsBadge } from "@/components/header/unlinked-work-records-badge";
 
 describe("UnlinkedWorkRecordsBadge", () => {
   it("count=0 のとき何も描画しない", () => {

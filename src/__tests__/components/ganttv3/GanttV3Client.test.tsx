@@ -34,7 +34,7 @@ jest.mock("@/hooks/use-toast", () => ({ toast: jest.fn() }));
 // 子コンポーネントは軽量モック（GanttChart は jsdom 非対応APIを多用するため）。
 // GanttV3Client は barrel ではなく各ファイルから直接 import しているため、
 // モックも各モジュールパスに対して行う。
-jest.mock("@/components/ganttv3/GanttChart", () => ({
+jest.mock("@/components/ganttv3/gantt-chart", () => ({
   GanttChart: ({
     tasks,
     onEditDependencies,
@@ -48,7 +48,7 @@ jest.mock("@/components/ganttv3/GanttChart", () => ({
     </div>
   ),
 }));
-jest.mock("@/components/ganttv3/ViewSwitcher", () => ({
+jest.mock("@/components/ganttv3/view-switcher", () => ({
   ViewSwitcher: ({
     onViewChange,
   }: {
@@ -60,16 +60,16 @@ jest.mock("@/components/ganttv3/ViewSwitcher", () => ({
     </div>
   ),
 }));
-jest.mock("@/components/ganttv3/QuickActions", () => ({
+jest.mock("@/components/ganttv3/quick-actions", () => ({
   QuickActions: () => <div data-testid="quick-actions" />,
 }));
 
-jest.mock("@/components/ganttv3/TaskTable", () => ({
+jest.mock("@/components/ganttv3/task-table", () => ({
   TaskTable: ({ tasks }: { tasks: unknown[] }) => (
     <div data-testid="task-table">table-tasks:{tasks.length}</div>
   ),
 }));
-jest.mock("@/components/ganttv3/DependencyEditModal", () => ({
+jest.mock("@/components/ganttv3/dependency-edit-modal", () => ({
   DependencyEditModal: ({ open }: { open: boolean }) =>
     open ? <div data-testid="dep-modal" /> : null,
 }));
@@ -78,7 +78,7 @@ jest.mock("@/components/wbs/task-modal", () => ({
     isOpen ? <div data-testid="task-modal" /> : null,
 }));
 
-import { GanttV3Client } from "@/components/ganttv3/GanttV3Client";
+import { GanttV3Client } from "@/components/ganttv3/gantt-v3-client";
 import {
   getGanttTasks,
   getPhases,

@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AuthHeader } from "./auth/auth-header";
-import { NotificationCenter } from "./notification/NotificationCenter";
-import { UnlinkedWorkRecordsBadge } from "./header/UnlinkedWorkRecordsBadge";
+import { NotificationCenter } from "./notification/notification-center";
+import { UnlinkedWorkRecordsBadge } from "./header/unlinked-work-records-badge";
 import { useAuth } from "@/hooks/use-auth";
 
 interface ProjectInfo {

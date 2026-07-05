@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Bell, Settings, CheckCheck, Send } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
-import { NotificationList } from "./NotificationList";
+import { NotificationList } from "./notification-list";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,

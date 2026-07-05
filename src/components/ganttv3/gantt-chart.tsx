@@ -22,12 +22,12 @@ import {
   getChartWidth,
   dateToX as computeDateX,
 } from "./utils/timelineGeometry";
-import { TimelineHeader } from "./TimelineHeader";
-import { TaskBar } from "./TaskBar";
-import { TaskListRow } from "./TaskListRow";
-import { InlineTaskEditPanel } from "./InlineTaskEditPanel";
-import { GridLines } from "./GridLines";
-import { DependencyArrows } from "./DependencyArrows";
+import { TimelineHeader } from "./timeline-header";
+import { TaskBar } from "./task-bar";
+import { TaskListRow } from "./task-list-row";
+import { InlineTaskEditPanel } from "./inline-task-edit-panel";
+import { GridLines } from "./grid-lines";
+import { DependencyArrows } from "./dependency-arrows";
 import { Button } from "../ui/button";
 import {
   ChevronLeft,

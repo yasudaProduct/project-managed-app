@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { GanttChart } from "@/components/ganttv3/GanttChart";
+import { GanttChart } from "@/components/ganttv3/gantt-chart";
 import { makeTask, makePhase, makeStyle } from "./_fixtures";
 
 // jsdom 非対応のスクロールAPIのポリフィル（ナビゲーション操作で使用）

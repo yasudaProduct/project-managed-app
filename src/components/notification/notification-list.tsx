@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { NotificationItem } from './NotificationItem';
+import { NotificationItem } from './notification-item';
 import { NotificationData } from '@/hooks/use-notifications';
 import { Skeleton } from '@/components/ui/skeleton';
 

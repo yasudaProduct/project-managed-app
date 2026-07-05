@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { CalendarCheck } from "lucide-react";
 import { getProjectById } from "../../actions";
 import { getLatestWbsByProjectId } from "@/app/wbs/[id]/actions/wbs-actions";
-import { GanttV3Client } from "@/components/ganttv3/GanttV3Client";
+import { GanttV3Client } from "@/components/ganttv3/gantt-v3-client";
 
 export default async function ProjectGanttV3Page({
   params,

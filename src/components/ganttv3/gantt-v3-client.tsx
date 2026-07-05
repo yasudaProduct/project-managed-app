@@ -7,11 +7,11 @@ import type {
   GroupBy,
   TaskSortBy,
 } from "@/components/ganttv3/gantt";
-import { ViewSwitcher } from "@/components/ganttv3/ViewSwitcher";
-import { QuickActions } from "@/components/ganttv3/QuickActions";
-import { GanttChart } from "@/components/ganttv3/GanttChart";
-import { TaskTable, TaskTableColumn } from "@/components/ganttv3/TaskTable";
-import { DependencyEditModal } from "@/components/ganttv3/DependencyEditModal";
+import { ViewSwitcher } from "@/components/ganttv3/view-switcher";
+import { QuickActions } from "@/components/ganttv3/quick-actions";
+import { GanttChart } from "@/components/ganttv3/gantt-chart";
+import { TaskTable, TaskTableColumn } from "@/components/ganttv3/task-table";
+import { DependencyEditModal } from "@/components/ganttv3/dependency-edit-modal";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { HoursUnit, HOURS_UNIT_LABELS } from "@/utils/hours-converter";
 import { getGanttTasksTsv } from "@/app/wbs/[id]/ganttv3/export-actions";

@@ -1,5 +1,5 @@
 import type { Task } from "./gantt";
-import type { TaskTableColumn } from "./TaskTable";
+import type { TaskTableColumn } from "./task-table";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {

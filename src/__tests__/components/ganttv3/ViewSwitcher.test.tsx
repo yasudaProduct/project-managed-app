@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { ViewSwitcher } from "@/components/ganttv3/ViewSwitcher";
+import { ViewSwitcher } from "@/components/ganttv3/view-switcher";
 
 describe("ViewSwitcher", () => {
   it("ガント/テーブルの切替ボタンを描画する（E2E用 testid 付き）", () => {
