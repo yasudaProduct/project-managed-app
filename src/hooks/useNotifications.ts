@@ -4,6 +4,8 @@ import { useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useActionState } from 'react';
 import {
+  getNotifications,
+  getUnreadCount,
   markNotificationAsRead,
   markAllAsRead,
   deleteNotification,
@@ -82,22 +84,8 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     isFetching
   } = useQuery<NotificationListResult>({
     queryKey,
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        unreadOnly: unreadOnly.toString(),
-      });
-
-      if (type) params.append('type', type);
-      if (priority) params.append('priority', priority);
-
-      const response = await fetch(`/api/notifications?${params}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch notifications: ${response.statusText}`);
-      }
-      return response.json();
-    },
+    queryFn: () =>
+      getNotifications({ page, limit, unreadOnly, type, priority }),
     staleTime: 30000, // 30秒間はフレッシュとみなす
     refetchInterval: autoRefresh ? 60000 : false, // 1分ごとに自動更新
   });
@@ -105,13 +93,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   // 未読数の取得
   const { data: unreadCountData } = useQuery<{ count: number; timestamp: string }>({
     queryKey: countQueryKey,
-    queryFn: async () => {
-      const response = await fetch('/api/notifications/count');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch unread count: ${response.statusText}`);
-      }
-      return response.json();
-    },
+    queryFn: () => getUnreadCount(),
     staleTime: 30000,
     refetchInterval: autoRefresh ? 60000 : false,
   });

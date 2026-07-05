@@ -20,6 +20,7 @@ import {
   getNotificationTypeDisplayName,
   NotificationType,
 } from "@/types/notification";
+import { createNotification } from "@/app/actions/notification-actions";
 
 type Channel = "PUSH" | "IN_APP" | "EMAIL";
 
@@ -112,20 +113,13 @@ export default function SendNotificationPage() {
     };
 
     try {
-      const res = await fetch("/api/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const result = await createNotification(body);
 
-      if (!res.ok) {
-        const t = await res.json().catch(() => ({}));
-        throw new Error(
-          t?.details || t?.error || `Request failed: ${res.status}`
-        );
+      if (!result.success) {
+        setError(result.error ?? "送信に失敗しました");
+        return;
       }
 
-      await res.json();
       setSuccess("通知を作成しました");
 
       // 直送の場合は一覧へ案内

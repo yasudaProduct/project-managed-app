@@ -42,6 +42,109 @@ export type NotificationActionResult = {
 };
 
 /**
+ * 通知一覧を取得する（TanStack Query の queryFn から利用）
+ */
+export async function getNotifications(options: {
+  page?: number;
+  limit?: number;
+  unreadOnly?: boolean;
+  type?: string;
+  priority?: string;
+}) {
+  const userId = await getCurrentUserIdOrThrow();
+  const page = options.page ?? 1;
+  const limit = Math.min(options.limit ?? 20, 100);
+
+  const result = await notificationService.getNotifications({
+    userId,
+    page,
+    limit,
+    unreadOnly: options.unreadOnly ?? false,
+    type: options.type || undefined,
+    priority: options.priority || undefined,
+  });
+
+  // フロントのフックが期待するレスポンス形（日時は ISO 文字列）に正規化
+  return {
+    data: result.notifications.map((n) => ({
+      id: n.id!,
+      type: n.type,
+      priority: n.priority,
+      title: n.title,
+      message: n.message,
+      data: n.data,
+      channels: n.channels,
+      isRead: n.isRead,
+      createdAt: n.createdAt.toISOString(),
+    })),
+    total: result.totalCount,
+    page: result.page,
+    limit: result.limit,
+    totalPages: result.totalPages,
+    hasNext: result.page < result.totalPages,
+    hasPrev: result.page > 1,
+  };
+}
+
+/**
+ * 未読通知数を取得する（TanStack Query の queryFn から利用）
+ */
+export async function getUnreadCount(): Promise<{ count: number; timestamp: string }> {
+  const userId = await getCurrentUserIdOrThrow();
+  const count = await notificationService.getUnreadCount(userId);
+  return { count, timestamp: new Date().toISOString() };
+}
+
+const CreateNotificationSchema = z.object({
+  type: z.string().min(1, 'タイプは必須です'),
+  title: z.string().min(1, 'タイトルは必須です'),
+  message: z.string().min(1, 'メッセージは必須です'),
+});
+
+/**
+ * 通知を作成する（管理・運用向けの手動送信）
+ */
+export async function createNotification(input: {
+  targetUserId?: string;
+  type: string;
+  priority?: string;
+  title: string;
+  message: string;
+  data?: unknown;
+  channels?: string[];
+  scheduledAt?: string;
+}): Promise<NotificationActionResult> {
+  try {
+    const userId = await getCurrentUserIdOrThrow();
+
+    const parsed = CreateNotificationSchema.safeParse(input);
+    if (!parsed.success) {
+      return { success: false, error: '入力値が不正です。' };
+    }
+
+    await notificationService.createNotification({
+      userId: input.targetUserId || userId,
+      type: input.type,
+      priority: input.priority || 'MEDIUM',
+      title: input.title,
+      message: input.message,
+      data: input.data,
+      channels: input.channels,
+      scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : undefined,
+    } as unknown as Parameters<INotificationService['createNotification']>[0]);
+
+    revalidateTag('notifications');
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to create notification:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '通知の作成に失敗しました',
+    };
+  }
+}
+
+/**
  * 通知を既読にマークする
  */
 export async function markNotificationAsRead(
