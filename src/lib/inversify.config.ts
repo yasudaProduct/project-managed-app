@@ -119,9 +119,6 @@ import { IScheduleApplicationService, ScheduleApplicationService } from '@/appli
 import { MilestoneRepository } from '@/infrastructures/milestone/milestone.repository';
 
 // EVM関連
-// import { IEvmRepository } from '@/applications/evm/ievm-repository';
-// import { EvmRepository } from '@/infrastructures/evm/evm-repository';
-// import { EvmApplicationService } from '@/applications/evm/evm-application-service';
 import { IWbsEvmRepository } from '@/applications/evm/iwbs-evm-repository';
 import { WbsEvmRepository } from '@/infrastructures/evm/wbs-evm-repository';
 import { EvmService } from '@/applications/evm/evm-service';
@@ -167,15 +164,13 @@ container.bind<IWorkRecordApplicationService>(SYMBOL.IWorkRecordApplicationServi
 container.bind<IUserApplicationService>(SYMBOL.IUserApplicationService).to(UserApplicationService).inSingletonScope();
 container.bind<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService).to(GeppoImportApplicationService).inSingletonScope();
 container.bind<TaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDependencyService).inSingletonScope();
-// container.bind<IWbsSyncService>(SYMBOL.IWbsSyncService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<IMilestoneApplicationService>(SYMBOL.IMilestoneApplicationService).to(MilestoneApplicationService).inSingletonScope();
 container.bind<IScheduleApplicationService>(SYMBOL.IScheduleApplicationService).to(ScheduleApplicationService).inSingletonScope();
-// container.bind<EvmApplicationService>(SYMBOL.IEvmApplicationService).to(EvmApplicationService).inSingletonScope();
 container.bind<EvmService>(SYMBOL.EvmService).to(EvmService).inSingletonScope();
 container.bind<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService).to(ImportJobApplicationService).inSingletonScope();
 container.bind<INotificationService>(SYMBOL.INotificationService).to(NotificationService).inSingletonScope();
 container.bind<IPushNotificationService>(SYMBOL.IPushNotificationService).to(PushNotificationService).inSingletonScope();
-container.bind<NotificationEventDetector>('NotificationEventDetector').to(NotificationEventDetector).inSingletonScope();
+container.bind<NotificationEventDetector>(SYMBOL.NotificationEventDetector).to(NotificationEventDetector).inSingletonScope();
 container.bind<ISchedulingApplicationService>(SYMBOL.ISchedulingApplicationService).to(SchedulingApplicationService).inSingletonScope();
 container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<ISystemSettingsApplicationService>(SYMBOL.ISystemSettingsApplicationService).to(SystemSettingsApplicationService).inSingletonScope();
@@ -207,7 +202,6 @@ container.bind<ISyncLogRepository>(SYMBOL.ISyncLogRepository).to(SyncLogReposito
 container.bind<IMilestoneRepository>(SYMBOL.IMilestoneRepository).to(MilestoneRepository).inSingletonScope();
 container.bind<ICompanyHolidayRepository>(SYMBOL.ICompanyHolidayRepository).to(CompanyHolidayRepository).inSingletonScope();
 container.bind<IUserScheduleRepository>(SYMBOL.IUserScheduleRepository).to(UserScheduleRepository).inSingletonScope();
-// container.bind<IEvmRepository>(SYMBOL.IEvmRepository).to(EvmRepository).inSingletonScope();
 container.bind<IWbsEvmRepository>(SYMBOL.IWbsEvmRepository).to(WbsEvmRepository).inSingletonScope();
 container.bind<IImportJobRepository>(SYMBOL.IImportJobRepository).to(ImportJobPrismaRepository).inSingletonScope();
 container.bind<INotificationRepository>(SYMBOL.INotificationRepository).to(NotificationRepository).inSingletonScope();

@@ -56,7 +56,6 @@ export const SYMBOL = {
     TaskMappingService: Symbol.for('TaskMappingService'),
 
     // WBS Sync
-    IWbsSyncService: Symbol.for('IWbsSyncService'),
     IExcelWbsRepository: Symbol.for('IExcelWbsRepository'),
     ISyncLogRepository: Symbol.for('ISyncLogRepository'),
     IWbsSyncApplicationService: Symbol.for('IWbsSyncApplicationService'),
@@ -68,8 +67,6 @@ export const SYMBOL = {
     IUserScheduleRepository: Symbol.for('IUserScheduleRepository'),
 
     // EVM
-    IEvmRepository: Symbol.for('IEvmRepository'),
-    IEvmApplicationService: Symbol.for('IEvmApplicationService'),
     IWbsEvmRepository: Symbol.for('IWbsEvmRepository'),
     EvmService: Symbol.for('EvmService'),
 
@@ -81,6 +78,7 @@ export const SYMBOL = {
     INotificationService: Symbol.for('INotificationService'),
     INotificationRepository: Symbol.for('INotificationRepository'),
     IPushNotificationService: Symbol.for('IPushNotificationService'),
+    NotificationEventDetector: Symbol.for('NotificationEventDetector'),
 
     // Task Scheduling
     ISchedulingApplicationService: Symbol.for('ISchedulingApplicationService'),

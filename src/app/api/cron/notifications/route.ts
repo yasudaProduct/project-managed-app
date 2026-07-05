@@ -5,7 +5,7 @@ import { NotificationEventDetector } from '@/applications/notification/Notificat
 import { SYMBOL } from '@/types/symbol';
 
 const notificationService = container.get<INotificationService>(SYMBOL.INotificationService);
-const eventDetector = container.get<NotificationEventDetector>('NotificationEventDetector');
+const eventDetector = container.get<NotificationEventDetector>(SYMBOL.NotificationEventDetector);
 
 /**
  * GET /api/cron/notifications - Cronジョブエンドポイント
