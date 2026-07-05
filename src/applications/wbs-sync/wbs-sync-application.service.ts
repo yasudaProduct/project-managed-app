@@ -45,11 +45,9 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       // wbs存在チェック
       const wbs = await this.wbsRepository.findById(wbsId);
       if (!wbs) {
-        throw new SyncError(
-          'WBSが見つかりません',
-          SyncErrorType.VALIDATION_ERROR,
-          { wbsId }
-        );
+        // 予見可能な検証失敗は throw せず Result で返す（docs/08 §5・行検証エラーと統一）
+        result.errorDetails = { message: 'WBSが見つかりません' };
+        return result;
       }
 
       // Excelデータを取得
@@ -167,7 +165,9 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       // wbs存在チェック
       const wbs = await this.wbsRepository.findById(wbsId);
       if (!wbs) {
-        throw new SyncError('WBSが見つかりません', SyncErrorType.VALIDATION_ERROR, { wbsId });
+        // 予見可能な検証失敗は throw せず Result で返す（docs/08 §5・行検証エラーと統一）
+        result.errorDetails = { message: 'WBSが見つかりません' };
+        return result;
       }
 
       // Excelデータを取得
