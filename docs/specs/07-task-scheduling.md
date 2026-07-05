@@ -153,11 +153,11 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 ### 7.4 開始日の丸めと工数消化
 依存下限・担当者の前タスク終了（`assigneeFreeFrom`）・基準日の最大を開始下限とし、`working-calendar-walker.ts` の関数で確定する。
 
-- `nextAvailableDay(下限, cal, consumed)`: 実効稼働時間が正になる最初の日。実効稼働 = `max(0, getAvailableHours − consumed)`。
-- `consumeUntilDone(開始, 残工数, cal, consumed)`: 各稼働日の実効稼働で工数を消化し、消化し切った最後の稼働日を終了日とする。
-- `nextBusinessDay(終了, cal, consumed)`: 同一担当者の次タスクの起点（翌営業日）。
+- `nextAvailableDay(下限, cal, consumed)`: 実効稼働時間が正になる最初の日。実効稼働 = `max(0, getAvailableHours − consumed)`（浮動小数の按分残差は epsilon でゼロ扱い）。
+- `consumeUntilDone(開始, 残工数, cal, consumed)`: 各稼働日の実効稼働から `min(実効稼働, 残工数)` を消化し、消化し切った最後の稼働日を終了日とする。**実際に消化した量は `consumed` に記録される**。
+- 同一担当者の次タスクは前タスクの**終了日を起点**とする（`assigneeFreeFrom`）。終了日に稼働の残余があれば**同日に詰め込まれ**、使い切っていれば `nextAvailableDay` により翌稼働日以降へ送られる。これにより小さいタスクが多数あっても1タスクが1日を占有しない。
 
-担当者の稼働量計算（土日祝・会社休日・個人予定・参画率）は `AssigneeWorkingCalendar.getAvailableHours` に委譲する（[01仕様書](./01-working-hours-allocation.md)）。定常タスクの消費は `consumed` マップで合成され、カレンダー本体は改変しない。
+担当者の稼働量計算（土日祝・会社休日・個人予定・参画率）は `AssigneeWorkingCalendar.getAvailableHours` に委譲する（[01仕様書](./01-working-hours-allocation.md)）。定常タスク・通常タスクの消費は `consumed` マップ（担当者ごと）で合成され、カレンダー本体は改変しない。
 
 ### 7.5 無限ループ防止
 `nextAvailableDay` / `consumeUntilDone` / `countWorkingDays` は反復上限（約5年=`366×5`日）を持ち、全日稼働0等で消化できない場合は打ち切る。`consumeUntilDone` が打ち切った場合は `SCHEDULE_OVERFLOW` を立てる。
