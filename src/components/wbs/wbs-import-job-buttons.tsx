@@ -42,7 +42,8 @@ export default function WbsImportJobButtons({
         }),
       });
       if (res.ok) {
-        const data = await res.json();
+        const json = await res.json();
+        const data = json.data ?? json;
         toast({
           title: "ジョブ作成",
           description: `WBS(${wbsId})のジョブを作成しました（${syncMode === "replace" ? "洗い替え" : "差分"}）。`,

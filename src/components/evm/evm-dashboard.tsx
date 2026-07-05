@@ -14,11 +14,8 @@ import { EvmChart } from "./evm-chart";
 import { EvmMetricsCard } from "./evm-metrics-card";
 import { TaskEvmTable } from "./task-evm-table";
 import { EvmTimeSeriesTable } from "./evm-timeseries-table";
-import {
-  getEvmDashboardData,
-  type EvmMetricsData,
-  type TaskEvmDataSerialized,
-} from "@/app/actions/evm/evm-actions";
+import { getEvmDashboardData } from "@/app/actions/evm/evm-actions";
+import type { EvmMetricsData, TaskEvmDataSerialized } from "@/applications/evm/evm-dashboard-dto";
 import { Loader2, TrendingUp, DollarSign, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

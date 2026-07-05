@@ -58,8 +58,8 @@ export default function CompanyHolidaysPage() {
       setLoading(true);
       const response = await fetch("/api/company-holidays");// TODO:server actionに変更
       if (response.ok) {
-        const data = await response.json();
-        setHolidays(data);
+        const json = await response.json();
+        setHolidays(json.data ?? json);
       } else {
         console.error("休日データの取得に失敗しました");
       }

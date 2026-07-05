@@ -94,6 +94,9 @@ export const SYMBOL = {
     IProjectSettingsRepository: Symbol.for('IProjectSettingsRepository'),
     IProjectSettingsApplicationService: Symbol.for('IProjectSettingsApplicationService'),
 
+    // Forecast
+    IForecastApplicationService: Symbol.for('IForecastApplicationService'),
+
     // WBS Tags
     IWbsTagRepository: Symbol.for('IWbsTagRepository'),
     IWbsTagApplicationService: Symbol.for('IWbsTagApplicationService'),

@@ -5,7 +5,7 @@ import type {
   GeppoSearchFilters,
   GeppoPaginationOptions,
   GeppoSearchResult,
-} from '@/domains/geppo/types'
+} from '@/types/geppo'
 import { SYMBOL } from '@/types/symbol'
 import { Project } from '@/types/project'
 import { User } from '@/types/user'

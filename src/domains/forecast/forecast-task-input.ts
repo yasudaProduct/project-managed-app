@@ -1,4 +1,4 @@
-import { TaskStatus } from "@/domains/task/task-progress-calculator";
+import type { TaskStatus } from "@/types/wbs";
 
 /**
  * 見通し工数計算の入力データ（Domain 層で完結する最小構造）

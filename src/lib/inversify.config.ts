@@ -106,6 +106,10 @@ import { ProjectSettingsRepository } from "@/infrastructures/project-settings/pr
 import type { IProjectSettingsApplicationService } from "@/applications/project-settings/project-settings-application-service";
 import { ProjectSettingsApplicationService } from "@/applications/project-settings/project-settings-application-service";
 
+// Forecast関連
+import type { IForecastApplicationService } from "@/applications/forecast/forecast-application-service";
+import { ForecastApplicationService } from "@/applications/forecast/forecast-application-service";
+
 // Prisma
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma/prisma';
@@ -178,6 +182,7 @@ container.bind<ISystemSettingsApplicationService>(SYMBOL.ISystemSettingsApplicat
 container.bind<IWbsTagApplicationService>(SYMBOL.IWbsTagApplicationService).to(WbsTagApplicationService).inSingletonScope();
 container.bind<WbsAnalyticsHandler>(SYMBOL.WbsAnalyticsHandler).to(WbsAnalyticsHandler).inSingletonScope();
 container.bind<IProjectSettingsApplicationService>(SYMBOL.IProjectSettingsApplicationService).to(ProjectSettingsApplicationService).inSingletonScope();
+container.bind<IForecastApplicationService>(SYMBOL.IForecastApplicationService).to(ForecastApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();
@@ -205,7 +210,7 @@ container.bind<IUserScheduleRepository>(SYMBOL.IUserScheduleRepository).to(UserS
 // container.bind<IEvmRepository>(SYMBOL.IEvmRepository).to(EvmRepository).inSingletonScope();
 container.bind<IWbsEvmRepository>(SYMBOL.IWbsEvmRepository).to(WbsEvmRepository).inSingletonScope();
 container.bind<IImportJobRepository>(SYMBOL.IImportJobRepository).to(ImportJobPrismaRepository).inSingletonScope();
-container.bind<INotificationRepository>('NotificationRepository').to(NotificationRepository).inSingletonScope();
+container.bind<INotificationRepository>(SYMBOL.INotificationRepository).to(NotificationRepository).inSingletonScope();
 container.bind<ISystemSettingsRepository>(SYMBOL.ISystemSettingsRepository).to(SystemSettingsRepository).inSingletonScope();
 container.bind<ISchedulingSettingsRepository>(SYMBOL.ISchedulingSettingsRepository).to(SchedulingSettingsRepository).inSingletonScope();
 container.bind<IProjectSettingsRepository>(SYMBOL.IProjectSettingsRepository).to(ProjectSettingsRepository).inSingletonScope();

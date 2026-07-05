@@ -19,7 +19,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import type { EvmMetricsData } from "@/app/actions/evm/evm-actions";
+import type { EvmMetricsData } from "@/applications/evm/evm-dashboard-dto";
 import { CheckCircle, AlertTriangle, AlertCircle } from "lucide-react";
 
 type EvmTimeSeriesTableProps = {

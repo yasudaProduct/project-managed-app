@@ -1,7 +1,7 @@
 import type { SteadyDailyHoursMode } from "@/types/scheduling-settings";
+import type { BaselineMode } from "@/types/scheduling-settings";
 
-/** 基準日の決定モード */
-export type BaselineMode = "PROJECT_START" | "TODAY" | "CUSTOM";
+export type { BaselineMode };
 
 /**
  * スケジューリング計算のオプション。

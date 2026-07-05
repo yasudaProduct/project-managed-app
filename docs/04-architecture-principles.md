@@ -151,7 +151,7 @@
 
 - APIルートの標準レスポンスヘルパー: `src/lib/api-response.ts`
   - `createApiResponse`, `createApiError`, `createImportResponse`, `createImportError`
-  - **注意（2026-07時点）: このファイルは未実装**。全APIルートが生の `NextResponse.json` を使っており、レスポンス形も統一されていない。ヘルパーの新設と移行は `docs/09-refactoring-backlog.md` P2-2 を参照。
+  - **注意（2026-07時点）: ヘルパー実装済み。** `company-holidays/*` と `import-jobs/*` は移行完了。残り API Route の移行は `docs/09-refactoring-backlog.md` P2-2 を参照。
 - 入力検証: Zod（例: `src/app/api/company-holidays/*`）
 - ドメイン固有の同期エラー: `SyncError` + `SyncErrorType`（`src/domains/sync/ExcelWbs.ts`）
 - サーバーアクションの結果: 共通型 `ActionResult<T>`（`src/types/action-result.ts`・新設対象）を返す。`{ success: true, data }` または `{ success: false, error }`。エラーメッセージのキーは `error` に統一（`message` は不可）。実装例は docs/03 の「Server Action」を参照。

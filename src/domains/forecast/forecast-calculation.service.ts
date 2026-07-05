@@ -6,22 +6,12 @@
 import { ForecastTaskInput } from "@/domains/forecast/forecast-task-input";
 import { TaskProgressCalculator } from "@/domains/task/task-progress-calculator";
 import { ProgressMeasurementMethod } from "@/types/progress-measurement";
+import type {
+  ForecastCalculationOptions,
+  ForecastCalculationResult,
+} from "@/types/forecast-calculation";
 
-export interface ForecastCalculationOptions {
-  method: 'conservative' | 'realistic' | 'optimistic' | 'plannedOrActual';
-  progressMeasurementMethod?: ProgressMeasurementMethod; // 進捗測定方式（プロジェクト設定から取得）
-}
-
-export interface ForecastCalculationResult {
-  taskId: string;
-  taskName: string;
-  plannedHours: number;
-  actualHours: number;
-  progressRate: number;
-  effectiveProgressRate: number; // 進捗測定方式適用後の進捗率
-  forecastHours: number;
-  completionStatus: string;
-}
+export type { ForecastCalculationOptions, ForecastCalculationResult };
 
 export class ForecastCalculationService {
   /**

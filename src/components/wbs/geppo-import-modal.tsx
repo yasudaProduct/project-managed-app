@@ -82,7 +82,8 @@ export default function GeppoImportModal({
         body: JSON.stringify(requestBody),
       });
       if (res.ok) {
-        const data = await res.json();
+        const json = await res.json();
+        const data = json.data ?? json;
         const monthDescription =
           selectedMonth === "ALL" ? "月報(全期間)" : `月報(${selectedMonth})`;
         toast({

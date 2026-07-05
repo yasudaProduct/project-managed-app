@@ -1,11 +1,16 @@
 import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
 import type { IWbsEvmRepository, WbsEvmData, TaskProgressSnapshotRecord, EditableProgressSnapshot } from './iwbs-evm-repository';
-import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
+import { EvmMetrics } from '@/domains/evm/evm-metrics';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import type { ProgressMeasurementMethod } from '@/types/progress-measurement';
 import { TASK_STATUSES, type TaskStatus } from '@/types/wbs';
 import type { EvmForecastMethod } from '@/types/evm-forecast-method';
+import type { EvmCalculationMode } from '@/types/evm';
+import {
+  serializeEvmDashboardData,
+  type EvmDashboardData,
+} from '@/applications/evm/evm-dashboard-dto';
 
 /**
  * EVM表示に適した日付範囲
@@ -214,6 +219,21 @@ export class EvmService {
       taskDetails: wbsData.tasks,
       dateRange,
     };
+  }
+
+  async getEvmDashboardDataSerialized(
+    wbsId: number,
+    options: {
+      calculationMode?: EvmCalculationMode;
+      progressMethod?: ProgressMeasurementMethod;
+      forecastMethod?: EvmForecastMethod;
+      interval?: 'daily' | 'weekly' | 'monthly';
+      periodMode?: 'project' | 'recent3months' | 'recent1month' | 'custom';
+      showPrediction?: boolean;
+    } = {}
+  ): Promise<EvmDashboardData> {
+    const result = await this.getEvmDashboardData(wbsId, options);
+    return serializeEvmDashboardData(result);
   }
 
   /**

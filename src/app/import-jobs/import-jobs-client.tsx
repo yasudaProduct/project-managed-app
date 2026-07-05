@@ -76,8 +76,8 @@ export default function ImportJobsClient() {
     try {
       const res = await fetch(`/api/import-jobs`, { cache: "no-store" }); // TODO: server action対応
       if (res.ok) {
-        const data = await res.json();
-        setJobs(data as Job[]);
+        const json = await res.json();
+        setJobs((json.data ?? json) as Job[]);
       } else {
         console.log(res.statusText);
         toast({

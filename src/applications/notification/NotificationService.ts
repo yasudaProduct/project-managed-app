@@ -25,7 +25,7 @@ export class NotificationService implements INotificationService {
 
 
   constructor(
-    @inject('NotificationRepository') private notificationRepository: INotificationRepository,
+    @inject(SYMBOL.INotificationRepository) private notificationRepository: INotificationRepository,
     @inject(SYMBOL.IPushNotificationService) private pushNotificationService: IPushNotificationService
   ) { }
 

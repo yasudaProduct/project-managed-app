@@ -3,6 +3,9 @@
  * project_settings.schedulingSettings (Json列) に保存される。
  */
 
+/** 基準日の決定モード */
+export type BaselineMode = 'PROJECT_START' | 'TODAY' | 'CUSTOM';
+
 export type SteadyDailyHoursMode = "PRORATE" | "FIXED";
 
 export interface SchedulingSettings {

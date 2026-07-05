@@ -3,9 +3,7 @@
 import { container } from '@/lib/inversify.config'
 import { SYMBOL } from '@/types/symbol'
 import type { IGeppoApplicationService } from '@/applications/geppo/geppo-application-service'
-// TODO(docs/09-refactoring-backlog.md P1-7): UI層からのDomain直接import。src/types/ へ型を移設し置き換える。
-// eslint-disable-next-line no-restricted-imports
-import type { GeppoSearchFilters, GeppoPaginationOptions } from '@/domains/geppo/types'
+import type { GeppoSearchFilters, GeppoPaginationOptions } from '@/types/geppo'
 
 /**
  * データベース接続状態を確認

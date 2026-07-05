@@ -1,6 +1,6 @@
 import type { WbsTaskData } from "@/applications/wbs/query/wbs-query-repository";
 import type { ForecastTaskInput } from "@/domains/forecast/forecast-task-input";
-import type { TaskStatus } from "@/domains/task/task-progress-calculator";
+import type { TaskStatus } from "@/types/wbs";
 
 /**
  * WbsTaskData（Application層のクエリ結果）から

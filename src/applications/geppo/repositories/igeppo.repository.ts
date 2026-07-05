@@ -2,7 +2,7 @@ import type {
   GeppoSearchFilters,
   GeppoPaginationOptions,
   GeppoSearchResult,
-} from '@/domains/geppo/types'
+} from '@/types/geppo'
 
 export interface IGeppoRepository {
   /**

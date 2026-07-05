@@ -11,6 +11,23 @@ export enum NotificationType {
     IMPORT_JOB_FAILED = 'IMPORT_JOB_FAILED',             // インポートジョブ失敗
 }
 
+export type NotificationPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+
+export const NOTIFICATION_PRIORITIES: NotificationPriority[] = [
+    'LOW',
+    'MEDIUM',
+    'HIGH',
+    'URGENT',
+];
+
+export type NotificationChannel = 'PUSH' | 'IN_APP' | 'EMAIL';
+
+export const NOTIFICATION_CHANNELS: NotificationChannel[] = [
+    'PUSH',
+    'IN_APP',
+    'EMAIL',
+];
+
 export const getNotificationTypeDisplayName = (type: NotificationType): string => {
     switch (type) {
         case NotificationType.TASK_DEADLINE_WARNING:

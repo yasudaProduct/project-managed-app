@@ -118,7 +118,7 @@ export function CompanyHolidayForm({
         onSaveSuccess();
       } else {
         const errorData = await response.json();
-        alert(errorData.message || "保存に失敗しました");
+        alert(errorData.error || errorData.message || "保存に失敗しました");
       }
     } catch (error) {
       console.error("保存中にエラーが発生しました:", error);

@@ -2,12 +2,10 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { calculateTasksForecast } from '@/app/wbs/[id]/actions/forecast-actions';
-// TODO(docs/09-refactoring-backlog.md P1-7): UI層からのDomain直接import。src/types/ へ型を移設し置き換える。
-// eslint-disable-next-line no-restricted-imports
-import {
+import type {
   ForecastCalculationOptions,
   ForecastCalculationResult
-} from '@/domains/forecast/forecast-calculation.service';
+} from '@/types/forecast-calculation';
 
 /**
  * 見通し工数計算フック
