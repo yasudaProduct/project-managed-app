@@ -75,7 +75,10 @@ export function formatDate(value: Date, format: SupportedDateFormat): string {
             });
 
         case 'YYYY/MM/DD HH:mm:ss':
-            return date.toLocaleDateString('ja-JP', {
+            // 日付＋時刻を出力するため toLocaleString を用いる。
+            // （toLocaleDateString は「日付」用メソッドで、明示 time オプションが将来
+            //   不要と誤解され削除されると時刻が欠落する罠になるため、意味の合う API に統一）
+            return date.toLocaleString('ja-JP', {
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
