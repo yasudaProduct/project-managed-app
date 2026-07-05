@@ -69,20 +69,29 @@ export function UserForm({ user, systemSettings }: UserFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      if (user) {
-        await updateUser(user.id, values);
+      const result = user
+        ? await updateUser(user.id, values)
+        : await createUser(values);
+
+      if (!result.success) {
         toast({
-          title: user ? "ユーザーを更新しました。" : "ユーザーを作成しました。",
+          title: "ユーザーの保存に失敗しました。",
+          description: result.error,
+          variant: "destructive",
         });
+        return;
+      }
+
+      if (user) {
+        toast({ title: "ユーザーを更新しました。" });
         router.push(`/users/${user.id}`);
       } else {
-        await createUser(values);
         router.push("/users");
       }
       router.refresh();
     } catch (error) {
       toast({
-        title: "ユーザーの作成に失敗しました。",
+        title: "ユーザーの保存に失敗しました。",
         description: error instanceof Error ? error.message : "不明なエラー",
         variant: "destructive",
       });

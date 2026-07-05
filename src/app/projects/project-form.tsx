@@ -83,43 +83,40 @@ export function ProjectForm({ project }: ProjectFormProps) {
     setIsSubmitting(true);
     try {
       if (project) {
-        const { project: updatedProject, error } = await updateProject(
-          project.id,
-          {
-            ...values,
-            status: values.status!,
-          }
-        );
-        if (!updatedProject) {
+        const result = await updateProject(project.id, {
+          ...values,
+          status: values.status!,
+        });
+        if (!result.success) {
           toast({
             title: "プロジェクトの更新に失敗しました",
-            description: error,
+            description: result.error,
           });
         } else {
           toast({
             title: "プロジェクトを更新しました",
-            description: `プロジェクトID: ${updatedProject.id}`,
+            description: `プロジェクトID: ${result.data.id}`,
           });
-          router.push(`/projects/${updatedProject.id}`);
+          router.push(`/projects/${result.data.id}`);
         }
       } else {
-        const { project: newProject, error } = await createProject({
+        const result = await createProject({
           name: values.name,
           description: values.description,
           startDate: new Date(values.startDate),
           endDate: new Date(values.endDate),
         });
-        if (!newProject) {
+        if (!result.success) {
           toast({
             title: "プロジェクトの作成に失敗しました",
-            description: error,
+            description: result.error,
           });
         } else {
           toast({
             title: "プロジェクトを作成しました",
-            description: `プロジェクトID: ${newProject.id}`,
+            description: `プロジェクトID: ${result.data.id}`,
           });
-          router.push(`/projects/${newProject.id}`);
+          router.push(`/projects/${result.data.id}`);
         }
       }
       router.refresh();

@@ -63,7 +63,15 @@ export function SystemSettingsForm() {
 
     startTransition(async () => {
       try {
-        await updateSystemSettings(hours, cost);
+        const result = await updateSystemSettings(hours, cost);
+        if (!result.success) {
+          toast({
+            variant: "destructive",
+            title: "保存失敗",
+            description: result.error,
+          });
+          return;
+        }
         toast({
           title: "保存成功",
           description: "システム設定を保存しました",
