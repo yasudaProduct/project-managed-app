@@ -1,5 +1,5 @@
 import { injectable } from 'inversify';
-import { IExcelWbsRepository } from '@/applications/excel-sync/IExcelWbsRepository';
+import { IExcelWbsRepository } from '@/applications/wbs-sync/IExcelWbsRepository';
 import { ExcelWbs } from '@/domains/sync/ExcelWbs';
 import { geppoPrisma } from '@/lib/prisma/geppo';
 import { wbs } from '.prisma/geppo-client'

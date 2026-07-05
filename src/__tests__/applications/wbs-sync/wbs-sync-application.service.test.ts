@@ -1,8 +1,8 @@
 import { WbsSyncApplicationService } from '@/applications/wbs-sync/wbs-sync-application.service';
 import { ExcelWbs } from '@/domains/sync/ExcelWbs';
 import type { IWbsRepository } from '@/applications/wbs/iwbs-repository';
-import type { IExcelWbsRepository } from '@/applications/excel-sync/IExcelWbsRepository';
-import type { ISyncLogRepository } from '@/applications/excel-sync/ISyncLogRepository';
+import type { IExcelWbsRepository } from '@/applications/wbs-sync/IExcelWbsRepository';
+import type { ISyncLogRepository } from '@/applications/wbs-sync/ISyncLogRepository';
 import type { IPhaseRepository } from '@/applications/task/iphase-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import type { ITaskRepository, SyncDiffBuckets, TaskSyncState } from '@/applications/task/itask-repository';

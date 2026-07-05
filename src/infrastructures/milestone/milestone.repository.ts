@@ -45,7 +45,7 @@ export class MilestoneRepository implements IMilestoneRepository {
     }
 
     private convertMilestone(milestone: MilestoneDbType): Milestone {
-        return Milestone.create({
+        return Milestone.createFromDb({
             id: milestone.id,
             name: milestone.name,
             date: milestone.date,

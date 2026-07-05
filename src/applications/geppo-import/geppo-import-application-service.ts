@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify'
 import { SYMBOL } from '@/types/symbol'
-import { WorkRecord } from '@/domains/work-records/work-record'
+import { WorkRecord } from '@/domains/work-record/work-record'
 import {
   GeppoImportOptions,
   GeppoImportResult,

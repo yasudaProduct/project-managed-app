@@ -5,8 +5,8 @@
 // import { ExcelWbs, SyncChanges, SyncError, SyncErrorType } from '@/domains/sync/ExcelWbs';
 // import { Phase } from '@/domains/phase/phase';
 // import { PhaseCode } from '@/domains/phase/phase-code';
-// import { IExcelWbsRepository } from '@/applications/excel-sync/IExcelWbsRepository';
-// import { ISyncLogRepository } from '@/applications/excel-sync/ISyncLogRepository';
+// import { IExcelWbsRepository } from '@/applications/wbs-sync/IExcelWbsRepository';
+// import { ISyncLogRepository } from '@/applications/wbs-sync/ISyncLogRepository';
 // import { IPhaseRepository } from '@/applications/task/iphase-repository';
 // import { IUserRepository } from '@/applications/user/iuser-repository';
 // import { WbsAssignee } from '@/domains/wbs/wbs-assignee';

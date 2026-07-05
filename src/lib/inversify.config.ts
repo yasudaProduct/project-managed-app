@@ -74,9 +74,9 @@ import { ITaskDependencyService, TaskDependencyService } from "@/applications/ta
 
 // WBS Sync関連
 import { WbsSyncApplicationService } from "@/applications/wbs-sync/wbs-sync-application.service";
-import type { IExcelWbsRepository } from "@/applications/excel-sync/IExcelWbsRepository";
+import type { IExcelWbsRepository } from "@/applications/wbs-sync/IExcelWbsRepository";
 import { ExcelWbsRepository } from "@/infrastructures/sync/ExcelWbsRepository";
-import type { ISyncLogRepository } from "@/applications/excel-sync/ISyncLogRepository";
+import type { ISyncLogRepository } from "@/applications/wbs-sync/ISyncLogRepository";
 import { SyncLogRepository } from "@/infrastructures/sync/SyncLogRepository";
 
 // Calendar関連

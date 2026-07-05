@@ -7,7 +7,7 @@ import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";
 import { ManHourType } from "@/domains/task/value-object/man-hour-type";
-import { WorkRecord } from "@/domains/work-records/work-record";
+import { WorkRecord } from "@/domains/work-record/work-record";
 import { createDefaultSystemSettings } from "@/__tests__/helpers/system-settings-helper";
 import { DEFAULT_SCHEDULING_SETTINGS } from "@/types/scheduling-settings";
 import type { TaskStatus as TaskStatusType } from "@/types/wbs";

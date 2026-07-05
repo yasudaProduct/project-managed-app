@@ -1,4 +1,4 @@
-import { WorkRecord } from '@/domains/work-records/work-record'
+import { WorkRecord } from '@/domains/work-record/work-record'
 import type { WorkRecordDetail } from '@/types/work-record'
 
 export interface IWorkRecordRepository {

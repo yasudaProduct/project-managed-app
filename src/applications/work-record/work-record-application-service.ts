@@ -1,5 +1,5 @@
 import { injectable, inject } from 'inversify'
-import { WorkRecord } from '@/domains/work-records/work-record'
+import { WorkRecord } from '@/domains/work-record/work-record'
 import type { IWorkRecordRepository } from './repositories/iwork-record.repository'
 import type { WorkRecordDetail } from '@/types/work-record'
 import { SYMBOL } from '@/types/symbol'
