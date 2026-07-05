@@ -177,6 +177,7 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 | `NO_YOTEI_KOSU` | 非定常で予定工数が未設定/0以下 |
 | `STEADY_NO_PERIOD` | 定常タスクに予定期間（開始・終了日）が無い |
 | `CYCLIC_DEPENDENCY` | 依存に循環あり（`cycleTaskNos` に該当タスクNo） |
+| `EXCEEDS_PROJECT_END` | **計算後の検証**: 算出した終了日がプロジェクト終了日を超過（`checkProjectEnd`、日単位比較。完了固定タスクの実績超過も含む） |
 
 循環検出は `TaskDependencyValidator.detectCycles`（Tarjanの強連結成分、サイズ2以上を循環とみなす）。
 

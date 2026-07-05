@@ -32,6 +32,7 @@ const WARNING_LABELS: Record<string, string> = {
   NO_YOTEI_KOSU: "予定工数未設定",
   CYCLIC_DEPENDENCY: "循環依存",
   STEADY_NO_PERIOD: "定常タスク期間未設定",
+  EXCEEDS_PROJECT_END: "プロジェクト終了日超過",
 };
 
 // <input type="date"> の "YYYY-MM-DD" をその日のUTC 0時の ISO に正規化（CLAUDE.md ポリシー）

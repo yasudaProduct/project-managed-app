@@ -1,13 +1,16 @@
 import type { SchedulingTask } from "./scheduling-task";
+import type { ScheduledTask } from "./scheduled-result";
 import type { TaskDependency } from "@/domains/task-dependency/task-dependency";
 import { TaskDependencyValidator } from "@/domains/task-dependency/task-dependency-validator";
 import { isSteadyTask } from "./steady-task-classifier";
+import { toDateKey } from "./working-calendar-walker";
 
 export type PreconditionWarningKind =
   | "NO_ASSIGNEE"
   | "NO_YOTEI_KOSU"
   | "CYCLIC_DEPENDENCY"
-  | "STEADY_NO_PERIOD";
+  | "STEADY_NO_PERIOD"
+  | "EXCEEDS_PROJECT_END";
 
 export interface PreconditionWarning {
   kind: PreconditionWarningKind;
@@ -77,6 +80,35 @@ export class SchedulingPreconditionService {
         detail: "タスク依存に循環があります",
         cycleTaskNos,
       });
+    }
+
+    return warnings;
+  }
+
+  /**
+   * 計算結果がプロジェクト終了日に収まっているかをチェックする（計算後の検証）。
+   * 終了日超過はリスケ判断の主要シグナルのため、日付が確定した全タスクを対象にする
+   * （完了固定タスクの実績超過も含む）。日付比較は日単位（ローカル日付キー）。
+   */
+  static checkProjectEnd(
+    scheduled: ScheduledTask[],
+    projectEndDate: Date
+  ): PreconditionWarning[] {
+    const warnings: PreconditionWarning[] = [];
+    const projectEndKey = toDateKey(projectEndDate);
+
+    for (const t of scheduled) {
+      if (t.skipped || !t.scheduledEndDate) continue;
+      const endKey = toDateKey(t.scheduledEndDate);
+      if (endKey > projectEndKey) {
+        warnings.push({
+          kind: "EXCEEDS_PROJECT_END",
+          taskId: t.taskId,
+          taskNo: t.taskNo,
+          taskName: t.taskName,
+          detail: `予定終了日(${endKey})がプロジェクト終了日(${projectEndKey})を超えています`,
+        });
+      }
     }
 
     return warnings;

@@ -142,6 +142,16 @@ export class SchedulingApplicationService
       },
     });
 
+    // 計算結果がプロジェクト終了日に収まらないタスクを警告（リスケ判断の主要シグナル）
+    if (project.endDate) {
+      warnings.push(
+        ...SchedulingPreconditionService.checkProjectEnd(
+          scheduledTasks,
+          project.endDate
+        )
+      );
+    }
+
     const workloads = this.buildWorkloads(
       scheduledTasks,
       assignees,
