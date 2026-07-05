@@ -85,6 +85,56 @@ describe("SchedulingPreconditionService.check", () => {
     expect(w).toEqual([]);
   });
 
+  test("保留(ON_HOLD)タスクを検出（前詰め対象である旨の注意喚起）", () => {
+    const w = SchedulingPreconditionService.check(
+      [task({ taskId: 1, taskNo: "0001", status: "ON_HOLD" })],
+      [],
+      []
+    );
+    expect(w).toEqual([
+      expect.objectContaining({ kind: "ON_HOLD", taskNo: "0001" }),
+    ]);
+  });
+
+  test("日程のない完了タスクを検出（依存制約に反映されない）", () => {
+    const w = SchedulingPreconditionService.check(
+      [
+        task({
+          taskId: 1,
+          taskNo: "0001",
+          status: "COMPLETED",
+          yoteiStartDate: undefined,
+          yoteiEndDate: undefined,
+          jissekiStartDate: undefined,
+          jissekiEndDate: undefined,
+        }),
+      ],
+      [],
+      []
+    );
+    expect(
+      w.some((x) => x.kind === "COMPLETED_NO_PERIOD" && x.taskNo === "0001")
+    ).toBe(true);
+  });
+
+  test("実績日程のある完了タスクはCOMPLETED_NO_PERIODにしない", () => {
+    const w = SchedulingPreconditionService.check(
+      [
+        task({
+          taskId: 1,
+          taskNo: "0001",
+          status: "COMPLETED",
+          jissekiStartDate: new Date(2026, 5, 10),
+          jissekiEndDate: new Date(2026, 5, 11),
+          jissekiKosu: 8,
+        }),
+      ],
+      [],
+      []
+    );
+    expect(w.some((x) => x.kind === "COMPLETED_NO_PERIOD")).toBe(false);
+  });
+
   test("循環依存を検出しcycleTaskNosを返す", () => {
     const tasks = [
       task({ taskId: 1, taskNo: "0001" }),
