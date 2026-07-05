@@ -339,6 +339,115 @@ describe("forwardSchedule", () => {
     expect(result[0].note).toBe("SCHEDULE_OVERFLOW");
   });
 
+  describe("同日詰め込み", () => {
+    test("同一担当者の小タスクは同じ日の残り稼働に詰め込まれる", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", yoteiKosu: 2 }),
+          task({ taskId: 2, taskNo: "0002", yoteiKosu: 2 }),
+          task({ taskId: 3, taskNo: "0003", yoteiKosu: 2 }),
+        ],
+        dependencies: [],
+        calendars: new Map([[1, weekday8()]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      // 2h×3=6h < 8h/日 → 全て 06-15 に収まる
+      for (const id of [1, 2, 3]) {
+        const r = result.find((x) => x.taskId === id)!;
+        expect(r.scheduledStartDate).toEqual(new Date(2026, 5, 15));
+        expect(r.scheduledEndDate).toEqual(new Date(2026, 5, 15));
+      }
+    });
+
+    test("前タスクが日中で終わる場合、次タスクは同日の残り稼働から開始", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", yoteiKosu: 12 }),
+          task({ taskId: 2, taskNo: "0002", yoteiKosu: 8 }),
+        ],
+        dependencies: [],
+        calendars: new Map([[1, weekday8()]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      const a = result.find((r) => r.taskId === 1)!;
+      const b = result.find((r) => r.taskId === 2)!;
+      // t1: 06-15(8h) + 06-16(4h) → end 06-16
+      expect(a.scheduledEndDate).toEqual(new Date(2026, 5, 16));
+      // t2: 06-16 の残り4h + 06-17 の4h → 06-16 開始、06-17 終了
+      expect(b.scheduledStartDate).toEqual(new Date(2026, 5, 16));
+      expect(b.scheduledEndDate).toEqual(new Date(2026, 5, 17));
+    });
+
+    test("稼働を使い切った日には詰め込まず翌営業日から", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", yoteiKosu: 8 }),
+          task({ taskId: 2, taskNo: "0002", yoteiKosu: 2 }),
+        ],
+        dependencies: [],
+        calendars: new Map([[1, weekday8()]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      expect(result.find((r) => r.taskId === 2)!.scheduledStartDate).toEqual(
+        new Date(2026, 5, 16)
+      );
+    });
+
+    test("FS依存は同日詰め込みより優先され翌日以降に開始", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", yoteiKosu: 2 }),
+          task({ taskId: 2, taskNo: "0002", yoteiKosu: 2 }),
+        ],
+        dependencies: [dep(1, 2, "FS")],
+        calendars: new Map([[1, weekday8()]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      // 06-15 に6h残っていても FS 制約で翌営業日から
+      expect(result.find((r) => r.taskId === 2)!.scheduledStartDate).toEqual(
+        new Date(2026, 5, 16)
+      );
+    });
+
+    test("定常タスクの消費と通常タスクの消費が同じ日で合成される", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({
+            taskId: 1,
+            taskNo: "0001",
+            taskName: "プロジェクト管理",
+            yoteiStartDate: new Date(2026, 5, 15),
+            yoteiEndDate: new Date(2026, 5, 19),
+            yoteiKosu: 20, // 5稼働日 → 4h/日
+          }),
+          task({ taskId: 2, taskNo: "0002", taskName: "実装A", yoteiKosu: 2 }),
+          task({ taskId: 3, taskNo: "0003", taskName: "実装B", yoteiKosu: 2 }),
+        ],
+        dependencies: [],
+        calendars: new Map([[1, weekday8()]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON, {
+          steadyTaskKeywords: ["管理"],
+          consumeSteadyTaskCapacity: true,
+        }),
+      });
+      // 06-15 実効4h → 2h+2h の両タスクが同日に収まる
+      expect(result.find((r) => r.taskId === 2)!.scheduledEndDate).toEqual(
+        new Date(2026, 5, 15)
+      );
+      expect(result.find((r) => r.taskId === 3)!.scheduledStartDate).toEqual(
+        new Date(2026, 5, 15)
+      );
+      expect(result.find((r) => r.taskId === 3)!.scheduledEndDate).toEqual(
+        new Date(2026, 5, 15)
+      );
+    });
+  });
+
   test("循環依存に含まれるタスクはskip(CYCLIC)し他は計算続行", () => {
     const result = forwardSchedule({
       tasks: [
