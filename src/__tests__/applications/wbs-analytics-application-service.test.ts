@@ -1,9 +1,9 @@
-import { WbsAnalyticsHandler } from "@/applications/wbs/query/wbs-analytics-handler";
+import { WbsAnalyticsApplicationService } from "@/applications/wbs/wbs-analytics-application-service";
 import { IWbsCrossQueryRepository, PhaseHoursSummary } from "@/applications/wbs/iwbs-cross-query-repository";
 import { IWbsTagRepository } from "@/applications/wbs/iwbs-tag-repository";
 
-describe('WbsAnalyticsHandler', () => {
-  let handler: WbsAnalyticsHandler;
+describe('WbsAnalyticsApplicationService', () => {
+  let handler: WbsAnalyticsApplicationService;
   let mockCrossQueryRepository: jest.Mocked<IWbsCrossQueryRepository>;
   let mockTagRepository: jest.Mocked<IWbsTagRepository>;
 
@@ -29,7 +29,7 @@ describe('WbsAnalyticsHandler', () => {
       findWbsIdsByTagNames: jest.fn(),
     };
 
-    handler = new WbsAnalyticsHandler(mockCrossQueryRepository, mockTagRepository);
+    handler = new WbsAnalyticsApplicationService(mockCrossQueryRepository, mockTagRepository);
   });
 
   describe('getCoefficients', () => {

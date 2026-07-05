@@ -1,5 +1,5 @@
-import type { IWbsCrossQueryRepository, PhaseHoursSummary } from "../iwbs-cross-query-repository";
-import type { IWbsTagRepository } from "../iwbs-tag-repository";
+import type { IWbsCrossQueryRepository, PhaseHoursSummary } from "./iwbs-cross-query-repository";
+import type { IWbsTagRepository } from "./iwbs-tag-repository";
 import { PhaseCoefficientService } from "@/domains/wbs/phase-coefficient.service";
 import type { PhaseCoefficient } from "@/domains/wbs/phase-coefficient.service";
 import { PhaseProportionService } from "@/domains/wbs/phase-proportion.service";
@@ -25,8 +25,13 @@ export type ProportionQuery = {
     customBaseTemplateIds?: number[];
 };
 
+export interface IWbsAnalyticsApplicationService {
+    getCoefficients(query: CoefficientQuery): Promise<PhaseCoefficient[]>;
+    getProportions(query: ProportionQuery): Promise<PhaseProportion[]>;
+}
+
 @injectable()
-export class WbsAnalyticsHandler {
+export class WbsAnalyticsApplicationService implements IWbsAnalyticsApplicationService {
     constructor(
         @inject(SYMBOL.IWbsCrossQueryRepository) private readonly crossQueryRepository: IWbsCrossQueryRepository,
         @inject(SYMBOL.IWbsTagRepository) private readonly tagRepository: IWbsTagRepository,

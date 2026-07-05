@@ -101,7 +101,7 @@ export const SYMBOL = {
 
     // WBS Analytics
     IWbsCrossQueryRepository: Symbol.for('IWbsCrossQueryRepository'),
-    WbsAnalyticsHandler: Symbol.for('WbsAnalyticsHandler'),
+    IWbsAnalyticsApplicationService: Symbol.for('IWbsAnalyticsApplicationService'),
 
 
     // Infrastructure

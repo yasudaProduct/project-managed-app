@@ -145,7 +145,7 @@ import { WbsTagApplicationService } from '@/applications/wbs/wbs-tag-application
 // WBS Analytics関連
 import type { IWbsCrossQueryRepository } from '@/applications/wbs/iwbs-cross-query-repository';
 import { WbsCrossQueryRepository } from '@/infrastructures/wbs/wbs-cross-query-repository';
-import { WbsAnalyticsHandler } from '@/applications/wbs/query/wbs-analytics-handler';
+import { IWbsAnalyticsApplicationService, WbsAnalyticsApplicationService } from '@/applications/wbs/wbs-analytics-application-service';
 
 
 
@@ -175,7 +175,7 @@ container.bind<ISchedulingApplicationService>(SYMBOL.ISchedulingApplicationServi
 container.bind<IWbsSyncApplicationService>(SYMBOL.IWbsSyncApplicationService).to(WbsSyncApplicationService).inSingletonScope();
 container.bind<ISystemSettingsApplicationService>(SYMBOL.ISystemSettingsApplicationService).to(SystemSettingsApplicationService).inSingletonScope();
 container.bind<IWbsTagApplicationService>(SYMBOL.IWbsTagApplicationService).to(WbsTagApplicationService).inSingletonScope();
-container.bind<WbsAnalyticsHandler>(SYMBOL.WbsAnalyticsHandler).to(WbsAnalyticsHandler).inSingletonScope();
+container.bind<IWbsAnalyticsApplicationService>(SYMBOL.IWbsAnalyticsApplicationService).to(WbsAnalyticsApplicationService).inSingletonScope();
 container.bind<IProjectSettingsApplicationService>(SYMBOL.IProjectSettingsApplicationService).to(ProjectSettingsApplicationService).inSingletonScope();
 container.bind<IForecastApplicationService>(SYMBOL.IForecastApplicationService).to(ForecastApplicationService).inSingletonScope();
 
