@@ -10,6 +10,8 @@ interface DependencyArrowsProps {
   taskHeight: number;
   style: GanttStyle;
   taskPositions?: Map<string, number>;
+  /** 矢印クリック時に後続タスクIDを通知（指定時のみ透明なクリック領域を描画） */
+  onArrowClick?: (successorTaskId: string) => void;
 }
 
 export const DependencyArrows = ({
@@ -20,6 +22,7 @@ export const DependencyArrows = ({
   taskHeight,
   style,
   taskPositions: customTaskPositions,
+  onArrowClick,
 }: DependencyArrowsProps) => {
   // タスクバー右端に対応するX。マイルストーンは点（ダイヤ中心）なので inclusive にしない。
   const endXOf = (task: Task) =>
@@ -105,57 +108,55 @@ export const DependencyArrows = ({
       const horizontalSpacing = 20;
       const verticalOffset = 15;
 
-      if (Math.abs(endY - startY) < 5) {
-        // Same row - simple horizontal line
-        arrows.push(
-          <g key={uniqueKey}>
-            <line
-              x1={startX}
-              y1={startY}
-              x2={endX - 8}
-              y2={endY}
-              stroke={color}
-              strokeWidth={strokeWidth}
-              markerEnd="url(#arrowhead)"
-              fill="none"
-            />
-          </g>
-        );
-      } else {
-        // Different rows - use path with curves
-        const pathData =
-          endY > startY
-            ? `M ${startX} ${startY} 
+      // 同一行は水平線、異なる行はカーブ付きパス（クリック領域と共有するためどちらも path 文字列にする）
+      const pathData =
+        Math.abs(endY - startY) < 5
+          ? `M ${startX} ${startY} L ${endX - 8} ${endY}`
+          : endY > startY
+          ? `M ${startX} ${startY}
              Q ${startX + horizontalSpacing} ${startY} ${
-                startX + horizontalSpacing
-              } ${startY + verticalOffset}
+              startX + horizontalSpacing
+            } ${startY + verticalOffset}
              L ${startX + horizontalSpacing} ${endY - verticalOffset}
              Q ${startX + horizontalSpacing} ${endY} ${
-                startX + horizontalSpacing + 10
-              } ${endY}
+              startX + horizontalSpacing + 10
+            } ${endY}
              L ${endX - 8} ${endY}`
-            : `M ${startX} ${startY} 
+          : `M ${startX} ${startY}
              Q ${startX + horizontalSpacing} ${startY} ${
-                startX + horizontalSpacing
-              } ${startY - verticalOffset}
+              startX + horizontalSpacing
+            } ${startY - verticalOffset}
              L ${startX + horizontalSpacing} ${endY + verticalOffset}
              Q ${startX + horizontalSpacing} ${endY} ${
-                startX + horizontalSpacing + 10
-              } ${endY}
+              startX + horizontalSpacing + 10
+            } ${endY}
              L ${endX - 8} ${endY}`;
 
-        arrows.push(
-          <g key={uniqueKey}>
+      arrows.push(
+        <g key={uniqueKey}>
+          <path
+            d={pathData}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="none"
+            markerEnd="url(#arrowhead)"
+          />
+          {onArrowClick && (
             <path
               d={pathData}
-              stroke={color}
-              strokeWidth={strokeWidth}
+              stroke="transparent"
+              strokeWidth={10}
               fill="none"
-              markerEnd="url(#arrowhead)"
-            />
-          </g>
-        );
-      }
+              className="cursor-pointer"
+              style={{ pointerEvents: "stroke" }}
+              data-dep-arrow={`${pred.taskId}->${task.id}`}
+              onClick={() => onArrowClick(task.id)}
+            >
+              <title>クリックして依存関係を編集</title>
+            </path>
+          )}
+        </g>
+      );
 
       // Add dependency type label for close inspection
       if (Math.abs(endX - startX) > 50) {

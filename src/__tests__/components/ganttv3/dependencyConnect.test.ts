@@ -125,7 +125,8 @@ describe("hitTestTaskBar", () => {
   it("境界: X はバー両端を含み、Y は上端を含み下端を含まない", () => {
     expect(hitTestTaskBar(boxes, 100, 20)?.taskId).toBe("A");
     expect(hitTestTaskBar(boxes, 200, 39)?.taskId).toBe("A");
-    expect(hitTestTaskBar(boxes, 150, 40)?.taskId).toBe("B"); // Aの下端＝Bの上端
+    expect(hitTestTaskBar(boxes, 150, 40)).toBeNull(); // Aの下端は含まない
+    expect(hitTestTaskBar(boxes, 300, 40)?.taskId).toBe("B"); // Bの上端は含む
   });
 });
 

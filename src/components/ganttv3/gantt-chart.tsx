@@ -14,6 +14,7 @@ import {
   GanttPhase,
   GroupBy,
   TaskSortBy,
+  DependencyType,
 } from "./gantt";
 import { groupTasksByType } from "./utils/groupTasks";
 import {
@@ -22,6 +23,14 @@ import {
   getChartWidth,
   dateToX as computeDateX,
 } from "./utils/timelineGeometry";
+import {
+  deriveDependencyType,
+  validateConnect,
+  hitTestTaskBar,
+  connectSideAt,
+  type ConnectSide,
+  type TaskBarHitBox,
+} from "./utils/dependencyConnect";
 import { TimelineHeader } from "./timeline-header";
 import { TaskBar } from "./task-bar";
 import { TaskListRow } from "./task-list-row";
@@ -85,6 +94,13 @@ interface GanttChartProps {
   onCancelEdit?: () => void;
   /** 依存関係編集モーダルを開く */
   onEditDependencies?: (taskId: string) => void;
+  /** チャート上のドラッグ接続で依存関係を作成する（後続, 先行, タイプ, ラグ） */
+  onDependencyCreate?: (
+    successorTaskId: string,
+    predecessorTaskId: string,
+    type: DependencyType,
+    lag: number,
+  ) => void;
   /** 保存処理中かどうか */
   isSaving?: boolean;
   /** 初回データ読込中か（trueの間は編集モードに入れない） */
@@ -122,6 +138,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       onSaveEdit,
       onCancelEdit,
       onEditDependencies,
+      onDependencyCreate,
       isSaving = false,
       isDataLoading = false,
     },
@@ -151,6 +168,17 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     } | null>(null);
     // 編集モードで選択中（インライン編集パネル表示対象）のタスクID
     const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+
+    // 編集モード: 依存関係の接続ドラッグ（バーの接続ハンドル→相手バーへの矢印描画）
+    const [connectPreview, setConnectPreview] = useState<{
+      fromTaskId: string;
+      fromX: number;
+      fromY: number;
+      toX: number;
+      toY: number;
+      targetTaskId: string | null;
+      valid: boolean;
+    } | null>(null);
 
     // 行高さスケール（Ctrl+ホイールで全行の高さを均等に増減）
     const [rowScale, setRowScale] = useState(1);
@@ -427,6 +455,126 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       [dateToX],
     );
 
+    // 依存接続ドラッグ用: 可視タスクバーの当たり判定領域（マイルストーンは接続対象外）
+    const taskBarHitBoxes = useMemo<TaskBarHitBox[]>(
+      () =>
+        ganttRows
+          .filter((row) => row.type === "task" && row.task && !row.task.isMilestone)
+          .map((row) => {
+            const task = row.task!;
+            const x = dateToX(task.startDate);
+            return {
+              taskId: task.id,
+              x,
+              // 描画上の最小バー幅(20px)と当たり判定を一致させる
+              endX: Math.max(dateToXEnd(task.endDate), x + 20),
+              top: row.y,
+              height: row.height,
+            };
+          }),
+      [ganttRows, dateToX, dateToXEnd],
+    );
+
+    // 依存接続のバリデーション用ルックアップ
+    const taskById = useMemo(
+      () => new Map(tasks.map((t) => [t.id, t])),
+      [tasks],
+    );
+
+    // 依存関係の接続ドラッグ開始（編集モードのみ）。
+    // ドラッグ中のみ document へリスナを張り、mouseup / Escape で必ず解除する。
+    const handleConnectStart = useCallback(
+      (taskId: string, e: React.MouseEvent, side: ConnectSide) => {
+        if (!editMode || !onDependencyCreate) return;
+        const source = taskBarHitBoxes.find((b) => b.taskId === taskId);
+        const scroller = timelineScrollRef.current;
+        if (!source || !scroller) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const fromX = side === "start" ? source.x : source.endX;
+        const fromY = source.top + source.height / 2;
+        // マウス座標（クライアント系）→ チャートコンテンツ系への変換
+        const toContent = (ev: MouseEvent) => {
+          const rect = scroller.getBoundingClientRect();
+          return {
+            x: ev.clientX - rect.left + scroller.scrollLeft,
+            y: ev.clientY - rect.top + scroller.scrollTop,
+          };
+        };
+
+        let target: { taskId: string; side: ConnectSide; valid: boolean } | null =
+          null;
+
+        const handleMove = (ev: MouseEvent) => {
+          const p = toContent(ev);
+          const hit = hitTestTaskBar(taskBarHitBoxes, p.x, p.y);
+          target = hit
+            ? {
+                taskId: hit.taskId,
+                side: connectSideAt(hit, p.x),
+                valid: validateConnect(taskById, taskId, hit.taskId).ok,
+              }
+            : null;
+          setConnectPreview({
+            fromTaskId: taskId,
+            fromX,
+            fromY,
+            toX: p.x,
+            toY: p.y,
+            targetTaskId: target?.taskId ?? null,
+            valid: target?.valid ?? false,
+          });
+        };
+
+        const cleanup = () => {
+          document.removeEventListener("mousemove", handleMove);
+          document.removeEventListener("mouseup", handleUp);
+          document.removeEventListener("keydown", handleKeyDown);
+          document.body.style.userSelect = "";
+          setConnectPreview(null);
+        };
+
+        const handleUp = () => {
+          const dropTarget = target;
+          cleanup();
+          if (dropTarget?.valid) {
+            onDependencyCreate(
+              dropTarget.taskId,
+              taskId,
+              deriveDependencyType(side, dropTarget.side),
+              0,
+            );
+          }
+        };
+
+        const handleKeyDown = (ev: KeyboardEvent) => {
+          if (ev.key === "Escape") cleanup();
+        };
+
+        document.addEventListener("mousemove", handleMove);
+        document.addEventListener("mouseup", handleUp);
+        document.addEventListener("keydown", handleKeyDown);
+        document.body.style.userSelect = "none";
+        setConnectPreview({
+          fromTaskId: taskId,
+          fromX,
+          fromY,
+          toX: fromX,
+          toY: fromY,
+          targetTaskId: null,
+          valid: false,
+        });
+      },
+      [editMode, onDependencyCreate, taskBarHitBoxes, taskById],
+    );
+
+    // 編集モード時のみ矢印クリックで依存編集モーダルを開く
+    const handleArrowClick = useCallback(
+      (successorTaskId: string) => onEditDependencies?.(successorTaskId),
+      [onEditDependencies],
+    );
+
     // バーのドラッグ開始（編集モードのみ）
     const handleBarDragStart = useCallback(
       (
@@ -517,6 +665,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         setEditingTaskId(null);
         setDragPreview(null);
         setDraggedTaskId(null);
+        setConnectPreview(null);
         dragRef.current = null;
       }
     }, [editMode]);
@@ -625,6 +774,16 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         });
       }
     }, [todayX]);
+
+    // 接続ドラッグのプレビュー描画用の派生値（線色・ターゲット枠）
+    const connectTargetBox = connectPreview?.targetTaskId
+      ? taskBarHitBoxes.find((b) => b.taskId === connectPreview.targetTaskId)
+      : undefined;
+    const connectColor = !connectPreview?.targetTaskId
+      ? "#6B7280"
+      : connectPreview.valid
+        ? "#3B82F6"
+        : "#DC2626";
 
     // サマリーバー用にカテゴリの期間を計算
     const categoryRanges = useMemo(() => {
@@ -1157,6 +1316,14 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                 }
                                 isDragging={draggedTaskId === task.id}
                                 editable={editMode}
+                                onConnectStart={
+                                  editMode && onDependencyCreate
+                                    ? handleConnectStart
+                                    : undefined
+                                }
+                                isConnectSource={
+                                  connectPreview?.fromTaskId === task.id
+                                }
                               />
                               {actualBar}
                             </g>
@@ -1175,7 +1342,49 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                           taskHeight={TASK_HEIGHT}
                           style={style}
                           taskPositions={taskCenterYById}
+                          onArrowClick={
+                            editMode && onEditDependencies
+                              ? handleArrowClick
+                              : undefined
+                          }
                         />
+                      )}
+
+                      {/* 依存関係の接続ドラッグ中のプレビュー（線＋ターゲット強調） */}
+                      {connectPreview && (
+                        <g className="pointer-events-none">
+                          {connectTargetBox && (
+                            <rect
+                              data-testid="ganttv3-connect-target"
+                              x={connectTargetBox.x - 2}
+                              y={connectTargetBox.top + 1}
+                              width={
+                                connectTargetBox.endX - connectTargetBox.x + 4
+                              }
+                              height={connectTargetBox.height - 2}
+                              fill="none"
+                              stroke={connectColor}
+                              strokeWidth={2}
+                              rx={4}
+                            />
+                          )}
+                          <line
+                            data-testid="ganttv3-connect-line"
+                            x1={connectPreview.fromX}
+                            y1={connectPreview.fromY}
+                            x2={connectPreview.toX}
+                            y2={connectPreview.toY}
+                            stroke={connectColor}
+                            strokeWidth={2}
+                            strokeDasharray="4,4"
+                          />
+                          <circle
+                            cx={connectPreview.fromX}
+                            cy={connectPreview.fromY}
+                            r={4}
+                            fill={connectColor}
+                          />
+                        </g>
                       )}
                     </svg>
                   </div>

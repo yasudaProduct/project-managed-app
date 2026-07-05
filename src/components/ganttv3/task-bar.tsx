@@ -1,5 +1,6 @@
 import { useState, memo } from "react";
 import { Task, GanttStyle } from "./gantt";
+import type { ConnectSide } from "./utils/dependencyConnect";
 
 interface TaskBarProps {
   task: Task;
@@ -16,6 +17,14 @@ interface TaskBarProps {
   isDragging: boolean;
   /** 編集モード時のみドラッグ用カーソル・リサイズハンドルを表示 */
   editable?: boolean;
+  /** 依存関係の接続ドラッグ開始（指定時のみ接続ハンドルを表示） */
+  onConnectStart?: (
+    taskId: string,
+    e: React.MouseEvent,
+    side: ConnectSide
+  ) => void;
+  /** 接続ドラッグの起点タスクか（ドラッグ中はホバーなしでもハンドルを表示し続ける） */
+  isConnectSource?: boolean;
 }
 
 export const TaskBar = memo(function TaskBar({
@@ -28,6 +37,8 @@ export const TaskBar = memo(function TaskBar({
   onDragStart,
   isDragging,
   editable = false,
+  onConnectStart,
+  isConnectSource = false,
 }: TaskBarProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -189,6 +200,44 @@ export const TaskBar = memo(function TaskBar({
           />
         </>
       )}
+
+      {/* Connect handles (依存関係のドラッグ接続。編集モードでホバー中 or 接続ドラッグの起点) */}
+      {editable && onConnectStart && (isHovered || isConnectSource) && (
+          <>
+            <circle
+              data-side="start"
+              cx={x}
+              cy={y + height / 2}
+              r={5}
+              fill="#fff"
+              stroke="#3B82F6"
+              strokeWidth={1.5}
+              className="gantt-connect-handle cursor-crosshair"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                onConnectStart(task.id, e, "start");
+              }}
+            >
+              <title>ドラッグして依存関係を作成</title>
+            </circle>
+            <circle
+              data-side="end"
+              cx={x + actualWidth}
+              cy={y + height / 2}
+              r={5}
+              fill="#fff"
+              stroke="#3B82F6"
+              strokeWidth={1.5}
+              className="gantt-connect-handle cursor-crosshair"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                onConnectStart(task.id, e, "end");
+              }}
+            >
+              <title>ドラッグして依存関係を作成</title>
+            </circle>
+          </>
+        )}
 
       {/* Task label */}
       {style.labelPosition === "outside" && (
