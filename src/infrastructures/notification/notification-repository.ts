@@ -8,7 +8,7 @@ import {
   NotificationListOptions,
   NotificationListResult,
   PushSubscriptionData
-} from '@/applications/notification/INotificationRepository';
+} from '@/applications/notification/inotification-repository';
 
 @injectable()
 export class NotificationRepository implements INotificationRepository {

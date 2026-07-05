@@ -1,4 +1,4 @@
-import { ExcelWbs } from './ExcelWbs';
+import { ExcelWbs } from './excel-wbs';
 import { Period } from '@/domains/task/period';
 import { ManHour } from '@/domains/task/man-hour';
 import { PeriodType } from '@/domains/task/value-object/period-type';

@@ -3,7 +3,7 @@
 import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { container } from '@/lib/inversify.config';
-import type { INotificationService } from '@/applications/notification/INotificationService';
+import type { INotificationService } from '@/applications/notification/inotification-service';
 import { getCurrentUserIdOrThrow } from '@/lib/get-current-user-id';
 import { SYMBOL } from '@/types/symbol';
 

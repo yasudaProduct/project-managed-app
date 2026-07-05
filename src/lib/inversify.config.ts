@@ -74,10 +74,10 @@ import { ITaskDependencyService, TaskDependencyService } from "@/applications/ta
 
 // WBS Sync関連
 import { WbsSyncApplicationService } from "@/applications/wbs-sync/wbs-sync-application.service";
-import type { IExcelWbsRepository } from "@/applications/wbs-sync/IExcelWbsRepository";
-import { ExcelWbsRepository } from "@/infrastructures/sync/ExcelWbsRepository";
-import type { ISyncLogRepository } from "@/applications/wbs-sync/ISyncLogRepository";
-import { SyncLogRepository } from "@/infrastructures/sync/SyncLogRepository";
+import type { IExcelWbsRepository } from "@/applications/wbs-sync/iexcel-wbs-repository";
+import { ExcelWbsRepository } from "@/infrastructures/sync/excel-wbs-repository";
+import type { ISyncLogRepository } from "@/applications/wbs-sync/isync-log-repository";
+import { SyncLogRepository } from "@/infrastructures/sync/sync-log-repository";
 
 // Calendar関連
 import type { ICompanyHolidayRepository } from "@/applications/calendar/icompany-holiday-repository";
@@ -87,13 +87,13 @@ import { UserScheduleRepository } from "@/infrastructures/calendar/user-schedule
 import { ICompanyHolidayApplicationService, CompanyHolidayApplicationService } from "@/applications/calendar/company-holiday-application-service";
 
 // Notification関連
-import type { INotificationService } from "@/applications/notification/INotificationService";
-import { NotificationService } from "@/applications/notification/NotificationService";
-import type { INotificationRepository } from "@/applications/notification/INotificationRepository";
-import { NotificationRepository } from "@/infrastructures/notification/NotificationRepository";
-import type { IPushNotificationService } from "@/applications/notification/IPushNotificationService";
-import { PushNotificationService } from "@/infrastructures/notification/PushNotificationService";
-import { NotificationEventDetector } from "@/applications/notification/NotificationEventDetector";
+import type { INotificationService } from "@/applications/notification/inotification-service";
+import { NotificationService } from "@/applications/notification/notification-service";
+import type { INotificationRepository } from "@/applications/notification/inotification-repository";
+import { NotificationRepository } from "@/infrastructures/notification/notification-repository";
+import type { IPushNotificationService } from "@/applications/notification/ipush-notification-service";
+import { PushNotificationService } from "@/infrastructures/notification/push-notification-service";
+import { NotificationEventDetector } from "@/applications/notification/notification-event-detector";
 
 // Task Scheduling関連
 import type { ISchedulingApplicationService } from "@/applications/task-scheduling/ischeduling-application.service";
@@ -129,7 +129,7 @@ import type { IImportJobRepository } from '@/applications/import-job/iimport-job
 import { ImportJobPrismaRepository } from '@/infrastructures/import-job/import-job-prisma.repository';
 import type { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service';
 import { ImportJobApplicationService } from '@/applications/import-job/import-job-application.service';
-import { IWbsSyncApplicationService } from '@/applications/wbs-sync/IWbsSyncApplicationService';
+import { IWbsSyncApplicationService } from '@/applications/wbs-sync/iwbs-sync-application-service';
 
 // System Settings関連
 import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';

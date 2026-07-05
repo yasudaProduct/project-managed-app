@@ -1,4 +1,4 @@
-import { SyncResult } from '@/domains/sync/ExcelWbs';
+import { SyncResult } from '@/domains/sync/excel-wbs';
 
 export interface IWbsSyncApplicationService {
   replaceAll(wbsId: number): Promise<SyncResult>;

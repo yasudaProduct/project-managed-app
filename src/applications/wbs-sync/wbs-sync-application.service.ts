@@ -1,9 +1,9 @@
 import { injectable, inject } from 'inversify';
-import { ExcelWbs, SyncResult, SyncError, SyncErrorType, ValidationError } from '@/domains/sync/ExcelWbs';
+import { ExcelWbs, SyncResult, SyncError, SyncErrorType, ValidationError } from '@/domains/sync/excel-wbs';
 import { Task } from '@/domains/task/task';
-import { WbsDataMapper } from '@/domains/sync/WbsDataMapper';
-import type { IExcelWbsRepository } from '@/applications/wbs-sync/IExcelWbsRepository';
-import type { ISyncLogRepository } from '@/applications/wbs-sync/ISyncLogRepository';
+import { WbsDataMapper } from '@/domains/sync/wbs-data-mapper';
+import type { IExcelWbsRepository } from '@/applications/wbs-sync/iexcel-wbs-repository';
+import type { ISyncLogRepository } from '@/applications/wbs-sync/isync-log-repository';
 import { SYMBOL } from '@/types/symbol';
 import type { IPhaseRepository } from '@/applications/task/iphase-repository';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
@@ -12,7 +12,7 @@ import type { ITaskRepository, TaskSyncState, TaskProgressSnapshotInput } from '
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/task-status';
 import type { IWbsRepository } from '../wbs/iwbs-repository';
-import { IWbsSyncApplicationService } from './IWbsSyncApplicationService';
+import { IWbsSyncApplicationService } from './iwbs-sync-application-service';
 
 /**
  * WBS同期アプリケーションサービス

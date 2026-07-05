@@ -2,7 +2,7 @@ import { injectable, inject } from 'inversify';
 import { NotificationType } from '@/types/notification';
 import { NotificationPriority } from '@/domains/notification/notification-priority';
 import { NotificationChannel } from '@/domains/notification/notification-channel';
-import type { INotificationService } from './INotificationService';
+import type { INotificationService } from './inotification-service';
 import type { ITaskRepository } from '@/applications/task/itask-repository';
 import type { IProjectRepository } from '@/applications/projects/iproject-repository';
 import type { IUserRepository } from '@/applications/user/iuser-repository';

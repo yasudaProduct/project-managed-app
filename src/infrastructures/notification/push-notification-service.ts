@@ -1,8 +1,8 @@
 import { injectable, inject } from 'inversify';
 import webpush from 'web-push';
 import { Notification } from '@/domains/notification/notification';
-import type { INotificationRepository, PushSubscriptionData } from '@/applications/notification/INotificationRepository';
-import type { IPushNotificationService } from '@/applications/notification/IPushNotificationService';
+import type { INotificationRepository, PushSubscriptionData } from '@/applications/notification/inotification-repository';
+import type { IPushNotificationService } from '@/applications/notification/ipush-notification-service';
 import { SYMBOL } from '@/types/symbol';
 
 export interface PushPayload {

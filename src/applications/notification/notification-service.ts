@@ -12,13 +12,13 @@ import {
   NotificationPreferencePlain,
   NotificationPlain,
   NotificationListResultPlain,
-} from './INotificationService';
+} from './inotification-service';
 import type {
   INotificationRepository,
   PushSubscriptionData,
   NotificationFilter
-} from './INotificationRepository';
-import type { IPushNotificationService } from './IPushNotificationService';
+} from './inotification-repository';
+import type { IPushNotificationService } from './ipush-notification-service';
 
 @injectable()
 export class NotificationService implements INotificationService {

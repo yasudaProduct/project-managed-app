@@ -3,7 +3,7 @@ import { NotificationPreference } from '@/domains/notification/notification-pref
 import { NotificationType } from '@/types/notification';
 import { NotificationPriority } from '@/domains/notification/notification-priority';
 import { NotificationChannel } from '@/domains/notification/notification-channel';
-import { PushSubscriptionData } from './INotificationRepository';
+import { PushSubscriptionData } from './inotification-repository';
 
 // 通知設定の詳細型定義
 export interface TaskDeadlineSettings {
