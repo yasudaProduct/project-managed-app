@@ -103,7 +103,7 @@ export class NotificationService implements INotificationService {
             // アプリ内通知は既に作成済み
             break;
           case NotificationChannel.EMAIL: // メール通知
-            await this.sendEmailNotification(notification);
+            await this.sendEmailNotification();
             break;
         }
       } catch (error) {
@@ -399,9 +399,8 @@ export class NotificationService implements INotificationService {
     }
   }
 
-  private async sendEmailNotification(notification: Notification): Promise<void> {
-    // TODO: メール通知の実装を行う
-    console.log('Email notification would be sent:', notification);
+  private async sendEmailNotification(): Promise<void> {
+    // TODO: メール通知の実装を行う（実装時に notification を引数に取る）
   }
 
 

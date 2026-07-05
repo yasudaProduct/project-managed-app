@@ -82,7 +82,6 @@ export class ScheduleGenerateService implements IScheduleGenerateService {
 
         }
 
-        console.log(scheduleList);
         const schedule = Object.entries(scheduleList).flatMap(([assigneeId, schedules]) => {
             // タスクごとにグループ化
             const taskGroups = schedules.reduce((groups, schedule) => {

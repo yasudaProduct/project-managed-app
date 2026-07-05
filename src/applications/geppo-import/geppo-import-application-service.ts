@@ -260,7 +260,6 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
     }
     // targetMonthが指定されていない場合は、全期間を対象とする（フィルタなし）
 
-    console.log(targetMonth)
 
     const result = await this.geppoRepository.searchWorkEntries(filters, { page: 1, limit: 10000 })
     return result.geppos

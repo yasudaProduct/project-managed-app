@@ -42,7 +42,6 @@ export class PushNotificationService implements IPushNotificationService {
       vapidPrivateKey
     );
 
-    console.log('WebPush initialized with VAPID keys');
   }
 
   /**
@@ -53,7 +52,6 @@ export class PushNotificationService implements IPushNotificationService {
       const subscriptions = await this.notificationRepository.findPushSubscriptionsByUserId(userId);
 
       if (subscriptions.length === 0) {
-        console.log(`No push subscriptions found for user: ${userId}`);
         return;
       }
 
@@ -63,7 +61,6 @@ export class PushNotificationService implements IPushNotificationService {
       );
 
       await Promise.allSettled(promises);
-      console.log(`Push notification sent to ${subscriptions.length} subscriptions for user: ${userId}`);
     } catch (error) {
       console.error(`Failed to send push notification to user ${userId}:`, error);
       throw error;
@@ -86,7 +83,6 @@ export class PushNotificationService implements IPushNotificationService {
       const allSubscriptions = await this.notificationRepository.findActivePushSubscriptions();
 
       if (allSubscriptions.length === 0) {
-        console.log('No active push subscriptions found');
         return;
       }
 
@@ -95,11 +91,7 @@ export class PushNotificationService implements IPushNotificationService {
         this.sendToSubscription(subscription, payload)
       );
 
-      const results = await Promise.allSettled(promises);
-      const succeeded = results.filter(r => r.status === 'fulfilled').length;
-      const failed = results.filter(r => r.status === 'rejected').length;
-
-      console.log(`Broadcast push notification sent: ${succeeded} succeeded, ${failed} failed`);
+      await Promise.allSettled(promises);
     } catch (error) {
       console.error('Failed to send broadcast push notification:', error);
       throw error;
@@ -132,7 +124,6 @@ export class PushNotificationService implements IPushNotificationService {
         options
       );
 
-      console.log(`Push notification sent successfully to: ${subscription.endpoint.substring(0, 50)}...`);
     } catch (error) {
       await this.handleSendError(error, subscription);
     }
@@ -201,7 +192,6 @@ export class PushNotificationService implements IPushNotificationService {
 
     // 購読が無効になった場合（410 Gone、404 Not Foundなど）
     if (error.statusCode === 410 || error.statusCode === 404) {
-      console.log(`Subscription expired or invalid, removing: ${subscription.endpoint}`);
 
       try {
         // 無効な購読をデータベースから削除

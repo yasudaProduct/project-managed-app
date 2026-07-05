@@ -67,7 +67,6 @@ export class NotificationEventDetector {
    * タスク期限の検知と通知作成
    */
   async detectTaskDeadlines(): Promise<void> {
-    console.log('Starting task deadline detection...');
 
     try {
       const upcomingTasks = await this.getUpcomingDeadlineTasks();
@@ -83,7 +82,6 @@ export class NotificationEventDetector {
         await this.createDeadlineNotification(task, true);
       }
 
-      console.log(`Task deadline detection completed: ${upcomingTasks.length} upcoming, ${overdueTasks.length} overdue`);
     } catch (error) {
       console.error('Error in detectTaskDeadlines:', error);
       throw error;
@@ -94,7 +92,6 @@ export class NotificationEventDetector {
    * 工数超過の検知と通知作成
    */
   async detectManhourExceeded(): Promise<void> {
-    console.log('Starting manhour exceeded detection...');
 
     try {
       const manhourInfos = await this.getManhourExceededTasks();
@@ -103,7 +100,6 @@ export class NotificationEventDetector {
         await this.createManhourNotification(info);
       }
 
-      console.log(`Manhour exceeded detection completed: ${manhourInfos.length} tasks`);
     } catch (error) {
       console.error('Error in detectManhourExceeded:', error);
       throw error;
@@ -114,7 +110,6 @@ export class NotificationEventDetector {
    * スケジュール遅延の検知と通知作成
    */
   async detectScheduleDelays(): Promise<void> {
-    console.log('Starting schedule delay detection...');
 
     try {
       const delayInfos = await this.getScheduleDelayInfo();
@@ -123,7 +118,6 @@ export class NotificationEventDetector {
         await this.createScheduleDelayNotification(info);
       }
 
-      console.log(`Schedule delay detection completed: ${delayInfos.length} projects`);
     } catch (error) {
       console.error('Error in detectScheduleDelays:', error);
       throw error;
