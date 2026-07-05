@@ -84,6 +84,7 @@ import type { ICompanyHolidayRepository } from "@/applications/calendar/icompany
 import { CompanyHolidayRepository } from "@/infrastructures/calendar/company-holiday-repository";
 import type { IUserScheduleRepository } from "@/applications/calendar/iuser-schedule-repository";
 import { UserScheduleRepository } from "@/infrastructures/calendar/user-schedule-repository";
+import { ICompanyHolidayApplicationService, CompanyHolidayApplicationService } from "@/applications/calendar/company-holiday-application-service";
 
 // Notification関連
 import type { INotificationService } from "@/applications/notification/INotificationService";
@@ -178,6 +179,7 @@ container.bind<IWbsTagApplicationService>(SYMBOL.IWbsTagApplicationService).to(W
 container.bind<IWbsAnalyticsApplicationService>(SYMBOL.IWbsAnalyticsApplicationService).to(WbsAnalyticsApplicationService).inSingletonScope();
 container.bind<IProjectSettingsApplicationService>(SYMBOL.IProjectSettingsApplicationService).to(ProjectSettingsApplicationService).inSingletonScope();
 container.bind<IForecastApplicationService>(SYMBOL.IForecastApplicationService).to(ForecastApplicationService).inSingletonScope();
+container.bind<ICompanyHolidayApplicationService>(SYMBOL.ICompanyHolidayApplicationService).to(CompanyHolidayApplicationService).inSingletonScope();
 
 // ドメインサービス
 container.bind<GetOperationPossible>(SYMBOL.GetOperationPossible).to(GetOperationPossible).inSingletonScope();

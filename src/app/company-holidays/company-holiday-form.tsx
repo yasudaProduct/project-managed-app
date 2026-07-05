@@ -30,20 +30,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/date-picker";
-
-type CompanyHolidayType = "NATIONAL" | "COMPANY" | "SPECIAL";
-
-interface CompanyHoliday {
-  id: number;
-  date: string;
-  name: string;
-  type: CompanyHolidayType;
-  createdAt: string;
-  updatedAt: string;
-}
+import {
+  createCompanyHoliday,
+  updateCompanyHoliday,
+} from "@/app/company-holidays/actions";
+import { useToast } from "@/hooks/use-toast";
+import type { CompanyHolidayDto } from "@/types/company-holiday";
 
 interface CompanyHolidayFormProps {
-  holiday?: CompanyHoliday | null;
+  holiday?: CompanyHolidayDto | null;
   onClose: () => void;
   onSaveSuccess: () => void;
 }
@@ -70,6 +65,7 @@ export function CompanyHolidayForm({
   onSaveSuccess,
 }: CompanyHolidayFormProps) {
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   // DatePicker 使用のため個別のカレンダー開閉状態は不要
 
   const isEditing = !!holiday;
@@ -95,34 +91,33 @@ export function CompanyHolidayForm({
     try {
       setLoading(true);
 
-      // TODO: server actionに移行
-      const url = isEditing
-        ? `/api/company-holidays/${holiday.id}`
-        : "/api/company-holidays";
+      const payload = {
+        date: data.date.replace(/\//g, "-"),
+        name: data.name,
+        type: data.type,
+      };
 
-      const method = isEditing ? "PUT" : "POST";
+      const result =
+        isEditing && holiday
+          ? await updateCompanyHoliday(holiday.id, payload)
+          : await createCompanyHoliday(payload);
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          date: data.date.replace(/\//g, "-"),
-          name: data.name,
-          type: data.type,
-        }),
-      });
-
-      if (response.ok) {
+      if (result.success) {
         onSaveSuccess();
       } else {
-        const errorData = await response.json();
-        alert(errorData.error || errorData.message || "保存に失敗しました");
+        toast({
+          variant: "destructive",
+          title: "保存に失敗しました",
+          description: result.error,
+        });
       }
     } catch (error) {
       console.error("保存中にエラーが発生しました:", error);
-      alert("保存中にエラーが発生しました");
+      toast({
+        variant: "destructive",
+        title: "エラー",
+        description: "保存中にエラーが発生しました",
+      });
     } finally {
       setLoading(false);
     }

@@ -64,6 +64,7 @@ export const SYMBOL = {
 
     // Calendar
     ICompanyHolidayRepository: Symbol.for('ICompanyHolidayRepository'),
+    ICompanyHolidayApplicationService: Symbol.for('ICompanyHolidayApplicationService'),
     IUserScheduleRepository: Symbol.for('IUserScheduleRepository'),
 
     // EVM
