@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatDate as formatDateUtil } from "@/utils/date-util";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -90,11 +91,7 @@ export function EvmTimeSeriesTable({
   };
 
   const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
+    formatDateUtil(new Date(dateStr), "YYYY/MM/DD");
 
   return (
     <>

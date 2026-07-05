@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { CompanyHolidayForm } from "@/app/company-holidays/company-holiday-form";
+import { formatDate as formatDateUtil } from "@/utils/date-util";
 
 type CompanyHolidayType = "NATIONAL" | "COMPANY" | "SPECIAL";
 
@@ -113,14 +114,8 @@ export default function CompanyHolidaysPage() {
   };
 
   // 日付をフォーマット
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      weekday: "short",
-    });
-  };
+  const formatDate = (dateString: string) =>
+    formatDateUtil(new Date(dateString), "YYYY/MM/DD(曜)");
 
   return (
     <div className="container mx-auto py-6">
