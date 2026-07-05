@@ -205,6 +205,45 @@ describe("SchedulingApplicationService", () => {
     expect(result.scheduledTasks[0].note).toBe("COMPLETED_FIXED");
   });
 
+  test("プロジェクト終了日を超えるタスクにEXCEEDS_PROJECT_END警告", async () => {
+    projectRepo.findById.mockResolvedValue({
+      startDate: PROJECT_START,
+      endDate: new Date(2026, 5, 16),
+    });
+    // 40h / 7.5h日 → 6稼働日 → 06-22 終了で 06-16 を超過
+    taskRepo.findActiveByWbsId.mockResolvedValue([
+      yoteiTask(1, "T-0001", 10, PROJECT_START, new Date(2026, 5, 16), 40),
+    ]);
+    assigneeRepo.findByWbsId.mockResolvedValue([mockAssignee(10, "u1", "山田")]);
+
+    const result = await service.calculateSchedule(1, {
+      baselineMode: "PROJECT_START",
+    });
+    expect(
+      result.warnings.some(
+        (w) => w.kind === "EXCEEDS_PROJECT_END" && w.taskNo === "T-0001"
+      )
+    ).toBe(true);
+  });
+
+  test("プロジェクト終了日以内なら超過警告なし", async () => {
+    projectRepo.findById.mockResolvedValue({
+      startDate: PROJECT_START,
+      endDate: new Date(2026, 5, 30),
+    });
+    taskRepo.findActiveByWbsId.mockResolvedValue([
+      yoteiTask(1, "T-0001", 10, PROJECT_START, new Date(2026, 5, 16), 8),
+    ]);
+    assigneeRepo.findByWbsId.mockResolvedValue([mockAssignee(10, "u1", "山田")]);
+
+    const result = await service.calculateSchedule(1, {
+      baselineMode: "PROJECT_START",
+    });
+    expect(result.warnings.some((w) => w.kind === "EXCEEDS_PROJECT_END")).toBe(
+      false
+    );
+  });
+
   test("定常設定キーワードに一致するタスクは定常扱い", async () => {
     schedSettingsRepo.getByProjectId.mockResolvedValue({
       ...DEFAULT_SCHEDULING_SETTINGS,

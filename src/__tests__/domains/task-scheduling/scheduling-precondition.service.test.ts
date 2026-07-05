@@ -1,5 +1,6 @@
 import { SchedulingPreconditionService } from "@/domains/task-scheduling/scheduling-precondition-service";
 import type { SchedulingTask } from "@/domains/task-scheduling/scheduling-task";
+import type { ScheduledTask } from "@/domains/task-scheduling/scheduled-result";
 import { TaskDependency } from "@/domains/task-dependency/task-dependency";
 
 const task = (over: Partial<SchedulingTask>): SchedulingTask => ({
@@ -93,5 +94,65 @@ describe("SchedulingPreconditionService.check", () => {
     expect(w.length).toBe(1);
     expect(w[0].kind).toBe("CYCLIC_DEPENDENCY");
     expect(w[0].cycleTaskNos!.sort()).toEqual(["0001", "0002"]);
+  });
+});
+
+describe("SchedulingPreconditionService.checkProjectEnd", () => {
+  const scheduled = (over: Partial<ScheduledTask>): ScheduledTask => ({
+    taskId: 0,
+    taskNo: "0000",
+    taskName: "task",
+    status: "NOT_STARTED",
+    isSteady: false,
+    fixed: false,
+    skipped: false,
+    note: "NORMAL",
+    predecessors: [],
+    ...over,
+  });
+
+  const projectEnd = new Date(2026, 5, 16);
+
+  test("プロジェクト終了日以内なら警告なし", () => {
+    const w = SchedulingPreconditionService.checkProjectEnd(
+      [
+        scheduled({
+          taskId: 1,
+          taskNo: "0001",
+          scheduledStartDate: new Date(2026, 5, 15),
+          scheduledEndDate: new Date(2026, 5, 16),
+        }),
+      ],
+      projectEnd
+    );
+    expect(w).toEqual([]);
+  });
+
+  test("プロジェクト終了日を超えるタスクを検出", () => {
+    const w = SchedulingPreconditionService.checkProjectEnd(
+      [
+        scheduled({
+          taskId: 1,
+          taskNo: "0001",
+          scheduledStartDate: new Date(2026, 5, 15),
+          scheduledEndDate: new Date(2026, 5, 17),
+        }),
+      ],
+      projectEnd
+    );
+    expect(w).toEqual([
+      expect.objectContaining({ kind: "EXCEEDS_PROJECT_END", taskNo: "0001" }),
+    ]);
+  });
+
+  test("skipタスク・日付未確定タスクは対象外", () => {
+    const w = SchedulingPreconditionService.checkProjectEnd(
+      [
+        scheduled({ taskId: 1, taskNo: "0001", skipped: true }),
+        scheduled({ taskId: 2, taskNo: "0002", scheduledEndDate: undefined }),
+      ],
+      projectEnd
+    );
+    expect(w).toEqual([]);
   });
 });
