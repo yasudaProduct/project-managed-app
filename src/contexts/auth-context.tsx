@@ -44,13 +44,13 @@ export function AuthProvider({
         });
         if (response.ok) {
           const userData = await response.json();
-          if (userData.user) {
+          if (userData.data?.user) {
             setUser(
               new User(
-                userData.user.id,
-                userData.user.email,
-                userData.user.name,
-                userData.user.displayName
+                userData.data.user.id,
+                userData.data.user.email,
+                userData.data.user.name,
+                userData.data.user.displayName
               )
             );
           } else {

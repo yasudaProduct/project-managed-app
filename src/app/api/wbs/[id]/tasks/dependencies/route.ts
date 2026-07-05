@@ -1,7 +1,8 @@
 import { container } from "@/lib/inversify.config";
 import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
 import { SYMBOL } from "@/types/symbol";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { createApiResponse, createApiError } from "@/lib/api-response";
 
 export async function GET(
     request: NextRequest,
@@ -11,10 +12,7 @@ export async function GET(
         const resolvedParams = await params;
         const wbsId = parseInt(resolvedParams.id);
         if (isNaN(wbsId)) {
-            return NextResponse.json(
-                { error: "無効なWBSIDです" },
-                { status: 400 }
-            );
+            return createApiError("無効なWBSIDです", 400);
         }
 
         const taskDependencyService = container.get<TaskDependencyService>(
@@ -23,7 +21,7 @@ export async function GET(
 
         const dependencies = await taskDependencyService.getDependenciesByWbsId(wbsId);
 
-        return NextResponse.json({
+        return createApiResponse({
             dependencies: dependencies.map(dep => ({
                 id: dep.id,
                 predecessorTaskId: dep.predecessorTaskId,
@@ -35,10 +33,7 @@ export async function GET(
         });
     } catch (error) {
         console.error("Error fetching task dependencies:", error);
-        return NextResponse.json(
-            { error: "依存関係の取得に失敗しました" },
-            { status: 500 }
-        );
+        return createApiError("依存関係の取得に失敗しました", 500);
     }
 }
 
@@ -50,20 +45,14 @@ export async function POST(
         const resolvedParams = await params;
         const wbsId = parseInt(resolvedParams.id);
         if (isNaN(wbsId)) {
-            return NextResponse.json(
-                { error: "無効なWBSIDです" },
-                { status: 400 }
-            );
+            return createApiError("無効なWBSIDです", 400);
         }
 
         const body = await request.json();
         const { predecessorTaskId, successorTaskId } = body;
 
         if (!predecessorTaskId || !successorTaskId) {
-            return NextResponse.json(
-                { error: "先行タスクIDと後続タスクIDは必須です" },
-                { status: 400 }
-            );
+            return createApiError("先行タスクIDと後続タスクIDは必須です", 400);
         }
 
         const taskDependencyService = container.get<TaskDependencyService>(
@@ -76,7 +65,7 @@ export async function POST(
             wbsId,
         });
 
-        return NextResponse.json({
+        return createApiResponse({
             dependency: {
                 id: dependency.id,
                 predecessorTaskId: dependency.predecessorTaskId,
@@ -85,20 +74,14 @@ export async function POST(
                 createdAt: dependency.createdAt,
                 updatedAt: dependency.updatedAt,
             }
-        }, { status: 201 });
+        }, undefined, 201);
     } catch (error) {
         console.error("Error creating task dependency:", error);
-        
+
         if (error instanceof Error) {
-            return NextResponse.json(
-                { error: error.message },
-                { status: 400 }
-            );
+            return createApiError(error.message, 400);
         }
 
-        return NextResponse.json(
-            { error: "依存関係の作成に失敗しました" },
-            { status: 500 }
-        );
+        return createApiError("依存関係の作成に失敗しました", 500);
     }
 }
