@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify'
 import { SYMBOL } from '@/types/symbol'
-import { WorkRecord } from '@/domains/work-records/work-recoed'
+import { WorkRecord } from '@/domains/work-record/work-record'
 import {
   GeppoImportOptions,
   GeppoImportResult,
@@ -9,11 +9,12 @@ import {
   GeppoImportError,
   ProjectMappingValidation
 } from '@/domains/geppo-import/geppo-import-result'
-import type { IGeppoRepository } from '@/applications/geppo/repositories/igeppo.repository'
+import type { IGeppoRepository } from '@/applications/geppo/repositories/igeppo-repository'
 import type { IWorkRecordApplicationService } from '@/applications/work-record/work-record-application-service'
-import { ProjectMappingService } from '@/infrastructures/geppo-import/project-mapping.service'
-import { UserMappingService } from '@/infrastructures/geppo-import/user-mapping.service'
-import { TaskMappingService, TaskMappingEntry, buildTaskMapKey } from '@/infrastructures/geppo-import/task-mapping.service'
+import type { IProjectMappingService } from '@/applications/geppo-import/iproject-mapping-service'
+import type { IUserMappingService } from '@/applications/geppo-import/iuser-mapping-service'
+import type { ITaskMappingService, TaskMappingEntry } from '@/applications/geppo-import/itask-mapping-service'
+import { buildTaskMapKey } from '@/applications/geppo-import/itask-mapping-service'
 import { Geppo, GeppoSearchFilters } from '@/domains/geppo/types'
 
 export interface IGeppoImportApplicationService {
@@ -26,9 +27,9 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
   constructor(
     @inject(SYMBOL.IGeppoRepository) private geppoRepository: IGeppoRepository,
     @inject(SYMBOL.IWorkRecordApplicationService) private workRecordService: IWorkRecordApplicationService,
-    @inject(SYMBOL.ProjectMappingService) private projectMappingService: ProjectMappingService,
-    @inject(SYMBOL.UserMappingService) private userMappingService: UserMappingService,
-    @inject(SYMBOL.TaskMappingService) private taskMappingService: TaskMappingService
+    @inject(SYMBOL.ProjectMappingService) private projectMappingService: IProjectMappingService,
+    @inject(SYMBOL.UserMappingService) private userMappingService: IUserMappingService,
+    @inject(SYMBOL.TaskMappingService) private taskMappingService: ITaskMappingService
   ) { }
 
   async validateImportData(options: GeppoImportOptions): Promise<GeppoImportValidation> {
@@ -259,7 +260,6 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
     }
     // targetMonthが指定されていない場合は、全期間を対象とする（フィルタなし）
 
-    console.log(targetMonth)
 
     const result = await this.geppoRepository.searchWorkEntries(filters, { page: 1, limit: 10000 })
     return result.geppos

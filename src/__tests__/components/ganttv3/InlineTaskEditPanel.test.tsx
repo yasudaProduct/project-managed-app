@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { InlineTaskEditPanel } from "@/components/ganttv3/InlineTaskEditPanel";
+import { InlineTaskEditPanel } from "@/components/ganttv3/inline-task-edit-panel";
 import { makeTask } from "./_fixtures";
 
 const assignees = [

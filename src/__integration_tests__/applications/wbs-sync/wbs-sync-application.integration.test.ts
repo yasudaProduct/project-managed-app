@@ -1,10 +1,10 @@
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
-import { WbsSyncApplicationService } from '@/applications/wbs-sync/wbs-sync-application.service';
-import { ExcelWbs } from '@/domains/sync/ExcelWbs';
-import type { IExcelWbsRepository } from '@/applications/excel-sync/IExcelWbsRepository';
+import { WbsSyncApplicationService } from '@/applications/wbs-sync/wbs-sync-application-service';
+import { ExcelWbs } from '@/domains/sync/excel-wbs';
+import type { IExcelWbsRepository } from '@/applications/wbs-sync/iexcel-wbs-repository';
 import type { IWbsRepository } from '@/applications/wbs/iwbs-repository';
-import type { ISyncLogRepository } from '@/applications/excel-sync/ISyncLogRepository';
+import type { ISyncLogRepository } from '@/applications/wbs-sync/isync-log-repository';
 import type { IPhaseRepository } from '@/applications/task/iphase-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import type { ITaskRepository } from '@/applications/task/itask-repository';

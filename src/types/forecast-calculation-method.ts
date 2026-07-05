@@ -3,10 +3,18 @@
  * タスクの見通し工数をどのように計算するかを定義
  */
 
-import type { ForecastCalculationMethod as PrismaForecastCalculationMethod } from '@prisma/client';
+/**
+ * Prisma の ForecastCalculationMethod enum と値を一致させた独立 union 型。
+ * Prisma enum との相互変換は Infrastructure 層でのみ行う。
+ */
+export type ForecastCalculationMethod = 'CONSERVATIVE' | 'REALISTIC' | 'OPTIMISTIC' | 'PLANNED_OR_ACTUAL';
 
-// Prismaのenumをそのまま使用
-export type ForecastCalculationMethod = PrismaForecastCalculationMethod;
+export const FORECAST_CALCULATION_METHODS: ForecastCalculationMethod[] = [
+  'CONSERVATIVE',
+  'REALISTIC',
+  'OPTIMISTIC',
+  'PLANNED_OR_ACTUAL',
+];
 
 /**
  * 見通し工数算出方式のラベル

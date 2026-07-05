@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { WorkingHoursAllocationService } from '@/domains/calendar/working-hours-allocation.service';
+import { WorkingHoursAllocationService } from '@/domains/calendar/working-hours-allocation-service';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { TaskForAllocation as ExtendedTaskForAllocation } from '@/domains/wbs/monthly-task-allocation';

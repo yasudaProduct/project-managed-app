@@ -9,10 +9,10 @@ import {
   TaskProgressSnapshotRecord,
   EditableProgressSnapshot,
 } from '@/applications/evm/iwbs-evm-repository';
-import type { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-repository';
+import type { IWbsQueryRepository } from '@/applications/wbs/query/iwbs-query-repository';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { EvmCalculationMode } from '@/domains/evm/evm-metrics';
-import { TaskStatus } from '@prisma/client';
+import { TaskStatus } from '@/types/wbs';
 
 @injectable()
 export class WbsEvmRepository implements IWbsEvmRepository {

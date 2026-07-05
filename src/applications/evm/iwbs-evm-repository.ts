@@ -1,4 +1,7 @@
-import { ProgressMeasurementMethod, ForecastCalculationMethod, EvmForecastMethod, TaskStatus } from '@prisma/client';
+import type { ProgressMeasurementMethod } from '@/types/progress-measurement';
+import type { ForecastCalculationMethod } from '@/types/forecast-calculation-method';
+import type { EvmForecastMethod } from '@/types/evm-forecast-method';
+import type { TaskStatus } from '@/types/wbs';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { EvmCalculationMode } from '@/domains/evm/evm-metrics';
 

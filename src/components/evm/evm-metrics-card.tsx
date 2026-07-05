@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { EvmMetricsData } from "@/app/actions/evm/evm-actions";
+import type { EvmMetricsData } from "@/applications/evm/evm-dashboard-dto";
 import {
   TrendingUp,
   TrendingDown,

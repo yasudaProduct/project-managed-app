@@ -4,7 +4,7 @@ import "@testing-library/jest-dom";
 import {
   TaskTable,
   TaskTableColumn,
-} from "@/components/ganttv3/TaskTable";
+} from "@/components/ganttv3/task-table";
 import { makeTask } from "./_fixtures";
 
 const columns: TaskTableColumn[] = [

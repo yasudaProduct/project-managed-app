@@ -1,3 +1,5 @@
+import type { TaskStatus } from '@/types/wbs';
+
 export interface Task {
   id: string;
   name: string; // タスク名
@@ -26,7 +28,7 @@ export interface Task {
   taskNo?: string; // タスクNo（"P-0001"形式）
 }
 
-export type TaskStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD';
+export type { TaskStatus };
 
 export type GroupBy = 'none' | 'phase' | 'assignee' | 'status';
 

@@ -1,4 +1,6 @@
-export type DependencyType = "FS" | "SS" | "FF" | "SF";
+import type { DependencyType } from '@/types/task-dependency';
+
+export type { DependencyType };
 
 export class TaskDependency {
     public readonly id?: number;

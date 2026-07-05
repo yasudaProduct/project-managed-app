@@ -2,12 +2,15 @@
 
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
-import { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-repository';
-import {
-  ForecastCalculationService,
+import type { IForecastApplicationService } from '@/applications/forecast/forecast-application-service';
+import type {
   ForecastCalculationOptions,
-  ForecastCalculationResult
-} from '@/domains/forecast/forecast-calculation.service';
+  ForecastCalculationResult,
+} from '@/types/forecast-calculation';
+
+const forecastApplicationService = container.get<IForecastApplicationService>(
+  SYMBOL.IForecastApplicationService
+);
 
 /**
  * WBSタスクの見通し工数を計算
@@ -18,18 +21,8 @@ export async function calculateTasksForecast(
   options: ForecastCalculationOptions = { method: 'realistic' }
 ): Promise<ForecastCalculationResult[]> {
   try {
-    const wbsQueryRepository = container.get<IWbsQueryRepository>(SYMBOL.IWbsQueryRepository);
-
-    // WBSタスクデータを取得
-    const tasks = await wbsQueryRepository.getWbsTasks(wbsId);
-
-    // 見通し工数を計算
-    const forecastResults = ForecastCalculationService.calculateMultipleTasksForecast(
-      tasks,
-      options
-    );
-
-    return forecastResults;
+    void projectId;
+    return await forecastApplicationService.calculateTasksForecast(wbsId, options);
   } catch (error) {
     console.error('見通し工数計算エラー:', error);
     throw new Error(
@@ -50,20 +43,12 @@ export async function calculateSingleTaskForecast(
   options: ForecastCalculationOptions = { method: 'realistic' }
 ): Promise<ForecastCalculationResult | null> {
   try {
-    const wbsQueryRepository = container.get<IWbsQueryRepository>(SYMBOL.IWbsQueryRepository);
-
-    // WBSタスクデータを取得
-    const tasks = await wbsQueryRepository.getWbsTasks(wbsId);
-    const task = tasks.find(t => t.id === taskId);
-
-    if (!task) {
-      return null;
-    }
-
-    // 見通し工数を計算
-    const forecastResult = ForecastCalculationService.calculateTaskForecast(task, options);
-
-    return forecastResult;
+    void projectId;
+    return await forecastApplicationService.calculateSingleTaskForecast(
+      wbsId,
+      taskId,
+      options
+    );
   } catch (error) {
     console.error('単一タスク見通し工数計算エラー:', error);
     throw new Error(
@@ -78,9 +63,5 @@ export async function calculateSingleTaskForecast(
  * 見通し工数計算メソッドの一覧を取得
  */
 export async function getForecastMethods() {
-  return [
-    { value: 'conservative', label: '保守的', description: '実績ベースの推定（高めの見積もり）' },
-    { value: 'realistic', label: '現実的', description: '実績と予定の加重平均' },
-    { value: 'optimistic', label: '楽観的', description: '実績 + 残り予定' },
-  ] as const;
+  return forecastApplicationService.getForecastMethods();
 }

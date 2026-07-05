@@ -1,4 +1,4 @@
-import { AssigneeGanttService } from '@/applications/assignee-gantt/assignee-gantt.service';
+import { AssigneeGanttService } from '@/applications/assignee-gantt/assignee-gantt-service';
 import { ITaskRepository } from '@/applications/task/itask-repository';
 import { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
@@ -9,7 +9,7 @@ import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
 import { CompanyHoliday } from '@/domains/calendar/company-calendar';
 import { TaskNo } from '@/domains/task/value-object/task-id';
-import { TaskStatus } from '@/domains/task/value-object/project-status';
+import { TaskStatus } from '@/domains/task/value-object/task-status';
 import { Period } from '@/domains/task/period';
 import { PeriodType } from '@/domains/task/value-object/period-type';
 import { ManHour } from '@/domains/task/man-hour';
@@ -47,9 +47,12 @@ describe('AssigneeGanttService', () => {
     mockCompanyHolidayRepository = {
       findByDateRange: jest.fn(),
       findAll: jest.fn(),
+      findById: jest.fn(),
       findByDate: jest.fn(),
+      findByDateExcludingId: jest.fn(),
       save: jest.fn(),
       saveMany: jest.fn(),
+      update: jest.fn(),
       delete: jest.fn(),
     } as jest.Mocked<ICompanyHolidayRepository>;
 

@@ -4,9 +4,9 @@ import { GetWbsSummaryQuery } from "./get-wbs-summary-query";
 import { WbsSummaryResult, PhaseSummary, AssigneeSummary, TaskAllocationDetail, MonthlyAssigneeSummary } from "./wbs-summary-result";
 import { AllocationCalculationMode } from "./allocation-calculation-mode";
 import { SYMBOL } from "@/types/symbol";
-import { WbsTaskData, PhaseData, TaskActualMonthly } from "@/applications/wbs/query/wbs-query-repository";
-import type { IWbsQueryRepository } from "@/applications/wbs/query/wbs-query-repository";
-import { WorkingHoursAllocationService } from "@/domains/calendar/working-hours-allocation.service";
+import { WbsTaskData, PhaseData, TaskActualMonthly } from "@/applications/wbs/query/iwbs-query-repository";
+import type { IWbsQueryRepository } from "@/applications/wbs/query/iwbs-query-repository";
+import { WorkingHoursAllocationService } from "@/domains/calendar/working-hours-allocation-service";
 import { CompanyCalendar } from "@/domains/calendar/company-calendar";
 import type { ICompanyHolidayRepository } from "@/applications/calendar/icompany-holiday-repository";
 import type { IUserScheduleRepository } from "@/applications/calendar/iuser-schedule-repository";
@@ -15,11 +15,13 @@ import type { ISystemSettingsRepository } from "@/applications/system-settings/i
 import { AllocationQuantizer } from "@/domains/wbs/allocation-quantizer";
 import { MonthlySummaryAccumulator } from "./monthly-summary-accumulator";
 import { MonthlyPhaseSummaryAccumulator } from "./monthly-phase-summary-accumulator";
-import { ForecastCalculationService } from "@/domains/forecast/forecast-calculation.service";
+import { ForecastCalculationService } from "@/domains/forecast/forecast-calculation-service";
+import { toForecastTaskInput } from "@/applications/wbs/query/to-forecast-task-input";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import { toForecastMethodOption } from "@/types/forecast-calculation-method";
 import { distributeForecastAcrossMonths } from "./monthly-forecast-distributor";
-import prisma from "@/lib/prisma/prisma";
+import type { IProjectSettingsRepository } from "@/applications/project-settings/iproject-settings-repository";
+import { withProjectSettingsDefaults } from "@/types/project-settings";
 
 @injectable()
 export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, WbsSummaryResult> {
@@ -33,7 +35,9 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     @inject(SYMBOL.IWbsAssigneeRepository)
     private readonly wbsAssigneeRepository: IWbsAssigneeRepository,
     @inject(SYMBOL.ISystemSettingsRepository)
-    private readonly systemSettingsRepository: ISystemSettingsRepository
+    private readonly systemSettingsRepository: ISystemSettingsRepository,
+    @inject(SYMBOL.IProjectSettingsRepository)
+    private readonly projectSettingsRepository: IProjectSettingsRepository
   ) { }
 
   /**
@@ -64,10 +68,11 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     const assigneeTotal = this.calculateTotal(assigneeSummaries);
 
     // プロジェクト設定を取得（量子化フラグ、進捗測定方式、見通し算出方式）
-    const settings = await prisma.projectSettings.findUnique({ where: { projectId: query.projectId } }); // TODO: Repositroyから取得する
-    const roundToQuarter = settings?.roundToQuarter === true;
-    const progressMeasurementMethod = settings?.progressMeasurementMethod || 'SELF_REPORTED';
-    const forecastCalculationMethod = settings?.forecastCalculationMethod || 'REALISTIC';
+    const rawSettings = await this.projectSettingsRepository.findByProjectId(query.projectId);
+    const settings = withProjectSettingsDefaults(query.projectId, rawSettings);
+    const roundToQuarter = settings.roundToQuarter;
+    const progressMeasurementMethod = settings.progressMeasurementMethod;
+    const forecastCalculationMethod = settings.forecastCalculationMethod;
     const forecastMethodOption = toForecastMethodOption(forecastCalculationMethod);
 
     // 月別・担当者別集計
@@ -283,10 +288,13 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           quantizer
         );
 
-        const forecastResult = ForecastCalculationService.calculateTaskForecast(task, {
-          method: forecastMethodOption,
-          progressMeasurementMethod
-        });
+        const forecastResult = ForecastCalculationService.calculateTaskForecast(
+          toForecastTaskInput(task),
+          {
+            method: forecastMethodOption,
+            progressMeasurementMethod
+          }
+        );
         totalForecastHours = forecastResult.forecastHours;
       }
 
@@ -493,10 +501,13 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         const date = new Date(task.yoteiStart);
         plannedYearMonth = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
 
-        const forecastResult = ForecastCalculationService.calculateTaskForecast(task, {
-          method: forecastMethodOption,
-          progressMeasurementMethod
-        });
+        const forecastResult = ForecastCalculationService.calculateTaskForecast(
+          toForecastTaskInput(task),
+          {
+            method: forecastMethodOption,
+            progressMeasurementMethod
+          }
+        );
         totalForecastHours = forecastResult.forecastHours;
       }
 

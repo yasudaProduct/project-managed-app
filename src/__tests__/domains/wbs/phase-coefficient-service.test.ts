@@ -1,4 +1,4 @@
-import { PhaseCoefficientService, PhaseHoursInput } from "@/domains/wbs/phase-coefficient.service";
+import { PhaseCoefficientService, PhaseHoursInput } from "@/domains/wbs/phase-coefficient-service";
 
 describe('PhaseCoefficientService', () => {
   describe('calculate', () => {

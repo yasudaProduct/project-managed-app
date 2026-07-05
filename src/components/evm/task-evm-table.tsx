@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import type { TaskEvmDataSerialized } from '@/app/actions/evm/evm-actions';
+import type { TaskEvmDataSerialized } from '@/applications/evm/evm-dashboard-dto';
 
 type TaskEvmTableProps = {
   tasks: TaskEvmDataSerialized[];

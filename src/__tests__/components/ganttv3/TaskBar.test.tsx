@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { TaskBar } from "@/components/ganttv3/TaskBar";
+import { TaskBar } from "@/components/ganttv3/task-bar";
 import { makeTask, makeStyle } from "./_fixtures";
 
 function renderInSvg(ui: React.ReactElement) {

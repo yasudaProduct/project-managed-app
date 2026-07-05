@@ -77,6 +77,7 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
                 assigneeId: wbsAssignee.userId,
                 rate: wbsAssignee.getRate(),
                 costPerHour: wbsAssignee.getCostPerHour(),
+                seq: wbsAssignee.seq,
             },
         });
 
@@ -101,8 +102,10 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
         const updatedWbsAssignee = await prisma.wbsAssignee.update({
             where: { id: wbsAssignee.id },
             data: {
+                assigneeId: wbsAssignee.userId,
                 rate: wbsAssignee.getRate(),
                 costPerHour: wbsAssignee.getCostPerHour(),
+                seq: wbsAssignee.seq,
             },
         });
 

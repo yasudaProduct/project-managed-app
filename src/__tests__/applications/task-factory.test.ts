@@ -6,7 +6,7 @@ import { Phase } from "@/domains/phase/phase";
 import { PhaseCode } from "@/domains/phase/phase-code";
 import { Task } from "@/domains/task/task";
 import { TaskNo } from "@/domains/task/value-object/task-id";
-import { TaskStatus } from "@/domains/task/value-object/project-status";
+import { TaskStatus } from "@/domains/task/value-object/task-status";
 
 // モックの設定
 jest.mock("@/applications/task/itask-repository");
@@ -32,9 +32,15 @@ describe('TaskFactory', () => {
       findById: jest.fn(),
       findAll: jest.fn(),
       findByWbsId: jest.fn(),
+      findPhasesUsedInWbs: jest.fn(),
       findAllTemplates: jest.fn(),
+      findTemplateById: jest.fn(),
       createTemplate: jest.fn(),
       updateTemplate: jest.fn(),
+      deleteTemplate: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
 
     taskFactory = new TaskFactory(taskRepository, phaseRepository);

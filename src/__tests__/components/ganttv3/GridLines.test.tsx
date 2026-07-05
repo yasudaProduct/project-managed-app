@@ -1,6 +1,6 @@
 import React from "react";
 import { render } from "@testing-library/react";
-import { GridLines } from "@/components/ganttv3/GridLines";
+import { GridLines } from "@/components/ganttv3/grid-lines";
 
 function renderInSvg(ui: React.ReactElement) {
   return render(<svg>{ui}</svg>);

@@ -1,5 +1,5 @@
 import { EvmMetrics } from '@/domains/evm/evm-metrics';
-import { ProgressMeasurementMethod } from '@prisma/client';
+import { ProgressMeasurementMethod } from '@/types/progress-measurement';
 
 describe('EvmMetrics', () => {
   describe('基本的なEVM指標の計算', () => {

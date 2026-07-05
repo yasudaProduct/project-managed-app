@@ -6,6 +6,15 @@
 
 このプロジェクトは、Next.js 15、TypeScript、Prismaを使用して構築されたプロジェクト管理アプリケーションです。プロジェクト計画とタスク管理のためのWBS（Work Breakdown Structure）システムを特徴としています。アプリケーションは依存性注入（Inversify）を使用したオニオンアーキテクチャパターンを採用し、ドメイン駆動設計の原則に従っています。
 
+## 規約ドキュメント（必読）
+
+コードを書く前に `docs/` 配下の規約を確認すること。本ファイルと矛盾がある場合は docs 側を正とする。
+
+- `docs/03-coding-style.md`：命名規則・TypeScript規約・Server Actionの書き方
+- `docs/04-architecture-principles.md`：レイヤー間の依存ルール（依存関係マトリクス）・エラーハンドリング標準
+- `docs/08-implementation-guidelines.md`：ライブラリ・実装パターンの使い分け（データ取得、フォーム、日付、DI等）
+- `docs/09-refactoring-backlog.md`：既知の規約違反と修正対象の一覧（新規コードで同じパターンを踏襲しないこと）
+
 ## Development Philosophy
 
 ### Test-Driven Development (TDD)
@@ -149,12 +158,11 @@ npx prisma db seed
 - 表示整形：`Intl.DateTimeFormat` でユーザー TZ に整形
 - 日付のみ（終日）の演算や DST を跨ぐ演算は **タイムゾーン対応ライブラリ（date-fns-tz/Luxon/Day.js+TZ）** を使用
 
-### データベース/ORM（Prisma + MySQL）
+### データベース/ORM（Prisma + PostgreSQL主系 / MySQL参照用）
+- 主系DBは **PostgreSQL**（`prisma/schema.prisma`）。MySQLはGeppo参照用の読み取り専用データソース（`prisma/schema.mysql.prisma`）
 - DB/サーバーのタイムゾーンは **UTC に固定**
-- 列型選定：
-  - `DATETIME`（TZなし）を **UTC 値**として保存する方針が安全
-  - `TIMESTAMP` はサーバー/DB TZ 設定の影響を受けやすいので原則非推奨
-- Prisma モデルの日時フィールドは **UTC 前提**で入出力する
+- Prisma モデルの日時フィールド（`DateTime`）は **UTC 前提**で入出力する（PostgreSQLでは `timestamp(3)`（TZなし）として保存）
+- 参照用MySQL側の列型：`DATETIME`（TZなし）を **UTC 値**として読む。`TIMESTAMP` はサーバー/DB TZ 設定の影響を受けやすいので原則非推奨
 
 ### フロントエンドの取り扱い
 - フォーム入力（`datetime-local`）はタイムゾーンを含まないため、**送信時に UTC ISO へ正規化**

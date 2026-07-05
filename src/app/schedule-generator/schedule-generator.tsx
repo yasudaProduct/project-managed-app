@@ -6,7 +6,7 @@ import { parse } from "csv-parse/sync";
 import {
   generateSchedule,
   getOperationPossible,
-} from "@/app/schedule-generator/action";
+} from "@/app/schedule-generator/actions";
 import {
   Select,
   SelectContent,
@@ -18,7 +18,7 @@ import { ProjectStatus } from "@/types/wbs";
 import { getProjectStatusName } from "@/utils/utils";
 import { formatDate } from "@/utils/date-util";
 import { toast } from "@/hooks/use-toast";
-import { ScheduleGenerateResult } from "@/applications/schedule-generator/schedule-generate.service";
+import { ScheduleGenerateResult } from "@/applications/schedule-generator/schedule-generate-service";
 
 export function ScheduleGenerator({
   projects,

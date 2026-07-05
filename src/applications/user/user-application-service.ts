@@ -1,6 +1,6 @@
 import { User } from "@/types/user";
 import { inject, injectable } from "inversify";
-import type { IUserRepository } from "./iuser-repositroy";
+import type { IUserRepository } from "./iuser-repository";
 import { SYMBOL } from "@/types/symbol";
 
 export interface IUserApplicationService {

@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AuthHeader } from "./auth/auth-header";
-import { NotificationCenter } from "./notification/NotificationCenter";
-import { UnlinkedWorkRecordsBadge } from "./header/UnlinkedWorkRecordsBadge";
+import { NotificationCenter } from "./notification/notification-center";
+import { UnlinkedWorkRecordsBadge } from "./header/unlinked-work-records-badge";
 import { useAuth } from "@/hooks/use-auth";
 
 interface ProjectInfo {
@@ -68,13 +68,15 @@ export function Header() {
 
             // WBSが存在する場合はタスクサマリーも取得
             if (wbsData?.id) {
-              import("@/app/actions/get-wbs-summary").then(({ getWbsTasksSummary }) => {
-                getWbsTasksSummary(String(wbsData.id)).then((summaryData) => {
-                  if (summaryData) {
-                    setTasksSummary(summaryData);
-                  }
-                });
-              });
+              import("@/app/wbs/[id]/actions/wbs-summary-actions").then(
+                ({ getWbsTaskSummary }) => {
+                  getWbsTaskSummary(wbsData.id).then((summaryData) => {
+                    if (summaryData) {
+                      setTasksSummary(summaryData);
+                    }
+                  });
+                }
+              );
             }
           }
         })

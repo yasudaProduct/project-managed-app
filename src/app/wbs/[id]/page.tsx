@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { notFound } from "next/navigation";
 import { getWbsBuffers, getWbsById } from "@/app/wbs/[id]/actions/wbs-actions";
-import prisma from "@/lib/prisma/prisma";
+import { getProjectById } from "@/app/projects/actions";
 import { getWbsPhases } from "./actions/wbs-phase-actions";
 import { getWbsAssignees } from "../assignee/assignee-actions";
 import { getTaskAll } from "./actions/wbs-task-actions";
@@ -24,11 +24,7 @@ export default async function WbsManagementPage({
     notFound();
   }
 
-  const project = await prisma.projects.findUnique({
-    where: {
-      id: wbs.projectId,
-    },
-  });
+  const project = await getProjectById(wbs.projectId);
   if (!project) {
     notFound();
   }

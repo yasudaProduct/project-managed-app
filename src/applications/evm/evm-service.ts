@@ -1,10 +1,16 @@
 import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
 import type { IWbsEvmRepository, WbsEvmData, TaskProgressSnapshotRecord, EditableProgressSnapshot } from './iwbs-evm-repository';
-import { EvmMetrics, EvmCalculationMode } from '@/domains/evm/evm-metrics';
+import { EvmMetrics } from '@/domains/evm/evm-metrics';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
-import { ProgressMeasurementMethod, TaskStatus } from '@prisma/client';
+import type { ProgressMeasurementMethod } from '@/types/progress-measurement';
+import { TASK_STATUSES, type TaskStatus } from '@/types/wbs';
 import type { EvmForecastMethod } from '@/types/evm-forecast-method';
+import type { EvmCalculationMode } from '@/types/evm';
+import {
+  serializeEvmDashboardData,
+  type EvmDashboardData,
+} from '@/applications/evm/evm-dashboard-dto';
 
 /**
  * EVM表示に適した日付範囲
@@ -16,8 +22,54 @@ export type EvmDateRange = {
   recommendedEndDate: Date;
 };
 
+type EvmDashboardOptions = {
+  calculationMode?: EvmCalculationMode;
+  progressMethod?: ProgressMeasurementMethod;
+  forecastMethod?: EvmForecastMethod;
+  interval?: 'daily' | 'weekly' | 'monthly';
+  periodMode?: 'project' | 'recent3months' | 'recent1month' | 'custom';
+  showPrediction?: boolean;
+};
+
+export interface IEvmService {
+  getEditableProgressSnapshots(wbsId: number): Promise<EditableProgressSnapshot[]>;
+  updateProgressSnapshot(id: number, progressRate: number | null, status: TaskStatus): Promise<void>;
+  calculateCurrentEvmMetrics(
+    wbsId: number,
+    evaluationDate?: Date,
+    calculationMode?: EvmCalculationMode,
+    progressMethod?: ProgressMeasurementMethod,
+    forecastMethod?: EvmForecastMethod
+  ): Promise<EvmMetrics>;
+  getEvmTimeSeries(
+    wbsId: number,
+    startDate: Date,
+    endDate: Date,
+    interval?: 'daily' | 'weekly' | 'monthly',
+    calculationMode?: EvmCalculationMode,
+    progressMethod?: ProgressMeasurementMethod,
+    includePrediction?: boolean,
+    forecastMethod?: EvmForecastMethod
+  ): Promise<EvmMetrics[]>;
+  getEvmDashboardData(
+    wbsId: number,
+    options?: EvmDashboardOptions
+  ): Promise<{
+    currentMetrics: EvmMetrics;
+    timeSeries: EvmMetrics[];
+    taskDetails: TaskEvmData[];
+    dateRange: EvmDateRange;
+  }>;
+  getEvmDashboardDataSerialized(
+    wbsId: number,
+    options?: EvmDashboardOptions
+  ): Promise<EvmDashboardData>;
+  getTaskEvmDetails(wbsId: number): Promise<TaskEvmData[]>;
+  getHealthStatus(metrics: EvmMetrics): 'healthy' | 'warning' | 'critical';
+}
+
 @injectable()
-export class EvmService {
+export class EvmService implements IEvmService {
   constructor(
     @inject(SYMBOL.IWbsEvmRepository)
     private wbsEvmRepository: IWbsEvmRepository
@@ -50,7 +102,7 @@ export class EvmService {
         throw new Error('進捗率は0〜100の範囲で指定してください。');
       }
     }
-    if (!Object.values(TaskStatus).includes(status)) {
+    if (!TASK_STATUSES.includes(status)) {
       throw new Error(`不正なステータスです: ${status}`);
     }
     await this.wbsEvmRepository.updateProgressSnapshot(id, progressRate, status);
@@ -213,6 +265,21 @@ export class EvmService {
       taskDetails: wbsData.tasks,
       dateRange,
     };
+  }
+
+  async getEvmDashboardDataSerialized(
+    wbsId: number,
+    options: {
+      calculationMode?: EvmCalculationMode;
+      progressMethod?: ProgressMeasurementMethod;
+      forecastMethod?: EvmForecastMethod;
+      interval?: 'daily' | 'weekly' | 'monthly';
+      periodMode?: 'project' | 'recent3months' | 'recent1month' | 'custom';
+      showPrediction?: boolean;
+    } = {}
+  ): Promise<EvmDashboardData> {
+    const result = await this.getEvmDashboardData(wbsId, options);
+    return serializeEvmDashboardData(result);
   }
 
   /**

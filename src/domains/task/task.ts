@@ -1,13 +1,13 @@
 import { Assignee } from "./assignee";
 import { Phase } from "../phase/phase";
-import { TaskStatus } from "./value-object/project-status";
+import { TaskStatus } from "./value-object/task-status";
 import { Period } from "./period";
 import { TaskStatus as TaskStatusType } from "@/types/wbs";
 import { ManHour } from "./man-hour";
 import { ManHourType } from "./value-object/man-hour-type";
 import { PeriodType } from "./value-object/period-type";
 import { TaskNo } from "./value-object/task-id";
-import { WorkRecord } from "../work-records/work-recoed";
+import { WorkRecord } from "../work-record/work-record";
 
 export class Task {
     public id?: number;

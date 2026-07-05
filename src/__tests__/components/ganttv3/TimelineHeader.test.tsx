@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { TimelineHeader } from "@/components/ganttv3/TimelineHeader";
+import { TimelineHeader } from "@/components/ganttv3/timeline-header";
 
 describe("TimelineHeader", () => {
   it("day スケールで日付ラベルの子ヘッダを描画", () => {

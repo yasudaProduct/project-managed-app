@@ -1,6 +1,6 @@
 import { injectable } from "inversify";
 import prisma from "@/lib/prisma/prisma";
-import { IWbsQueryRepository, WbsTaskData, PhaseData, TaskActualMonthly } from "@/applications/wbs/query/wbs-query-repository";
+import { IWbsQueryRepository, WbsTaskData, PhaseData, TaskActualMonthly } from "@/applications/wbs/query/iwbs-query-repository";
 
 @injectable()
 export class WbsQueryRepository implements IWbsQueryRepository {
@@ -137,6 +137,12 @@ export class WbsQueryRepository implements IWbsQueryRepository {
       yearMonth: r.yearMonth,
       hoursWorked: Number(r.hoursWorked),
     }));
+  }
+
+  async getUnlinkedWorkRecordsCount(wbsId: number): Promise<number> {
+    return prisma.workRecord.count({
+      where: { taskId: null, wbsId },
+    });
   }
 
   async getPhases(wbsId: number): Promise<PhaseData[]> {

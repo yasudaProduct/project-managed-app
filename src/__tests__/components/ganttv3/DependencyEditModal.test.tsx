@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { DependencyEditModal } from "@/components/ganttv3/DependencyEditModal";
+import { DependencyEditModal } from "@/components/ganttv3/dependency-edit-modal";
 import { makeTask, makeDependency } from "./_fixtures";
 
 // Radix Dialog / cmdk が要求する jsdom 非対応API のポリフィル

@@ -1,10 +1,19 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
-import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
-import { DependencyType } from "@/domains/task-dependency/task-dependency";
+import type { ITaskDependencyService } from "@/applications/task-dependency/task-dependency-service";
+import type { DependencyType } from "@/types/task-dependency";
+import type { ActionResult } from "@/types/action-result";
+
+const createDependencySchema = z.object({
+    predecessorTaskId: z.number().int().positive(),
+    successorTaskId: z.number().int().positive(),
+    type: z.enum(["FS", "SS", "FF", "SF"]).optional(),
+    lag: z.number().optional(),
+});
 
 export async function createGanttDependency(
     wbsId: number,
@@ -14,35 +23,36 @@ export async function createGanttDependency(
         type?: DependencyType;
         lag?: number;
     }
-): Promise<{
-    success: boolean;
-    dependency?: {
-        id: number;
-        predecessorTaskId: number;
-        successorTaskId: number;
-        type: DependencyType;
-        lag: number;
-    };
-    error?: string;
-}> {
+): Promise<ActionResult<{
+    id: number;
+    predecessorTaskId: number;
+    successorTaskId: number;
+    type: DependencyType;
+    lag: number;
+}>> {
+    const parsed = createDependencySchema.safeParse(data);
+    if (!parsed.success) {
+        return { success: false, error: "入力値が不正です。" };
+    }
+
     try {
-        const service = container.get<TaskDependencyService>(
+        const service = container.get<ITaskDependencyService>(
             SYMBOL.ITaskDependencyService
         );
 
         const created = await service.createDependency({
-            predecessorTaskId: data.predecessorTaskId,
-            successorTaskId: data.successorTaskId,
+            predecessorTaskId: parsed.data.predecessorTaskId,
+            successorTaskId: parsed.data.successorTaskId,
             wbsId,
-            type: data.type,
-            lag: data.lag,
+            type: parsed.data.type,
+            lag: parsed.data.lag,
         });
 
         revalidatePath(`/wbs/${wbsId}/ganttv3`);
 
         return {
             success: true,
-            dependency: {
+            data: {
                 id: created.id!,
                 predecessorTaskId: created.predecessorTaskId,
                 successorTaskId: created.successorTaskId,
@@ -64,9 +74,14 @@ export async function createGanttDependency(
 export async function deleteGanttDependency(
     wbsId: number,
     dependencyId: number
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
+    const parsed = z.number().int().positive().safeParse(dependencyId);
+    if (!parsed.success) {
+        return { success: false, error: "入力値が不正です。" };
+    }
+
     try {
-        const service = container.get<TaskDependencyService>(
+        const service = container.get<ITaskDependencyService>(
             SYMBOL.ITaskDependencyService
         );
 
@@ -74,7 +89,7 @@ export async function deleteGanttDependency(
 
         revalidatePath(`/wbs/${wbsId}/ganttv3`);
 
-        return { success: true };
+        return { success: true, data: undefined };
     } catch (error) {
         return {
             success: false,

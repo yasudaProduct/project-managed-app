@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GanttChart } from "@/components/ganttv3/GanttChart";
+import { GanttChart } from "@/components/ganttv3/gantt-chart";
 import type {
   Task as GanttTask,
   GanttPhase,

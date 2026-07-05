@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createProject, deleteProject, updateProject } from "./actions";
-import { ProjectStatus } from "@prisma/client";
+import type { ProjectStatus } from "@/types/wbs";
 import { toast } from "@/hooks/use-toast";
 import { DatePicker } from "@/components/date-picker";
 import { formatDate } from "@/utils/date-util";
@@ -42,7 +42,9 @@ const formSchema = z.object({
   endDate: z.string().regex(/^\d{4}\/\d{2}\/\d{2}$/, {
     message: "終了予定日は YYYY/MM/DD 形式で入力してください。",
   }),
-  status: z.nativeEnum(ProjectStatus).optional(), // TODO: 更新の場合は必須にする
+  status: z
+    .enum(["INACTIVE", "ACTIVE", "DONE", "CANCELLED", "PENDING"])
+    .optional(), // TODO: 更新の場合は必須にする
 });
 
 type ProjectFormProps = {
@@ -73,7 +75,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
         description: undefined,
         startDate: "",
         endDate: "",
-        status: ProjectStatus.INACTIVE,
+        status: "INACTIVE",
       },
   });
 
@@ -81,43 +83,40 @@ export function ProjectForm({ project }: ProjectFormProps) {
     setIsSubmitting(true);
     try {
       if (project) {
-        const { project: updatedProject, error } = await updateProject(
-          project.id,
-          {
-            ...values,
-            status: values.status!,
-          }
-        );
-        if (!updatedProject) {
+        const result = await updateProject(project.id, {
+          ...values,
+          status: values.status!,
+        });
+        if (!result.success) {
           toast({
             title: "プロジェクトの更新に失敗しました",
-            description: error,
+            description: result.error,
           });
         } else {
           toast({
             title: "プロジェクトを更新しました",
-            description: `プロジェクトID: ${updatedProject.id}`,
+            description: `プロジェクトID: ${result.data.id}`,
           });
-          router.push(`/projects/${updatedProject.id}`);
+          router.push(`/projects/${result.data.id}`);
         }
       } else {
-        const { project: newProject, error } = await createProject({
+        const result = await createProject({
           name: values.name,
           description: values.description,
           startDate: new Date(values.startDate),
           endDate: new Date(values.endDate),
         });
-        if (!newProject) {
+        if (!result.success) {
           toast({
             title: "プロジェクトの作成に失敗しました",
-            description: error,
+            description: result.error,
           });
         } else {
           toast({
             title: "プロジェクトを作成しました",
-            description: `プロジェクトID: ${newProject.id}`,
+            description: `プロジェクトID: ${result.data.id}`,
           });
-          router.push(`/projects/${newProject.id}`);
+          router.push(`/projects/${result.data.id}`);
         }
       }
       router.refresh();

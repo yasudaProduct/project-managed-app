@@ -6,7 +6,7 @@ import type {
   ISchedulingApplicationService,
   ScheduleCalculationParams,
   ScheduleCalculationResult,
-} from "@/applications/task-scheduling/ischeduling-application.service";
+} from "@/applications/task-scheduling/ischeduling-application-service";
 
 /**
  * WBSのタスクスケジュールを計算する。

@@ -7,7 +7,6 @@ import { UserSession } from "@/domains/auth/user-session";
 @injectable()
 export class AuthRepository implements IAuthRepository {
     async findUserByEmail(email: string): Promise<User | null> {
-        console.log("findUserByEmail", email);
         const userData = await prisma.users.findUnique({
             where: { email }
         });

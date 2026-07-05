@@ -1,9 +1,12 @@
 import * as holiday_jp from '@holiday-jp/holiday_jp';
 
 export interface CompanyHoliday {
+  id?: number;
   date: Date;
   name: string;
   type: 'NATIONAL' | 'COMPANY' | 'SPECIAL';
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 /**

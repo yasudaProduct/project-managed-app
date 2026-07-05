@@ -1,29 +1,36 @@
 "use server";
 
+import { z } from "zod";
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
 import type { IAuthApplicationService, LoginRequest } from "@/applications/auth/auth-application-service";
 import { cookies } from "next/headers";
 
+const loginSchema = z.object({
+    email: z.string().email(),
+    password: z.string().optional(),
+});
+
 export async function loginAction(formData: FormData) {
     const authService = container.get<IAuthApplicationService>(SYMBOL.IAuthApplicationService);
 
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-
-    if (!email) {
-        return { success: false, error: "メールアドレスを入力してください" };
+    const parsed = loginSchema.safeParse({
+        email: formData.get("email"),
+        password: formData.get("password") || undefined,
+    });
+    if (!parsed.success) {
+        // セキュリティのためどのフィールドが不正かは明示しない
+        return { success: false, error: "メールアドレスまたはパスワードが正しくありません" };
     }
 
     const request: LoginRequest = {
-        email,
-        password: password || undefined
+        email: parsed.data.email,
+        password: parsed.data.password,
     };
 
     const result = await authService.login(request);
 
     if (result.success && result.session) {
-        console.log("loginAction result", result);
         // セッションをCookieに保存
         const cookieStore = await cookies();
         cookieStore.set("session_token", result.session.token, {

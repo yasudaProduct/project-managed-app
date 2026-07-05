@@ -2,7 +2,8 @@
  * TaskProgressCalculator ユニットテスト
  */
 
-import { TaskProgressCalculator, TaskStatus } from '@/domains/task/task-progress-calculator';
+import { TaskProgressCalculator } from '@/domains/task/task-progress-calculator';
+import type { TaskStatus } from '@/types/wbs';
 import { ProgressMeasurementMethod } from '@/types/progress-measurement';
 
 describe('TaskProgressCalculator', () => {

@@ -1,8 +1,11 @@
 import * as holiday_jp from '@holiday-jp/holiday_jp';
+import { format as formatWithDateFns } from 'date-fns';
 
 type SupportedDateFormat =
     'YYYY/MM/DD' |
+    'YYYY/MM/DD(曜)' |
     'YYYY年M月D日(曜)' |
+    'YYYY年MM月DD日' |
     'M/D(曜)' |
     'YYYY/MM/DD HH:mm:ss';
 
@@ -47,6 +50,22 @@ export function formatDate(date: Date, format: 'M/D(曜)'): string;
  */
 export function formatDate(date: Date, format: 'YYYY/MM/DD HH:mm:ss'): string;
 
+/**
+ * 日付を YYYY/MM/DD(曜) 形式の文字列に変換します
+ * @param date 変換対象の日付
+ * @param format YYYY/MM/DD(曜)
+ * @returns {string} 例: 2025/09/01(月)
+ */
+export function formatDate(date: Date, format: 'YYYY/MM/DD(曜)'): string;
+
+/**
+ * 日付を YYYY年MM月DD日 形式（0埋め）の文字列に変換します
+ * @param date 変換対象の日付
+ * @param format YYYY年MM月DD日
+ * @returns {string} 例: 2025年09月01日
+ */
+export function formatDate(date: Date, format: 'YYYY年MM月DD日'): string;
+
 // 実装
 export function formatDate(value: Date, format: SupportedDateFormat): string {
     if (!value) return ""
@@ -67,6 +86,17 @@ export function formatDate(value: Date, format: SupportedDateFormat): string {
                 weekday: 'short'
             });
 
+        case 'YYYY/MM/DD(曜)':
+            return date.toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                weekday: 'short'
+            });
+
+        case 'YYYY年MM月DD日':
+            return formatWithDateFns(date, 'yyyy年MM月dd日');
+
         case 'M/D(曜)':
             return date.toLocaleDateString('ja-JP', {
                 month: 'numeric',
@@ -75,7 +105,10 @@ export function formatDate(value: Date, format: SupportedDateFormat): string {
             });
 
         case 'YYYY/MM/DD HH:mm:ss':
-            return date.toLocaleDateString('ja-JP', {
+            // 日付＋時刻を出力するため toLocaleString を用いる。
+            // （toLocaleDateString は「日付」用メソッドで、明示 time オプションが将来
+            //   不要と誤解され削除されると時刻が欠落する罠になるため、意味の合う API に統一）
+            return date.toLocaleString('ja-JP', {
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',

@@ -21,24 +21,12 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
-type Job = {
-  id: string;
-  type: "GEPPO" | "WBS";
-  status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
-  totalRecords: number;
-  processedRecords: number;
-  successCount: number;
-  errorCount: number;
-  createdAt: string;
-  startedAt?: string;
-  completedAt?: string;
-  targetMonth?: string | null;
-  wbsId?: number | null;
-  wbsName?: string | null;
-  errorDetails?: Record<string, unknown>;
-  result?: Record<string, unknown>;
-};
+import {
+  getImportJobs,
+  executeImportJob,
+  cancelImportJob,
+} from "./actions";
+import type { ImportJobDto as Job } from "@/types/import-job";
 
 type GeppoImportError = {
   memberId: string;
@@ -74,19 +62,15 @@ export default function ImportJobsClient() {
     setLoading(true);
 
     try {
-      const res = await fetch(`/api/import-jobs`, { cache: "no-store" }); // TODO: server action対応
-      if (res.ok) {
-        const data = await res.json();
-        setJobs(data as Job[]);
-      } else {
-        console.log(res.statusText);
-        toast({
-          title: "エラー",
-          description: res.statusText,
-          variant: "destructive",
-        });
-        console.error(res.statusText);
-      }
+      const data = await getImportJobs();
+      setJobs(data);
+    } catch (error) {
+      toast({
+        title: "エラー",
+        description:
+          error instanceof Error ? error.message : "ジョブの取得に失敗しました",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -166,17 +150,28 @@ export default function ImportJobsClient() {
   };
 
   const startJob = async (id: string) => {
-    const res = await fetch(`/api/import-jobs/${id}/execute`, {
-      method: "POST",
-    });
-    if (res.ok) {
+    const result = await executeImportJob(id);
+    if (result.success) {
       setSubscribingJobId(id);
       fetchJobs();
+    } else {
+      toast({
+        title: "エラー",
+        description: result.error,
+        variant: "destructive",
+      });
     }
   };
 
   const cancelJob = async (id: string) => {
-    await fetch(`/api/import-jobs/${id}/cancel`, { method: "POST" });
+    const result = await cancelImportJob(id);
+    if (!result.success) {
+      toast({
+        title: "エラー",
+        description: result.error,
+        variant: "destructive",
+      });
+    }
     fetchJobs();
   };
 
@@ -280,7 +275,7 @@ export default function ImportJobsClient() {
           </div>
         )}
 
-        {job.errorDetails && !errors?.errors && (
+        {!!job.errorDetails && !errors?.errors && (
           <div>
             <h4 className="font-semibold text-sm mb-2">エラー詳細</h4>
             <pre className="text-xs bg-white p-2 rounded border overflow-x-auto">

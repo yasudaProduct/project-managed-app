@@ -1,7 +1,8 @@
-import { ProgressMeasurementMethod } from '@prisma/client';
+import type { ProgressMeasurementMethod } from '@/types/progress-measurement';
 import type { EvmForecastMethod } from '@/types/evm-forecast-method';
+import type { EvmCalculationMode } from '@/types/evm';
 
-export type EvmCalculationMode = 'hours' | 'cost';
+export type { EvmCalculationMode };
 
 type EvmMetricsArgs = {
   pv_base: number;

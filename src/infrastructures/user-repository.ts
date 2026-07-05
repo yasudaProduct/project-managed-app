@@ -1,4 +1,4 @@
-import { IUserRepository } from "@/applications/user/iuser-repositroy";
+import { IUserRepository } from "@/applications/user/iuser-repository";
 import { User } from "@/domains/user/user";
 import { injectable } from "inversify";
 import prisma from "@/lib/prisma/prisma";

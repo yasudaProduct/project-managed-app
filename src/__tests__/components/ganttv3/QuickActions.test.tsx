@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { QuickActions } from "@/components/ganttv3/QuickActions";
+import { QuickActions } from "@/components/ganttv3/quick-actions";
 import { makeStyle } from "./_fixtures";
 
 // Radix Select が要求する jsdom 非対応API のポリフィル

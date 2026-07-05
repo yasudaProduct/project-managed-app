@@ -1,13 +1,13 @@
-import { SchedulingApplicationService } from "@/applications/task-scheduling/scheduling-application.service";
+import { SchedulingApplicationService } from "@/applications/task-scheduling/scheduling-application-service";
 import { Task } from "@/domains/task/task";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
 import { TaskNo } from "@/domains/task/value-object/task-id";
-import { TaskStatus } from "@/domains/task/value-object/project-status";
+import { TaskStatus } from "@/domains/task/value-object/task-status";
 import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";
 import { ManHourType } from "@/domains/task/value-object/man-hour-type";
-import { WorkRecord } from "@/domains/work-records/work-recoed";
+import { WorkRecord } from "@/domains/work-record/work-record";
 import { createDefaultSystemSettings } from "@/__tests__/helpers/system-settings-helper";
 import { DEFAULT_SCHEDULING_SETTINGS } from "@/types/scheduling-settings";
 import type { TaskStatus as TaskStatusType } from "@/types/wbs";

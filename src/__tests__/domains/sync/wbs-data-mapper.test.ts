@@ -1,5 +1,5 @@
-import { WbsDataMapper } from '@/domains/sync/WbsDataMapper';
-import { ExcelWbs } from '@/domains/sync/ExcelWbs';
+import { WbsDataMapper } from '@/domains/sync/wbs-data-mapper';
+import { ExcelWbs } from '@/domains/sync/excel-wbs';
 
 function createExcelWbs(overrides?: Partial<ExcelWbs>): ExcelWbs {
   return {

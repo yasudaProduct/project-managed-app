@@ -1,17 +1,18 @@
 import { SYMBOL } from "@/types/symbol";
 import { inject, injectable } from "inversify";
 import type { ITaskRepository } from "./itask-repository";
-import { WbsTask } from "@/types/wbs";
+import { WbsTask, type TaskStatus } from "@/types/wbs";
 import { Task } from "@/domains/task/task";
-import { TaskStatus } from "@/domains/task/value-object/project-status";
+import { TaskStatus as TaskStatusVO } from "@/domains/task/value-object/task-status";
 import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";
 import { ManHourType } from "@/domains/task/value-object/man-hour-type";
 import type { ITaskFactory } from "@/domains/task/interfaces/task-factory";
+import { TaskProgressCalculator } from "@/domains/task/task-progress-calculator";
+import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 
 export interface CreateTaskCommand {
-    id: string;  // IDを追加
     name: string;
     wbsId: number;
     phaseId: number;
@@ -31,6 +32,11 @@ export interface ITaskApplicationService {
     getTaskStatusCount(wbsId: number): Promise<{ todo: number; inProgress: number; completed: number }>;
     getTaskProgressByPhase(wbsId: number): Promise<Array<{ phase: string; total: number; todo: number; inProgress: number; completed: number }>>;
     getKosuSummary(wbsId: number): Promise<Record<string, { kijun: number; yotei: number; jisseki: number }>>;
+    calculateEffectiveProgress(
+        status: TaskStatus,
+        progressRate: number | null,
+        progressMethod: ProgressMeasurementMethod
+    ): number;
 }
 
 @injectable()
@@ -43,7 +49,6 @@ export class TaskApplicationService implements ITaskApplicationService {
     }
 
     public async getTaskById(id: number): Promise<WbsTask | null> {
-        console.log("getTaskById")
         const task = await this.taskRepository.findById(id);
         if (!task) return null;
         return {
@@ -113,7 +118,6 @@ export class TaskApplicationService implements ITaskApplicationService {
     }
 
     public async createTask(command: CreateTaskCommand): Promise<{ success: boolean; id?: number; error?: string }> {
-        console.log("service: createTask")
         const { name, wbsId, phaseId, yoteiStartDate, yoteiEndDate, yoteiKosu, assigneeId, status } = command;
 
         const task = Task.create(
@@ -123,7 +127,7 @@ export class TaskApplicationService implements ITaskApplicationService {
                 name,
                 phaseId,
                 assigneeId,
-                status,
+                status: new TaskStatusVO({ status }),
                 periods: [
                     Period.create({
                         startDate: yoteiStartDate,
@@ -146,9 +150,6 @@ export class TaskApplicationService implements ITaskApplicationService {
     }
 
     public async updateTask(args: { wbsId: number, updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }> {
-        console.log("service: updateTask")
-        console.log("service: updateTask:yoteiStart", args.updateTask.yoteiStart);
-        console.log("service: updateTask:yoteiEnd", args.updateTask.yoteiEnd);
         const { wbsId, updateTask } = args;
 
         const task: Task | null = await this.taskRepository.findById(updateTask.id);
@@ -167,7 +168,7 @@ export class TaskApplicationService implements ITaskApplicationService {
             name: updateTask.name,
             assigneeId: updateTask.assigneeId,
             phaseId: updateTask.phaseId,
-            status: new TaskStatus({ status: updateTask.status }),
+            status: new TaskStatusVO({ status: updateTask.status }),
         });
         // if (updateTask.kijunStart) task.updateKijun(updateTask.kijunStart, updateTask.kijunEnd ?? updateTask.kijunStart, updateTask.kijunKosu ?? 0);
         if (updateTask.yoteiStart) task.updateYotei({ startDate: updateTask.yoteiStart, endDate: updateTask.yoteiEnd ?? updateTask.yoteiStart, kosu: updateTask.yoteiKosu ?? 0 });
@@ -291,5 +292,17 @@ export class TaskApplicationService implements ITaskApplicationService {
         });
 
         return phaseSummary;
+    }
+
+    public calculateEffectiveProgress(
+        status: TaskStatus,
+        progressRate: number | null,
+        progressMethod: ProgressMeasurementMethod
+    ): number {
+        return TaskProgressCalculator.calculateEffectiveProgress(
+            status,
+            progressRate,
+            progressMethod
+        );
     }
 }

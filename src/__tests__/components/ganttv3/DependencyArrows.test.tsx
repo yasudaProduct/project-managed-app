@@ -1,6 +1,6 @@
 import React from "react";
 import { render } from "@testing-library/react";
-import { DependencyArrows } from "@/components/ganttv3/DependencyArrows";
+import { DependencyArrows } from "@/components/ganttv3/dependency-arrows";
 import { makeTask, makeStyle, makeDependency } from "./_fixtures";
 
 const EPOCH = Date.UTC(2024, 0, 1);

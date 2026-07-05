@@ -1,8 +1,12 @@
-export enum NotificationChannel {
-  PUSH = 'PUSH',         // デスクトップ通知
-  IN_APP = 'IN_APP',     // アプリ内通知
-  EMAIL = 'EMAIL',       // メール通知
-}
+import type { NotificationChannel as NotificationChannelType } from '@/types/notification';
+
+export type NotificationChannel = NotificationChannelType;
+
+export const NotificationChannel = {
+  PUSH: 'PUSH',
+  IN_APP: 'IN_APP',
+  EMAIL: 'EMAIL',
+} as const satisfies Record<string, NotificationChannelType>;
 
 export class NotificationChannelVO {
   private constructor(private readonly value: NotificationChannel) {}

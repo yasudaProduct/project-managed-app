@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { TaskListRow } from "@/components/ganttv3/TaskListRow";
+import { TaskListRow } from "@/components/ganttv3/task-list-row";
 import { makeTask } from "./_fixtures";
 
 describe("TaskListRow", () => {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { container } from '@/lib/inversify.config';
-import type { INotificationService } from '@/applications/notification/INotificationService';
+import type { INotificationService } from '@/applications/notification/inotification-service';
 import { getCurrentUserIdOrThrow } from '@/lib/get-current-user-id';
 import { SYMBOL } from '@/types/symbol';
 

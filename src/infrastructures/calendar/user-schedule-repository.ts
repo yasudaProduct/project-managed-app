@@ -10,6 +10,14 @@ export class UserScheduleRepository implements IUserScheduleRepository {
     @inject(SYMBOL.PrismaClient) private readonly prisma: PrismaClient
   ) { }
 
+  async findAll(): Promise<UserSchedule[]> {
+    const schedules = await this.prisma.userSchedule.findMany({
+      orderBy: [{ date: 'asc' }, { userId: 'asc' }]
+    });
+
+    return schedules.map(this.toDomain);
+  }
+
   async findByUserId(userId: string): Promise<UserSchedule[]> {
     const schedules = await this.prisma.userSchedule.findMany({
       where: { userId },
@@ -113,6 +121,25 @@ export class UserScheduleRepository implements IUserScheduleRepository {
   async delete(id: number): Promise<void> {
     await this.prisma.userSchedule.delete({
       where: { id }
+    });
+  }
+
+  async replaceAll(schedules: Omit<UserSchedule, "id">[]): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userSchedule.deleteMany({});
+      if (schedules.length === 0) return;
+
+      await tx.userSchedule.createMany({
+        data: schedules.map((schedule) => ({
+          userId: schedule.userId,
+          date: schedule.date,
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+          title: schedule.title,
+          location: schedule.location,
+          description: schedule.description,
+        })),
+      });
     });
   }
 

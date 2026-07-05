@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { GanttV3Client } from "@/components/ganttv3/GanttV3Client";
+import { GanttV3Client } from "@/components/ganttv3/gantt-v3-client";
 
 /**
  * WBS ルートの ganttv3 ページ。

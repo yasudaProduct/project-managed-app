@@ -6,10 +6,10 @@ import { ManHour } from "@/domains/task/man-hour";
 import { ManHourType } from "@/domains/task/value-object/man-hour-type";
 import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
-import { TaskStatus } from "@/domains/task/value-object/project-status";
+import { TaskStatus } from "@/domains/task/value-object/task-status";
 import { Task } from "@/domains/task/task";
 import { TaskNo } from "@/domains/task/value-object/task-id";
-import { WorkRecord } from "@/domains/work-records/work-recoed";
+import { WorkRecord } from "@/domains/work-record/work-record";
 import prisma from "@/lib/prisma/prisma";
 import { $Enums } from "@prisma/client";
 import { injectable } from "inversify";
@@ -21,7 +21,6 @@ type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 export class TaskRepository implements ITaskRepository {
 
     async findById(id: number): Promise<Task | null> {
-        console.log("repository: findById")
         const taskDb = await prisma.wbsTask.findFirst({
             where: { id: Number(id), isDeleted: false },
             include: {
@@ -173,7 +172,6 @@ export class TaskRepository implements ITaskRepository {
     }
 
     async create(task: Task): Promise<Task> {
-        console.log("repository: create")
         const taskDb = await prisma.wbsTask.create({
             data: {
                 taskNo: task.taskNo?.getValue(),
@@ -208,7 +206,6 @@ export class TaskRepository implements ITaskRepository {
             }
         }
 
-        console.log("taskDb", taskDb)
         return Task.createFromDb({
             id: taskDb.id,
             taskNo: TaskNo.reconstruct(taskDb.taskNo),
@@ -221,7 +218,6 @@ export class TaskRepository implements ITaskRepository {
     }
 
     async update(wbsId: number, task: Task): Promise<Task> {
-        console.log("repository: update")
 
         // 本体更新＋期間・工数の入れ替えを単一トランザクションで実行する。
         // 期間・工数は upsert(id ?? 0) だと毎回createに落ちて重複蓄積するため、

@@ -3,10 +3,17 @@
  * EVMやスケジュール管理で使用する進捗率の計算方法を定義
  */
 
-import type { ProgressMeasurementMethod as PrismaProgressMeasurementMethod } from '@prisma/client';
+/**
+ * Prisma の ProgressMeasurementMethod enum と値を一致させた独立 union 型。
+ * Prisma enum との相互変換は Infrastructure 層でのみ行う。
+ */
+export type ProgressMeasurementMethod = 'ZERO_HUNDRED' | 'FIFTY_FIFTY' | 'SELF_REPORTED';
 
-// Prismaのenumをそのまま使用
-export type ProgressMeasurementMethod = PrismaProgressMeasurementMethod;
+export const PROGRESS_MEASUREMENT_METHODS: ProgressMeasurementMethod[] = [
+  'ZERO_HUNDRED',
+  'FIFTY_FIFTY',
+  'SELF_REPORTED',
+];
 
 /**
  * 進捗測定方式のラベル

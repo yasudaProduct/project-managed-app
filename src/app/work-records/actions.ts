@@ -1,37 +1,24 @@
 "use server"
 
 import { formatDate } from "@/utils/date-util";
-import prisma from "@/lib/prisma/prisma";
+import { container } from "@/lib/inversify.config";
+import { SYMBOL } from "@/types/symbol";
+import type { IWorkRecordApplicationService } from "@/applications/work-record/work-record-application-service";
 
-// TODO: サービス呼び出し
+function getWorkRecordApplicationService(): IWorkRecordApplicationService {
+    return container.get<IWorkRecordApplicationService>(SYMBOL.IWorkRecordApplicationService);
+}
+
 export async function getWorkRecords() {
-    const workRecords = await prisma.workRecord.findMany({
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                },
-            },
-            task: {
-                select: {
-                    id: true,
-                    name: true,
-                    taskNo: true,
-                },
-            },
-        },
-    });
+    const workRecords = await getWorkRecordApplicationService().getWorkRecords();
 
-    const formattedWorkRecords = workRecords.map((workRecord) => ({
+    return workRecords.map((workRecord) => ({
         id: workRecord.id,
         userId: workRecord.userId,
-        userName: workRecord.user.name,
-        taskNo: workRecord.task?.taskNo,
-        taskName: workRecord.task?.name,
+        userName: workRecord.userName,
+        taskNo: workRecord.taskNo ?? undefined,
+        taskName: workRecord.taskName ?? undefined,
         date: formatDate(workRecord.date, "YYYY/MM/DD"),
-        hours_worked: Number(workRecord.hours_worked),
+        hours_worked: workRecord.hoursWorked,
     }));
-
-    return formattedWorkRecords;
 }

@@ -1,6 +1,6 @@
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
-import { EvmService } from '@/applications/evm/evm-service';
+import type { IEvmService } from '@/applications/evm/evm-service';
 import { IWbsEvmRepository } from '@/applications/evm/iwbs-evm-repository';
 import { cleanupTestData, seedTestProject, testIds } from '../helpers';
 
@@ -19,11 +19,11 @@ const localIds = {
 };
 
 describe('EVM Integration Tests', () => {
-  let evmService: EvmService;
+  let evmService: IEvmService;
   let wbsEvmRepository: IWbsEvmRepository;
 
   beforeAll(async () => {
-    evmService = container.get<EvmService>(SYMBOL.EvmService);
+    evmService = container.get<IEvmService>(SYMBOL.IEvmService);
     wbsEvmRepository = container.get<IWbsEvmRepository>(SYMBOL.IWbsEvmRepository);
 
     // ユーザー作成

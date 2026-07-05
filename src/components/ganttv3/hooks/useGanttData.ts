@@ -4,7 +4,7 @@ import {
   getGanttTasks,
   getPhases,
   getAssigneeOptions,
-} from "@/app/wbs/[id]/ganttv3/action";
+} from "@/app/wbs/[id]/ganttv3/actions";
 import { calculateCriticalPath } from "../utils/criticalPath";
 
 export type AssigneeOption = { id: number; name: string };

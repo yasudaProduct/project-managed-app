@@ -1,4 +1,4 @@
-import { getProjectStatusName } from "@/utils/utils";
+import { getProjectStatusName, getTaskStatusName } from "@/utils/utils";
 import { isHoliday } from "@/utils/date-util";
 
 describe("utils", () => {
@@ -27,6 +27,29 @@ describe("utils", () => {
     it("未知のステータスは「不明」と表示されること", () => {
       // @ts-expect-error - テスト目的で無効な値を渡す
       expect(getProjectStatusName("UNKNOWN")).toBe("不明");
+    });
+  });
+
+  describe("getTaskStatusName", () => {
+    it("NOT_STARTEDは「未開始」と表示されること", () => {
+      expect(getTaskStatusName("NOT_STARTED")).toBe("未開始");
+    });
+
+    it("IN_PROGRESSは「進行中」と表示されること", () => {
+      expect(getTaskStatusName("IN_PROGRESS")).toBe("進行中");
+    });
+
+    it("COMPLETEDは「完了」と表示されること", () => {
+      expect(getTaskStatusName("COMPLETED")).toBe("完了");
+    });
+
+    it("ON_HOLDは「保留」と表示されること", () => {
+      expect(getTaskStatusName("ON_HOLD")).toBe("保留");
+    });
+
+    it("未知のステータスは「不明」と表示されること", () => {
+      // @ts-expect-error - テスト目的で無効な値を渡す
+      expect(getTaskStatusName("UNKNOWN")).toBe("不明");
     });
   });
 
