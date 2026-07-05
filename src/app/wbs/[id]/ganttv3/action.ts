@@ -7,7 +7,7 @@ import { container } from "@/lib/inversify.config";
 import { Milestone, WbsTask } from "@/types/wbs";
 import { IWbsApplicationService } from "@/applications/wbs/wbs-application-service";
 import { IMilestoneApplicationService } from "@/applications/milestone/milestone-application-service";
-import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import type { ITaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
 import { DependencyType } from "@/components/ganttv3/gantt";
 import { statusColor } from "@/components/ganttv3/utils/taskFormat";
 import { ProgressMeasurementMethod } from "@/types/progress-measurement";
@@ -94,7 +94,7 @@ export async function getGanttTasks(wbsId: number): Promise<GanttTask[]> {
 
     // 依存関係を読み込み、後続タスクの predecessors に詰める
     try {
-        const dependencyService = container.get<TaskDependencyService>(
+        const dependencyService = container.get<ITaskDependencyService>(
             SYMBOL.ITaskDependencyService
         );
         const dependencies = await dependencyService.getDependenciesByWbsId(wbsId);

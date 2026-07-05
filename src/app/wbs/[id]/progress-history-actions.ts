@@ -4,10 +4,10 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
-import { EvmService } from '@/applications/evm/evm-service';
+import type { IEvmService } from '@/applications/evm/evm-service';
 import type { TaskStatus } from '@/types/wbs';
 
-const evmService = container.get<EvmService>(SYMBOL.EvmService);
+const evmService = container.get<IEvmService>(SYMBOL.IEvmService);
 
 // 進捗スナップショット訂正画面用のシリアライズ済みレコード
 export type EditableProgressSnapshotData = {

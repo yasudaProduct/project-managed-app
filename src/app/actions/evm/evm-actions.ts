@@ -3,10 +3,10 @@
 import { z } from 'zod';
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
-import { EvmService } from '@/applications/evm/evm-service';
+import type { IEvmService } from '@/applications/evm/evm-service';
 import type { EvmDashboardData } from '@/applications/evm/evm-dashboard-dto';
 
-const evmService = container.get<EvmService>(SYMBOL.EvmService);
+const evmService = container.get<IEvmService>(SYMBOL.IEvmService);
 
 const GetEvmDashboardDataSchema = z.object({
   wbsId: z.number(),

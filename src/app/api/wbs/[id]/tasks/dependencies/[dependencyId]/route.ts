@@ -1,5 +1,5 @@
 import { container } from "@/lib/inversify.config";
-import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import type { ITaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
 import { SYMBOL } from "@/types/symbol";
 import { NextRequest } from "next/server";
 import { createApiResponse, createApiError } from "@/lib/api-response";
@@ -19,7 +19,7 @@ export async function DELETE(
             return createApiError("無効なWBSIDです", 400);
         }
 
-        const taskDependencyService = container.get<TaskDependencyService>(
+        const taskDependencyService = container.get<ITaskDependencyService>(
             SYMBOL.ITaskDependencyService
         );
 

@@ -70,7 +70,7 @@ import { TaskMappingService } from "@/infrastructures/geppo-import/task-mapping.
 // Task Dependency関連
 import type { ITaskDependencyRepository } from "@/applications/task-dependency/itask-dependency-repository";
 import { TaskDependencyRepository } from "@/infrastructures/task-dependency-repository";
-import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import { ITaskDependencyService, TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
 
 // WBS Sync関連
 import { WbsSyncApplicationService } from "@/applications/wbs-sync/wbs-sync-application.service";
@@ -122,7 +122,7 @@ import { MilestoneRepository } from '@/infrastructures/milestone/milestone.repos
 // EVM関連
 import { IWbsEvmRepository } from '@/applications/evm/iwbs-evm-repository';
 import { WbsEvmRepository } from '@/infrastructures/evm/wbs-evm-repository';
-import { EvmService } from '@/applications/evm/evm-service';
+import { IEvmService, EvmService } from '@/applications/evm/evm-service';
 
 // Import Job関連
 import type { IImportJobRepository } from '@/applications/import-job/iimport-job.repository';
@@ -164,10 +164,10 @@ container.bind<IGeppoApplicationService>(SYMBOL.IGeppoApplicationService).to(Gep
 container.bind<IWorkRecordApplicationService>(SYMBOL.IWorkRecordApplicationService).to(WorkRecordApplicationService).inSingletonScope();
 container.bind<IUserApplicationService>(SYMBOL.IUserApplicationService).to(UserApplicationService).inSingletonScope();
 container.bind<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationService).to(GeppoImportApplicationService).inSingletonScope();
-container.bind<TaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDependencyService).inSingletonScope();
+container.bind<ITaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDependencyService).inSingletonScope();
 container.bind<IMilestoneApplicationService>(SYMBOL.IMilestoneApplicationService).to(MilestoneApplicationService).inSingletonScope();
 container.bind<IScheduleApplicationService>(SYMBOL.IScheduleApplicationService).to(ScheduleApplicationService).inSingletonScope();
-container.bind<EvmService>(SYMBOL.EvmService).to(EvmService).inSingletonScope();
+container.bind<IEvmService>(SYMBOL.IEvmService).to(EvmService).inSingletonScope();
 container.bind<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService).to(ImportJobApplicationService).inSingletonScope();
 container.bind<INotificationService>(SYMBOL.INotificationService).to(NotificationService).inSingletonScope();
 container.bind<IPushNotificationService>(SYMBOL.IPushNotificationService).to(PushNotificationService).inSingletonScope();

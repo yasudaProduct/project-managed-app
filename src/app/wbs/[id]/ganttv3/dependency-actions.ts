@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
-import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import type { ITaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
 import type { DependencyType } from "@/types/task-dependency";
 import type { ActionResult } from "@/types/action-result";
 
@@ -36,7 +36,7 @@ export async function createGanttDependency(
     }
 
     try {
-        const service = container.get<TaskDependencyService>(
+        const service = container.get<ITaskDependencyService>(
             SYMBOL.ITaskDependencyService
         );
 
@@ -81,7 +81,7 @@ export async function deleteGanttDependency(
     }
 
     try {
-        const service = container.get<TaskDependencyService>(
+        const service = container.get<ITaskDependencyService>(
             SYMBOL.ITaskDependencyService
         );
 

@@ -3,7 +3,7 @@
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
 import { ITaskRepository } from "@/applications/task/itask-repository";
-import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import type { ITaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
 
 // TSVのヘッダー（出力列の順序）
 const HEADERS = [
@@ -46,7 +46,7 @@ function sanitize(value: string): string {
  */
 export async function getGanttTasksTsv(wbsId: number): Promise<string> {
   const taskRepository = container.get<ITaskRepository>(SYMBOL.ITaskRepository);
-  const dependencyService = container.get<TaskDependencyService>(
+  const dependencyService = container.get<ITaskDependencyService>(
     SYMBOL.ITaskDependencyService
   );
 

@@ -22,8 +22,54 @@ export type EvmDateRange = {
   recommendedEndDate: Date;
 };
 
+type EvmDashboardOptions = {
+  calculationMode?: EvmCalculationMode;
+  progressMethod?: ProgressMeasurementMethod;
+  forecastMethod?: EvmForecastMethod;
+  interval?: 'daily' | 'weekly' | 'monthly';
+  periodMode?: 'project' | 'recent3months' | 'recent1month' | 'custom';
+  showPrediction?: boolean;
+};
+
+export interface IEvmService {
+  getEditableProgressSnapshots(wbsId: number): Promise<EditableProgressSnapshot[]>;
+  updateProgressSnapshot(id: number, progressRate: number | null, status: TaskStatus): Promise<void>;
+  calculateCurrentEvmMetrics(
+    wbsId: number,
+    evaluationDate?: Date,
+    calculationMode?: EvmCalculationMode,
+    progressMethod?: ProgressMeasurementMethod,
+    forecastMethod?: EvmForecastMethod
+  ): Promise<EvmMetrics>;
+  getEvmTimeSeries(
+    wbsId: number,
+    startDate: Date,
+    endDate: Date,
+    interval?: 'daily' | 'weekly' | 'monthly',
+    calculationMode?: EvmCalculationMode,
+    progressMethod?: ProgressMeasurementMethod,
+    includePrediction?: boolean,
+    forecastMethod?: EvmForecastMethod
+  ): Promise<EvmMetrics[]>;
+  getEvmDashboardData(
+    wbsId: number,
+    options?: EvmDashboardOptions
+  ): Promise<{
+    currentMetrics: EvmMetrics;
+    timeSeries: EvmMetrics[];
+    taskDetails: TaskEvmData[];
+    dateRange: EvmDateRange;
+  }>;
+  getEvmDashboardDataSerialized(
+    wbsId: number,
+    options?: EvmDashboardOptions
+  ): Promise<EvmDashboardData>;
+  getTaskEvmDetails(wbsId: number): Promise<TaskEvmData[]>;
+  getHealthStatus(metrics: EvmMetrics): 'healthy' | 'warning' | 'critical';
+}
+
 @injectable()
-export class EvmService {
+export class EvmService implements IEvmService {
   constructor(
     @inject(SYMBOL.IWbsEvmRepository)
     private wbsEvmRepository: IWbsEvmRepository

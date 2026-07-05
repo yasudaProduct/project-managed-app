@@ -5,8 +5,28 @@ import type { ITaskDependencyRepository } from "./itask-dependency-repository";
 import type { ITaskRepository } from "@/applications/task/itask-repository";
 import { SYMBOL } from "@/types/symbol";
 
+export interface ITaskDependencyService {
+    createDependency(args: {
+        predecessorTaskId: number;
+        successorTaskId: number;
+        wbsId: number;
+        type?: DependencyType;
+        lag?: number;
+    }): Promise<TaskDependency>;
+    deleteDependency(id: number, wbsId?: number): Promise<void>;
+    getDependenciesByWbsId(wbsId: number): Promise<TaskDependency[]>;
+    getPredecessorsByTaskId(taskId: number): Promise<TaskDependency[]>;
+    getSuccessorsByTaskId(taskId: number): Promise<TaskDependency[]>;
+    dependencyExists(predecessorTaskId: number, successorTaskId: number): Promise<boolean>;
+    deleteDependenciesByTaskId(taskId: number): Promise<void>;
+    canStartTask(taskId: number): Promise<{
+        canStart: boolean;
+        blockingPredecessors: TaskDependency[];
+    }>;
+}
+
 @injectable()
-export class TaskDependencyService {
+export class TaskDependencyService implements ITaskDependencyService {
     constructor(
         @inject(SYMBOL.ITaskDependencyRepository)
         private readonly taskDependencyRepository: ITaskDependencyRepository,
