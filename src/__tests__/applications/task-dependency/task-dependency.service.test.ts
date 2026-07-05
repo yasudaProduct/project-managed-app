@@ -4,7 +4,7 @@ import type { ITaskRepository } from "@/applications/task/itask-repository";
 import { TaskDependency } from "@/domains/task-dependency/task-dependency";
 import { Task } from "@/domains/task/task";
 import { TaskNo } from "@/domains/task/value-object/task-id";
-import { TaskStatus } from "@/domains/task/value-object/project-status";
+import { TaskStatus } from "@/domains/task/value-object/task-status";
 
 // モックリポジトリ
 const mockTaskDependencyRepository: jest.Mocked<ITaskDependencyRepository> = {

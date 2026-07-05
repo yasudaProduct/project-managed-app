@@ -10,7 +10,7 @@ import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import type { ITaskRepository, TaskSyncState, TaskProgressSnapshotInput } from '@/applications/task/itask-repository';
 import { TaskNo } from '@/domains/task/value-object/task-id';
-import { TaskStatus } from '@/domains/task/value-object/project-status';
+import { TaskStatus } from '@/domains/task/value-object/task-status';
 import type { IWbsRepository } from '../wbs/iwbs-repository';
 import { IWbsSyncApplicationService } from './IWbsSyncApplicationService';
 

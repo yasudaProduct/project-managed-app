@@ -1,6 +1,6 @@
 import { Assignee } from "./assignee";
 import { Phase } from "../phase/phase";
-import { TaskStatus } from "./value-object/project-status";
+import { TaskStatus } from "./value-object/task-status";
 import { Period } from "./period";
 import { TaskStatus as TaskStatusType } from "@/types/wbs";
 import { ManHour } from "./man-hour";

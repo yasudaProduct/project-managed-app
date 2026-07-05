@@ -3,7 +3,7 @@ import { inject, injectable } from "inversify";
 import type { ITaskRepository } from "./itask-repository";
 import { WbsTask, type TaskStatus } from "@/types/wbs";
 import { Task } from "@/domains/task/task";
-import { TaskStatus as TaskStatusVO } from "@/domains/task/value-object/project-status";
+import { TaskStatus as TaskStatusVO } from "@/domains/task/value-object/task-status";
 import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";

@@ -3,7 +3,7 @@ import { ITaskRepository } from "@/applications/task/itask-repository";
 import { TaskApplicationService } from "@/applications/task/task-application-service";
 import { Task } from "@/domains/task/task";
 import { TaskNo } from "@/domains/task/value-object/task-id";
-import { TaskStatus } from "@/domains/task/value-object/project-status";
+import { TaskStatus } from "@/domains/task/value-object/task-status";
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";

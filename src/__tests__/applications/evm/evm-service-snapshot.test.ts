@@ -5,7 +5,7 @@ import {
   TaskProgressSnapshotRecord,
 } from '@/applications/evm/iwbs-evm-repository';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
-import { TaskStatus } from '@prisma/client';
+import { TaskStatus } from '@/types/wbs';
 
 /**
  * Stage2-2B: スナップショット履歴による時系列as-of再構築の検証。

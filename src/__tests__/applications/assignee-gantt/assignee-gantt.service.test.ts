@@ -9,7 +9,7 @@ import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
 import { CompanyHoliday } from '@/domains/calendar/company-calendar';
 import { TaskNo } from '@/domains/task/value-object/task-id';
-import { TaskStatus } from '@/domains/task/value-object/project-status';
+import { TaskStatus } from '@/domains/task/value-object/task-status';
 import { Period } from '@/domains/task/period';
 import { PeriodType } from '@/domains/task/value-object/period-type';
 import { ManHour } from '@/domains/task/man-hour';

@@ -1,5 +1,5 @@
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
-import { TaskStatus} from '@prisma/client';
+import { TaskStatus } from '@/types/wbs';
 
 describe('TaskEvmData', () => {
   const createTestTask = (overrides?: Partial<{

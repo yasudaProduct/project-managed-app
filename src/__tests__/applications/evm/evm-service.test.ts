@@ -3,7 +3,7 @@ import { IWbsEvmRepository } from '@/applications/evm/iwbs-evm-repository';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { EvmMetrics } from '@/domains/evm/evm-metrics';
 import { WbsEvmData } from '@/applications/evm/iwbs-evm-repository';
-import { TaskStatus } from '@prisma/client';
+import { TaskStatus } from '@/types/wbs';
 
 describe('EvmService', () => {
   let evmService: EvmService;
@@ -1466,42 +1466,42 @@ describe('EvmService', () => {
 
   describe('updateProgressSnapshot（進捗スナップショット訂正）', () => {
     it('正常系: progressRate/status をリポジトリへそのまま委譲する', async () => {
-      await evmService.updateProgressSnapshot(10, 50, TaskStatus.IN_PROGRESS);
+      await evmService.updateProgressSnapshot(10, 50, 'IN_PROGRESS');
 
       expect(mockRepository.updateProgressSnapshot).toHaveBeenCalledWith(
         10,
         50,
-        TaskStatus.IN_PROGRESS
+        'IN_PROGRESS'
       );
     });
 
     it('正常系: progressRate=null（クリア）を許容する', async () => {
-      await evmService.updateProgressSnapshot(10, null, TaskStatus.NOT_STARTED);
+      await evmService.updateProgressSnapshot(10, null, 'NOT_STARTED');
 
       expect(mockRepository.updateProgressSnapshot).toHaveBeenCalledWith(
         10,
         null,
-        TaskStatus.NOT_STARTED
+        'NOT_STARTED'
       );
     });
 
     it('境界値: 0 と 100 は許容する', async () => {
-      await evmService.updateProgressSnapshot(1, 0, TaskStatus.NOT_STARTED);
-      await evmService.updateProgressSnapshot(2, 100, TaskStatus.COMPLETED);
+      await evmService.updateProgressSnapshot(1, 0, 'NOT_STARTED');
+      await evmService.updateProgressSnapshot(2, 100, 'COMPLETED');
 
       expect(mockRepository.updateProgressSnapshot).toHaveBeenCalledTimes(2);
     });
 
     it('範囲外（負の値）は例外を投げ、リポジトリを呼ばない', async () => {
       await expect(
-        evmService.updateProgressSnapshot(10, -1, TaskStatus.IN_PROGRESS)
+        evmService.updateProgressSnapshot(10, -1, 'IN_PROGRESS')
       ).rejects.toThrow();
       expect(mockRepository.updateProgressSnapshot).not.toHaveBeenCalled();
     });
 
     it('範囲外（100超）は例外を投げ、リポジトリを呼ばない', async () => {
       await expect(
-        evmService.updateProgressSnapshot(10, 101, TaskStatus.IN_PROGRESS)
+        evmService.updateProgressSnapshot(10, 101, 'IN_PROGRESS')
       ).rejects.toThrow();
       expect(mockRepository.updateProgressSnapshot).not.toHaveBeenCalled();
     });

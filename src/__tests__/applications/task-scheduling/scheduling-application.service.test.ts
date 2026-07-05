@@ -2,7 +2,7 @@ import { SchedulingApplicationService } from "@/applications/task-scheduling/sch
 import { Task } from "@/domains/task/task";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
 import { TaskNo } from "@/domains/task/value-object/task-id";
-import { TaskStatus } from "@/domains/task/value-object/project-status";
+import { TaskStatus } from "@/domains/task/value-object/task-status";
 import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";
