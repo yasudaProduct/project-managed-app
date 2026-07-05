@@ -1,6 +1,6 @@
 import { SYMBOL } from "@/types/symbol";
 import { inject, injectable } from "inversify";
-import type { IMilestoneRepository } from "./milestone.interfase";
+import type { IMilestoneRepository } from "./imilestone-repository";
 
 export interface IMilestoneApplicationService {
     getMilestones(wbsId: number): Promise<{ id: number; name: string; date: Date; }[]>;

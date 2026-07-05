@@ -7,7 +7,7 @@ import { ManHour } from "./man-hour";
 import { ManHourType } from "./value-object/man-hour-type";
 import { PeriodType } from "./value-object/period-type";
 import { TaskNo } from "./value-object/task-id";
-import { WorkRecord } from "../work-records/work-recoed";
+import { WorkRecord } from "../work-records/work-record";
 
 export class Task {
     public id?: number;

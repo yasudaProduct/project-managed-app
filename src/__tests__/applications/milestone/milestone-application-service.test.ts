@@ -1,5 +1,5 @@
 import { MilestoneApplicationService } from "@/applications/milestone/milestone-application-service";
-import type { IMilestoneRepository } from "@/applications/milestone/milestone.interfase";
+import type { IMilestoneRepository } from "@/applications/milestone/imilestone-repository";
 import { Milestone } from "@/domains/milestone/milestone";
 
 describe("MilestoneApplicationService", () => {

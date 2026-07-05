@@ -9,7 +9,7 @@ import type {
 import { SYMBOL } from '@/types/symbol'
 import { Project } from '@/types/project'
 import { User } from '@/types/user'
-import type { IUserRepository } from '../user/iuser-repositroy'
+import type { IUserRepository } from '../user/iuser-repository'
 
 export interface IGeppoApplicationService {
   /**

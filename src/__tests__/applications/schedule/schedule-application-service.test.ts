@@ -1,6 +1,6 @@
 import { ScheduleApplicationService } from "@/applications/schedule/schedule-application-service";
 import type { IUserScheduleRepository } from "@/applications/calendar/iuser-schedule-repository";
-import type { IUserRepository } from "@/applications/user/iuser-repositroy";
+import type { IUserRepository } from "@/applications/user/iuser-repository";
 import { User } from "@/domains/user/user";
 
 describe("ScheduleApplicationService", () => {

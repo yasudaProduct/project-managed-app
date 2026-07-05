@@ -5,7 +5,7 @@ import { NotificationChannel } from '@/domains/notification/notification-channel
 import type { INotificationService } from './INotificationService';
 import type { ITaskRepository } from '@/applications/task/itask-repository';
 import type { IProjectRepository } from '@/applications/projects/iproject-repository';
-import type { IUserRepository } from '@/applications/user/iuser-repositroy';
+import type { IUserRepository } from '@/applications/user/iuser-repository';
 import { SYMBOL } from '@/types/symbol';
 
 export interface TaskDeadlineInfo {

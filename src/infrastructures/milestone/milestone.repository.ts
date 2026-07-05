@@ -1,4 +1,4 @@
-import { IMilestoneRepository } from "@/applications/milestone/milestone.interfase";
+import { IMilestoneRepository } from "@/applications/milestone/imilestone-repository";
 import { Milestone } from "@/domains/milestone/milestone";
 import { injectable } from "inversify";
 import prisma from "@/lib/prisma/prisma";

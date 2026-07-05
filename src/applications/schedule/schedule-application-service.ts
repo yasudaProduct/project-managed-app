@@ -1,7 +1,7 @@
 import { inject, injectable } from "inversify";
 import { SYMBOL } from "@/types/symbol";
 import type { IUserScheduleRepository } from "@/applications/calendar/iuser-schedule-repository";
-import type { IUserRepository } from "@/applications/user/iuser-repositroy";
+import type { IUserRepository } from "@/applications/user/iuser-repository";
 import type { UserSchedule } from "@/domains/calendar/assignee-working-calendar";
 import type { ScheduleEntry } from "@/types/schedule";
 import type { scheduleTsvData } from "@/types/csv";

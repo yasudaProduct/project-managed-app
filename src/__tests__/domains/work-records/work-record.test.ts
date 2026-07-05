@@ -1,4 +1,4 @@
-import { WorkRecord } from "@/domains/work-records/work-recoed";
+import { WorkRecord } from "@/domains/work-records/work-record";
 
 describe('WorkRecord', () => {
   const taskId = 1;

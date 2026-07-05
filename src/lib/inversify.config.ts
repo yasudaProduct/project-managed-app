@@ -47,7 +47,7 @@ import type { IGeppoApplicationService } from "@/applications/geppo/geppo-applic
 import { GeppoApplicationService } from "@/applications/geppo/geppo-application-service";
 import type { IGeppoRepository } from "@/applications/geppo/repositories/igeppo.repository";
 import { GeppoPrismaRepository } from "@/infrastructures/geppo/geppo-prisma.repository";
-import { IUserRepository } from "@/applications/user/iuser-repositroy";
+import { IUserRepository } from "@/applications/user/iuser-repository";
 import { UserRepository } from "@/infrastructures/user-repository";
 import { IUserApplicationService, UserApplicationService } from "@/applications/user/user-application-service";
 
@@ -115,7 +115,7 @@ import { ForecastApplicationService } from "@/applications/forecast/forecast-app
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma/prisma';
 import { IMilestoneApplicationService, MilestoneApplicationService } from '@/applications/milestone/milestone-application-service';
-import { IMilestoneRepository } from '@/applications/milestone/milestone.interfase';
+import { IMilestoneRepository } from '@/applications/milestone/imilestone-repository';
 import { IScheduleApplicationService, ScheduleApplicationService } from '@/applications/schedule/schedule-application-service';
 import { MilestoneRepository } from '@/infrastructures/milestone/milestone.repository';
 
