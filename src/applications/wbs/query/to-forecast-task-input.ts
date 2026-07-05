@@ -1,4 +1,4 @@
-import type { WbsTaskData } from "@/applications/wbs/query/wbs-query-repository";
+import type { WbsTaskData } from "@/applications/wbs/query/iwbs-query-repository";
 import type { ForecastTaskInput } from "@/domains/forecast/forecast-task-input";
 import type { TaskStatus } from "@/types/wbs";
 

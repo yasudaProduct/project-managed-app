@@ -1,4 +1,4 @@
-import { WorkRecordPrismaRepository } from "@/infrastructures/work-record/work-record-prisma.repository";
+import { WorkRecordRepository } from "@/infrastructures/work-record/work-record-repository";
 import prisma from "@/lib/prisma/prisma";
 
 jest.mock("@/lib/prisma/prisma", () => ({
@@ -15,12 +15,12 @@ jest.mock("@/lib/prisma/prisma", () => ({
   },
 }));
 
-describe("WorkRecordPrismaRepository", () => {
-  let repository: WorkRecordPrismaRepository;
+describe("WorkRecordRepository", () => {
+  let repository: WorkRecordRepository;
   const prismaMock = prisma as jest.Mocked<typeof prisma>;
 
   beforeEach(() => {
-    repository = new WorkRecordPrismaRepository();
+    repository = new WorkRecordRepository();
     jest.clearAllMocks();
   });
 

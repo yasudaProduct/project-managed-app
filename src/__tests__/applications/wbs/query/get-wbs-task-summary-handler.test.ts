@@ -1,6 +1,6 @@
 import { GetWbsTaskSummaryHandler } from "@/applications/wbs/query/get-wbs-task-summary-handler";
 import { GetWbsTaskSummaryQuery } from "@/applications/wbs/query/get-wbs-task-summary-query";
-import type { IWbsQueryRepository, WbsTaskData } from "@/applications/wbs/query/wbs-query-repository";
+import type { IWbsQueryRepository, WbsTaskData } from "@/applications/wbs/query/iwbs-query-repository";
 
 describe("GetWbsTaskSummaryHandler", () => {
   let handler: GetWbsTaskSummaryHandler;

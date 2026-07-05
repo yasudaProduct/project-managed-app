@@ -1,6 +1,6 @@
 import { injectable } from "inversify";
 import prisma from "@/lib/prisma/prisma";
-import { IWbsQueryRepository, WbsTaskData, PhaseData, TaskActualMonthly } from "@/applications/wbs/query/wbs-query-repository";
+import { IWbsQueryRepository, WbsTaskData, PhaseData, TaskActualMonthly } from "@/applications/wbs/query/iwbs-query-repository";
 
 @injectable()
 export class WbsQueryRepository implements IWbsQueryRepository {

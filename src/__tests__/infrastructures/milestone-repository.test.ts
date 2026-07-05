@@ -1,4 +1,4 @@
-import { MilestoneRepository } from "@/infrastructures/milestone/milestone.repository";
+import { MilestoneRepository } from "@/infrastructures/milestone/milestone-repository";
 import prisma from "@/lib/prisma/prisma";
 
 jest.mock('@/lib/prisma/prisma', () => ({

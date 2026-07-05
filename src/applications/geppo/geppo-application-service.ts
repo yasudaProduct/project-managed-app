@@ -1,5 +1,5 @@
 import { injectable, inject } from 'inversify'
-import type { IGeppoRepository } from './repositories/igeppo.repository'
+import type { IGeppoRepository } from './repositories/igeppo-repository'
 import type { IProjectRepository } from '../projects/iproject-repository'
 import type {
   GeppoSearchFilters,

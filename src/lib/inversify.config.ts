@@ -29,13 +29,13 @@ import { IQueryBus } from "@/applications/shared/cqrs/base-classes";
 import { QueryBus } from "@/applications/shared/query-bus/query-bus";
 import { GetDashboardStatsHandler } from "@/applications/dashboard/queries/get-dashboard-stats/get-dashboard-stats.handler";
 import { GetDashboardStatsQuery } from "@/applications/dashboard/queries/get-dashboard-stats/get-dashboard-stats.query";
-import type { IDashboardQueryRepository } from "@/applications/dashboard/repositories/idashboard-query.repository";
-import { DashboardQueryRepository } from "@/infrastructures/dashboard-query.repository";
+import type { IDashboardQueryRepository } from "@/applications/dashboard/repositories/idashboard-query-repository";
+import { DashboardQueryRepository } from "@/infrastructures/dashboard-query-repository";
 import { GetWbsSummaryHandler } from "@/applications/wbs/query/get-wbs-summary-handler";
 import { GetWbsSummaryQuery } from "@/applications/wbs/query/get-wbs-summary-query";
 import { GetWbsTaskSummaryHandler } from "@/applications/wbs/query/get-wbs-task-summary-handler";
 import { GetWbsTaskSummaryQuery } from "@/applications/wbs/query/get-wbs-task-summary-query";
-import type { IWbsQueryRepository } from "@/applications/wbs/query/wbs-query-repository";
+import type { IWbsQueryRepository } from "@/applications/wbs/query/iwbs-query-repository";
 import { WbsQueryRepository } from "@/infrastructures/wbs/wbs-query-repository";
 import type { IAuthApplicationService } from "@/applications/auth/auth-application-service";
 import { AuthApplicationService } from "@/applications/auth/auth-application-service";
@@ -45,15 +45,15 @@ import { AuthRepository } from "@/infrastructures/auth-repository";
 // Geppo関連
 import type { IGeppoApplicationService } from "@/applications/geppo/geppo-application-service";
 import { GeppoApplicationService } from "@/applications/geppo/geppo-application-service";
-import type { IGeppoRepository } from "@/applications/geppo/repositories/igeppo.repository";
-import { GeppoPrismaRepository } from "@/infrastructures/geppo/geppo-prisma.repository";
+import type { IGeppoRepository } from "@/applications/geppo/repositories/igeppo-repository";
+import { GeppoRepository } from "@/infrastructures/geppo/geppo-repository";
 import { IUserRepository } from "@/applications/user/iuser-repository";
 import { UserRepository } from "@/infrastructures/user-repository";
 import { IUserApplicationService, UserApplicationService } from "@/applications/user/user-application-service";
 
 // Work Records関連
-import type { IWorkRecordRepository } from "@/applications/work-record/repositories/iwork-record.repository";
-import { WorkRecordPrismaRepository } from "@/infrastructures/work-record/work-record-prisma.repository";
+import type { IWorkRecordRepository } from "@/applications/work-record/repositories/iwork-record-repository";
+import { WorkRecordRepository } from "@/infrastructures/work-record/work-record-repository";
 import type { IWorkRecordApplicationService } from "@/applications/work-record/work-record-application-service";
 import { WorkRecordApplicationService } from "@/applications/work-record/work-record-application-service";
 
@@ -117,7 +117,7 @@ import prisma from '@/lib/prisma/prisma';
 import { IMilestoneApplicationService, MilestoneApplicationService } from '@/applications/milestone/milestone-application-service';
 import { IMilestoneRepository } from '@/applications/milestone/imilestone-repository';
 import { IScheduleApplicationService, ScheduleApplicationService } from '@/applications/schedule/schedule-application-service';
-import { MilestoneRepository } from '@/infrastructures/milestone/milestone.repository';
+import { MilestoneRepository } from '@/infrastructures/milestone/milestone-repository';
 
 // EVM関連
 import { IWbsEvmRepository } from '@/applications/evm/iwbs-evm-repository';
@@ -125,8 +125,8 @@ import { WbsEvmRepository } from '@/infrastructures/evm/wbs-evm-repository';
 import { IEvmService, EvmService } from '@/applications/evm/evm-service';
 
 // Import Job関連
-import type { IImportJobRepository } from '@/applications/import-job/iimport-job.repository';
-import { ImportJobPrismaRepository } from '@/infrastructures/import-job/import-job-prisma.repository';
+import type { IImportJobRepository } from '@/applications/import-job/iimport-job-repository';
+import { ImportJobRepository } from '@/infrastructures/import-job/import-job-repository';
 import type { IImportJobApplicationService } from '@/applications/import-job/import-job-application-service';
 import { ImportJobApplicationService } from '@/applications/import-job/import-job-application-service';
 import { IWbsSyncApplicationService } from '@/applications/wbs-sync/iwbs-sync-application-service';
@@ -195,9 +195,9 @@ container.bind<IWbsBufferRepository>(SYMBOL.IWbsBufferRepository).to(WbsBufferRe
 container.bind<IDashboardQueryRepository>(SYMBOL.IDashboardQueryRepository).to(DashboardQueryRepository).inSingletonScope();
 container.bind<IAuthRepository>(SYMBOL.IAuthRepository).to(AuthRepository).inSingletonScope();
 container.bind<IWbsQueryRepository>(SYMBOL.IWbsQueryRepository).to(WbsQueryRepository).inSingletonScope();
-container.bind<IGeppoRepository>(SYMBOL.IGeppoRepository).to(GeppoPrismaRepository).inSingletonScope();
+container.bind<IGeppoRepository>(SYMBOL.IGeppoRepository).to(GeppoRepository).inSingletonScope();
 container.bind<IUserRepository>(SYMBOL.IUserRepository).to(UserRepository).inSingletonScope();
-container.bind<IWorkRecordRepository>(SYMBOL.IWorkRecordRepository).to(WorkRecordPrismaRepository).inSingletonScope();
+container.bind<IWorkRecordRepository>(SYMBOL.IWorkRecordRepository).to(WorkRecordRepository).inSingletonScope();
 container.bind<ITaskDependencyRepository>(SYMBOL.ITaskDependencyRepository).to(TaskDependencyRepository).inSingletonScope();
 container.bind<IExcelWbsRepository>(SYMBOL.IExcelWbsRepository).to(ExcelWbsRepository).inSingletonScope();
 container.bind<ISyncLogRepository>(SYMBOL.ISyncLogRepository).to(SyncLogRepository).inSingletonScope();
@@ -205,7 +205,7 @@ container.bind<IMilestoneRepository>(SYMBOL.IMilestoneRepository).to(MilestoneRe
 container.bind<ICompanyHolidayRepository>(SYMBOL.ICompanyHolidayRepository).to(CompanyHolidayRepository).inSingletonScope();
 container.bind<IUserScheduleRepository>(SYMBOL.IUserScheduleRepository).to(UserScheduleRepository).inSingletonScope();
 container.bind<IWbsEvmRepository>(SYMBOL.IWbsEvmRepository).to(WbsEvmRepository).inSingletonScope();
-container.bind<IImportJobRepository>(SYMBOL.IImportJobRepository).to(ImportJobPrismaRepository).inSingletonScope();
+container.bind<IImportJobRepository>(SYMBOL.IImportJobRepository).to(ImportJobRepository).inSingletonScope();
 container.bind<INotificationRepository>(SYMBOL.INotificationRepository).to(NotificationRepository).inSingletonScope();
 container.bind<ISystemSettingsRepository>(SYMBOL.ISystemSettingsRepository).to(SystemSettingsRepository).inSingletonScope();
 container.bind<ISchedulingSettingsRepository>(SYMBOL.ISchedulingSettingsRepository).to(SchedulingSettingsRepository).inSingletonScope();

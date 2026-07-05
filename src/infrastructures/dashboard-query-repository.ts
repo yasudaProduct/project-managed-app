@@ -6,7 +6,7 @@ import type {
     ActiveProjectInfo,
     DeadlineInfo,
     OverdueInfo
-} from "@/applications/dashboard/repositories/idashboard-query.repository";
+} from "@/applications/dashboard/repositories/idashboard-query-repository";
 import prisma from "@/lib/prisma/prisma";
 
 @injectable()

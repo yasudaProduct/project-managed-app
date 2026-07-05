@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify'
 import { SYMBOL } from '@/types/symbol'
-import type { IImportJobRepository } from './iimport-job.repository'
+import type { IImportJobRepository } from './iimport-job-repository'
 import { ImportJob, ImportJobOptions, ImportJobProgress } from '@/domains/import-job/import-job'
 import { ImportJobStatuses } from '@/domains/import-job/import-job-enums'
 import type { IGeppoImportApplicationService } from '@/applications/geppo-import/geppo-import-application-service'

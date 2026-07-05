@@ -2,7 +2,7 @@ import { injectable, inject } from 'inversify'
 import { SYMBOL } from '@/types/symbol'
 import { Geppo } from '@/domains/geppo/types'
 import { ProjectImportOption, ProjectMappingValidation } from '@/domains/geppo-import/geppo-import-result'
-import type { IGeppoRepository } from '@/applications/geppo/repositories/igeppo.repository'
+import type { IGeppoRepository } from '@/applications/geppo/repositories/igeppo-repository'
 import type { IWbsRepository } from '@/applications/wbs/iwbs-repository'
 import type { IProjectMappingService } from '@/applications/geppo-import/iproject-mapping-service'
 

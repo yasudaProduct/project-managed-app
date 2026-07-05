@@ -1,5 +1,5 @@
 import { WorkRecordApplicationService } from "@/applications/work-record/work-record-application-service";
-import type { IWorkRecordRepository } from "@/applications/work-record/repositories/iwork-record.repository";
+import type { IWorkRecordRepository } from "@/applications/work-record/repositories/iwork-record-repository";
 
 describe("WorkRecordApplicationService", () => {
   let workRecordRepository: jest.Mocked<IWorkRecordRepository>;

@@ -1,12 +1,12 @@
 import { injectable } from 'inversify'
 import type { ImportJob as PrismaImportJob, Prisma, $Enums } from '@prisma/client'
-import type { IImportJobRepository } from '@/applications/import-job/iimport-job.repository'
+import type { IImportJobRepository } from '@/applications/import-job/iimport-job-repository'
 import { ImportJob, ImportJobProgress } from '@/domains/import-job/import-job'
 import type { ImportJobType, ImportJobStatus } from '@/domains/import-job/import-job-enums'
 import prisma from "@/lib/prisma/prisma";
 
 @injectable()
-export class ImportJobPrismaRepository implements IImportJobRepository {
+export class ImportJobRepository implements IImportJobRepository {
 
   /**
    * インポートジョブを作成

@@ -1,7 +1,7 @@
 import { GetWbsSummaryHandler } from '@/applications/wbs/query/get-wbs-summary-handler';
 import { GetWbsSummaryQuery } from '@/applications/wbs/query/get-wbs-summary-query';
 import { AllocationCalculationMode } from '@/applications/wbs/query/allocation-calculation-mode';
-import type { IWbsQueryRepository, WbsTaskData, PhaseData } from '@/applications/wbs/query/wbs-query-repository';
+import type { IWbsQueryRepository, WbsTaskData, PhaseData } from '@/applications/wbs/query/iwbs-query-repository';
 import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';

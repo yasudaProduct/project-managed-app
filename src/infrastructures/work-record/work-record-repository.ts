@@ -1,11 +1,11 @@
 import prisma from "@/lib/prisma/prisma";
 import { injectable} from 'inversify'
 import { WorkRecord } from '@/domains/work-record/work-record'
-import { IWorkRecordRepository } from '@/applications/work-record/repositories/iwork-record.repository'
+import { IWorkRecordRepository } from '@/applications/work-record/repositories/iwork-record-repository'
 import type { WorkRecordDetail } from '@/types/work-record'
 
 @injectable()
-export class WorkRecordPrismaRepository implements IWorkRecordRepository {
+export class WorkRecordRepository implements IWorkRecordRepository {
   constructor(
     // @inject(SYMBOL.PrismaClient) private prisma: PrismaClient
   ) { }

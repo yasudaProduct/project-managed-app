@@ -9,7 +9,7 @@ import {
   GeppoImportError,
   ProjectMappingValidation
 } from '@/domains/geppo-import/geppo-import-result'
-import type { IGeppoRepository } from '@/applications/geppo/repositories/igeppo.repository'
+import type { IGeppoRepository } from '@/applications/geppo/repositories/igeppo-repository'
 import type { IWorkRecordApplicationService } from '@/applications/work-record/work-record-application-service'
 import type { IProjectMappingService } from '@/applications/geppo-import/iproject-mapping-service'
 import type { IUserMappingService } from '@/applications/geppo-import/iuser-mapping-service'

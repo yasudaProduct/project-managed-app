@@ -3,7 +3,7 @@ import type { IQueryHandler } from "@/applications/shared/cqrs/base-classes";
 import { GetWbsTaskSummaryQuery } from "./get-wbs-task-summary-query";
 import type { WbsTaskSummaryResult } from "./wbs-task-summary-result";
 import { SYMBOL } from "@/types/symbol";
-import type { IWbsQueryRepository, WbsTaskData } from "@/applications/wbs/query/wbs-query-repository";
+import type { IWbsQueryRepository, WbsTaskData } from "@/applications/wbs/query/iwbs-query-repository";
 
 @injectable()
 export class GetWbsTaskSummaryHandler

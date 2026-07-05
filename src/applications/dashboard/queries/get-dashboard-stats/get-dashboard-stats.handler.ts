@@ -2,7 +2,7 @@ import { inject, injectable } from "inversify";
 import type { IQueryHandler } from "@/applications/shared/cqrs/base-classes";
 import { GetDashboardStatsQuery } from "./get-dashboard-stats.query";
 import { GetDashboardStatsResult } from "./get-dashboard-stats.result";
-import type { IDashboardQueryRepository } from "../../repositories/idashboard-query.repository";
+import type { IDashboardQueryRepository } from "../../repositories/idashboard-query-repository";
 import { SYMBOL } from "@/types/symbol";
 
 @injectable()
