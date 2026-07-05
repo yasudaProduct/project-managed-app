@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +12,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +39,11 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Trash2, Calendar } from "lucide-react";
 
+const formSchema = z.object({
+  name: z.string().min(1, "マイルストーン名を入力してください"),
+  date: z.string().min(1, "日付を入力してください"),
+});
+
 interface MilestoneModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -44,59 +59,54 @@ export function MilestoneModal({
   wbsId,
   onMilestoneUpdate,
 }: MilestoneModalProps) {
-  const [name, setName] = useState("");
-  const [date, setDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const isEditing = Boolean(milestone?.id);
 
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { name: "", date: "" },
+  });
+
   // モーダルが開かれた時にフィールドを初期化
   useEffect(() => {
     if (isOpen) {
       if (milestone) {
-        setName(milestone.name);
-        // UTC日付をローカル日付に変換してフォーマット
-        const localDate = milestone.date;
-        if (localDate) {
-          setDate(localDate.toISOString().split("T")[0]);
-        }
+        form.reset({
+          name: milestone.name,
+          // UTC日付をローカル日付に変換してフォーマット
+          date: milestone.date
+            ? milestone.date.toISOString().split("T")[0]
+            : "",
+        });
       } else {
-        setName("");
-        setDate("");
+        form.reset({ name: "", date: "" });
       }
     }
-  }, [isOpen, milestone]);
+  }, [isOpen, milestone, form]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !date) return;
-
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
 
     try {
       const milestoneData = {
-        name: name.trim(),
-        date: new Date(date),
+        name: values.name.trim(),
+        date: new Date(values.date),
         wbsId,
       };
 
-      let result;
-      if (isEditing && milestone) {
-        result = await updateMilestone({
-          ...milestoneData,
-          id: milestone.id,
-        });
-      } else {
-        result = await createMilestone(milestoneData);
-      }
+      const result =
+        isEditing && milestone
+          ? await updateMilestone({ ...milestoneData, id: milestone.id })
+          : await createMilestone(milestoneData);
 
       if (result.success) {
         toast({
           title: isEditing
             ? "マイルストーンを更新しました"
             : "マイルストーンを作成しました",
-          description: `${name}を${isEditing ? "更新" : "作成"}しました`,
+          description: `${values.name}を${isEditing ? "更新" : "作成"}しました`,
         });
         onClose();
         if (onMilestoneUpdate) {
@@ -166,63 +176,68 @@ export function MilestoneModal({
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="milestone-name">マイルストーン名</Label>
-              <Input
-                id="milestone-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="マイルストーン名を入力"
-                required
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>マイルストーン名</FormLabel>
+                    <FormControl>
+                      <Input placeholder="マイルストーン名を入力" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="milestone-date">日付</Label>
-              <Input
-                id="milestone-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>日付</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div className="flex justify-between pt-4">
-              <div>
-                {isEditing && (
+              <div className="flex justify-between pt-4">
+                <div>
+                  {isEditing && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setShowDeleteDialog(true)}
+                      disabled={isLoading}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      削除
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setShowDeleteDialog(true)}
+                    variant="outline"
+                    onClick={onClose}
                     disabled={isLoading}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    削除
+                    キャンセル
                   </Button>
-                )}
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? "保存中..." : isEditing ? "更新" : "作成"}
+                  </Button>
+                </div>
               </div>
-
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                  disabled={isLoading}
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading || !name.trim() || !date}
-                >
-                  {isLoading ? "保存中..." : isEditing ? "更新" : "作成"}
-                </Button>
-              </div>
-            </div>
-          </form>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
