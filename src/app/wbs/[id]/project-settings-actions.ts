@@ -93,16 +93,32 @@ export async function getSchedulingSettings(
     return getProjectSettingsApplicationService().getSchedulingSettings(projectId);
 }
 
+const schedulingSettingsSchema = z.object({
+    steadyTaskKeywords: z.array(z.string()),
+    consumeSteadyTaskCapacity: z.boolean(),
+    steadyDailyHoursMode: z.enum(["PRORATE", "FIXED"]),
+    steadyFixedHoursByKeyword: z.record(z.number()).optional(),
+});
+
+const updateSchedulingSettingsSchema = z.object({
+    projectId: z.string().min(1),
+    schedulingSettings: schedulingSettingsSchema,
+});
+
 export async function updateSchedulingSettings(
     projectId: string,
     schedulingSettings: SchedulingSettings,
 ): Promise<ActionResult<void>> {
-    if (!projectId) {
-        return { success: false, error: "projectIdは必須です。" };
+    const parsed = updateSchedulingSettingsSchema.safeParse({
+        projectId,
+        schedulingSettings,
+    });
+    if (!parsed.success) {
+        return { success: false, error: "入力値が不正です。" };
     }
 
     return getProjectSettingsApplicationService().updateSchedulingSettings(
-        projectId,
-        schedulingSettings
+        parsed.data.projectId,
+        parsed.data.schedulingSettings
     );
 }

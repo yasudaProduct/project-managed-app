@@ -1,5 +1,6 @@
 "use server"
 
+import { z } from "zod";
 import { IProjectApplicationService } from "@/applications/projects/project-application-service";
 import { taskCsvData } from "@/types/csv";
 import { container } from "@/lib/inversify.config";
@@ -72,7 +73,23 @@ export type ScheduleItem = {
     totalHours: number;
 };
 
+const generateScheduleCsvSchema = z
+    .array(
+        z.object({
+            name: z.string().min(1),
+            userId: z.string(),
+            phaseId: z.string(),
+            kosu: z.number(),
+        })
+    )
+    .min(1, "取り込むデータがありません。");
+
 export async function generateSchedule(csv: taskCsvData[], wbsId: number): Promise<ScheduleGenerateResult> {
+    const parsedCsv = generateScheduleCsvSchema.safeParse(csv);
+    const parsedWbsId = z.number().int().positive().safeParse(wbsId);
+    if (!parsedCsv.success || !parsedWbsId.success) {
+        return { success: false, error: "入力値が不正です。" };
+    }
 
     // サービス呼び出し
     const { success, error, schedule } = await scheduleGenerateService.generateSchedule(csv, wbsId);
