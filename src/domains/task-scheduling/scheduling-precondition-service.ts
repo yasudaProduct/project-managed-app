@@ -10,6 +10,8 @@ export type PreconditionWarningKind =
   | "NO_YOTEI_KOSU"
   | "CYCLIC_DEPENDENCY"
   | "STEADY_NO_PERIOD"
+  | "ON_HOLD"
+  | "COMPLETED_NO_PERIOD"
   | "EXCEEDS_PROJECT_END";
 
 export interface PreconditionWarning {
@@ -64,6 +66,31 @@ export class SchedulingPreconditionService {
           taskNo: t.taskNo,
           taskName: t.taskName,
           detail: "定常タスクに期間(予定開始日・終了日)が設定されていません",
+        });
+      }
+
+      if (t.status === "ON_HOLD") {
+        warnings.push({
+          kind: "ON_HOLD",
+          taskId: t.taskId,
+          taskNo: t.taskNo,
+          taskName: t.taskName,
+          detail: "保留タスクも計算対象になります（未着手と同様の扱い）",
+        });
+      }
+
+      if (
+        t.status === "COMPLETED" &&
+        (!(t.jissekiStartDate ?? t.yoteiStartDate) ||
+          !(t.jissekiEndDate ?? t.yoteiEndDate))
+      ) {
+        warnings.push({
+          kind: "COMPLETED_NO_PERIOD",
+          taskId: t.taskId,
+          taskNo: t.taskNo,
+          taskName: t.taskName,
+          detail:
+            "完了タスクに日程(実績・予定)がなく、後続タスクの依存制約に反映されません",
         });
       }
     }

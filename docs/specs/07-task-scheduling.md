@@ -60,7 +60,7 @@
 | --- | --- |
 | ドメイン（エンジン） | `src/domains/task-scheduling/forward-scheduler.ts` ほか同ディレクトリ |
 | ドメイン（依存・カレンダー） | `src/domains/task-dependency/`, `src/domains/calendar/` |
-| アプリケーション | `src/applications/task-scheduling/scheduling-application.service.ts` |
+| アプリケーション | `src/applications/task-scheduling/scheduling-application-service.ts` |
 | Server Action | `src/components/task-scheduling/scheduling-actions.ts` |
 | UI | `src/components/task-scheduling/scheduling-workbench.tsx` ほか |
 | 設定 | `project_settings.schedulingSettings`（Json列） |
@@ -177,6 +177,8 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 | `NO_YOTEI_KOSU` | 非定常で予定工数が未設定/0以下 |
 | `STEADY_NO_PERIOD` | 定常タスクに予定期間（開始・終了日）が無い |
 | `CYCLIC_DEPENDENCY` | 依存に循環あり（`cycleTaskNos` に該当タスクNo） |
+| `ON_HOLD` | 保留タスクが含まれる（計算対象になる旨の注意喚起。挙動は未着手と同じ） |
+| `COMPLETED_NO_PERIOD` | 完了タスクに日程（実績・予定）が無い（日程未確定のまま固定され、後続の依存制約に反映されない） |
 | `EXCEEDS_PROJECT_END` | **計算後の検証**: 算出した終了日がプロジェクト終了日を超過（`checkProjectEnd`、日単位比較。完了固定タスクの実績超過も含む） |
 
 循環検出は `TaskDependencyValidator.detectCycles`（Tarjanの強連結成分、サイズ2以上を循環とみなす）。
@@ -211,6 +213,8 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 - **DB書き戻し非対応**: 計算結果はプレビュー＋TSVのみ。WBSへの反映は MySQL/Excel インポートが本流（[§1](#1-概要)）。
 - **FF/SF依存は近似**: 後続の所要日数を理想営業日数で近似するため、休暇・参画率が絡むと誤差が出る。終了日からの逆算（`consumeBackward`）による厳密化は局所改修で対応可能だが未実装。
 - **リソース制約の同時最適化は非対応**: 依存・担当者稼働・定常消費を満たす厳密な最適解（リソース制約付きスケジューリング）は対象外。前詰めヒューリスティックによる試算である。
+- **タイムゾーン前提**: エンジンの日付キーは**サーバーのローカル日付**（`toDateKey`）で、入力の日付（プロジェクト開始日・CUSTOM基準日等）は UTC 深夜の `Date` を想定する。サーバーTZが UTC（推奨）または UTC+側（JST等）なら日付は一致するが、UTC−側のTZでは1日ずれる。実行環境の TZ は UTC 固定を推奨（CLAUDE.md の日付ポリシー参照）。
+- **全日休暇キーワードのハードコード**: 個人予定を全日休暇とみなすタイトル（「休暇」「有給」等）は `AssigneeWorkingCalendar` にハードコードされており、設定化は未対応。
 
 ---
 
@@ -222,14 +226,14 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 - `steady-task-classifier.ts` — 定常タスク判定
 - `topological-sort.ts` — トポロジカルソート
 - `working-calendar-walker.ts` — 稼働日探索・工数消化
-- `scheduling-precondition.service.ts` — 前提条件チェック
+- `scheduling-precondition-service.ts` — 前提条件チェック
 - `src/domains/task-dependency/task-dependency-validator.ts` — `detectCycles`
 
 ### アプリケーション (`src/applications/task-scheduling/`)
-- `scheduling-application.service.ts` — オーケストレーション
+- `scheduling-application-service.ts` — オーケストレーション
 - `scheduling-task-mapper.ts` — `Task` → `SchedulingTask`
 - `baseline-resolver.ts` / `tsv-converter.ts`
-- `ischeduling-application.service.ts` / `ischeduling-settings-repository.ts`
+- `ischeduling-application-service.ts` / `ischeduling-settings-repository.ts`
 - `src/infrastructures/scheduling-settings-repository.ts`
 
 ### UI (`src/components/task-scheduling/`)
