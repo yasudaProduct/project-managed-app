@@ -1,11 +1,10 @@
 /**
  * 見通し工数計算サービス
- * 設計書：/docs/feature/forecast-hours-specification.md
+ * 設計書：docs/specs/03-forecast-calculation.md
  */
 
 import { ForecastTaskInput } from "@/domains/forecast/forecast-task-input";
 import { TaskProgressCalculator } from "@/domains/task/task-progress-calculator";
-import { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import type {
   ForecastCalculationOptions,
   ForecastCalculationResult,
