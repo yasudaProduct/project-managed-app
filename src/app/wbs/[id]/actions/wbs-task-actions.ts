@@ -1,11 +1,13 @@
 "use server"
 
+import { z } from "zod"
 import { revalidatePath } from "next/cache"
 import { KosuType, PeriodType, TaskStatus, WbsTask } from "@/types/wbs"
 import { SYMBOL } from "@/types/symbol";
 import { container } from "@/lib/inversify.config"
 import { ITaskApplicationService } from "@/applications/task/task-application-service";
 import { IPhaseApplicationService } from "@/applications/phase/phase-application-service";
+import type { ActionResult } from "@/types/action-result"
 
 const taskApplicationService = container.get<ITaskApplicationService>(SYMBOL.ITaskApplicationService);
 const phaseApplicationService = container.get<IPhaseApplicationService>(SYMBOL.IPhaseApplicationService);
@@ -16,6 +18,23 @@ export async function getTaskAll(wbsId: number): Promise<WbsTask[]> {
     return tasks;
 
 }
+
+const createTaskSchema = z.object({
+    name: z.string().min(1, "タスク名は必須です。"),
+    periods: z
+        .array(
+            z.object({
+                startDate: z.string(),
+                endDate: z.string(),
+                type: z.string(),
+                kosus: z.array(z.object({ kosu: z.number(), type: z.string() })),
+            })
+        )
+        .min(1, "期間は必須です。"),
+    status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "ON_HOLD"]),
+    assigneeId: z.string().optional(),
+    phaseId: z.number({ invalid_type_error: "工程は必須です。" }),
+});
 
 export async function createTask(
     wbsId: number,
@@ -34,35 +53,50 @@ export async function createTask(
         assigneeId?: string;
         phaseId?: number;
     },
-): Promise<{ success: boolean; task?: WbsTask; error?: string }> {
+): Promise<ActionResult<void>> {
+    const parsed = createTaskSchema.safeParse(taskData);
+    if (!parsed.success) {
+        return { success: false, error: "入力値が不正です。" };
+    }
+
     try {
-        const phase = await phaseApplicationService.getPhaseById(taskData.phaseId!);
+        const phase = await phaseApplicationService.getPhaseById(parsed.data.phaseId);
 
         if (!phase) {
             return { success: false, error: "工程が見つかりません" };
         }
 
         const result = await taskApplicationService.createTask({
-            name: taskData.name,
+            name: parsed.data.name,
             wbsId: wbsId,
-            assigneeId: taskData.assigneeId ? Number(taskData.assigneeId) : undefined,
-            phaseId: taskData.phaseId!,
-            status: taskData.status,
-            yoteiStartDate: new Date(taskData.periods![0].startDate!),
-            yoteiEndDate: new Date(taskData.periods![0].endDate!),
-            yoteiKosu: taskData.periods?.[0].kosus.find(k => k.type === 'NORMAL')?.kosu ?? 0,
+            assigneeId: parsed.data.assigneeId ? Number(parsed.data.assigneeId) : undefined,
+            phaseId: parsed.data.phaseId,
+            status: parsed.data.status,
+            yoteiStartDate: new Date(parsed.data.periods[0].startDate),
+            yoteiEndDate: new Date(parsed.data.periods[0].endDate),
+            yoteiKosu: parsed.data.periods[0].kosus.find(k => k.type === 'NORMAL')?.kosu ?? 0,
         });
 
-        if (result.success) {
-            const task = await taskApplicationService.getTaskById(result.id!);
-            return { success: true, task: task ?? undefined }
-        } else {
-            return { success: false, error: result.error }
+        if (!result.success) {
+            return { success: false, error: result.error ?? "タスクの作成に失敗しました" };
         }
+        return { success: true, data: undefined };
     } catch (error) {
         return { success: false, error: error instanceof Error ? error.message : "タスクの作成に失敗しました" };
     }
 }
+
+const updateTaskSchema = z.object({
+    id: z.number(),
+    taskNo: z.string().optional(),
+    name: z.string().min(1, "タスク名は必須です。"),
+    yoteiStart: z.coerce.date().optional(),
+    yoteiEnd: z.coerce.date().optional(),
+    yoteiKosu: z.number().optional(),
+    status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "ON_HOLD"]),
+    assigneeId: z.number().optional(),
+    phaseId: z.number().optional(),
+});
 
 export async function updateTask(
     wbsId: number,
@@ -77,34 +111,40 @@ export async function updateTask(
         assigneeId?: number;
         phaseId?: number;
     },
-): Promise<{ success: boolean; task?: WbsTask, error?: string }> {
+): Promise<ActionResult<void>> {
+    const parsed = updateTaskSchema.safeParse(taskData);
+    if (!parsed.success) {
+        return { success: false, error: "入力値が不正です。" };
+    }
 
     const result = await taskApplicationService.updateTask({
         wbsId: wbsId,
         updateTask: {
-            ...taskData,
-            yoteiStart: taskData.yoteiStart ? new Date(taskData.yoteiStart) : undefined,
-            yoteiEnd: taskData.yoteiEnd ? new Date(taskData.yoteiEnd) : undefined,
+            ...parsed.data,
         }
     });
 
-    if (result.success) {
-        const task = await taskApplicationService.getTaskById(taskData.id);
-        revalidatePath(`/wbs/${wbsId}/gannt`);
-        return { success: true, task: task ?? undefined }
-    } else {
-        return { success: false, error: result.error }
+    if (!result.success) {
+        return { success: false, error: result.error ?? "タスクの更新に失敗しました" };
     }
+
+    revalidatePath(`/wbs/${wbsId}/gannt`);
+    return { success: true, data: undefined };
 }
 
-export async function deleteTask(taskId: number): Promise<{ success: boolean, error?: string }> {
-    const result = await taskApplicationService.deleteTask(taskId);
-
-    if (result.success) {
-        revalidatePath('/wbs');
+export async function deleteTask(taskId: number): Promise<ActionResult<void>> {
+    const parsed = z.number().int().positive().safeParse(taskId);
+    if (!parsed.success) {
+        return { success: false, error: "入力値が不正です。" };
     }
 
-    return result;
+    const result = await taskApplicationService.deleteTask(taskId);
+    if (!result.success) {
+        return { success: false, error: result.error ?? "タスクの削除に失敗しました" };
+    }
+
+    revalidatePath('/wbs');
+    return { success: true, data: undefined };
 }
 
 export async function getTaskStatusCount(wbsId: number) {

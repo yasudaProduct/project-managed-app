@@ -1,9 +1,11 @@
 "use server"
 
+import { z } from "zod"
 import { container } from "@/lib/inversify.config"
 import { IWbsApplicationService } from "@/applications/wbs/wbs-application-service"
 import { SYMBOL } from "@/types/symbol"
 import { WbsAssignee } from '../assignee/columns'
+import type { ActionResult } from "@/types/action-result"
 
 const wbsApplicationService = container.get<IWbsApplicationService>(SYMBOL.IWbsApplicationService);
 
@@ -24,10 +26,15 @@ export async function getWbsAssignees(wbsId: number): Promise<WbsAssignee[]> {
         }));
 }
 
-export async function deleteWbsAssignee(id: number): Promise<{ success: boolean, error?: string }> {
+export async function deleteWbsAssignee(id: number): Promise<ActionResult<void>> {
+    const parsed = z.number().int().positive().safeParse(id);
+    if (!parsed.success) {
+        return { success: false, error: "入力値が不正です。" };
+    }
+
     const result = await wbsApplicationService.deleteAssignee(id);
     if (!result.success) {
-        return { success: false, error: result.error };
+        return { success: false, error: result.error ?? "担当者の削除に失敗しました。" };
     }
-    return { success: true };
+    return { success: true, data: undefined };
 }
