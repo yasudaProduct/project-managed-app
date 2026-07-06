@@ -5,7 +5,7 @@
 本仕様書は、WBSのタスクに対して**基準日を起点に予定開始日・終了日を前詰めで試算する**スケジューリング機能を定義する。タスクの依存関係・担当者の稼働カレンダー・定常タスク・タスクのステータスを考慮し、現実的なスケジュールをシミュレートする。
 
 > **重要な前提（スコープ）**
-> 計算結果は **画面プレビューと TSV 出力までに留め、WBSタスクのDB（予定日程）には一切書き戻さない**。WBSへの予定日程の反映は MySQL/Excel インポート（[06: MySQLインポート](./06-mysql-import.md)）が本流であり、本機能は見積もり・確認のための**読み取り専用の試算**である。
+> 計算結果は **画面プレビューと TSV 出力までに留め、WBSタスクのDB（予定日程）には一切書き戻さない**。WBSへの予定日程の反映は MySQL/Excel インポート（[06: MySQLインポート](./06-mysql-import.md)）が本流であり、本機能は見積もり・確認のための**読み取り専用の試算**である。計算結果の手動調整（[§9.4](#94-手動調整)）もクライアント状態と読み取り専用の再計算のみで実現し、この前提を維持する。
 
 > **関連仕様書との位置づけ**
 > - [01: 営業日按分ロジック](./01-working-hours-allocation.md): 担当者の「いつ・何時間稼働できるか」（`AssigneeWorkingCalendar` / `CompanyCalendar`）を計算する。本機能はこれを稼働量の基盤として利用する。
@@ -204,7 +204,17 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 計算結果を `WorkloadCalculationService.calculateDailyAllocationsFromSchedule` に流し、`AssigneeGanttChart` に `previewWorkloads` props として渡す（サーバー取得をスキップして計算結果を表示）。過負荷・参画率超過のセル色分けは既存ロジックを踏襲。
 
 ### 9.3 TSV
-`convertScheduledTasksToTsv`（`tsv-converter.ts`）が `タスクNo / タスク名 / 担当者 / フェーズ / ステータス / 定常 / 予定開始日 / 予定終了日 / 予定工数 / 備考` の列を生成。ダウンロードは Blob + BOM 付与方式。
+`convertScheduledTasksToTsv`（`tsv-converter.ts`）が `タスクNo / タスク名 / 担当者 / フェーズ / ステータス / 定常 / 予定開始日 / 予定終了日 / 予定工数 / 備考` の列を生成。ダウンロードは Blob + BOM 付与方式。手動調整中は調整後の内容が出力される。
+
+### 9.4 手動調整
+自動計算結果を起点にユーザーが画面上で最終調整するモード。ガントのツールバー「編集モード」で開始する。
+
+- **編集手段**: バーのドラッグ（移動／両端リサイズ）と、バークリックで開くインライン編集パネル（予定開始日・終了日・工数・担当者）。ganttv3 の既存編集UI（制御コンポーネント）をそのまま利用しており、**ganttv3 本体は無修正**。
+- **状態管理**: 編集は `onTaskUpdate` → `applyGanttTaskToScheduled`（`adapters/scheduled-to-gantt.ts`）で `ScheduledTaskDto[]` のクライアント状態へ非破壊反映されるだけで、**DBへの書き込みは一切発生しない**（一時テーブルも不使用）。
+- **負荷・TSV・警告への反映**: 編集からデバウンス（500ms）後に読み取り専用の Server Action `recalculateSchedulePreview` → `recalculatePreview`（アプリケーション層）を呼び、担当者別負荷（`AssigneeGanttChart` の `previewWorkloads`）・TSV・`EXCEEDS_PROJECT_END` 警告を再計算して差し替える。前詰め（`forwardSchedule`）は再実行しない。
+- **対象外**: 完了（実績固定, `fixed`）タスクは調整不可（トーストで通知）。
+- **巻き戻し**: ツールバーの「キャンセル」は調整モード進入時点へ復元。サマリー行の「調整を破棄して計算結果に戻す」で全調整を破棄。手動調整がある間は件数バッジ（DB未保存の明示）を表示する。
+- **再計算**: 「スケジュール計算」を再実行すると調整は破棄され、新しい計算結果に置き換わる。
 
 ---
 
