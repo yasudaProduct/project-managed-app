@@ -39,9 +39,33 @@ export interface ScheduleCalculationResult {
   tsv: string;
 }
 
+/** 手動調整後スケジュールの再計算入力 */
+export interface SchedulePreviewRecalcParams {
+  /** 元計算の基準日（ISO8601）。休日・個人予定の取得範囲の決定に使用 */
+  baselineDateIso: string;
+  /** 手動調整後のスケジュール結果（画面上の編集を反映したDTO） */
+  scheduledTasks: ScheduledTaskDto[];
+}
+
+/** 手動調整後スケジュールの再計算結果 */
+export interface SchedulePreviewRecalcResult {
+  workloads: WorkloadData[];
+  tsv: string;
+  /** 調整後の計算後検証警告（EXCEEDS_PROJECT_END のみ） */
+  warnings: PreconditionWarning[];
+}
+
 export interface ISchedulingApplicationService {
   calculateSchedule(
     wbsId: number,
     params: ScheduleCalculationParams
   ): Promise<ScheduleCalculationResult>;
+  /**
+   * 手動調整後のスケジュールから負荷・TSV・超過警告のみを再計算する。
+   * タスクの再スケジュール（前詰め）は行わず、DBへの書き込みも行わない。
+   */
+  recalculatePreview(
+    wbsId: number,
+    params: SchedulePreviewRecalcParams
+  ): Promise<SchedulePreviewRecalcResult>;
 }
