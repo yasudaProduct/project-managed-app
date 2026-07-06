@@ -1,4 +1,4 @@
-import { ITaskRepository, SyncDiffBuckets, TaskSyncState, SyncDiffContext } from "@/applications/task/itask-repository";
+import { ITaskRepository, SyncDiffBuckets, TaskSyncState, SyncDiffContext, ManualSnapshotContext } from "@/applications/task/itask-repository";
 import { Phase } from "@/domains/phase/phase";
 import { PhaseCode } from "@/domains/phase/phase-code";
 import { Assignee } from "@/domains/task/assignee";
@@ -217,7 +217,7 @@ export class TaskRepository implements ITaskRepository {
         });
     }
 
-    async update(wbsId: number, task: Task): Promise<Task> {
+    async update(wbsId: number, task: Task, snapshot?: ManualSnapshotContext): Promise<Task> {
 
         // 本体更新＋期間・工数の入れ替えを単一トランザクションで実行する。
         // 期間・工数は upsert(id ?? 0) だと毎回createに落ちて重複蓄積するため、
@@ -236,6 +236,11 @@ export class TaskRepository implements ITaskRepository {
 
             // 既存の期間・工数を全入れ替え（重複蓄積を防ぐ）
             await this.replacePeriodsTx(tx, task.id!, wbsId, task.periods ?? []);
+
+            // 手動編集の進捗スナップショットを同一トランザクションで追記
+            if (snapshot) {
+                await this.createManualSnapshotTx(tx, snapshot, task.id!);
+            }
 
             return updated;
         });
@@ -281,6 +286,47 @@ export class TaskRepository implements ITaskRepository {
                 });
             }
         }
+    }
+
+    /** 手動編集スナップショット（syncLogId=null）を1件追記する */
+    private async createManualSnapshotTx(
+        tx: TxClient,
+        snapshot: ManualSnapshotContext,
+        taskId: number
+    ): Promise<void> {
+        const s = snapshot.input;
+        await tx.taskProgressSnapshot.create({
+            data: {
+                taskId: s.taskId ?? taskId,
+                wbsId: snapshot.wbsId,
+                taskNo: s.taskNo,
+                snapshotAt: snapshot.snapshotAt,
+                progressRate: s.progressRate,
+                status: s.status as $Enums.TaskStatus,
+                plannedManHours: s.plannedManHours,
+                baseManHours: s.baseManHours,
+                costPerHour: s.costPerHour,
+                plannedStart: s.plannedStart,
+                plannedEnd: s.plannedEnd,
+                baseStart: s.baseStart,
+                baseEnd: s.baseEnd,
+                actualStart: s.actualStart,
+                actualEnd: s.actualEnd,
+                isRemoved: s.isRemoved,
+                syncLogId: null,
+            },
+        });
+    }
+
+    async findLatestSnapshotActuals(
+        taskId: number
+    ): Promise<{ actualStart: Date | null; actualEnd: Date | null } | null> {
+        const row = await prisma.taskProgressSnapshot.findFirst({
+            where: { taskId },
+            orderBy: { snapshotAt: 'desc' },
+            select: { actualStart: true, actualEnd: true },
+        });
+        return row ?? null;
     }
 
     async findSyncStateByWbsId(wbsId: number): Promise<TaskSyncState[]> {
@@ -384,7 +430,11 @@ export class TaskRepository implements ITaskRepository {
             }
 
             return createdSyncLogId;
-        });
+        },
+            // 差分適用はタスク件数分の update/期間入れ替え＋スナップショット追記を行うため、
+            // 既定5秒では大規模WBSで確実に P2028 になる（replaceAllTasks と同水準に揃える）
+            { timeout: 30000, maxWait: 30000 }
+        );
 
         return { syncLogId };
     }
@@ -427,9 +477,19 @@ export class TaskRepository implements ITaskRepository {
         );
     }
 
-    async delete(id: number): Promise<void> {
-        await prisma.wbsTask.delete({
-            where: { id },
+    async delete(id: number, tombstone?: ManualSnapshotContext): Promise<void> {
+        if (!tombstone) {
+            await prisma.wbsTask.delete({
+                where: { id },
+            });
+            return;
+        }
+
+        // tombstoneスナップショットの追記と削除を原子的に行う
+        // （スナップショットは WbsTask への FK を持たないため削除後も残り、EVMのas-of読み出しで寄与0となる）
+        await prisma.$transaction(async (tx) => {
+            await this.createManualSnapshotTx(tx, tombstone, id);
+            await tx.wbsTask.delete({ where: { id } });
         });
     }
 

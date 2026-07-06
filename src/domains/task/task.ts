@@ -109,6 +109,13 @@ export class Task {
         this.phaseId = args.phaseId;
     }
 
+    public updateProgressRate(progressRate: number) {
+        if (!Number.isFinite(progressRate) || progressRate < 0 || progressRate > 100) {
+            throw new Error("進捗率は0〜100の範囲で指定してください");
+        }
+        this.progressRate = progressRate;
+    }
+
     public updateYotei(args: { startDate: Date; endDate: Date; kosu: number }) {
 
         // 自身の期間モデルを取得
