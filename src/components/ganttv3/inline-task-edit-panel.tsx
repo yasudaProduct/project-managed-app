@@ -95,6 +95,29 @@ export const InlineTaskEditPanel = ({
 
       {!task.isMilestone && (
         <label className="flex flex-col text-[11px] text-muted-foreground">
+          進捗率(%)
+          <input
+            type="number"
+            min={0}
+            max={100}
+            step={1}
+            className="h-8 w-20 rounded border bg-background px-2 text-sm text-foreground"
+            value={task.progressRate ?? ""}
+            onChange={(e) => {
+              // 空欄は「未変更」扱い（undefined）。入力値は0-100へクランプする
+              const v = e.target.valueAsNumber;
+              onChange({
+                progressRate: Number.isFinite(v)
+                  ? Math.max(0, Math.min(100, v))
+                  : undefined,
+              });
+            }}
+          />
+        </label>
+      )}
+
+      {!task.isMilestone && (
+        <label className="flex flex-col text-[11px] text-muted-foreground">
           担当者
           <select
             className="h-8 w-36 rounded border bg-background px-2 text-sm text-foreground"

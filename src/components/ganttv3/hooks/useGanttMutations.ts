@@ -77,6 +77,7 @@ export function useGanttMutations({
               status: updatedTask.status ?? "NOT_STARTED",
               assigneeId: updatedTask.assigneeId,
               phaseId: updatedTask.phaseId,
+              progressRate: updatedTask.progressRate,
             });
 
         if (!result.success) {

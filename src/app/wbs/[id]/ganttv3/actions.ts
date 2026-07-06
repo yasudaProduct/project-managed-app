@@ -232,6 +232,7 @@ function convertTask(
             color: color,
             isMilestone: false,
             progress,
+            progressRate: task.progressRate,
             predecessors: [],
             level: 0,
             isManuallyScheduled: true,
