@@ -18,6 +18,7 @@ export type EditableProgressSnapshotData = {
   snapshotAt: string; // ISO 8601 string
   progressRate: number | null;
   status: TaskStatus;
+  source: 'sync' | 'manual'; // 記録経路（同期 or 手動編集）
 };
 
 export type ProgressHistoryActionResult<T = unknown> = {
@@ -60,6 +61,7 @@ export async function getEditableProgressSnapshots(
         snapshotAt: s.snapshotAt.toISOString(),
         progressRate: s.progressRate,
         status: s.status,
+        source: s.syncLogId === null ? ('manual' as const) : ('sync' as const),
       })),
     };
   } catch (error) {

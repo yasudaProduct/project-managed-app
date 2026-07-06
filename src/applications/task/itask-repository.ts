@@ -51,6 +51,16 @@ interface SyncDiffContext {
     snapshotAt: Date;
 }
 
+/**
+ * 手動編集（ガント・タスクモーダル等）でタスク更新/削除と同一トランザクションで
+ * 進捗スナップショットを追記する文脈（syncLogId は null で記録される）
+ */
+interface ManualSnapshotContext {
+    wbsId: number;
+    input: TaskProgressSnapshotInput;
+    snapshotAt: Date;
+}
+
 interface ITaskRepository {
     findById(id: number): Promise<Task | null>;
     findAll(wbsId?: number): Promise<Task[]>;
@@ -62,8 +72,14 @@ interface ITaskRepository {
     /** 差分照合用の軽量な同期状態（id/taskNo/isDeletedのみ、論理削除込み） */
     findSyncStateByWbsId(wbsId: number): Promise<TaskSyncState[]>;
     findTasksByPeriod(startDate: Date, endDate: Date): Promise<Task[]>;
+    /** 手動スナップショット用：対象タスクの直近スナップショットの実績日（無ければnull） */
+    findLatestSnapshotActuals(taskId: number): Promise<{ actualStart: Date | null; actualEnd: Date | null } | null>;
     create(task: Task): Promise<Task>;
-    update(wbsId: number, task: Task): Promise<Task>;
+    /**
+     * タスクを更新する。snapshot を渡すと同一トランザクションで
+     * 進捗スナップショット（手動記録・syncLogId=null）を追記する。
+     */
+    update(wbsId: number, task: Task, snapshot?: ManualSnapshotContext): Promise<Task>;
     /**
      * 差分（作成/更新+revive/論理削除）を単一トランザクションで適用する。
      * context を渡すと、同一tx内で SyncLog を採番しスナップショットも記録し、採番した syncLogId を返す。
@@ -80,7 +96,11 @@ interface ITaskRepository {
      * 事前にドメイン検証済みのtasksを渡すこと（部分置換を起こさないため）。
      */
     replaceAllTasks(wbsId: number, tasks: Task[]): Promise<{ deleted: number; added: number }>;
-    delete(id: number): Promise<void>;
+    /**
+     * タスクを削除する。tombstone を渡すと同一トランザクションで
+     * tombstoneスナップショット（isRemoved=true）を追記し、削除後もEVM履歴の整合を保つ。
+     */
+    delete(id: number, tombstone?: ManualSnapshotContext): Promise<void>;
 }
 
 export type {
@@ -90,4 +110,5 @@ export type {
     TaskProgressSnapshotInput,
     SyncLogData,
     SyncDiffContext,
+    ManualSnapshotContext,
 };

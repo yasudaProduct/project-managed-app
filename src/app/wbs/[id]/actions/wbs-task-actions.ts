@@ -96,6 +96,7 @@ const updateTaskSchema = z.object({
     status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "ON_HOLD"]),
     assigneeId: z.number().optional(),
     phaseId: z.number().optional(),
+    progressRate: z.number().min(0, "進捗率は0〜100で入力してください。").max(100, "進捗率は0〜100で入力してください。").optional(),
 });
 
 export async function updateTask(
@@ -110,6 +111,7 @@ export async function updateTask(
         status: TaskStatus;
         assigneeId?: number;
         phaseId?: number;
+        progressRate?: number;
     },
 ): Promise<ActionResult<void>> {
     const parsed = updateTaskSchema.safeParse(taskData);

@@ -11,8 +11,8 @@ export interface ExcelWbs {
   PROJECT_ID: string;
   WBS_ID: string;
   PHASE: string;
-  ACTIVITY: string;
-  TASK: string;
+  ACTIVITY: string | null;
+  TASK: string | null;
   TANTO: string | null;
   TANTO_REV: string | null;
   KIJUN_START_DATE: Date | null;

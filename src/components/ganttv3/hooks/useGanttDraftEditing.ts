@@ -168,7 +168,9 @@ export function useGanttDraftEditing({
           dt.endDate.getTime() !== orig.endDate.getTime();
         const kosuChanged = dt.duration !== orig.duration;
         const assigneeChanged = dt.assigneeId !== orig.assigneeId;
-        if (!dateChanged && !kosuChanged && !assigneeChanged) continue;
+        const progressChanged = dt.progressRate !== orig.progressRate;
+        if (!dateChanged && !kosuChanged && !assigneeChanged && !progressChanged)
+          continue;
 
         const dbId = dt.dbId ?? parseDbId(dt.id);
         if (dt.isMilestone) {
@@ -192,6 +194,7 @@ export function useGanttDraftEditing({
             status: dt.status ?? "NOT_STARTED",
             assigneeId: dt.assigneeId,
             phaseId: dt.phaseId,
+            progressRate: dt.progressRate,
           });
           if (!res.success) {
             throw new Error(res.error ?? `「${dt.name}」の保存に失敗しました`);

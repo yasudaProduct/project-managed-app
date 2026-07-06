@@ -81,6 +81,14 @@ const formSchema = z
         message: "ステータスを選択してください。",
       }
     ),
+    progressRate: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
+      z
+        .number()
+        .min(0, { message: "進捗率は0〜100で入力してください。" })
+        .max(100, { message: "進捗率は0〜100で入力してください。" })
+        .optional()
+    ),
     phaseId: z.preprocess(
       (val) => Number(val),
       z.number().min(1, {
@@ -148,6 +156,7 @@ export function TaskModal({
             : "",
           yoteiKosu: task.yoteiKosu || 0,
           status: task.status,
+          progressRate: task.progressRate,
           phaseId: task.phaseId || 0,
         }
       : {
@@ -157,6 +166,7 @@ export function TaskModal({
           yoteiEndDate: "",
           yoteiKosu: 0,
           status: "NOT_STARTED",
+          progressRate: undefined,
           phaseId: 0,
         },
   });
@@ -197,6 +207,7 @@ export function TaskModal({
             yoteiEndDate: formatDateForForm(task.yoteiEnd),
             yoteiKosu: task.yoteiKosu || 0,
             status: task.status,
+            progressRate: task.progressRate,
             phaseId: task.phaseId || 0,
           });
         }
@@ -262,6 +273,7 @@ export function TaskModal({
           status: values.status,
           assigneeId: Number(values.assigneeId),
           phaseId: values.phaseId,
+          progressRate: values.progressRate,
         });
         if (result.success) {
           toast({
@@ -599,46 +611,82 @@ export function TaskModal({
                     ステータス
                   </h3>
 
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                          ステータス *
-                        </FormLabel>
-                        <FormControl>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            disabled={isLoading}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="ステータスを選択してください" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="NOT_STARTED">
-                                {getTaskStatusName("NOT_STARTED")}
-                              </SelectItem>
-                              <SelectItem value="IN_PROGRESS">
-                                {getTaskStatusName("IN_PROGRESS")}
-                              </SelectItem>
-                              <SelectItem value="COMPLETED">
-                                {getTaskStatusName("COMPLETED")}
-                              </SelectItem>
-                              <SelectItem value="ON_HOLD">
-                                {getTaskStatusName("ON_HOLD")}
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <FormDescription>
-                          タスクの現在の進行状況を選択してください
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium">
+                            ステータス *
+                          </FormLabel>
+                          <FormControl>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              disabled={isLoading}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="ステータスを選択してください" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="NOT_STARTED">
+                                  {getTaskStatusName("NOT_STARTED")}
+                                </SelectItem>
+                                <SelectItem value="IN_PROGRESS">
+                                  {getTaskStatusName("IN_PROGRESS")}
+                                </SelectItem>
+                                <SelectItem value="COMPLETED">
+                                  {getTaskStatusName("COMPLETED")}
+                                </SelectItem>
+                                <SelectItem value="ON_HOLD">
+                                  {getTaskStatusName("ON_HOLD")}
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormDescription>
+                            タスクの現在の進行状況を選択してください
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* 進捗率（自己申告） */}
+                    <FormField
+                      control={form.control}
+                      name="progressRate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium">
+                            進捗率（自己申告）
+                          </FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                type="number"
+                                step="1"
+                                min="0"
+                                max="100"
+                                placeholder="0"
+                                className="text-sm pr-8"
+                              />
+                              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+                                %
+                              </span>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            変更すると進捗履歴に記録されます
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
             )}

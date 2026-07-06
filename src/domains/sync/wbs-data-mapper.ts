@@ -14,9 +14,10 @@ export class WbsDataMapper {
     periods: Period[];
   } {
     // TODO: taskをドメインモデルに変換するのはbuildTaskDomainFromExcelで行っているが、ここでやればいいのでは？
+    // ACTIVITY/TASK はMySQL側でnullable。文字列連結すると "null" が混入するため空文字で連結する
     const task: Record<string, unknown> = {
       taskNo: excelWbs.WBS_ID || undefined,
-      name: (excelWbs.ACTIVITY + excelWbs.TASK) || undefined, // TODO: TASKとACTIVITYの運用を理解して、どちらを使うか決める
+      name: ((excelWbs.ACTIVITY ?? '') + (excelWbs.TASK ?? '')) || undefined, // TODO: TASKとACTIVITYの運用を理解して、どちらを使うか決める
       status: this.mapStatus(excelWbs.STATUS),
       progressRate: this.mapProgressRate(excelWbs.PROGRESS_RATE),
     };
