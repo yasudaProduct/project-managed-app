@@ -18,6 +18,21 @@ import { buildTaskMapKey } from '@/applications/geppo-import/itask-mapping-servi
 import { Geppo, GeppoSearchFilters } from '@/domains/geppo/types'
 import { utcDateFromYmd } from '@/utils/date-util'
 
+/**
+ * GeppoのYYYYMM＋日から作業実績日（WorkRecord.date）用のDateを生成する。
+ *
+ * WorkRecord.date は Prisma の `@db.Date`（TZなしの暦日）に保存され、Prisma は
+ * Date の **UTC** の暦日を書き込む。`new Date(year, month, day)` はローカルTZの
+ * 0時を表すため、UTC+9(JST)等の環境で生成すると前日（例: 9/3→9/2）として
+ * 保存され、ガントチャート上の実績日が1日ずれる原因になる。
+ * 日付ポリシー（保存は常にUTC）に従い、`Date.UTC` でUTC 0時として構築する。
+ */
+export function createUtcDateFromYearMonthDay(yyyymm: string, day: number): Date {
+  const year = parseInt(yyyymm.substring(0, 4))
+  const month = parseInt(yyyymm.substring(4, 6)) - 1 // Dateは0ベース
+  return new Date(Date.UTC(year, month, day))
+}
+
 export interface IGeppoImportApplicationService {
   validateImportData(options: GeppoImportOptions): Promise<GeppoImportValidation>
   executeImport(options: GeppoImportOptions): Promise<GeppoImportResult>
@@ -337,15 +352,13 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
 
   /**
    * YYYYMMと日付からDateオブジェクトを作成
-   * @param yyyymm 
-   * @param day 
-   * @returns 
+   * @param yyyymm
+   * @param day
+   * @returns
    */
   private createDateFromYearMonthDay(yyyymm: string, day: number): Date {
-    const year = parseInt(yyyymm.substring(0, 4))
-    const month = parseInt(yyyymm.substring(4, 6)) // 1〜12
     // 保存はUTC前提（ローカルTZ解釈だとサーバーTZ次第で日付が1日ずれる）
-    return utcDateFromYmd(year, month, day)
+    return createUtcDateFromYearMonthDay(yyyymm, day)
   }
 
   private convertWorkRecordsToImportRecords(workRecords: WorkRecord[]): GeppoImportRecord[] {
