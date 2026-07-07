@@ -4,6 +4,7 @@ import { SYMBOL } from "@/types/symbol";
 import type {
   IProjectSettingsRepository,
   UpsertDashboardSettingsInput,
+  UpsertEvmSettingsInput,
   UpsertProjectSettingsInput,
 } from "@/applications/project-settings/iproject-settings-repository";
 import type { ProjectSettingsData } from "@/types/project-settings";
@@ -30,6 +31,10 @@ export class ProjectSettingsRepository implements IProjectSettingsRepository {
       progressMeasurementMethod: settings.progressMeasurementMethod,
       forecastCalculationMethod: settings.forecastCalculationMethod,
       evmForecastMethod: settings.evmForecastMethod,
+      evmBufferCostMethod: settings.evmBufferCostMethod,
+      evmPvDistribution: settings.evmPvDistribution,
+      evmHealthyThresholdPct: settings.evmHealthyThresholdPct,
+      evmWarningThresholdPct: settings.evmWarningThresholdPct,
       deadlineAlertDays: settings.deadlineAlertDays,
       costOverrunThresholdPct: settings.costOverrunThresholdPct,
     };
@@ -75,6 +80,36 @@ export class ProjectSettingsRepository implements IProjectSettingsRepository {
       update: {
         deadlineAlertDays: data.deadlineAlertDays,
         costOverrunThresholdPct: data.costOverrunThresholdPct,
+      },
+    });
+  }
+
+  async upsertEvmSettings(
+    projectId: string,
+    data: UpsertEvmSettingsInput
+  ): Promise<void> {
+    await this.prisma.projectSettings.upsert({
+      where: { projectId },
+      create: {
+        projectId,
+        ...(data.evmBufferCostMethod && { evmBufferCostMethod: data.evmBufferCostMethod }),
+        ...(data.evmPvDistribution && { evmPvDistribution: data.evmPvDistribution }),
+        ...(data.evmHealthyThresholdPct !== undefined && {
+          evmHealthyThresholdPct: data.evmHealthyThresholdPct,
+        }),
+        ...(data.evmWarningThresholdPct !== undefined && {
+          evmWarningThresholdPct: data.evmWarningThresholdPct,
+        }),
+      },
+      update: {
+        ...(data.evmBufferCostMethod && { evmBufferCostMethod: data.evmBufferCostMethod }),
+        ...(data.evmPvDistribution && { evmPvDistribution: data.evmPvDistribution }),
+        ...(data.evmHealthyThresholdPct !== undefined && {
+          evmHealthyThresholdPct: data.evmHealthyThresholdPct,
+        }),
+        ...(data.evmWarningThresholdPct !== undefined && {
+          evmWarningThresholdPct: data.evmWarningThresholdPct,
+        }),
       },
     });
   }

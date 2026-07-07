@@ -4,6 +4,12 @@ import { DEFAULT_COST_PER_HOUR } from './evm-constants';
 
 export type EvmCalculationMode = 'hours' | 'cost';
 
+/**
+ * 営業日カウンタ。(start, end] に含まれる営業日数を返す。
+ * PVの営業日按分（evmPvDistribution = BUSINESS_DAYS）で使用する。
+ */
+export type BusinessDayCounter = (start: Date, end: Date) => number;
+
 export class TaskEvmData {
   constructor(
     public readonly taskId: number,
@@ -181,7 +187,8 @@ export class TaskEvmData {
     type: 'YOTEI' | 'BASE',
     evaluationDate: Date,
     mode: EvmCalculationMode = 'hours',
-    progressMethod: 'LINEAR' | ProgressMeasurementMethod = 'LINEAR' //TODO: PVの算出optionとProgressMeasurementMethodを分ける?
+    progressMethod: 'LINEAR' | ProgressMeasurementMethod = 'LINEAR', //TODO: PVの算出optionとProgressMeasurementMethodを分ける?
+    businessDayCounter?: BusinessDayCounter
   ): number {
     let startDate: Date;
     let endDate: Date;
@@ -210,20 +217,18 @@ export class TaskEvmData {
     if (progressMethod === 'SELF_REPORTED') progressMethod = 'LINEAR';
 
     switch (progressMethod) {
-      case 'LINEAR':
-        // 総日数
-        const totalDays = this.getDaysBetween(
-          startDate,
-          endDate
-        );
+      case 'LINEAR': {
+        // 総日数・経過日数（営業日カウンタ指定時は営業日ベースで按分）
+        const totalDays = businessDayCounter
+          ? businessDayCounter(startDate, endDate)
+          : this.getDaysBetween(startDate, endDate);
 
-        // 経過日数
-        const elapsedDays = this.getDaysBetween(
-          startDate,
-          evaluationDate
-        );
+        const elapsedDays = businessDayCounter
+          ? businessDayCounter(startDate, evaluationDate)
+          : this.getDaysBetween(startDate, evaluationDate);
 
         return totalDays === 0 ? 0 : (baseValue * elapsedDays) / totalDays;
+      }
       case 'ZERO_HUNDRED':
         // 評価日が予定開始日と予定終了日の間の場合、計画価値は0
         return 0;

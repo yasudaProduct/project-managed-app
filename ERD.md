@@ -201,6 +201,10 @@ erDiagram
   ProgressMeasurementMethod progressMeasurementMethod
   ForecastCalculationMethod forecastCalculationMethod
   EvmForecastMethod evmForecastMethod
+  EvmBufferCostMethod evmBufferCostMethod
+  EvmPvDistribution evmPvDistribution
+  Int evmHealthyThresholdPct
+  Int evmWarningThresholdPct
   Int deadlineAlertDays
   Int costOverrunThresholdPct
   Json evmExcludeSettings
@@ -564,6 +568,10 @@ erDiagram
   - `progressMeasurementMethod`: 
   - `forecastCalculationMethod`: 
   - `evmForecastMethod`: 
+  - `evmBufferCostMethod`: 
+  - `evmPvDistribution`: 
+  - `evmHealthyThresholdPct`: 
+  - `evmWarningThresholdPct`: 
   - `deadlineAlertDays`: 
   - `costOverrunThresholdPct`: 
   - `evmExcludeSettings`: 

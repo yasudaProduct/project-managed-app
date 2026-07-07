@@ -25,6 +25,7 @@ describe('EvmService - スナップショットas-of時系列（2B）', () => {
       getProgressSnapshots: jest.fn().mockResolvedValue([]),
       getEditableProgressSnapshots: jest.fn().mockResolvedValue([]),
       updateProgressSnapshot: jest.fn().mockResolvedValue(undefined),
+      getCompanyHolidays: jest.fn().mockResolvedValue([]),
     } as jest.Mocked<IWbsEvmRepository>;
     evmService = new EvmService(mockRepository);
   });

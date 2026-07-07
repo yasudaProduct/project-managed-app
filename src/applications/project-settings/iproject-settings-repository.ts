@@ -2,6 +2,8 @@ import type { ProjectSettingsData } from "@/types/project-settings";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import type { ForecastCalculationMethod } from "@/types/forecast-calculation-method";
 import type { EvmForecastMethod } from "@/types/evm-forecast-method";
+import type { EvmBufferCostMethod } from "@/types/evm-buffer-cost-method";
+import type { EvmPvDistribution } from "@/types/evm-pv-distribution";
 import type { SchedulingSettings } from "@/types/scheduling-settings";
 
 export interface UpsertProjectSettingsInput {
@@ -14,6 +16,13 @@ export interface UpsertProjectSettingsInput {
 export interface UpsertDashboardSettingsInput {
   deadlineAlertDays: number;
   costOverrunThresholdPct: number;
+}
+
+export interface UpsertEvmSettingsInput {
+  evmBufferCostMethod?: EvmBufferCostMethod;
+  evmPvDistribution?: EvmPvDistribution;
+  evmHealthyThresholdPct?: number;
+  evmWarningThresholdPct?: number;
 }
 
 /**
@@ -29,6 +38,10 @@ export interface IProjectSettingsRepository {
   upsertDashboardSettings(
     projectId: string,
     data: UpsertDashboardSettingsInput
+  ): Promise<void>;
+  upsertEvmSettings(
+    projectId: string,
+    data: UpsertEvmSettingsInput
   ): Promise<void>;
   findSchedulingSettings(projectId: string): Promise<SchedulingSettings>;
   upsertSchedulingSettings(

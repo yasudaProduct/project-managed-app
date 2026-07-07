@@ -7,7 +7,10 @@ import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import type { ForecastCalculationMethod } from "@/types/forecast-calculation-method";
 import type { EvmForecastMethod } from "@/types/evm-forecast-method";
 import type { SchedulingSettings } from "@/types/scheduling-settings";
-import type { IProjectSettingsRepository } from "./iproject-settings-repository";
+import type {
+  IProjectSettingsRepository,
+  UpsertEvmSettingsInput,
+} from "./iproject-settings-repository";
 
 export interface IProjectSettingsApplicationService {
   getProjectSettings(projectId: string): Promise<ProjectSettingsData>;
@@ -22,6 +25,10 @@ export interface IProjectSettingsApplicationService {
     projectId: string,
     deadlineAlertDays: number,
     costOverrunThresholdPct: number
+  ): Promise<ActionResult<void>>;
+  updateEvmSettings(
+    projectId: string,
+    settings: UpsertEvmSettingsInput
   ): Promise<ActionResult<void>>;
   getSchedulingSettings(projectId: string): Promise<SchedulingSettings>;
   updateSchedulingSettings(
@@ -78,6 +85,28 @@ export class ProjectSettingsApplicationService
       deadlineAlertDays,
       costOverrunThresholdPct,
     });
+    return { success: true, data: undefined };
+  }
+
+  public async updateEvmSettings(
+    projectId: string,
+    settings: UpsertEvmSettingsInput
+  ): Promise<ActionResult<void>> {
+    if (!projectId) {
+      return { success: false, error: "projectIdは必須です。" };
+    }
+    if (
+      settings.evmHealthyThresholdPct !== undefined &&
+      settings.evmWarningThresholdPct !== undefined &&
+      settings.evmWarningThresholdPct > settings.evmHealthyThresholdPct
+    ) {
+      return {
+        success: false,
+        error: "warningしきい値はhealthyしきい値以下にしてください。",
+      };
+    }
+
+    await this.projectSettingsRepository.upsertEvmSettings(projectId, settings);
     return { success: true, data: undefined };
   }
 

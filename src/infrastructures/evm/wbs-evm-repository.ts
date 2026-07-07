@@ -100,6 +100,13 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       0
     );
 
+    // バッファ金額換算用のWBS平均単価（担当者未登録時はnull）
+    const averageCostPerHour =
+      wbs.assignees.length > 0
+        ? wbs.assignees.reduce((sum, a) => sum + a.costPerHour, 0) /
+          wbs.assignees.length
+        : null;
+
     return {
       wbsId: wbs.id,
       projectId: wbs.projectId,
@@ -109,6 +116,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       tasks,
       buffers,
       settings,
+      averageCostPerHour,
     };
   }
 
@@ -137,7 +145,20 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       progressMeasurementMethod: settings.progressMeasurementMethod,
       forecastCalculationMethod: settings.forecastCalculationMethod,
       evmForecastMethod: settings.evmForecastMethod,
+      evmBufferCostMethod: settings.evmBufferCostMethod,
+      evmPvDistribution: settings.evmPvDistribution,
+      evmHealthyThresholdPct: settings.evmHealthyThresholdPct,
+      evmWarningThresholdPct: settings.evmWarningThresholdPct,
     };
+  }
+
+  async getCompanyHolidays(startDate: Date, endDate: Date): Promise<Date[]> {
+    const rows = await prisma.companyHoliday.findMany({
+      where: { date: { gte: startDate, lte: endDate } },
+      select: { date: true },
+      orderBy: { date: 'asc' },
+    });
+    return rows.map((r) => r.date);
   }
 
   async getTasksEvmData(wbsId: number): Promise<TaskEvmData[]> {

@@ -1,6 +1,8 @@
 import type { ProgressMeasurementMethod } from '@/types/progress-measurement';
 import type { ForecastCalculationMethod } from '@/types/forecast-calculation-method';
 import type { EvmForecastMethod } from '@/types/evm-forecast-method';
+import type { EvmBufferCostMethod } from '@/types/evm-buffer-cost-method';
+import type { EvmPvDistribution } from '@/types/evm-pv-distribution';
 import type { TaskStatus } from '@/types/wbs';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { EvmCalculationMode } from '@/domains/evm/evm-metrics';
@@ -28,6 +30,9 @@ export interface IWbsEvmRepository {
 
   // 進捗スナップショット履歴（snapshotAt <= toDate を全件、taskId/snapshotAt 昇順）
   getProgressSnapshots(wbsId: number, toDate: Date): Promise<TaskProgressSnapshotRecord[]>;
+
+  // 会社休日の取得（営業日ベースPV按分用。日付のみの配列を返す）
+  getCompanyHolidays(startDate: Date, endDate: Date): Promise<Date[]>;
 
   // 訂正画面用：編集対象スナップショット一覧（id 付き、isRemoved=false、taskNo/snapshotAt 昇順）
   getEditableProgressSnapshots(wbsId: number): Promise<EditableProgressSnapshot[]>;
@@ -80,6 +85,8 @@ export interface WbsEvmData {
   tasks: TaskEvmData[];
   buffers: BufferData[];
   settings: ProjectSettingsData | null;
+  /** WBS担当者の平均単価（円/h）。担当者未登録時はnull。バッファの金額換算に使用 */
+  averageCostPerHour?: number | null;
 }
 
 export interface BufferData {
@@ -94,4 +101,8 @@ export interface ProjectSettingsData {
   progressMeasurementMethod: ProgressMeasurementMethod;
   forecastCalculationMethod: ForecastCalculationMethod;
   evmForecastMethod: EvmForecastMethod;
+  evmBufferCostMethod?: EvmBufferCostMethod;
+  evmPvDistribution?: EvmPvDistribution;
+  evmHealthyThresholdPct?: number;
+  evmWarningThresholdPct?: number;
 }

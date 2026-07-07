@@ -110,6 +110,7 @@ describe('GetWbsSummaryHandler monthlyPhaseSummary (server-side pre-aggregation)
       }),
       upsertProjectSettings: jest.fn(),
       upsertDashboardSettings: jest.fn(),
+      upsertEvmSettings: jest.fn(),
       findSchedulingSettings: jest.fn(),
       upsertSchedulingSettings: jest.fn(),
     } as IProjectSettingsRepository;

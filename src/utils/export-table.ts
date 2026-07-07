@@ -45,7 +45,7 @@ export function copyToClipboard(
  * @param rows データ
  * @param options オプション
  */
-function exportTableData(
+export function exportTableData(
   headers: string[],
   rows: (string | number | undefined | null)[][],
   options: ExportOptions

@@ -16,7 +16,8 @@ import { TaskEvmTable } from "./task-evm-table";
 import { EvmTimeSeriesTable } from "./evm-timeseries-table";
 import { getEvmDashboardData } from "@/app/wbs/[id]/actions/evm-actions";
 import type { EvmMetricsData, TaskEvmDataSerialized } from "@/applications/evm/evm-dashboard-dto";
-import { Loader2, TrendingUp, DollarSign, Info } from "lucide-react";
+import { exportTableData } from "@/utils/export-table";
+import { Loader2, TrendingUp, DollarSign, Info, Download } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -142,6 +143,79 @@ export function EvmDashboard({
     );
   }
 
+  const formatCsvValue = (value: number): string =>
+    calculationMode === "cost" ? String(Math.round(value)) : value.toFixed(1);
+
+  const handleExportTimeSeries = () => {
+    exportTableData(
+      [
+        "評価日",
+        "PV_BASE",
+        "PV",
+        "EV",
+        "AC",
+        "BAC",
+        "SV",
+        "CV",
+        "SPI",
+        "CPI",
+        "完了率(%)",
+        "EAC",
+        "ETC",
+        "VAC",
+        "健全性",
+        "予測",
+      ],
+      timeSeriesData.map((m) => [
+        new Date(m.date).toLocaleDateString("ja-JP"),
+        formatCsvValue(m.pv_base),
+        formatCsvValue(m.pv),
+        formatCsvValue(m.ev),
+        formatCsvValue(m.ac),
+        formatCsvValue(m.bac),
+        formatCsvValue(m.sv),
+        formatCsvValue(m.cv),
+        m.spi !== null ? m.spi.toFixed(3) : "",
+        m.cpi !== null ? m.cpi.toFixed(3) : "",
+        m.completionRate.toFixed(1),
+        formatCsvValue(m.eac),
+        formatCsvValue(m.etc),
+        formatCsvValue(m.vac),
+        m.healthStatus,
+        m.isPredicted ? "予測" : "実績",
+      ]),
+      { filename: "evm-timeseries", format: "csv" }
+    );
+  };
+
+  const handleExportTaskDetails = () => {
+    exportTableData(
+      [
+        "タスクNo",
+        "タスク名",
+        "ステータス",
+        "計画工数(h)",
+        "実績工数(h)",
+        "進捗率(%)",
+        "出来高",
+        "単価",
+      ],
+      taskDetails.map((t) => [
+        t.taskNo,
+        t.taskName,
+        t.status,
+        t.plannedManHours.toFixed(1),
+        t.actualManHours.toFixed(1),
+        Math.round(t.methodProgressRate),
+        formatCsvValue(
+          calculationMode === "cost" ? t.methodEarnedValueCost : t.methodEarnedValue
+        ),
+        t.costPerHour,
+      ]),
+      { filename: "evm-tasks", format: "csv" }
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* コントロール */}
@@ -242,6 +316,24 @@ export function EvmDashboard({
             </div>
 
             <div className="flex items-center gap-1.5 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleExportTimeSeries}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                時系列CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleExportTaskDetails}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                タスクCSV
+              </Button>
               <Switch
                 id="show-prediction"
                 checked={showPrediction}

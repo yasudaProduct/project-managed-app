@@ -87,6 +87,32 @@ export async function updateDashboardSettings(
     );
 }
 
+const updateEvmSettingsSchema = z.object({
+    projectId: z.string().min(1),
+    evmBufferCostMethod: z.enum(["AVERAGE_RATE", "DEFAULT_RATE", "EXCLUDE"]).optional(),
+    evmPvDistribution: z.enum(["CALENDAR", "BUSINESS_DAYS"]).optional(),
+    evmHealthyThresholdPct: z.number().int().min(0).max(200).optional(),
+    evmWarningThresholdPct: z.number().int().min(0).max(200).optional(),
+});
+
+export async function updateEvmSettings(
+    projectId: string,
+    settings: {
+        evmBufferCostMethod?: import("@/types/evm-buffer-cost-method").EvmBufferCostMethod;
+        evmPvDistribution?: import("@/types/evm-pv-distribution").EvmPvDistribution;
+        evmHealthyThresholdPct?: number;
+        evmWarningThresholdPct?: number;
+    }
+): Promise<ActionResult<void>> {
+    const parsed = updateEvmSettingsSchema.safeParse({ projectId, ...settings });
+    if (!parsed.success) {
+        return { success: false, error: "入力値が不正です。" };
+    }
+
+    const { projectId: pid, ...rest } = parsed.data;
+    return getProjectSettingsApplicationService().updateEvmSettings(pid, rest);
+}
+
 export async function getSchedulingSettings(
     projectId: string,
 ): Promise<SchedulingSettings> {
