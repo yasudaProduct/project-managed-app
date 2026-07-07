@@ -696,6 +696,56 @@ describe('EvmMetrics', () => {
     });
   });
 
+  describe('ETCの下限クランプ（EV > BAC）', () => {
+    // 予定工数が基準工数を超えて増えた場合など、EVがBACを上回ることがある。
+    // 残作業は負にならないため、ETCは0を下限とする。
+    const overEarnedArgs = {
+      date: new Date('2025-01-01'),
+      pv_base: 100,
+      pv: 100,
+      ev: 220,
+      ac: 90,
+      bac: 200,
+    };
+
+    it('CPI_ONLY: EV > BAC の場合、ETCは負値ではなく0を返す', () => {
+      const metrics = EvmMetrics.create({ ...overEarnedArgs, forecastMethod: 'CPI_ONLY' });
+      expect(metrics.etc).toBe(0);
+      expect(metrics.eac).toBe(90); // EAC = AC + 0
+    });
+
+    it('CPI_SPI: EV > BAC の場合、ETCは負値ではなく0を返す', () => {
+      const metrics = EvmMetrics.create({ ...overEarnedArgs, forecastMethod: 'CPI_SPI' });
+      expect(metrics.etc).toBe(0);
+      expect(metrics.eac).toBe(90);
+    });
+
+    it('PLANNED: EV > BAC の場合、ETCは負値ではなく0を返す', () => {
+      const metrics = EvmMetrics.create({ ...overEarnedArgs, forecastMethod: 'PLANNED' });
+      expect(metrics.etc).toBe(0);
+      expect(metrics.eac).toBe(90);
+    });
+
+    it('VACはBAC - EACで整合する（EAC < BACとなりVACは正）', () => {
+      const metrics = EvmMetrics.create({ ...overEarnedArgs, forecastMethod: 'CPI_ONLY' });
+      expect(metrics.vac).toBe(200 - 90);
+    });
+
+    it('EV < BAC の通常ケースではクランプの影響を受けない', () => {
+      const metrics = EvmMetrics.create({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 80,
+        ac: 90,
+        bac: 200,
+        forecastMethod: 'CPI_ONLY',
+      });
+      // ETC = (200 - 80) / (80/90) = 135
+      expect(metrics.etc).toBeCloseTo(135, 1);
+    });
+  });
+
   describe('createファクトリメソッド', () => {
     it('必須パラメータでインスタンスを作成できる', () => {
       const metrics = EvmMetrics.create({
