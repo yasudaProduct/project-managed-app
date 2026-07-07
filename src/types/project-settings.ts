@@ -6,6 +6,8 @@
 import type { ProgressMeasurementMethod } from "./progress-measurement";
 import type { ForecastCalculationMethod } from "./forecast-calculation-method";
 import type { EvmForecastMethod } from "./evm-forecast-method";
+import type { EvmBufferCostMethod } from "./evm-buffer-cost-method";
+import type { EvmPvDistribution } from "./evm-pv-distribution";
 
 export interface ProjectSettingsData {
   projectId: string;
@@ -13,6 +15,10 @@ export interface ProjectSettingsData {
   progressMeasurementMethod: ProgressMeasurementMethod;
   forecastCalculationMethod: ForecastCalculationMethod;
   evmForecastMethod: EvmForecastMethod;
+  evmBufferCostMethod: EvmBufferCostMethod;
+  evmPvDistribution: EvmPvDistribution;
+  evmHealthyThresholdPct: number;
+  evmWarningThresholdPct: number;
   deadlineAlertDays: number;
   costOverrunThresholdPct: number;
 }
@@ -22,6 +28,10 @@ export const DEFAULT_PROJECT_SETTINGS: Omit<ProjectSettingsData, "projectId"> = 
   progressMeasurementMethod: "SELF_REPORTED",
   forecastCalculationMethod: "REALISTIC",
   evmForecastMethod: "CPI_ONLY",
+  evmBufferCostMethod: "AVERAGE_RATE",
+  evmPvDistribution: "CALENDAR",
+  evmHealthyThresholdPct: 90,
+  evmWarningThresholdPct: 80,
   deadlineAlertDays: 1,
   costOverrunThresholdPct: 100,
 };
@@ -42,6 +52,14 @@ export function withProjectSettingsDefaults(
     forecastCalculationMethod:
       settings?.forecastCalculationMethod ?? DEFAULT_PROJECT_SETTINGS.forecastCalculationMethod,
     evmForecastMethod: settings?.evmForecastMethod ?? DEFAULT_PROJECT_SETTINGS.evmForecastMethod,
+    evmBufferCostMethod:
+      settings?.evmBufferCostMethod ?? DEFAULT_PROJECT_SETTINGS.evmBufferCostMethod,
+    evmPvDistribution:
+      settings?.evmPvDistribution ?? DEFAULT_PROJECT_SETTINGS.evmPvDistribution,
+    evmHealthyThresholdPct:
+      settings?.evmHealthyThresholdPct ?? DEFAULT_PROJECT_SETTINGS.evmHealthyThresholdPct,
+    evmWarningThresholdPct:
+      settings?.evmWarningThresholdPct ?? DEFAULT_PROJECT_SETTINGS.evmWarningThresholdPct,
     deadlineAlertDays: settings?.deadlineAlertDays ?? DEFAULT_PROJECT_SETTINGS.deadlineAlertDays,
     costOverrunThresholdPct:
       settings?.costOverrunThresholdPct ?? DEFAULT_PROJECT_SETTINGS.costOverrunThresholdPct,

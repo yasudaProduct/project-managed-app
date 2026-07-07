@@ -1,7 +1,25 @@
 import { ProgressMeasurementMethod } from '@/types/progress-measurement';
 import { TaskStatus } from '@/types/wbs';
+import { DEFAULT_COST_PER_HOUR } from './evm-constants';
 
 export type EvmCalculationMode = 'hours' | 'cost';
+
+/**
+ * 営業日カウンタ。(start, end] に含まれる営業日数を返す。
+ * PVの営業日按分（evmPvDistribution = BUSINESS_DAYS）で使用する。
+ */
+export type BusinessDayCounter = (start: Date, end: Date) => number;
+
+/**
+ * 内訳集計（フェーズ別・担当者別）用の付帯情報。
+ * グルーピングキーはID（同名フェーズ・同姓同名の衝突回避）、表示は名前を使う。
+ */
+export type TaskEvmMeta = {
+  phaseId: number | null;
+  phaseName: string | null;
+  assigneeId: string | null;
+  assigneeName: string | null;
+};
 
 export class TaskEvmData {
   constructor(
@@ -19,8 +37,9 @@ export class TaskEvmData {
     public readonly actualManHours: number,
     public readonly status: TaskStatus,
     public readonly progressRate: number,
-    public readonly costPerHour: number = 5000,
-    public readonly selfReportedProgress: number | null = null
+    public readonly costPerHour: number = DEFAULT_COST_PER_HOUR,
+    public readonly selfReportedProgress: number | null = null,
+    public readonly meta?: TaskEvmMeta
   ) { }
 
   // 工数ベースの出来高計算
@@ -97,11 +116,11 @@ export class TaskEvmData {
       calculationMode === 'cost'
         ? this.plannedManHours * this.costPerHour
         : this.plannedManHours;
-    return base * (this.directRate(progressMethod) / 100);
+    return base * (this.getDirectProgressRate(progressMethod) / 100);
   }
 
-  /** 方式別の直接進捗率（0〜100、按分なし） */
-  private directRate(method: ProgressMeasurementMethod): number {
+  /** 方式別の直接進捗率（0〜100、按分なし）。タスク別明細の方式別表示にも使用する */
+  getDirectProgressRate(method: ProgressMeasurementMethod): number {
     switch (method) {
       case 'ZERO_HUNDRED':
         return this.status === 'COMPLETED' ? 100 : 0;
@@ -180,7 +199,8 @@ export class TaskEvmData {
     type: 'YOTEI' | 'BASE',
     evaluationDate: Date,
     mode: EvmCalculationMode = 'hours',
-    progressMethod: 'LINEAR' | ProgressMeasurementMethod = 'LINEAR' //TODO: PVの算出optionとProgressMeasurementMethodを分ける?
+    progressMethod: 'LINEAR' | ProgressMeasurementMethod = 'LINEAR', //TODO: PVの算出optionとProgressMeasurementMethodを分ける?
+    businessDayCounter?: BusinessDayCounter
   ): number {
     let startDate: Date;
     let endDate: Date;
@@ -209,20 +229,18 @@ export class TaskEvmData {
     if (progressMethod === 'SELF_REPORTED') progressMethod = 'LINEAR';
 
     switch (progressMethod) {
-      case 'LINEAR':
-        // 総日数
-        const totalDays = this.getDaysBetween(
-          startDate,
-          endDate
-        );
+      case 'LINEAR': {
+        // 総日数・経過日数（営業日カウンタ指定時は営業日ベースで按分）
+        const totalDays = businessDayCounter
+          ? businessDayCounter(startDate, endDate)
+          : this.getDaysBetween(startDate, endDate);
 
-        // 経過日数
-        const elapsedDays = this.getDaysBetween(
-          startDate,
-          evaluationDate
-        );
+        const elapsedDays = businessDayCounter
+          ? businessDayCounter(startDate, evaluationDate)
+          : this.getDaysBetween(startDate, evaluationDate);
 
         return totalDays === 0 ? 0 : (baseValue * elapsedDays) / totalDays;
+      }
       case 'ZERO_HUNDRED':
         // 評価日が予定開始日と予定終了日の間の場合、計画価値は0
         return 0;

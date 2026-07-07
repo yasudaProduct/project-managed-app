@@ -402,12 +402,27 @@ enum EvmForecastMethod {
   PLANNED   // EAC = AC + (BAC - EV)：残作業は計画通りのコストで完了
 }
 
+enum EvmBufferCostMethod {
+  AVERAGE_RATE // WBS担当者の平均単価でバッファ工数を金額換算
+  DEFAULT_RATE // デフォルト単価（5,000円/h）で金額換算
+  EXCLUDE      // 金額モードのBACにバッファを含めない
+}
+
+enum EvmPvDistribution {
+  CALENDAR      // 暦日按分（従来動作）
+  BUSINESS_DAYS // 営業日按分（土日・祝日・会社休日を除外）
+}
+
 model ProjectSettings {
   projectId                 String                     @id
   roundToQuarter            Boolean                    @default(false)
   progressMeasurementMethod ProgressMeasurementMethod  @default(SELF_REPORTED)
   forecastCalculationMethod ForecastCalculationMethod  @default(REALISTIC)
   evmForecastMethod         EvmForecastMethod          @default(CPI_ONLY)  // EVM予測計算方式
+  evmBufferCostMethod       EvmBufferCostMethod        @default(AVERAGE_RATE) // バッファの金額換算方式
+  evmPvDistribution         EvmPvDistribution          @default(CALENDAR)     // PV按分方式（暦日/営業日）
+  evmHealthyThresholdPct    Int                        @default(90)   // ヘルス判定healthyしきい値(%)
+  evmWarningThresholdPct    Int                        @default(80)   // ヘルス判定warningしきい値(%)
   deadlineAlertDays         Int                        @default(1)    // 期限間近アラートの日数
   costOverrunThresholdPct   Int                        @default(100)  // 工数超過アラートの閾値(%)
   evmExcludeSettings        Json                       @default("{}") // EVM除外設定 (enabled, task_names 等)

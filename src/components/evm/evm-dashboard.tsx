@@ -14,9 +14,16 @@ import { EvmChart } from "./evm-chart";
 import { EvmMetricsCard } from "./evm-metrics-card";
 import { TaskEvmTable } from "./task-evm-table";
 import { EvmTimeSeriesTable } from "./evm-timeseries-table";
+import { EvmBreakdownTable } from "./evm-breakdown-table";
 import { getEvmDashboardData } from "@/app/wbs/[id]/actions/evm-actions";
-import type { EvmMetricsData, TaskEvmDataSerialized } from "@/applications/evm/evm-dashboard-dto";
-import { Loader2, TrendingUp, DollarSign, Info } from "lucide-react";
+import type {
+  EvmMetricsData,
+  TaskEvmDataSerialized,
+  ScheduleForecastData,
+  EvmBreakdownRow,
+} from "@/applications/evm/evm-dashboard-dto";
+import { exportTableData } from "@/utils/export-table";
+import { Loader2, TrendingUp, DollarSign, Info, Download } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -42,6 +49,12 @@ export function EvmDashboard({
   );
   const [timeSeriesData, setTimeSeriesData] = useState<EvmMetricsData[]>([]);
   const [taskDetails, setTaskDetails] = useState<TaskEvmDataSerialized[]>([]);
+  const [scheduleForecast, setScheduleForecast] =
+    useState<ScheduleForecastData | null>(null);
+  const [phaseBreakdown, setPhaseBreakdown] = useState<EvmBreakdownRow[]>([]);
+  const [assigneeBreakdown, setAssigneeBreakdown] = useState<EvmBreakdownRow[]>(
+    []
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,6 +118,9 @@ export function EvmDashboard({
       setCurrentMetrics(result.data.currentMetrics);
       setTimeSeriesData(result.data.timeSeries);
       setTaskDetails(result.data.taskDetails);
+      setScheduleForecast(result.data.scheduleForecast ?? null);
+      setPhaseBreakdown(result.data.phaseBreakdown ?? []);
+      setAssigneeBreakdown(result.data.assigneeBreakdown ?? []);
     } catch (err) {
       console.error("Failed to load EVM data:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -141,6 +157,79 @@ export function EvmDashboard({
       </Alert>
     );
   }
+
+  const formatCsvValue = (value: number): string =>
+    calculationMode === "cost" ? String(Math.round(value)) : value.toFixed(1);
+
+  const handleExportTimeSeries = () => {
+    exportTableData(
+      [
+        "評価日",
+        "PV_BASE",
+        "PV",
+        "EV",
+        "AC",
+        "BAC",
+        "SV",
+        "CV",
+        "SPI",
+        "CPI",
+        "完了率(%)",
+        "EAC",
+        "ETC",
+        "VAC",
+        "健全性",
+        "予測",
+      ],
+      timeSeriesData.map((m) => [
+        new Date(m.date).toLocaleDateString("ja-JP"),
+        formatCsvValue(m.pv_base),
+        formatCsvValue(m.pv),
+        formatCsvValue(m.ev),
+        formatCsvValue(m.ac),
+        formatCsvValue(m.bac),
+        formatCsvValue(m.sv),
+        formatCsvValue(m.cv),
+        m.spi !== null ? m.spi.toFixed(3) : "",
+        m.cpi !== null ? m.cpi.toFixed(3) : "",
+        m.completionRate.toFixed(1),
+        formatCsvValue(m.eac),
+        formatCsvValue(m.etc),
+        formatCsvValue(m.vac),
+        m.healthStatus,
+        m.isPredicted ? "予測" : "実績",
+      ]),
+      { filename: "evm-timeseries", format: "csv" }
+    );
+  };
+
+  const handleExportTaskDetails = () => {
+    exportTableData(
+      [
+        "タスクNo",
+        "タスク名",
+        "ステータス",
+        "計画工数(h)",
+        "実績工数(h)",
+        "進捗率(%)",
+        "出来高",
+        "単価",
+      ],
+      taskDetails.map((t) => [
+        t.taskNo,
+        t.taskName,
+        t.status,
+        t.plannedManHours.toFixed(1),
+        t.actualManHours.toFixed(1),
+        Math.round(t.methodProgressRate),
+        formatCsvValue(
+          calculationMode === "cost" ? t.methodEarnedValueCost : t.methodEarnedValue
+        ),
+        t.costPerHour,
+      ]),
+      { filename: "evm-tasks", format: "csv" }
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -242,6 +331,24 @@ export function EvmDashboard({
             </div>
 
             <div className="flex items-center gap-1.5 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleExportTimeSeries}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                時系列CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleExportTaskDetails}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                タスクCSV
+              </Button>
               <Switch
                 id="show-prediction"
                 checked={showPrediction}
@@ -290,6 +397,7 @@ export function EvmDashboard({
           <TabsTrigger value="chart">トレンドチャート</TabsTrigger>
           <TabsTrigger value="timeseries">時系列データ</TabsTrigger>
           <TabsTrigger value="tasks">タスク別詳細</TabsTrigger>
+          <TabsTrigger value="breakdown">内訳</TabsTrigger>
         </TabsList>
 
         <TabsContent value="chart">
@@ -304,12 +412,31 @@ export function EvmDashboard({
         </TabsContent>
 
         <TabsContent value="tasks">
-          <TaskEvmTable tasks={taskDetails} calculationMode={calculationMode} />
+          <TaskEvmTable
+            tasks={taskDetails}
+            calculationMode={calculationMode}
+            progressMethod={progressMethod}
+          />
+        </TabsContent>
+
+        <TabsContent value="breakdown" className="space-y-4">
+          <EvmBreakdownTable
+            title="フェーズ別内訳"
+            rows={phaseBreakdown}
+            calculationMode={calculationMode}
+            note="現在時点のライブタスクによる集計です。BACにバッファは含まれません。「未紐付け・削除済み」はタスクに紐付かない実績と削除済みタスクの実績です。"
+          />
+          <EvmBreakdownTable
+            title="担当者別内訳"
+            rows={assigneeBreakdown}
+            calculationMode={calculationMode}
+            note="担当者軸はタスクの現担当者です（作業実績の記録者ではありません）。BACにバッファは含まれません。"
+          />
         </TabsContent>
       </Tabs>
 
       {/* メトリクスカード */}
-      <EvmMetricsCard metrics={currentMetrics} />
+      <EvmMetricsCard metrics={currentMetrics} scheduleForecast={scheduleForecast} />
     </div>
   );
 }

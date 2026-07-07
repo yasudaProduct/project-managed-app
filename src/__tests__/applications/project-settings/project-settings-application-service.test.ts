@@ -12,6 +12,7 @@ describe("ProjectSettingsApplicationService", () => {
       findByProjectId: jest.fn(),
       upsertProjectSettings: jest.fn(),
       upsertDashboardSettings: jest.fn(),
+      upsertEvmSettings: jest.fn(),
       findSchedulingSettings: jest.fn(),
       upsertSchedulingSettings: jest.fn(),
     };
@@ -26,6 +27,10 @@ describe("ProjectSettingsApplicationService", () => {
         progressMeasurementMethod: "ZERO_HUNDRED" as const,
         forecastCalculationMethod: "CONSERVATIVE" as const,
         evmForecastMethod: "CPI_SPI" as const,
+        evmBufferCostMethod: "AVERAGE_RATE" as const,
+        evmPvDistribution: "CALENDAR" as const,
+        evmHealthyThresholdPct: 90,
+        evmWarningThresholdPct: 80,
         deadlineAlertDays: 3,
         costOverrunThresholdPct: 120,
       };
@@ -80,6 +85,35 @@ describe("ProjectSettingsApplicationService", () => {
     });
   });
 
+  describe("updateEvmSettings", () => {
+    it("正常に更新できた場合、success: trueを返すこと", async () => {
+      const result = await service.updateEvmSettings("p1", {
+        evmBufferCostMethod: "DEFAULT_RATE",
+        evmPvDistribution: "BUSINESS_DAYS",
+        evmHealthyThresholdPct: 95,
+        evmWarningThresholdPct: 85,
+      });
+
+      expect(repository.upsertEvmSettings).toHaveBeenCalledWith("p1", {
+        evmBufferCostMethod: "DEFAULT_RATE",
+        evmPvDistribution: "BUSINESS_DAYS",
+        evmHealthyThresholdPct: 95,
+        evmWarningThresholdPct: 85,
+      });
+      expect(result).toEqual({ success: true, data: undefined });
+    });
+
+    it("warningしきい値がhealthyしきい値を上回る場合、success: falseを返すこと", async () => {
+      const result = await service.updateEvmSettings("p1", {
+        evmHealthyThresholdPct: 80,
+        evmWarningThresholdPct: 90,
+      });
+
+      expect(result.success).toBe(false);
+      expect(repository.upsertEvmSettings).not.toHaveBeenCalled();
+    });
+  });
+
   describe("getSchedulingSettings", () => {
     it("リポジトリの結果をそのまま返すこと", async () => {
       repository.findSchedulingSettings.mockResolvedValue(DEFAULT_SCHEDULING_SETTINGS);
@@ -110,6 +144,10 @@ describe("ProjectSettingsApplicationService", () => {
         progressMeasurementMethod: "FIFTY_FIFTY",
         forecastCalculationMethod: "REALISTIC",
         evmForecastMethod: "CPI_ONLY",
+        evmBufferCostMethod: "AVERAGE_RATE",
+        evmPvDistribution: "CALENDAR",
+        evmHealthyThresholdPct: 90,
+        evmWarningThresholdPct: 80,
         deadlineAlertDays: 1,
         costOverrunThresholdPct: 100,
       });

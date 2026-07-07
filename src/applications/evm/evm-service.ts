@@ -1,8 +1,11 @@
 import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
-import type { IWbsEvmRepository, WbsEvmData, TaskProgressSnapshotRecord, EditableProgressSnapshot } from './iwbs-evm-repository';
-import { EvmMetrics } from '@/domains/evm/evm-metrics';
-import { TaskEvmData } from '@/domains/evm/task-evm-data';
+import type { IWbsEvmRepository, WbsEvmData, TaskProgressSnapshotRecord, EditableProgressSnapshot, ProjectSettingsData } from './iwbs-evm-repository';
+import { EvmMetrics, type EvmHealthStatus } from '@/domains/evm/evm-metrics';
+import { TaskEvmData, type BusinessDayCounter } from '@/domains/evm/task-evm-data';
+import { DEFAULT_COST_PER_HOUR } from '@/domains/evm/evm-constants';
+import { CompanyCalendar } from '@/domains/calendar/company-calendar';
+import { utcNextDayStartMs, addUtcMonthsClamped } from '@/utils/date-util';
 import type { ProgressMeasurementMethod } from '@/types/progress-measurement';
 import { TASK_STATUSES, type TaskStatus } from '@/types/wbs';
 import type { EvmForecastMethod } from '@/types/evm-forecast-method';
@@ -20,6 +23,49 @@ export type EvmDateRange = {
   taskMaxEndDate: Date | null;
   recommendedStartDate: Date;
   recommendedEndDate: Date;
+};
+
+/**
+ * スケジュール予測（Earned Schedule）の状態
+ * - ok: 予測完了日を算出できた
+ * - no_plan: 計画（タスク/総PV）が存在しない
+ * - not_started: プロジェクト開始前（経過時間なし）
+ * - no_progress: 出来高ゼロで予測不能
+ * - completed_scope: 全量完了済み（EV >= 総PV）
+ */
+export type ScheduleForecastStatus =
+  | 'ok'
+  | 'no_plan'
+  | 'not_started'
+  | 'no_progress'
+  | 'completed_scope';
+
+export type ScheduleForecast = {
+  status: ScheduleForecastStatus;
+  forecastCompletionDate: Date | null;
+  plannedEndDate: Date | null;
+  /** 計画終了日に対する遅延日数（負値は前倒し） */
+  delayDays: number | null;
+  /** 時間ベースのスケジュール効率（ES / 実経過日数） */
+  spiT: number | null;
+};
+
+/**
+ * フェーズ別・担当者別のEVM内訳1行。
+ * バッファはグループBACに含めない（合計はカードBACと一致しない。UI側で注記）。
+ */
+export type EvmBreakdownRow = {
+  key: string;
+  name: string;
+  taskCount: number;
+  pv: number;
+  ev: number;
+  ac: number;
+  bac: number;
+  spi: number | null;
+  cpi: number | null;
+  /** タスク未紐付け・削除済みタスクのAC行（PV/EV/BACなし） */
+  isUnlinked?: boolean;
 };
 
 type EvmDashboardOptions = {
@@ -59,13 +105,16 @@ export interface IEvmService {
     timeSeries: EvmMetrics[];
     taskDetails: TaskEvmData[];
     dateRange: EvmDateRange;
+    scheduleForecast: ScheduleForecast;
+    phaseBreakdown: EvmBreakdownRow[];
+    assigneeBreakdown: EvmBreakdownRow[];
   }>;
   getEvmDashboardDataSerialized(
     wbsId: number,
     options?: EvmDashboardOptions
   ): Promise<EvmDashboardData>;
   getTaskEvmDetails(wbsId: number): Promise<TaskEvmData[]>;
-  getHealthStatus(metrics: EvmMetrics): 'healthy' | 'warning' | 'critical';
+  getHealthStatus(metrics: EvmMetrics): EvmHealthStatus;
 }
 
 @injectable()
@@ -143,7 +192,9 @@ export class EvmService implements IEvmService {
       0
     );
 
-    return this.computeMetricsFromData(wbsData, evaluationDate, ac, calculationMode, method, fMethod, false, evaluationDate);
+    const businessDayCounter = await this.buildBusinessDayCounter(wbsData);
+
+    return this.computeMetricsFromData(wbsData, evaluationDate, ac, calculationMode, method, fMethod, false, evaluationDate, businessDayCounter);
   }
 
   /**
@@ -179,14 +230,15 @@ export class EvmService implements IEvmService {
     // (3) 進捗スナップショット履歴を1回取得し、評価日ごとのas-ofメトリクス関数を構築
     const snapToDate = endDate.getTime() > now.getTime() ? endDate : now;
     const snapshots = await this.wbsEvmRepository.getProgressSnapshots(wbsId, snapToDate);
+    const businessDayCounter = await this.buildBusinessDayCounter(wbsData);
     const computeHistorical = this.buildAsOfMetricsFn(
-      wbsData, snapshots, now, calculationMode, method, fMethod
+      wbsData, snapshots, now, calculationMode, method, fMethod, businessDayCounter
     );
 
     // (4) 各日付のメトリクスをインメモリで計算
     const dates = this.generateDateRange(startDate, endDate, interval);
     return this.computeTimeSeries(
-      wbsData, dates, computeCumulativeAc, computeHistorical, now, calculationMode, method, fMethod, includePrediction
+      wbsData, dates, computeCumulativeAc, computeHistorical, now, calculationMode, method, fMethod, includePrediction, businessDayCounter
     );
   }
 
@@ -210,6 +262,9 @@ export class EvmService implements IEvmService {
     timeSeries: EvmMetrics[];
     taskDetails: TaskEvmData[];
     dateRange: EvmDateRange;
+    scheduleForecast: ScheduleForecast;
+    phaseBreakdown: EvmBreakdownRow[];
+    assigneeBreakdown: EvmBreakdownRow[];
   }> {
     const {
       calculationMode = 'hours',
@@ -243,20 +298,61 @@ export class EvmService implements IEvmService {
     );
 
     // (4) 現在メトリクス（カードはライブ値が正）
+    const businessDayCounter = await this.buildBusinessDayCounter(wbsData);
     const currentMetrics = this.computeMetricsFromData(
-      wbsData, now, computeCumulativeAc(now), calculationMode, method, fMethod, false, now
+      wbsData, now, computeCumulativeAc(now), calculationMode, method, fMethod, false, now, businessDayCounter
     );
 
     // (5) 進捗スナップショット履歴を1回取得し、as-ofメトリクス関数を構築
     const snapshots = await this.wbsEvmRepository.getProgressSnapshots(wbsId, costRangeEnd);
     const computeHistorical = this.buildAsOfMetricsFn(
-      wbsData, snapshots, now, calculationMode, method, fMethod
+      wbsData, snapshots, now, calculationMode, method, fMethod, businessDayCounter
     );
 
     // (6) 時系列メトリクス
     const dates = this.generateDateRange(startDate, endDate, interval);
-    const timeSeries = this.computeTimeSeries(
-      wbsData, dates, computeCumulativeAc, computeHistorical, now, calculationMode, method, fMethod, showPrediction
+    let timeSeries = this.computeTimeSeries(
+      wbsData, dates, computeCumulativeAc, computeHistorical, now, calculationMode, method, fMethod, showPrediction, businessDayCounter
+    );
+
+    // (7) スケジュール予測（Earned Schedule）と予測線のBAC到達延長
+    const scheduleForecast = this.computeScheduleForecast(
+      wbsData, currentMetrics.ev, dateRange, now, calculationMode, method, businessDayCounter
+    );
+    if (
+      showPrediction &&
+      periodMode === 'project' &&
+      scheduleForecast.status === 'ok' &&
+      scheduleForecast.forecastCompletionDate &&
+      scheduleForecast.forecastCompletionDate.getTime() > endDate.getTime() &&
+      timeSeries.length > 0
+    ) {
+      timeSeries = timeSeries.concat(
+        this.buildForecastExtension(
+          wbsData,
+          timeSeries[timeSeries.length - 1],
+          currentMetrics,
+          endDate,
+          scheduleForecast.forecastCompletionDate,
+          startDate,
+          interval,
+          calculationMode,
+          method,
+          fMethod,
+          businessDayCounter
+        )
+      );
+    }
+
+    // (8) フェーズ別・担当者別内訳（現在時点・ライブタスク限定。
+    //     スナップショットにフェーズ/担当者情報が無いため過去日のas-of内訳は算出しない）
+    const acByTask = await this.wbsEvmRepository.getActualCostByTask(
+      wbsId,
+      now,
+      calculationMode
+    );
+    const { phaseBreakdown, assigneeBreakdown } = this.computeBreakdowns(
+      wbsData, acByTask, now, calculationMode, method, businessDayCounter
     );
 
     return {
@@ -264,6 +360,9 @@ export class EvmService implements IEvmService {
       timeSeries,
       taskDetails: wbsData.tasks,
       dateRange,
+      scheduleForecast,
+      phaseBreakdown,
+      assigneeBreakdown,
     };
   }
 
@@ -324,23 +423,25 @@ export class EvmService implements IEvmService {
     calculationMode: EvmCalculationMode,
     method: ProgressMeasurementMethod,
     fMethod: EvmForecastMethod,
-    includePrediction: boolean
+    includePrediction: boolean,
+    businessDayCounter?: BusinessDayCounter
   ): EvmMetrics[] {
     // 予測モード用の現在メトリクスを計算（DBアクセスなし）
     let currentMetrics: EvmMetrics | null = null;
     if (includePrediction) {
       currentMetrics = this.computeMetricsFromData(
-        wbsData, now, computeCumulativeAc(now), calculationMode, method, fMethod, false, now
+        wbsData, now, computeCumulativeAc(now), calculationMode, method, fMethod, false, now, businessDayCounter
       );
     }
 
     return dates.map((date) => {
       if (includePrediction && date > now && currentMetrics) {
         const baseMetric = this.computeMetricsFromData(
-          wbsData, date, computeCumulativeAc(date), calculationMode, method, fMethod, false, now
+          wbsData, date, computeCumulativeAc(date), calculationMode, method, fMethod, false, now, businessDayCounter
         );
 
-        const spi = currentMetrics.spi;
+        // SPI/CPI未定義（開始前・実績未投入）は「計画通り＝1」とみなして予測する
+        const spi = currentMetrics.spi ?? 1;
         const pvIncrement = Math.max(0, baseMetric.pv - currentMetrics.pv);
         const predictedEvIncrement = pvIncrement * spi;
         const predictedEv = Math.min(
@@ -349,7 +450,7 @@ export class EvmService implements IEvmService {
         );
 
         const cpi = currentMetrics.cpi;
-        const effectiveCpi = cpi === 0 ? 1 : cpi;
+        const effectiveCpi = cpi === null || cpi === 0 ? 1 : cpi;
         const evIncrement = Math.max(0, predictedEv - currentMetrics.ev);
         const predictedAc = currentMetrics.ac + (evIncrement / effectiveCpi);
 
@@ -364,6 +465,7 @@ export class EvmService implements IEvmService {
           progressMethod: method,
           forecastMethod: fMethod,
           isPredicted: true,
+          ...this.resolveThresholds(wbsData.settings),
         });
       }
 
@@ -451,27 +553,28 @@ export class EvmService implements IEvmService {
     forecastMethod: EvmForecastMethod,
     isPredicted: boolean = false,
     referenceDate: Date = evaluationDate,
+    businessDayCounter?: BusinessDayCounter,
   ): EvmMetrics {
     const pv_base = wbsData.tasks.reduce((sum, task) => {
-      return sum + task.getPlannedValueAtDate('BASE', evaluationDate, calculationMode, progressMethod);
+      return sum + task.getPlannedValueAtDate('BASE', evaluationDate, calculationMode, progressMethod, businessDayCounter);
     }, 0);
 
     const pv = wbsData.tasks.reduce((sum, task) => {
-      return sum + task.getPlannedValueAtDate('YOTEI', evaluationDate, calculationMode, progressMethod);
+      return sum + task.getPlannedValueAtDate('YOTEI', evaluationDate, calculationMode, progressMethod, businessDayCounter);
     }, 0);
 
     const ev = wbsData.tasks.reduce((sum, task) => {
       return sum + task.getEarnedValue(evaluationDate, calculationMode, progressMethod, referenceDate);
     }, 0);
 
-    const bac =
+    const taskBac =
       calculationMode === 'cost'
         ? wbsData.tasks.reduce(
           (sum, task) => sum + task.baseManHours * task.costPerHour,
           0
-        ) + wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0)
-        : wbsData.totalBaseManHours +
-        wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0);
+        )
+        : wbsData.totalBaseManHours;
+    const bac = taskBac + this.bufferBacContribution(wbsData, calculationMode);
 
     return EvmMetrics.create({
       date: evaluationDate,
@@ -484,6 +587,372 @@ export class EvmService implements IEvmService {
       progressMethod,
       forecastMethod,
       isPredicted,
+      ...this.resolveThresholds(wbsData.settings),
+    });
+  }
+
+  /**
+   * ヘルス判定しきい値をプロジェクト設定から解決する（未設定はデフォルト 0.9 / 0.8）。
+   */
+  private resolveThresholds(settings: ProjectSettingsData | null | undefined): {
+    healthyThreshold: number;
+    warningThreshold: number;
+  } {
+    return {
+      healthyThreshold: (settings?.evmHealthyThresholdPct ?? 90) / 100,
+      warningThreshold: (settings?.evmWarningThresholdPct ?? 80) / 100,
+    };
+  }
+
+  /**
+   * バッファのBAC寄与を算出する。
+   * 工数モードは時間のまま加算。金額モードは設定（evmBufferCostMethod）に応じて
+   * WBS平均単価/デフォルト単価で金額換算、またはBACから除外する。
+   */
+  private bufferBacContribution(
+    wbsData: WbsEvmData,
+    calculationMode: EvmCalculationMode
+  ): number {
+    const totalHours = wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0);
+    if (calculationMode !== 'cost') return totalHours;
+
+    const method = wbsData.settings?.evmBufferCostMethod ?? 'AVERAGE_RATE';
+    switch (method) {
+      case 'EXCLUDE':
+        return 0;
+      case 'DEFAULT_RATE':
+        return totalHours * DEFAULT_COST_PER_HOUR;
+      case 'AVERAGE_RATE':
+      default:
+        return totalHours * (wbsData.averageCostPerHour ?? DEFAULT_COST_PER_HOUR);
+    }
+  }
+
+  /**
+   * 営業日ベースPV按分用のカウンタ関数を構築する。
+   * 設定がBUSINESS_DAYS以外ならundefined（暦日按分のまま）。
+   * タスクの基準/予定期間全体を1回走査して累積営業日インデックスを作り、
+   * (start, end] の営業日数をO(1)で返すクロージャにする。
+   * 休日判定はCompanyCalendar（土日＋日本の祝日＋会社休日）を再利用する。
+   */
+  private async buildBusinessDayCounter(
+    wbsData: WbsEvmData
+  ): Promise<BusinessDayCounter | undefined> {
+    if (wbsData.settings?.evmPvDistribution !== 'BUSINESS_DAYS') return undefined;
+
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+    let minMs = Infinity;
+    let maxMs = -Infinity;
+    for (const t of wbsData.tasks) {
+      for (const d of [t.baseStartDate, t.plannedStartDate]) {
+        if (d && !isNaN(d.getTime())) minMs = Math.min(minMs, d.getTime());
+      }
+      for (const d of [t.baseEndDate, t.plannedEndDate]) {
+        if (d && !isNaN(d.getTime())) maxMs = Math.max(maxMs, d.getTime());
+      }
+    }
+    if (!isFinite(minMs) || !isFinite(maxMs)) return undefined;
+
+    const holidays = await this.wbsEvmRepository.getCompanyHolidays(
+      new Date(minMs),
+      new Date(maxMs)
+    );
+    const calendar = new CompanyCalendar(
+      7.5, // 稼働時間はisCompanyHoliday判定に影響しないためダミー値
+      holidays.map((date) => ({ date, name: '', type: 'COMPANY' as const }))
+    );
+
+    const startDay = Math.floor(minMs / MS_PER_DAY);
+    const endDay = Math.floor(maxMs / MS_PER_DAY);
+    const cumulative: number[] = new Array(endDay - startDay + 1);
+    let count = 0;
+    for (let day = startDay; day <= endDay; day++) {
+      if (!calendar.isCompanyHoliday(new Date(day * MS_PER_DAY))) count++;
+      cumulative[day - startDay] = count;
+    }
+
+    const cumAt = (ms: number): number => {
+      const day = Math.floor(ms / MS_PER_DAY);
+      if (day < startDay) return 0;
+      if (day > endDay) return cumulative[cumulative.length - 1];
+      return cumulative[day - startDay];
+    };
+
+    return (start: Date, end: Date) =>
+      Math.max(0, cumAt(end.getTime()) - cumAt(start.getTime()));
+  }
+
+  /**
+   * フェーズ別・担当者別のEVM内訳を集計する。
+   * - 軸はタスクの現担当者（作業記録の記録者ではない）。グルーピングキーはID。
+   * - タスク未紐付け実績（taskId=null）とライブタスクに存在しないtaskId（削除済み）のACは
+   *   「未紐付け・削除済み」行へ合算し、内訳AC合計 = 全体AC を維持する。
+   * - 未紐付け行はEV=0のためCPIが「正当な0」に見えてしまうので、SPI/CPIとも明示的にnull。
+   */
+  private computeBreakdowns(
+    wbsData: WbsEvmData,
+    acByTask: Map<number | null, number>,
+    now: Date,
+    calculationMode: EvmCalculationMode,
+    method: ProgressMeasurementMethod,
+    businessDayCounter?: BusinessDayCounter
+  ): { phaseBreakdown: EvmBreakdownRow[]; assigneeBreakdown: EvmBreakdownRow[] } {
+    type Acc = Omit<EvmBreakdownRow, 'spi' | 'cpi'>;
+    const phaseMap = new Map<string, Acc>();
+    const assigneeMap = new Map<string, Acc>();
+    const liveTaskIds = new Set<number>();
+
+    const accumulate = (
+      map: Map<string, Acc>,
+      key: string,
+      name: string,
+      pv: number,
+      ev: number,
+      ac: number,
+      bac: number
+    ) => {
+      const acc = map.get(key) ?? {
+        key,
+        name,
+        taskCount: 0,
+        pv: 0,
+        ev: 0,
+        ac: 0,
+        bac: 0,
+      };
+      acc.taskCount += 1;
+      acc.pv += pv;
+      acc.ev += ev;
+      acc.ac += ac;
+      acc.bac += bac;
+      map.set(key, acc);
+    };
+
+    for (const task of wbsData.tasks) {
+      liveTaskIds.add(task.taskId);
+      const pv = task.getPlannedValueAtDate(
+        'YOTEI', now, calculationMode, method, businessDayCounter
+      );
+      const ev = task.getEarnedValue(now, calculationMode, method, now);
+      const bac =
+        calculationMode === 'cost'
+          ? task.baseManHours * task.costPerHour
+          : task.baseManHours;
+      const ac = acByTask.get(task.taskId) ?? 0;
+
+      const phaseKey =
+        task.meta?.phaseId != null ? `phase:${task.meta.phaseId}` : 'phase:none';
+      const phaseName = task.meta?.phaseName ?? '未分類';
+      accumulate(phaseMap, phaseKey, phaseName, pv, ev, ac, bac);
+
+      const assigneeKey =
+        task.meta?.assigneeId != null
+          ? `assignee:${task.meta.assigneeId}`
+          : 'assignee:none';
+      const assigneeName = task.meta?.assigneeName ?? '未割当';
+      accumulate(assigneeMap, assigneeKey, assigneeName, pv, ev, ac, bac);
+    }
+
+    // 未紐付け・削除済みタスクのAC（内訳AC合計 = 全体AC の不変式を守る）
+    let unlinkedAc = 0;
+    for (const [taskId, ac] of acByTask) {
+      if (taskId === null || !liveTaskIds.has(taskId)) unlinkedAc += ac;
+    }
+
+    const toRows = (map: Map<string, Acc>): EvmBreakdownRow[] => {
+      const rows: EvmBreakdownRow[] = Array.from(map.values()).map((acc) => ({
+        ...acc,
+        spi: acc.pv === 0 ? null : acc.ev / acc.pv,
+        cpi: acc.ac === 0 ? null : acc.ev / acc.ac,
+      }));
+      if (unlinkedAc > 0) {
+        rows.push({
+          key: 'unlinked',
+          name: '未紐付け・削除済み',
+          taskCount: 0,
+          pv: 0,
+          ev: 0,
+          ac: unlinkedAc,
+          bac: 0,
+          spi: null,
+          cpi: null,
+          isUnlinked: true,
+        });
+      }
+      return rows;
+    };
+
+    return {
+      phaseBreakdown: toRows(phaseMap),
+      assigneeBreakdown: toRows(assigneeMap),
+    };
+  }
+
+  /**
+   * Earned Schedule法によるスケジュール予測。
+   * ES = PV曲線（単調非減少）上で現在EVと同額に達する経過日数（日単位2分探索＋線形補間）。
+   * SPIt = ES / 実経過日数。予測完了日 = 開始日 + 計画総日数 / SPIt。
+   * 過去日への完了予測は現在日にクランプする。
+   */
+  private computeScheduleForecast(
+    wbsData: WbsEvmData,
+    currentEv: number,
+    dateRange: EvmDateRange,
+    now: Date,
+    calculationMode: EvmCalculationMode,
+    method: ProgressMeasurementMethod,
+    businessDayCounter?: BusinessDayCounter
+  ): ScheduleForecast {
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+    const none: Omit<ScheduleForecast, 'status'> = {
+      forecastCompletionDate: null,
+      plannedEndDate: null,
+      delayDays: null,
+      spiT: null,
+    };
+
+    const start = dateRange.taskMinStartDate;
+    const end = dateRange.taskMaxEndDate;
+    if (!start || !end || end.getTime() <= start.getTime()) {
+      return { status: 'no_plan', ...none };
+    }
+
+    const pvAt = (d: Date): number =>
+      wbsData.tasks.reduce(
+        (sum, task) =>
+          sum + task.getPlannedValueAtDate('YOTEI', d, calculationMode, method, businessDayCounter),
+        0
+      );
+
+    // 計画終了日以降の評価で総PV（全タスク全額）
+    const totalPv = pvAt(new Date(end.getTime() + MS_PER_DAY));
+    if (totalPv <= 0) {
+      return { status: 'no_plan', ...none };
+    }
+
+    const atDays = (now.getTime() - start.getTime()) / MS_PER_DAY;
+    if (atDays <= 0) {
+      return { status: 'not_started', ...none, plannedEndDate: end };
+    }
+
+    if (currentEv >= totalPv) {
+      return {
+        status: 'completed_scope',
+        forecastCompletionDate: now,
+        plannedEndDate: end,
+        delayDays: Math.ceil((now.getTime() - end.getTime()) / MS_PER_DAY),
+        spiT: null,
+      };
+    }
+
+    if (currentEv <= 0) {
+      return { status: 'no_progress', ...none, plannedEndDate: end };
+    }
+
+    // ES: PV(start + d日) >= currentEv となる最小の日数dを2分探索
+    const totalDays = Math.ceil((end.getTime() - start.getTime()) / MS_PER_DAY);
+    let lo = 0;
+    let hi = totalDays;
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      const pvMid = pvAt(new Date(start.getTime() + mid * MS_PER_DAY));
+      if (pvMid >= currentEv) hi = mid;
+      else lo = mid + 1;
+    }
+    // 隣接日間を線形補間してESを小数日で求める
+    let es: number;
+    if (lo === 0) {
+      es = 0;
+    } else {
+      const pvHi = pvAt(new Date(start.getTime() + lo * MS_PER_DAY));
+      const pvLo = pvAt(new Date(start.getTime() + (lo - 1) * MS_PER_DAY));
+      const frac = pvHi > pvLo ? (currentEv - pvLo) / (pvHi - pvLo) : 0;
+      es = lo - 1 + frac;
+    }
+
+    const spiT = es / atDays;
+    if (spiT <= 0) {
+      return { status: 'no_progress', ...none, plannedEndDate: end };
+    }
+
+    const plannedDurationDays = (end.getTime() - start.getTime()) / MS_PER_DAY;
+    const forecastMs = start.getTime() + (plannedDurationDays / spiT) * MS_PER_DAY;
+    // 過去日への完了予測は出さない（現在日にクランプ）
+    const forecast = new Date(Math.max(forecastMs, now.getTime()));
+
+    return {
+      status: 'ok',
+      forecastCompletionDate: forecast,
+      plannedEndDate: end,
+      delayDays: Math.ceil((forecast.getTime() - end.getTime()) / MS_PER_DAY),
+      spiT,
+    };
+  }
+
+  /**
+   * 予測線をプロジェクト計画終了日以降、予測完了日まで延長するセグメントを生成する。
+   * EVは終了日時点の予測EVからBACへ線形に増加（予測完了日でBAC到達）、
+   * ACはCPI（未定義/0は1）で追随、PV/PV_BASEは計画期間後のため全額フラット。
+   * 表示の暴走防止のため、延長は「開始日から計画期間の2倍」の時点で打ち切る
+   * （打ち切られた場合、EVはBAC未到達のまま線が終わる）。
+   */
+  private buildForecastExtension(
+    wbsData: WbsEvmData,
+    lastPoint: EvmMetrics,
+    currentMetrics: EvmMetrics,
+    endDate: Date,
+    forecastDate: Date,
+    projectStart: Date,
+    interval: 'daily' | 'weekly' | 'monthly',
+    calculationMode: EvmCalculationMode,
+    method: ProgressMeasurementMethod,
+    fMethod: EvmForecastMethod,
+    businessDayCounter?: BusinessDayCounter
+  ): EvmMetrics[] {
+    const capMs =
+      projectStart.getTime() + 2 * (endDate.getTime() - projectStart.getTime());
+    const targetMs = Math.min(forecastDate.getTime(), Math.max(capMs, endDate.getTime()));
+    if (targetMs <= endDate.getTime()) return [];
+
+    const extDates = this.generateDateRange(endDate, new Date(targetMs), interval).slice(1);
+    if (extDates.length === 0) return [];
+
+    const evStart = lastPoint.ev;
+    const bac = lastPoint.bac;
+    const fullSpan = forecastDate.getTime() - endDate.getTime();
+    const cpi = currentMetrics.cpi;
+    const effectiveCpi = cpi === null || cpi === 0 ? 1 : cpi;
+    const thresholds = this.resolveThresholds(wbsData.settings);
+
+    return extDates.map((date) => {
+      const frac = Math.min(1, (date.getTime() - endDate.getTime()) / fullSpan);
+      const ev = evStart + (bac - evStart) * frac;
+      const ac =
+        currentMetrics.ac + Math.max(0, ev - currentMetrics.ev) / effectiveCpi;
+      const pv = wbsData.tasks.reduce(
+        (sum, task) =>
+          sum + task.getPlannedValueAtDate('YOTEI', date, calculationMode, method, businessDayCounter),
+        0
+      );
+      const pv_base = wbsData.tasks.reduce(
+        (sum, task) =>
+          sum + task.getPlannedValueAtDate('BASE', date, calculationMode, method, businessDayCounter),
+        0
+      );
+
+      return EvmMetrics.create({
+        date,
+        pv_base,
+        pv,
+        ev,
+        ac,
+        bac,
+        calculationMode,
+        progressMethod: method,
+        forecastMethod: fMethod,
+        isPredicted: true,
+        ...thresholds,
+      });
     });
   }
 
@@ -502,7 +971,8 @@ export class EvmService implements IEvmService {
     now: Date,
     calculationMode: EvmCalculationMode,
     method: ProgressMeasurementMethod,
-    fMethod: EvmForecastMethod
+    fMethod: EvmForecastMethod,
+    businessDayCounter?: BusinessDayCounter
   ): (evalDate: Date, ac: number) => EvmMetrics {
     // taskId別のスナップショット配列（snapshotAt昇順。取得時点でソート済み）
     const snapshotsByTask = new Map<number, TaskProgressSnapshotRecord[]>();
@@ -517,15 +987,13 @@ export class EvmService implements IEvmService {
     for (const t of wbsData.tasks) liveById.set(t.taskId, t);
 
     const allTaskIds = new Set<number>([...liveById.keys(), ...snapshotsByTask.keys()]);
-    const bufferTotal = wbsData.buffers.reduce((sum, b) => sum + b.bufferHours, 0);
+    const bufferTotal = this.bufferBacContribution(wbsData, calculationMode);
+    const thresholds = this.resolveThresholds(wbsData.settings);
 
     return (evalDate: Date, ac: number): EvmMetrics => {
-      // 評価日 d の終了時刻 = 翌日00:00（ローカル）。これ未満の最新スナップショットを d に反映。
-      const cutoffMs = new Date(
-        evalDate.getFullYear(),
-        evalDate.getMonth(),
-        evalDate.getDate() + 1
-      ).getTime();
+      // 評価日 d の終了時刻 = 翌日00:00（UTC）。これ未満の最新スナップショットを d に反映。
+      // 累積ACの日付キー（UTC暦日）と同一基準に揃え、サーバーTZ依存を排除する。
+      const cutoffMs = utcNextDayStartMs(evalDate);
 
       let pv = 0;
       let pv_base = 0;
@@ -540,10 +1008,10 @@ export class EvmService implements IEvmService {
           if (asOf.isRemoved) continue; // tombstone以降は寄与0
           const t = this.taskFromSnapshot(asOf);
           if (asOf.plannedStart && asOf.plannedEnd) {
-            pv += t.getPlannedValueAtDate('YOTEI', evalDate, calculationMode, method);
+            pv += t.getPlannedValueAtDate('YOTEI', evalDate, calculationMode, method, businessDayCounter);
           }
           if (asOf.baseStart && asOf.baseEnd) {
-            pv_base += t.getPlannedValueAtDate('BASE', evalDate, calculationMode, method);
+            pv_base += t.getPlannedValueAtDate('BASE', evalDate, calculationMode, method, businessDayCounter);
           }
           ev += t.getEarnedValueDirect(calculationMode, method);
           bac +=
@@ -554,8 +1022,8 @@ export class EvmService implements IEvmService {
           // スナップショット未蓄積区間：ライブタスクで提案Cフォールバック（現行と同一）
           const live = liveById.get(taskId);
           if (!live) continue;
-          pv_base += live.getPlannedValueAtDate('BASE', evalDate, calculationMode, method);
-          pv += live.getPlannedValueAtDate('YOTEI', evalDate, calculationMode, method);
+          pv_base += live.getPlannedValueAtDate('BASE', evalDate, calculationMode, method, businessDayCounter);
+          pv += live.getPlannedValueAtDate('YOTEI', evalDate, calculationMode, method, businessDayCounter);
           ev += live.getEarnedValue(evalDate, calculationMode, method, now);
           bac +=
             calculationMode === 'cost'
@@ -575,6 +1043,7 @@ export class EvmService implements IEvmService {
         progressMethod: method,
         forecastMethod: fMethod,
         isPredicted: false,
+        ...thresholds,
       });
     };
   }
@@ -620,7 +1089,7 @@ export class EvmService implements IEvmService {
   }
 
   // ヘルスステータス判定
-  getHealthStatus(metrics: EvmMetrics): 'healthy' | 'warning' | 'critical' {
+  getHealthStatus(metrics: EvmMetrics): EvmHealthStatus {
     return metrics.healthStatus;
   }
 
@@ -637,22 +1106,30 @@ export class EvmService implements IEvmService {
     interval: 'daily' | 'weekly' | 'monthly'
   ): Date[] {
     const dates: Date[] = [];
-    const current = new Date(startDate);
 
-    while (current <= endDate) {
-      dates.push(new Date(current));
-
-      switch (interval) {
-        case 'daily':
-          current.setDate(current.getDate() + 1);
-          break;
-        case 'weekly':
-          current.setDate(current.getDate() + 7);
-          break;
-        case 'monthly':
-          current.setMonth(current.getMonth() + 1);
-          break;
+    if (interval === 'monthly') {
+      // 常に開始日基準で i ヶ月加算（累積setMonthのドリフト回避。同日が無い月は月末にクランプ）
+      for (let i = 0; ; i++) {
+        const d = addUtcMonthsClamped(startDate, i);
+        if (d.getTime() > endDate.getTime()) break;
+        dates.push(d);
       }
+    } else {
+      const stepDays = interval === 'daily' ? 1 : 7;
+      const current = new Date(startDate);
+      while (current <= endDate) {
+        dates.push(new Date(current));
+        current.setUTCDate(current.getUTCDate() + stepDays);
+      }
+    }
+
+    // 終端補正: 刻みがendDateに一致しない場合、最終点としてendDateを追加する
+    // （チャート・テーブルの最終週/最終日欠けを防ぐ）
+    if (
+      dates.length > 0 &&
+      dates[dates.length - 1].getTime() < endDate.getTime()
+    ) {
+      dates.push(new Date(endDate));
     }
 
     return dates;

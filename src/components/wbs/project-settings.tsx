@@ -10,6 +10,7 @@ import {
   getProjectSettings,
   updateProjectSettings,
   updateDashboardSettings,
+  updateEvmSettings,
   getSchedulingSettings,
   updateSchedulingSettings,
 } from "@/app/wbs/[id]/project-settings-actions";
@@ -27,6 +28,18 @@ import {
   FORECAST_CALCULATION_METHOD_LABELS,
   FORECAST_CALCULATION_METHOD_DESCRIPTIONS,
 } from "@/types/forecast-calculation-method";
+import type { EvmBufferCostMethod } from "@/types/evm-buffer-cost-method";
+import {
+  EVM_BUFFER_COST_METHODS,
+  EVM_BUFFER_COST_METHOD_LABELS,
+  EVM_BUFFER_COST_METHOD_DESCRIPTIONS,
+} from "@/types/evm-buffer-cost-method";
+import type { EvmPvDistribution } from "@/types/evm-pv-distribution";
+import {
+  EVM_PV_DISTRIBUTIONS,
+  EVM_PV_DISTRIBUTION_LABELS,
+  EVM_PV_DISTRIBUTION_DESCRIPTIONS,
+} from "@/types/evm-pv-distribution";
 import type { EvmForecastMethod } from "@/types/evm-forecast-method";
 import {
   EVM_FORECAST_METHOD_LABELS,
@@ -45,6 +58,14 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
     useState<ForecastCalculationMethod>("REALISTIC");
   const [evmForecastMethod, setEvmForecastMethod] =
     useState<EvmForecastMethod>("CPI_ONLY");
+  const [evmBufferCostMethod, setEvmBufferCostMethod] =
+    useState<EvmBufferCostMethod>("AVERAGE_RATE");
+  const [evmPvDistribution, setEvmPvDistribution] =
+    useState<EvmPvDistribution>("CALENDAR");
+  const [evmHealthyThresholdPct, setEvmHealthyThresholdPct] =
+    useState<number>(90);
+  const [evmWarningThresholdPct, setEvmWarningThresholdPct] =
+    useState<number>(80);
   const [deadlineAlertDays, setDeadlineAlertDays] = useState<number>(1);
   const [costOverrunThresholdPct, setCostOverrunThresholdPct] =
     useState<number>(100);
@@ -71,6 +92,18 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         );
         if ("evmForecastMethod" in data && data.evmForecastMethod) {
           setEvmForecastMethod(data.evmForecastMethod as EvmForecastMethod);
+        }
+        if ("evmBufferCostMethod" in data && data.evmBufferCostMethod) {
+          setEvmBufferCostMethod(data.evmBufferCostMethod as EvmBufferCostMethod);
+        }
+        if ("evmPvDistribution" in data && data.evmPvDistribution) {
+          setEvmPvDistribution(data.evmPvDistribution as EvmPvDistribution);
+        }
+        if ("evmHealthyThresholdPct" in data) {
+          setEvmHealthyThresholdPct(data.evmHealthyThresholdPct as number);
+        }
+        if ("evmWarningThresholdPct" in data) {
+          setEvmWarningThresholdPct(data.evmWarningThresholdPct as number);
         }
         if ("deadlineAlertDays" in data) {
           setDeadlineAlertDays(data.deadlineAlertDays as number);
@@ -199,6 +232,29 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         forecastCalculationMethod,
         value
       );
+    });
+  };
+
+  const onEvmBufferCostMethodChange = (value: EvmBufferCostMethod) => {
+    setEvmBufferCostMethod(value);
+    startTransition(async () => {
+      await updateEvmSettings(projectId, { evmBufferCostMethod: value });
+    });
+  };
+
+  const onEvmPvDistributionChange = (value: EvmPvDistribution) => {
+    setEvmPvDistribution(value);
+    startTransition(async () => {
+      await updateEvmSettings(projectId, { evmPvDistribution: value });
+    });
+  };
+
+  const onEvmThresholdsBlur = () => {
+    startTransition(async () => {
+      await updateEvmSettings(projectId, {
+        evmHealthyThresholdPct,
+        evmWarningThresholdPct,
+      });
     });
   };
 
@@ -430,6 +486,157 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
               </Label>
             </div>
           </RadioGroup>
+        </div>
+
+        {/* EVM詳細設定 */}
+        <div className="space-y-4 pt-4 border-t">
+          <div>
+            <Label className="text-base font-medium">EVM詳細設定</Label>
+            <div className="text-sm text-gray-500 mt-1">
+              EVMダッシュボードの計算・判定に関する詳細設定です。
+            </div>
+          </div>
+
+          {/* バッファ金額換算方式 */}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-medium">
+                バッファの金額換算方式
+              </Label>
+              <div className="text-xs text-gray-500 mt-0.5">
+                金額ベースのBAC計算でバッファ工数（時間）をどう金額換算するかを選択します。
+              </div>
+            </div>
+            <RadioGroup
+              value={evmBufferCostMethod}
+              onValueChange={(value) =>
+                onEvmBufferCostMethodChange(value as EvmBufferCostMethod)
+              }
+              name="evmBufferCostMethod"
+            >
+              {EVM_BUFFER_COST_METHODS.map((method) => (
+                <div key={method} className="flex items-start space-x-3">
+                  <RadioGroupItem
+                    value={method}
+                    id={`evm-buffer-cost-${method}`}
+                    disabled={saving}
+                  />
+                  <Label
+                    htmlFor={`evm-buffer-cost-${method}`}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {EVM_BUFFER_COST_METHOD_LABELS[method]}
+                      </span>
+                      <span className="text-xs text-gray-500 font-normal">
+                        {EVM_BUFFER_COST_METHOD_DESCRIPTIONS[method]}
+                      </span>
+                    </div>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* PV按分方式 */}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-medium">PV按分方式</Label>
+              <div className="text-xs text-gray-500 mt-0.5">
+                期間中の計画価値（PV）を暦日で按分するか、営業日で按分するかを選択します。
+              </div>
+            </div>
+            <RadioGroup
+              value={evmPvDistribution}
+              onValueChange={(value) =>
+                onEvmPvDistributionChange(value as EvmPvDistribution)
+              }
+              name="evmPvDistribution"
+            >
+              {EVM_PV_DISTRIBUTIONS.map((dist) => (
+                <div key={dist} className="flex items-start space-x-3">
+                  <RadioGroupItem
+                    value={dist}
+                    id={`evm-pv-dist-${dist}`}
+                    disabled={saving}
+                  />
+                  <Label
+                    htmlFor={`evm-pv-dist-${dist}`}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {EVM_PV_DISTRIBUTION_LABELS[dist]}
+                      </span>
+                      <span className="text-xs text-gray-500 font-normal">
+                        {EVM_PV_DISTRIBUTION_DESCRIPTIONS[dist]}
+                      </span>
+                    </div>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* ヘルス判定しきい値 */}
+          <div className="flex items-center justify-between">
+            <div>
+              <Label
+                htmlFor="evmHealthyThresholdPct"
+                className="text-sm font-medium"
+              >
+                健全判定しきい値（%）
+              </Label>
+              <div className="text-xs text-gray-500 mt-0.5">
+                SPI・CPIがこの値以上なら「健全」と判定します
+              </div>
+            </div>
+            <Input
+              id="evmHealthyThresholdPct"
+              type="number"
+              min={0}
+              max={200}
+              value={evmHealthyThresholdPct}
+              onChange={(e) => {
+                const value = parseInt(e.target.value, 10);
+                if (isNaN(value) || value < 0) return;
+                setEvmHealthyThresholdPct(value);
+              }}
+              onBlur={onEvmThresholdsBlur}
+              className="w-20 text-right"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label
+                htmlFor="evmWarningThresholdPct"
+                className="text-sm font-medium"
+              >
+                注意判定しきい値（%）
+              </Label>
+              <div className="text-xs text-gray-500 mt-0.5">
+                SPI・CPIがこの値以上なら「注意」、下回ると「危機的」と判定します
+              </div>
+            </div>
+            <Input
+              id="evmWarningThresholdPct"
+              type="number"
+              min={0}
+              max={200}
+              value={evmWarningThresholdPct}
+              onChange={(e) => {
+                const value = parseInt(e.target.value, 10);
+                if (isNaN(value) || value < 0) return;
+                setEvmWarningThresholdPct(value);
+              }}
+              onBlur={onEvmThresholdsBlur}
+              className="w-20 text-right"
+              disabled={saving}
+            />
+          </div>
         </div>
 
         {/* 月跨ぎ按分の最小単位 */}

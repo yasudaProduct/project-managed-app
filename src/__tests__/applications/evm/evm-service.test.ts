@@ -14,11 +14,13 @@ describe('EvmService', () => {
       getWbsEvmData: jest.fn(),
       getTasksEvmData: jest.fn(),
       getActualCostByDate: jest.fn(),
+      getActualCostByTask: jest.fn().mockResolvedValue(new Map()),
       getBuffers: jest.fn(),
       getProjectSettings: jest.fn(),
       getProgressSnapshots: jest.fn().mockResolvedValue([]),
       getEditableProgressSnapshots: jest.fn().mockResolvedValue([]),
       updateProgressSnapshot: jest.fn().mockResolvedValue(undefined),
+      getCompanyHolidays: jest.fn().mockResolvedValue([]),
     } as jest.Mocked<IWbsEvmRepository>;
 
     evmService = new EvmService(mockRepository);
@@ -409,9 +411,9 @@ describe('EvmService', () => {
 
       const result = await evmService.calculateCurrentEvmMetrics(1, evaluationDate, 'cost');
 
-      // BAC: (100 * 5000) + 20 = 500,020
-      // Note: バッファは工数として加算され、金額換算されない
-      expect(result.bac).toBe(500020);
+      // BAC: (100 * 5000) + (20h × デフォルト単価5,000) = 600,000
+      // バッファは単価換算して加算する（設定なし時はAVERAGE_RATE→平均単価不明→デフォルト単価）
+      expect(result.bac).toBe(600000);
     });
 
     it('タスクが空の場合、すべての値が0になる', async () => {
@@ -510,10 +512,12 @@ describe('EvmService', () => {
 
       const result = await evmService.getEvmTimeSeries(1, startDate, endDate, 'weekly', 'hours');
 
-      expect(result).toHaveLength(3); // 1/1, 1/8, 1/15
+      // 週次刻み + 終端補正（endDate=1/20 が最終点として含まれる）
+      expect(result).toHaveLength(4); // 1/1, 1/8, 1/15, 1/20
       expect(result[0].date).toEqual(new Date('2025-01-01'));
       expect(result[1].date).toEqual(new Date('2025-01-08'));
       expect(result[2].date).toEqual(new Date('2025-01-15'));
+      expect(result[3].date).toEqual(new Date('2025-01-20'));
     });
 
     it('月次の時系列データを生成する', async () => {
@@ -548,10 +552,12 @@ describe('EvmService', () => {
 
       const result = await evmService.getEvmTimeSeries(1, startDate, endDate, 'monthly', 'hours');
 
-      expect(result).toHaveLength(3); // 1/1, 2/1, 3/1
+      // 月次刻み + 終端補正（endDate=3/15 が最終点として含まれる）
+      expect(result).toHaveLength(4); // 1/1, 2/1, 3/1, 3/15
       expect(result[0].date).toEqual(new Date('2025-01-01'));
       expect(result[1].date).toEqual(new Date('2025-02-01'));
       expect(result[2].date).toEqual(new Date('2025-03-01'));
+      expect(result[3].date).toEqual(new Date('2025-03-15'));
     });
 
     it('進捗率測定方法を指定できる', async () => {
@@ -1275,7 +1281,7 @@ describe('EvmService', () => {
       );
 
       // ETCは(BAC-EV)/CPIで計算される
-      if (result.cpi > 0) {
+      if (result.cpi !== null && result.cpi > 0) {
         expect(result.etc).toBeCloseTo((result.bac - result.ev) / result.cpi, 1);
       }
       expect(result.eac).toBeCloseTo(result.ac + result.etc, 1);
@@ -1288,7 +1294,7 @@ describe('EvmService', () => {
         1, new Date('2025-01-15'), 'hours'
       );
 
-      if (result.cpi > 0 && result.spi > 0) {
+      if (result.cpi !== null && result.cpi > 0 && result.spi !== null && result.spi > 0) {
         expect(result.etc).toBeCloseTo(
           (result.bac - result.ev) / (result.cpi * result.spi), 1
         );

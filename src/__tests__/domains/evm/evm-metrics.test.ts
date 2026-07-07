@@ -4,7 +4,7 @@ import { ProgressMeasurementMethod } from '@/types/progress-measurement';
 describe('EvmMetrics', () => {
   describe('基本的なEVM指標の計算', () => {
 
-    it('PVが0の場合、SPIは0を返す', () => {
+    it('PVが0の場合、SPIはnull（未定義）を返す', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
         pv_base: 100,
@@ -14,10 +14,10 @@ describe('EvmMetrics', () => {
         bac: 200,
       });
 
-      expect(metrics.spi).toBe(0);
+      expect(metrics.spi).toBeNull();
     });
 
-    it('ACが0の場合、CPIは0を返す', () => {
+    it('ACが0の場合、CPIはnull（未定義）を返す', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
         pv_base: 100,
@@ -27,7 +27,7 @@ describe('EvmMetrics', () => {
         bac: 200,
       });
 
-      expect(metrics.cpi).toBe(0);
+      expect(metrics.cpi).toBeNull();
     });
   });
 
@@ -455,7 +455,7 @@ describe('EvmMetrics', () => {
   });
 
   describe('全値ゼロのエッジケース', () => {
-    it('すべてゼロの場合、SV/CVは0', () => {
+    it('すべてゼロの場合、SV/CVは0、SPI/CPIはnull、健全性はno_data', () => {
       const metrics = new EvmMetrics({
         date: new Date('2025-01-01'),
         pv_base: 0,
@@ -467,9 +467,10 @@ describe('EvmMetrics', () => {
 
       expect(metrics.sv).toBe(0);
       expect(metrics.cv).toBe(0);
-      expect(metrics.spi).toBe(0);
-      expect(metrics.cpi).toBe(0);
+      expect(metrics.spi).toBeNull();
+      expect(metrics.cpi).toBeNull();
       expect(metrics.completionRate).toBe(0);
+      expect(metrics.healthStatus).toBe('no_data');
     });
   });
 
@@ -577,10 +578,20 @@ describe('EvmMetrics', () => {
         expect(metrics.vac).toBeCloseTo(-40, 0);
       });
 
-      it('CPI=0の場合、etc=0を返す', () => {
+      it('AC=0（CPI未定義）の場合、係数1とみなし残作業をそのまま返す', () => {
         const metrics = EvmMetrics.create({
           ...baseArgs,
-          ev: 0, ac: 0, // CPI = 0
+          ev: 0, ac: 0, // CPI = null（AC未発生）
+          forecastMethod: 'CPI_ONLY',
+        });
+        // ETC = max(0, BAC - EV) / 1 = 200
+        expect(metrics.etc).toBe(200);
+      });
+
+      it('EV=0かつAC>0（CPI=0）の場合、従来通りetc=0を返す', () => {
+        const metrics = EvmMetrics.create({
+          ...baseArgs,
+          ev: 0, ac: 60, // CPI = 0（実コスト発生済みで出来高ゼロ）
           forecastMethod: 'CPI_ONLY',
         });
         expect(metrics.etc).toBe(0);
@@ -609,22 +620,24 @@ describe('EvmMetrics', () => {
         expect(metrics.vac).toBeCloseTo(200 - metrics.eac, 0);
       });
 
-      it('CPI=0の場合、etc=0を返す', () => {
+      it('EV=0（SPI=0）の場合、CPIが未定義でもetc=0を返す', () => {
         const metrics = EvmMetrics.create({
           ...baseArgs,
-          ev: 0, ac: 0, // CPI = 0
+          ev: 0, ac: 0, // CPI = null、SPI = 0/100 = 0
           forecastMethod: 'CPI_SPI',
         });
+        // (cpi ?? 1) × (spi ?? 1) = 1 × 0 = 0 → ガードで0
         expect(metrics.etc).toBe(0);
       });
 
-      it('SPI=0の場合、etc=0を返す', () => {
+      it('PV=0（SPI未定義）の場合、SPI=1とみなしCPIのみで計算する', () => {
         const metrics = EvmMetrics.create({
           ...baseArgs,
-          pv: 0, // SPI = 0 (PV=0)
+          pv: 0, // SPI = null
           forecastMethod: 'CPI_SPI',
         });
-        expect(metrics.etc).toBe(0);
+        // ETC = max(0, 200-50) / ((50/60) × 1) = 150 / 0.8333 = 180
+        expect(metrics.etc).toBeCloseTo(180, 0);
       });
 
       it('CPI×SPIが極小値の場合でも正常に計算する', () => {
@@ -693,6 +706,121 @@ describe('EvmMetrics', () => {
         expect(cpiSpi.etc).toBeGreaterThan(cpiOnly.etc);
         expect(cpiOnly.etc).toBeGreaterThan(planned.etc);
       });
+    });
+  });
+
+  describe('ETCの下限クランプ（EV > BAC）', () => {
+    // 予定工数が基準工数を超えて増えた場合など、EVがBACを上回ることがある。
+    // 残作業は負にならないため、ETCは0を下限とする。
+    const overEarnedArgs = {
+      date: new Date('2025-01-01'),
+      pv_base: 100,
+      pv: 100,
+      ev: 220,
+      ac: 90,
+      bac: 200,
+    };
+
+    it('CPI_ONLY: EV > BAC の場合、ETCは負値ではなく0を返す', () => {
+      const metrics = EvmMetrics.create({ ...overEarnedArgs, forecastMethod: 'CPI_ONLY' });
+      expect(metrics.etc).toBe(0);
+      expect(metrics.eac).toBe(90); // EAC = AC + 0
+    });
+
+    it('CPI_SPI: EV > BAC の場合、ETCは負値ではなく0を返す', () => {
+      const metrics = EvmMetrics.create({ ...overEarnedArgs, forecastMethod: 'CPI_SPI' });
+      expect(metrics.etc).toBe(0);
+      expect(metrics.eac).toBe(90);
+    });
+
+    it('PLANNED: EV > BAC の場合、ETCは負値ではなく0を返す', () => {
+      const metrics = EvmMetrics.create({ ...overEarnedArgs, forecastMethod: 'PLANNED' });
+      expect(metrics.etc).toBe(0);
+      expect(metrics.eac).toBe(90);
+    });
+
+    it('VACはBAC - EACで整合する（EAC < BACとなりVACは正）', () => {
+      const metrics = EvmMetrics.create({ ...overEarnedArgs, forecastMethod: 'CPI_ONLY' });
+      expect(metrics.vac).toBe(200 - 90);
+    });
+
+    it('EV < BAC の通常ケースではクランプの影響を受けない', () => {
+      const metrics = EvmMetrics.create({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 100,
+        ev: 80,
+        ac: 90,
+        bac: 200,
+        forecastMethod: 'CPI_ONLY',
+      });
+      // ETC = (200 - 80) / (80/90) = 135
+      expect(metrics.etc).toBeCloseTo(135, 1);
+    });
+  });
+
+  describe('SPI/CPI未定義（null）時の健全性判定', () => {
+    it('PV=0かつAC=0（開始前）はno_dataを返す', () => {
+      const metrics = EvmMetrics.create({
+        date: new Date('2025-01-01'),
+        pv_base: 100,
+        pv: 0,
+        ev: 0,
+        ac: 0,
+        bac: 200,
+      });
+
+      expect(metrics.healthStatus).toBe('no_data');
+    });
+
+    it('SPIのみ未定義（PV=0）の場合、CPIのみで判定する', () => {
+      const healthy = EvmMetrics.create({
+        date: new Date('2025-01-01'),
+        pv_base: 100, pv: 0, ev: 95, ac: 100, bac: 200,
+      });
+      expect(healthy.healthStatus).toBe('healthy'); // CPI=0.95
+
+      const critical = EvmMetrics.create({
+        date: new Date('2025-01-01'),
+        pv_base: 100, pv: 0, ev: 70, ac: 100, bac: 200,
+      });
+      expect(critical.healthStatus).toBe('critical'); // CPI=0.70
+    });
+
+    it('CPIのみ未定義（AC=0）の場合、SPIのみで判定する', () => {
+      const warning = EvmMetrics.create({
+        date: new Date('2025-01-01'),
+        pv_base: 100, pv: 100, ev: 85, ac: 0, bac: 200,
+      });
+      expect(warning.healthStatus).toBe('warning'); // SPI=0.85
+    });
+  });
+
+  describe('健全性しきい値のカスタマイズ', () => {
+    it('healthyThresholdを上げると同じ指標値でもwarningになる', () => {
+      const base = {
+        date: new Date('2025-01-01'),
+        pv_base: 100, pv: 100, ev: 92, ac: 100, bac: 200, // SPI=CPI=0.92
+      };
+      expect(EvmMetrics.create(base).healthStatus).toBe('healthy');
+      expect(
+        EvmMetrics.create({ ...base, healthyThreshold: 0.95 }).healthStatus
+      ).toBe('warning');
+    });
+
+    it('warningThresholdを上げると同じ指標値でもcriticalになる', () => {
+      const base = {
+        date: new Date('2025-01-01'),
+        pv_base: 100, pv: 100, ev: 85, ac: 100, bac: 200, // SPI=CPI=0.85
+      };
+      expect(EvmMetrics.create(base).healthStatus).toBe('warning');
+      expect(
+        EvmMetrics.create({
+          ...base,
+          healthyThreshold: 0.95,
+          warningThreshold: 0.9,
+        }).healthStatus
+      ).toBe('critical');
     });
   });
 
