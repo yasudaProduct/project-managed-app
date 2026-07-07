@@ -18,8 +18,11 @@ export function buildProgressSnapshotInput(args: {
   const { task, costPerHour, actualStart, actualEnd } = args;
   const kijun = task.periods?.find((p) => p.type.type === 'KIJUN');
   const yotei = task.periods?.find((p) => p.type.type === 'YOTEI');
-  const baseManHours = sumNormalKosu(kijun);
-  const plannedManHours = yotei ? sumNormalKosu(yotei) : baseManHours;
+  const plannedManHours = yotei ? sumNormalKosu(yotei) : sumNormalKosu(kijun);
+  // 基準（KIJUN）未設定タスク（画面からの作成等）は予定をベースラインとして扱う。
+  // 基準0のスナップショットが残るとas-of再構築時のBACから漏れるため。
+  // KIJUN期間が存在して工数0の場合は、明示的な基準0としてそのまま尊重する。
+  const baseManHours = kijun ? sumNormalKosu(kijun) : plannedManHours;
 
   return {
     taskId: task.id ?? null, // 新規はnull（create後にtaskNoで解決）
@@ -31,8 +34,8 @@ export function buildProgressSnapshotInput(args: {
     costPerHour,
     plannedStart: yotei?.startDate ?? null,
     plannedEnd: yotei?.endDate ?? null,
-    baseStart: kijun?.startDate ?? null,
-    baseEnd: kijun?.endDate ?? null,
+    baseStart: kijun?.startDate ?? yotei?.startDate ?? null,
+    baseEnd: kijun?.endDate ?? yotei?.endDate ?? null,
     actualStart,
     actualEnd,
     isRemoved: false,

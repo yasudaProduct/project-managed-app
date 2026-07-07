@@ -91,7 +91,7 @@ describe('WbsEvmRepository', () => {
         }),
       ]);
 
-      const result = await repository.getWbsEvmData(wbsId, new Date('2025-06-15'));
+      const result = await repository.getWbsEvmData(wbsId);
 
       expect(result.tasks).toHaveLength(1);
       expect(result.tasks[0].baseManHours).toBe(30);
@@ -112,7 +112,7 @@ describe('WbsEvmRepository', () => {
         }),
       ]);
 
-      const result = await repository.getWbsEvmData(wbsId, new Date('2025-06-15'));
+      const result = await repository.getWbsEvmData(wbsId);
 
       expect(result.tasks[0].baseStartDate).toEqual(yoteiStart);
       expect(result.tasks[0].baseEndDate).toEqual(yoteiEnd);
@@ -125,7 +125,7 @@ describe('WbsEvmRepository', () => {
     it('KIJUNがあるタスクは基準値をそのまま使う（回帰確認）', async () => {
       mockQueryRepository.getWbsTasks.mockResolvedValue([makeTaskData()]);
 
-      const result = await repository.getWbsEvmData(wbsId, new Date('2025-06-15'));
+      const result = await repository.getWbsEvmData(wbsId);
 
       expect(result.tasks[0].baseManHours).toBe(100);
       expect(result.tasks[0].plannedManHours).toBe(120);

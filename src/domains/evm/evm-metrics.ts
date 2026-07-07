@@ -76,16 +76,18 @@ export class EvmMetrics {
 
   // Estimate To Complete (完了までの残コスト予測)
   get etc(): number {
+    // EV > BAC（予定工数が基準を超えて増えた場合等）でも残作業は負にならないため0を下限とする
+    const remaining = Math.max(0, this.bac - this.ev);
     switch (this.forecastMethod) {
       case 'CPI_SPI': {
         const cpiSpi = this.cpi * this.spi;
-        return cpiSpi === 0 ? 0 : (this.bac - this.ev) / cpiSpi;
+        return cpiSpi === 0 ? 0 : remaining / cpiSpi;
       }
       case 'PLANNED':
-        return this.bac - this.ev;
+        return remaining;
       case 'CPI_ONLY':
       default:
-        return this.cpi === 0 ? 0 : (this.bac - this.ev) / this.cpi;
+        return this.cpi === 0 ? 0 : remaining / this.cpi;
     }
   }
 

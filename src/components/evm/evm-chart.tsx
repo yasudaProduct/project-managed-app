@@ -58,8 +58,8 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
     day: "numeric",
   });
 
-  // PVの最大値
-  const maxPv = Math.max(...data.map((metrics) => metrics.pv));
+  // BAC（完了時予算）。時系列途中でタスク追加等によりBACが変わるため、最新時点の値を使う
+  const bacValue = data.length > 0 ? data[data.length - 1].bac : 0;
 
   /**
    * 値を計算モードに応じてフォーマット
@@ -104,8 +104,9 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
               strokeDasharray="4 4"
             />
             <ReferenceLine
-              y={maxPv}
+              y={bacValue}
               stroke="red"
+              ifOverflow="extendDomain"
               label={{
                 value: "BAC",
                 position: "top",

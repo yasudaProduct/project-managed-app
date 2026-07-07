@@ -40,9 +40,16 @@ export class WbsEvmRepository implements IWbsEvmRepository {
 
     // TaskEvmDataに変換
     const tasks = wbsTasksData.map((task) => {
-      const baseManHours = task.kijunKosu ?? 0;
+      // 基準（KIJUN）未設定タスク（画面からの作成等）は予定をベースラインとして扱う。
+      // 基準0のままだとBAC・PV_BASEから漏れ、EV > BACとなってEAC/VAC/完了率が破綻するため。
+      const baseManHours = task.kijunKosu ?? task.yoteiKosu ?? 0;
       const plannedManHours = task.yoteiKosu ?? task.kijunKosu ?? 0;
       const actualManHours = task.jissekiKosu ?? 0;
+
+      const plannedStartDate = task.yoteiStart ?? task.kijunStart ?? new Date();
+      const plannedEndDate = task.yoteiEnd ?? task.kijunEnd ?? new Date();
+      const baseStartDate = task.kijunStart ?? plannedStartDate;
+      const baseEndDate = task.kijunEnd ?? plannedEndDate;
 
       // WbsAssigneeからcostPerHourを取得
       // task.assignee.idはユーザーIDなので、WbsAssigneeから検索
@@ -60,10 +67,10 @@ export class WbsEvmRepository implements IWbsEvmRepository {
         Number(task.id),
         task.no, // taskNo
         task.name, // taskName
-        task.kijunStart!,
-        task.kijunEnd!,
-        task.yoteiStart ?? task.kijunStart ?? new Date(),
-        task.yoteiEnd ?? task.kijunEnd ?? new Date(),
+        baseStartDate,
+        baseEndDate,
+        plannedStartDate,
+        plannedEndDate,
         task.jissekiStart ?? null,
         task.jissekiEnd ?? null,
         baseManHours,
@@ -147,9 +154,12 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       where: {
         // AC（実績コスト）はworkRecordという不変事実の集計。タスクがsoft-delete
         // されても実績は消えないため、isDeletedで絞らずWBS配下の実績を全て対象にする。
-        task: {
-          wbsId: wbsId,
-        },
+        // タスクに紐付かない実績（Geppo未マッチ、全量置換同期によるtaskIdのSetNull後）も
+        // wbsId直接紐付けで拾い、ACから消えないようにする。
+        OR: [
+          { task: { wbsId } },
+          { wbsId },
+        ],
         date: {
           gte: startDate,
           lte: endDate,
