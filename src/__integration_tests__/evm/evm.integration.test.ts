@@ -497,8 +497,11 @@ describe('EVM Integration Tests', () => {
       expect(result.calculationMode).toBe('cost');
       expect(result.bac).toBeGreaterThan(0);
 
-      // BAC (cost) はベース工数(kijun)で計算する: 40*5000 + 80*8000 + 60*5000 + 20(buffer) = 200000 + 640000 + 300000 + 20 = 1140020
-      expect(result.bac).toBeCloseTo(1140020, -2);
+      // BAC (cost) はベース工数(kijun)で計算する。
+      // バッファ(20h)は金額換算方式（未設定時の既定=AVERAGE_RATE）で WBS平均単価 × 時間 に換算する。
+      // 平均単価 = (5000 + 8000) / 2 = 6500 → バッファ = 20 * 6500 = 130000
+      // 40*5000 + 80*8000 + 60*5000 + 130000 = 200000 + 640000 + 300000 + 130000 = 1270000
+      expect(result.bac).toBeCloseTo(1270000, -2);
     });
 
     it('calculateCurrentEvmMetrics で進捗率測定方法を指定できる', async () => {
