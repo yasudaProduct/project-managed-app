@@ -12,6 +12,7 @@ import {
 import type { IWbsQueryRepository } from '@/applications/wbs/query/iwbs-query-repository';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { EvmCalculationMode } from '@/domains/evm/evm-metrics';
+import { DEFAULT_COST_PER_HOUR } from '@/domains/evm/evm-constants';
 import { TaskStatus } from '@/types/wbs';
 
 @injectable()
@@ -53,7 +54,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
 
       // WbsAssigneeからcostPerHourを取得
       // task.assignee.idはユーザーIDなので、WbsAssigneeから検索
-      let costPerHour = 5000; // デフォルト値
+      let costPerHour = DEFAULT_COST_PER_HOUR;
       if (task.assignee?.id) {
         const wbsAssignee = wbs.assignees.find(
           (a) => a.assigneeId === task.assignee?.id
@@ -185,7 +186,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       // 計算モードに応じて工数または金額を加算
       const cost =
         calculationMode === 'cost'
-          ? Number(record.hours_worked) * (rateByUserId.get(record.userId) ?? 5000)
+          ? Number(record.hours_worked) * (rateByUserId.get(record.userId) ?? DEFAULT_COST_PER_HOUR)
           : Number(record.hours_worked);
 
       costMap.set(dateKey, currentCost + cost);

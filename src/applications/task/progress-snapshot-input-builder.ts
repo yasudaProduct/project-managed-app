@@ -1,8 +1,7 @@
 import { Task } from '@/domains/task/task';
 import type { TaskProgressSnapshotInput } from './itask-repository';
 
-/** 担当者未設定・単価未登録時に適用するデフォルト単価（円/時） */
-export const DEFAULT_COST_PER_HOUR = 5000;
+export { DEFAULT_COST_PER_HOUR } from '@/domains/evm/evm-constants';
 
 /**
  * Task ドメインから進捗スナップショット入力（時点データ・自己完結）を構築する。

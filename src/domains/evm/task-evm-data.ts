@@ -1,5 +1,6 @@
 import { ProgressMeasurementMethod } from '@/types/progress-measurement';
 import { TaskStatus } from '@/types/wbs';
+import { DEFAULT_COST_PER_HOUR } from './evm-constants';
 
 export type EvmCalculationMode = 'hours' | 'cost';
 
@@ -19,7 +20,7 @@ export class TaskEvmData {
     public readonly actualManHours: number,
     public readonly status: TaskStatus,
     public readonly progressRate: number,
-    public readonly costPerHour: number = 5000,
+    public readonly costPerHour: number = DEFAULT_COST_PER_HOUR,
     public readonly selfReportedProgress: number | null = null
   ) { }
 
