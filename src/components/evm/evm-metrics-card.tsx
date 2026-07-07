@@ -46,6 +46,13 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
             危機的
           </Badge>
         );
+      case "no_data":
+        return (
+          <Badge variant="secondary">
+            <Info className="h-3 w-3 mr-1" />
+            開始前
+          </Badge>
+        );
     }
   };
 
@@ -126,22 +133,28 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
                     </Tooltip>
                   </TooltipProvider>
                 </p>
-                <p className="text-2xl font-bold">{metrics.spi.toFixed(3)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatPercentage(metrics.spi)} の進捗効率
+                <p className="text-2xl font-bold">
+                  {metrics.spi !== null ? metrics.spi.toFixed(3) : "—"}
                 </p>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full ${
-                      metrics.spi >= 1
-                        ? "bg-green-500"
-                        : metrics.spi >= 0.9
-                        ? "bg-yellow-500"
-                        : "bg-red-500"
-                    }`}
-                    style={{ width: `${Math.min(metrics.spi * 100, 100)}%` }}
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  {metrics.spi !== null
+                    ? `${formatPercentage(metrics.spi)} の進捗効率`
+                    : "計画価値が未発生のため算出できません"}
+                </p>
+                {metrics.spi !== null && (
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${
+                        metrics.spi >= 1
+                          ? "bg-green-500"
+                          : metrics.spi >= 0.9
+                          ? "bg-yellow-500"
+                          : "bg-red-500"
+                      }`}
+                      style={{ width: `${Math.min(metrics.spi * 100, 100)}%` }}
+                    />
+                  </div>
+                )}
               </div>
               <div>
                 <p className="flex items-center text-sm text-muted-foreground">
@@ -161,22 +174,28 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
                     </Tooltip>
                   </TooltipProvider>
                 </p>
-                <p className="text-2xl font-bold">{metrics.cpi.toFixed(3)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatPercentage(metrics.cpi)} のコスト効率
+                <p className="text-2xl font-bold">
+                  {metrics.cpi !== null ? metrics.cpi.toFixed(3) : "—"}
                 </p>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full ${
-                      metrics.cpi >= 1
-                        ? "bg-green-500"
-                        : metrics.cpi >= 0.9
-                        ? "bg-yellow-500"
-                        : "bg-red-500"
-                    }`}
-                    style={{ width: `${Math.min(metrics.cpi * 100, 100)}%` }}
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  {metrics.cpi !== null
+                    ? `${formatPercentage(metrics.cpi)} のコスト効率`
+                    : "実績コストが未投入のため算出できません"}
+                </p>
+                {metrics.cpi !== null && (
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${
+                        metrics.cpi >= 1
+                          ? "bg-green-500"
+                          : metrics.cpi >= 0.9
+                          ? "bg-yellow-500"
+                          : "bg-red-500"
+                      }`}
+                      style={{ width: `${Math.min(metrics.cpi * 100, 100)}%` }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
             {/* 差異分析 */}

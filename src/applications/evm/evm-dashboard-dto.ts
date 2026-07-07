@@ -14,13 +14,13 @@ export type EvmMetricsData = {
   bac: number;
   sv: number;
   cv: number;
-  spi: number;
-  cpi: number;
+  spi: number | null;
+  cpi: number | null;
   eac: number;
   etc: number;
   vac: number;
   completionRate: number;
-  healthStatus: 'healthy' | 'warning' | 'critical';
+  healthStatus: 'healthy' | 'warning' | 'critical' | 'no_data';
   calculationMode: EvmCalculationMode;
   progressMethod: ProgressMeasurementMethod;
   forecastMethod: EvmForecastMethod;

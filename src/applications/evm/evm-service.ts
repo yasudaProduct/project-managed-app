@@ -1,7 +1,7 @@
 import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
 import type { IWbsEvmRepository, WbsEvmData, TaskProgressSnapshotRecord, EditableProgressSnapshot } from './iwbs-evm-repository';
-import { EvmMetrics } from '@/domains/evm/evm-metrics';
+import { EvmMetrics, type EvmHealthStatus } from '@/domains/evm/evm-metrics';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import type { ProgressMeasurementMethod } from '@/types/progress-measurement';
 import { TASK_STATUSES, type TaskStatus } from '@/types/wbs';
@@ -65,7 +65,7 @@ export interface IEvmService {
     options?: EvmDashboardOptions
   ): Promise<EvmDashboardData>;
   getTaskEvmDetails(wbsId: number): Promise<TaskEvmData[]>;
-  getHealthStatus(metrics: EvmMetrics): 'healthy' | 'warning' | 'critical';
+  getHealthStatus(metrics: EvmMetrics): EvmHealthStatus;
 }
 
 @injectable()
@@ -340,7 +340,8 @@ export class EvmService implements IEvmService {
           wbsData, date, computeCumulativeAc(date), calculationMode, method, fMethod, false, now
         );
 
-        const spi = currentMetrics.spi;
+        // SPI/CPI未定義（開始前・実績未投入）は「計画通り＝1」とみなして予測する
+        const spi = currentMetrics.spi ?? 1;
         const pvIncrement = Math.max(0, baseMetric.pv - currentMetrics.pv);
         const predictedEvIncrement = pvIncrement * spi;
         const predictedEv = Math.min(
@@ -349,7 +350,7 @@ export class EvmService implements IEvmService {
         );
 
         const cpi = currentMetrics.cpi;
-        const effectiveCpi = cpi === 0 ? 1 : cpi;
+        const effectiveCpi = cpi === null || cpi === 0 ? 1 : cpi;
         const evIncrement = Math.max(0, predictedEv - currentMetrics.ev);
         const predictedAc = currentMetrics.ac + (evIncrement / effectiveCpi);
 
@@ -620,7 +621,7 @@ export class EvmService implements IEvmService {
   }
 
   // ヘルスステータス判定
-  getHealthStatus(metrics: EvmMetrics): 'healthy' | 'warning' | 'critical' {
+  getHealthStatus(metrics: EvmMetrics): EvmHealthStatus {
     return metrics.healthStatus;
   }
 

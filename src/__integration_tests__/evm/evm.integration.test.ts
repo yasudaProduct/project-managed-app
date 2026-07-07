@@ -641,7 +641,8 @@ describe('EVM Integration Tests', () => {
 
           // 予測EVの計算式を検証
           // predictedEV = min(BAC, currentEV + max(0, futurePV - currentPV) * SPI)
-          const spi = currentMetrics.spi;
+          // SPI/CPI未定義（null）は「計画通り=1」とみなす（実装と同一ルール）
+          const spi = currentMetrics.spi ?? 1;
           const pvIncrement = Math.max(0, fm.pv - currentMetrics.pv);
           const expectedEv = Math.min(
             currentMetrics.bac,
@@ -652,7 +653,7 @@ describe('EVM Integration Tests', () => {
           // 予測ACの計算式を検証
           // predictedAC = currentAC + evIncrement / effectiveCPI
           const cpi = currentMetrics.cpi;
-          const effectiveCpi = cpi === 0 ? 1 : cpi;
+          const effectiveCpi = cpi === null || cpi === 0 ? 1 : cpi;
           const evIncrement = Math.max(0, fm.ev - currentMetrics.ev);
           const expectedAc = currentMetrics.ac + evIncrement / effectiveCpi;
           expect(fm.ac).toBeCloseTo(expectedAc, 5);
@@ -726,7 +727,7 @@ describe('EVM Integration Tests', () => {
       );
 
       expect(result.forecastMethod).toBe('CPI_SPI');
-      if (result.cpi > 0 && result.spi > 0) {
+      if (result.cpi !== null && result.cpi > 0 && result.spi !== null && result.spi > 0) {
         const expectedEtc = (result.bac - result.ev) / (result.cpi * result.spi);
         expect(result.etc).toBeCloseTo(expectedEtc, 1);
       }

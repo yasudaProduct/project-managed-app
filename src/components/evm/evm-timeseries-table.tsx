@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import type { EvmMetricsData } from "@/applications/evm/evm-dashboard-dto";
-import { CheckCircle, AlertTriangle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertTriangle, AlertCircle, Minus } from "lucide-react";
 
 type EvmTimeSeriesTableProps = {
   data: EvmMetricsData[];
@@ -47,7 +47,9 @@ export function EvmTimeSeriesTable({
     return `${value.toFixed(1)}h`;
   };
 
-  const getHealthBadge = (status: "healthy" | "warning" | "critical") => {
+  const getHealthBadge = (
+    status: "healthy" | "warning" | "critical" | "no_data"
+  ) => {
     switch (status) {
       case "healthy":
         return (
@@ -68,6 +70,13 @@ export function EvmTimeSeriesTable({
           <Badge variant="destructive">
             <AlertCircle className="h-3 w-3 mr-1" />
             危機的
+          </Badge>
+        );
+      case "no_data":
+        return (
+          <Badge variant="secondary">
+            <Minus className="h-3 w-3 mr-1" />
+            開始前
           </Badge>
         );
     }
@@ -170,10 +179,10 @@ export function EvmTimeSeriesTable({
                         {formatValue(metrics.cv)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {metrics.spi.toFixed(3)}
+                        {metrics.spi !== null ? metrics.spi.toFixed(3) : "—"}
                       </TableCell>
                       <TableCell className="text-right">
-                        {metrics.cpi.toFixed(3)}
+                        {metrics.cpi !== null ? metrics.cpi.toFixed(3) : "—"}
                       </TableCell>
                       <TableCell className="text-right">
                         {metrics.completionRate.toFixed(1)}%
@@ -345,22 +354,34 @@ export function EvmTimeSeriesTable({
                   <div className="space-y-2">
                     <MetricRow
                       label="SPI (スケジュール効率指数)"
-                      value={selectedMetrics.spi.toFixed(3)}
+                      value={
+                        selectedMetrics.spi !== null
+                          ? selectedMetrics.spi.toFixed(3)
+                          : "—"
+                      }
                       formula={`EV / PV = ${formatValue(selectedMetrics.ev)} / ${formatValue(selectedMetrics.pv)}`}
                       description={
-                        selectedMetrics.spi >= 1
-                          ? "計画以上のペースで進捗"
-                          : "計画より遅れている"
+                        selectedMetrics.spi === null
+                          ? "計画価値が未発生のため算出不可"
+                          : selectedMetrics.spi >= 1
+                            ? "計画以上のペースで進捗"
+                            : "計画より遅れている"
                       }
                     />
                     <MetricRow
                       label="CPI (コスト効率指数)"
-                      value={selectedMetrics.cpi.toFixed(3)}
+                      value={
+                        selectedMetrics.cpi !== null
+                          ? selectedMetrics.cpi.toFixed(3)
+                          : "—"
+                      }
                       formula={`EV / AC = ${formatValue(selectedMetrics.ev)} / ${formatValue(selectedMetrics.ac)}`}
                       description={
-                        selectedMetrics.cpi >= 1
-                          ? "予算内で効率的に推進"
-                          : "コスト超過傾向"
+                        selectedMetrics.cpi === null
+                          ? "実績コストが未投入のため算出不可"
+                          : selectedMetrics.cpi >= 1
+                            ? "予算内で効率的に推進"
+                            : "コスト超過傾向"
                       }
                     />
                     <MetricRow
@@ -415,7 +436,9 @@ export function EvmTimeSeriesTable({
                         ? "SPI・CPIともに良好な状態です"
                         : selectedMetrics.healthStatus === "warning"
                           ? "一部の指標に注意が必要です"
-                          : "早急な対策が必要です"}
+                          : selectedMetrics.healthStatus === "no_data"
+                            ? "プロジェクト開始前、または実績データがありません"
+                            : "早急な対策が必要です"}
                     </span>
                   </div>
                 </section>
@@ -473,12 +496,15 @@ function getForecastMethodLabel(method?: string): string {
 function formatEtcCalculation(m: EvmMetricsData): string {
   const formatNum = (v: number) => v.toFixed(1);
   const bac_ev = m.bac - m.ev;
+  // 未定義（null）の効率指標は係数1として計算される（ドメイン実装と同一ルール）
+  const cpiStr = m.cpi !== null ? m.cpi.toFixed(3) : "1.000（CPI未定義）";
+  const spiStr = m.spi !== null ? m.spi.toFixed(3) : "1.000（SPI未定義）";
   switch (m.forecastMethod) {
     case "CPI_SPI":
-      return `(${formatNum(m.bac)} - ${formatNum(m.ev)}) / (${m.cpi.toFixed(3)} × ${m.spi.toFixed(3)})`;
+      return `(${formatNum(m.bac)} - ${formatNum(m.ev)}) / (${cpiStr} × ${spiStr})`;
     case "PLANNED":
       return `${formatNum(m.bac)} - ${formatNum(m.ev)} = ${formatNum(bac_ev)}`;
     default:
-      return `(${formatNum(m.bac)} - ${formatNum(m.ev)}) / ${m.cpi.toFixed(3)}`;
+      return `(${formatNum(m.bac)} - ${formatNum(m.ev)}) / ${cpiStr}`;
   }
 }

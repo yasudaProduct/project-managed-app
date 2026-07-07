@@ -1275,7 +1275,7 @@ describe('EvmService', () => {
       );
 
       // ETCは(BAC-EV)/CPIで計算される
-      if (result.cpi > 0) {
+      if (result.cpi !== null && result.cpi > 0) {
         expect(result.etc).toBeCloseTo((result.bac - result.ev) / result.cpi, 1);
       }
       expect(result.eac).toBeCloseTo(result.ac + result.etc, 1);
@@ -1288,7 +1288,7 @@ describe('EvmService', () => {
         1, new Date('2025-01-15'), 'hours'
       );
 
-      if (result.cpi > 0 && result.spi > 0) {
+      if (result.cpi !== null && result.cpi > 0 && result.spi !== null && result.spi > 0) {
         expect(result.etc).toBeCloseTo(
           (result.bac - result.ev) / (result.cpi * result.spi), 1
         );
