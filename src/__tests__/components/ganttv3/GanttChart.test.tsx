@@ -252,6 +252,255 @@ describe("GanttChart", () => {
     });
   });
 
+  describe("依存関係のドラッグ作成（編集モード）", () => {
+    // タイムライン基点は最小開始日の7日前(2023-12-25)。columnWidth=40px/日。
+    // タスク1: x=280〜400 / 行y=20〜40、タスク2: x=440〜680(中央560) / 行y=40〜60
+    const TASK2_LEFT_HALF = { clientX: 500, clientY: 50 };
+    const TASK2_RIGHT_HALF = { clientX: 600, clientY: 50 };
+
+    /** ホバーで接続ハンドルを出して mousedown する */
+    function startConnectDrag(
+      container: HTMLElement,
+      taskId: string,
+      side: "start" | "end",
+    ) {
+      const group = container.querySelector(`[data-task-id="${taskId}"]`)!;
+      fireEvent.mouseEnter(group);
+      const handle = group.querySelector(
+        `.gantt-connect-handle[data-side="${side}"]`,
+      );
+      expect(handle).not.toBeNull();
+      fireEvent.mouseDown(handle!);
+    }
+
+    it("右端ハンドル→相手バー左半分へドロップで FS 依存を作成", () => {
+      const onDependencyCreate = jest.fn();
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          editMode
+          onDependencyCreate={onDependencyCreate}
+        />,
+      );
+
+      startConnectDrag(container, "1", "end");
+      fireEvent.mouseMove(document, TASK2_LEFT_HALF);
+      fireEvent.mouseUp(document);
+
+      expect(onDependencyCreate).toHaveBeenCalledWith("2", "1", "FS", 0);
+    });
+
+    it("左端ハンドル→相手バー左半分へドロップで SS 依存を作成", () => {
+      const onDependencyCreate = jest.fn();
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          editMode
+          onDependencyCreate={onDependencyCreate}
+        />,
+      );
+
+      startConnectDrag(container, "1", "start");
+      fireEvent.mouseMove(document, TASK2_LEFT_HALF);
+      fireEvent.mouseUp(document);
+
+      expect(onDependencyCreate).toHaveBeenCalledWith("2", "1", "SS", 0);
+    });
+
+    it("右端ハンドル→相手バー右半分へドロップで FF 依存を作成", () => {
+      const onDependencyCreate = jest.fn();
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          editMode
+          onDependencyCreate={onDependencyCreate}
+        />,
+      );
+
+      startConnectDrag(container, "1", "end");
+      fireEvent.mouseMove(document, TASK2_RIGHT_HALF);
+      fireEvent.mouseUp(document);
+
+      expect(onDependencyCreate).toHaveBeenCalledWith("2", "1", "FF", 0);
+    });
+
+    it("ドラッグ中はプレビュー線とターゲット強調を表示し、確定後に消える", () => {
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          editMode
+          onDependencyCreate={jest.fn()}
+        />,
+      );
+
+      startConnectDrag(container, "1", "end");
+      fireEvent.mouseMove(document, TASK2_LEFT_HALF);
+      expect(
+        container.querySelector('[data-testid="ganttv3-connect-line"]'),
+      ).toBeInTheDocument();
+      expect(
+        container.querySelector('[data-testid="ganttv3-connect-target"]'),
+      ).toBeInTheDocument();
+
+      fireEvent.mouseUp(document);
+      expect(
+        container.querySelector('[data-testid="ganttv3-connect-line"]'),
+      ).not.toBeInTheDocument();
+    });
+
+    it("バーの無い場所へドロップしても作成しない", () => {
+      const onDependencyCreate = jest.fn();
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          editMode
+          onDependencyCreate={onDependencyCreate}
+        />,
+      );
+
+      startConnectDrag(container, "1", "end");
+      // タスク2の行だがバー左端(440)より手前
+      fireEvent.mouseMove(document, { clientX: 410, clientY: 50 });
+      fireEvent.mouseUp(document);
+
+      expect(onDependencyCreate).not.toHaveBeenCalled();
+    });
+
+    it("自分自身へドロップしても作成しない", () => {
+      const onDependencyCreate = jest.fn();
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          editMode
+          onDependencyCreate={onDependencyCreate}
+        />,
+      );
+
+      startConnectDrag(container, "1", "end");
+      fireEvent.mouseMove(document, { clientX: 300, clientY: 30 }); // タスク1自身
+      fireEvent.mouseUp(document);
+
+      expect(onDependencyCreate).not.toHaveBeenCalled();
+    });
+
+    it("既存と重複する依存は作成しない", () => {
+      const onDependencyCreate = jest.fn();
+      const tasksWithDep = [
+        tasks[0],
+        { ...tasks[1], predecessors: [{ taskId: "1", type: "FS" as const, lag: 0 }] },
+      ];
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={tasksWithDep}
+          editMode
+          onDependencyCreate={onDependencyCreate}
+        />,
+      );
+
+      startConnectDrag(container, "1", "end");
+      fireEvent.mouseMove(document, TASK2_LEFT_HALF);
+      fireEvent.mouseUp(document);
+
+      expect(onDependencyCreate).not.toHaveBeenCalled();
+    });
+
+    it("循環になる依存は作成しない", () => {
+      const onDependencyCreate = jest.fn();
+      // タスク1が既にタスク2へ依存 → 2に1を先行として足すと循環
+      const tasksWithDep = [
+        { ...tasks[0], predecessors: [{ taskId: "2", type: "FS" as const, lag: 0 }] },
+        tasks[1],
+      ];
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={tasksWithDep}
+          editMode
+          onDependencyCreate={onDependencyCreate}
+        />,
+      );
+
+      startConnectDrag(container, "1", "end");
+      fireEvent.mouseMove(document, TASK2_LEFT_HALF);
+      fireEvent.mouseUp(document);
+
+      expect(onDependencyCreate).not.toHaveBeenCalled();
+    });
+
+    it("Escape キーでドラッグをキャンセルできる", () => {
+      const onDependencyCreate = jest.fn();
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          editMode
+          onDependencyCreate={onDependencyCreate}
+        />,
+      );
+
+      startConnectDrag(container, "1", "end");
+      fireEvent.mouseMove(document, TASK2_LEFT_HALF);
+      fireEvent.keyDown(document, { key: "Escape" });
+      expect(
+        container.querySelector('[data-testid="ganttv3-connect-line"]'),
+      ).not.toBeInTheDocument();
+
+      fireEvent.mouseUp(document);
+      expect(onDependencyCreate).not.toHaveBeenCalled();
+    });
+
+    it("非編集モードでは接続ハンドルを表示しない", () => {
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          editMode={false}
+          onDependencyCreate={jest.fn()}
+        />,
+      );
+      const group = container.querySelector('[data-task-id="1"]')!;
+      fireEvent.mouseEnter(group);
+      expect(container.querySelectorAll(".gantt-connect-handle")).toHaveLength(0);
+    });
+  });
+
+  describe("依存矢印のクリック編集（編集モード）", () => {
+    const tasksWithDep = [
+      tasks[0],
+      { ...tasks[1], predecessors: [{ taskId: "1", type: "FS" as const, lag: 0 }] },
+    ];
+
+    it("編集モードで矢印クリックすると onEditDependencies(後続タスクID) が発火", () => {
+      const onEditDependencies = jest.fn();
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={tasksWithDep}
+          style={makeStyle({ showDependencies: true, showTodayLine: false })}
+          editMode
+          onEditDependencies={onEditDependencies}
+        />,
+      );
+
+      const hit = container.querySelector("[data-dep-arrow]");
+      expect(hit).not.toBeNull();
+      fireEvent.click(hit!);
+      expect(onEditDependencies).toHaveBeenCalledWith("2");
+    });
+
+    it("非編集モードでは矢印のクリック領域を描画しない", () => {
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={tasksWithDep}
+          style={makeStyle({ showDependencies: true, showTodayLine: false })}
+          editMode={false}
+          onEditDependencies={jest.fn()}
+        />,
+      );
+      expect(container.querySelector("[data-dep-arrow]")).toBeNull();
+    });
+  });
+
   describe("インライン編集パネル（編集モード）", () => {
     it("バーをクリック（移動なし）で選択するとパネルが開く", () => {
       const { container } = render(<GanttChart {...defaultProps} editMode />);

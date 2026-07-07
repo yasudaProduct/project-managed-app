@@ -543,6 +543,123 @@ describe('TaskRepository Integration Tests', () => {
     });
   });
 
+  describe('手動編集スナップショット（update/delete 連動）', () => {
+    const manualTaskNo = 'MAN-0001';
+    let manualTaskId: number;
+
+    const makeSnapshotInput = (
+      overrides: Partial<TaskProgressSnapshotInput> = {}
+    ): TaskProgressSnapshotInput => ({
+      taskId: manualTaskId,
+      taskNo: manualTaskNo,
+      progressRate: 65,
+      status: 'IN_PROGRESS',
+      plannedManHours: 10,
+      baseManHours: 0,
+      costPerHour: 4000,
+      plannedStart: new Date('2025-05-10'),
+      plannedEnd: new Date('2025-05-20'),
+      baseStart: null,
+      baseEnd: null,
+      actualStart: null,
+      actualEnd: null,
+      isRemoved: false,
+      ...overrides,
+    });
+
+    beforeAll(async () => {
+      const created = await taskRepository.create(
+        Task.create({
+          taskNo: TaskNo.reconstruct(manualTaskNo),
+          wbsId: testIds.wbsId,
+          name: '手動スナップショット対象',
+          phaseId: testIds.phaseId,
+          status: new TaskStatus({ status: 'IN_PROGRESS' }),
+          periods: [
+            Period.create({
+              startDate: new Date('2025-05-10'),
+              endDate: new Date('2025-05-20'),
+              type: new PeriodType({ type: 'YOTEI' }),
+              manHours: [
+                ManHour.create({ kosu: 10, type: new ManHourType({ type: 'NORMAL' }) }),
+              ],
+            }),
+          ],
+          progressRate: 10,
+        })
+      );
+      manualTaskId = created.id!;
+    });
+
+    afterAll(async () => {
+      await global.prisma.taskProgressSnapshot
+        .deleteMany({ where: { taskNo: manualTaskNo } })
+        .catch(() => {});
+      await global.prisma.wbsTask
+        .deleteMany({ where: { wbsId: testIds.wbsId, taskNo: manualTaskNo } })
+        .catch(() => {});
+    });
+
+    it('update に snapshot を渡すと syncLogId=null のスナップショットが同時に追記される', async () => {
+      const task = await taskRepository.findById(manualTaskId);
+      task!.updateProgressRate(65);
+
+      await taskRepository.update(testIds.wbsId, task!, {
+        wbsId: testIds.wbsId,
+        snapshotAt: new Date(),
+        input: makeSnapshotInput({
+          actualStart: new Date('2025-05-12'),
+        }),
+      });
+
+      const snaps = await global.prisma.taskProgressSnapshot.findMany({
+        where: { taskId: manualTaskId },
+      });
+      expect(snaps).toHaveLength(1);
+      expect(snaps[0].syncLogId).toBeNull(); // 手動記録は同期ログに紐づかない
+      expect(Number(snaps[0].progressRate)).toBe(65);
+      expect(snaps[0].isRemoved).toBe(false);
+
+      // タスク本体の進捗率も更新されている
+      const updated = await taskRepository.findById(manualTaskId);
+      expect(updated!.progressRate).toBe(65);
+    });
+
+    it('findLatestSnapshotActuals は直近スナップショットの実績日を返す', async () => {
+      const actuals = await taskRepository.findLatestSnapshotActuals(manualTaskId);
+      expect(actuals).not.toBeNull();
+      expect(actuals!.actualStart).toEqual(new Date('2025-05-12'));
+      expect(actuals!.actualEnd).toBeNull();
+    });
+
+    it('delete に tombstone を渡すとタスク削除後も isRemoved=true のスナップショットが残る', async () => {
+      await taskRepository.delete(manualTaskId, {
+        wbsId: testIds.wbsId,
+        snapshotAt: new Date(),
+        input: makeSnapshotInput({
+          progressRate: null,
+          status: 'NOT_STARTED',
+          plannedManHours: 0,
+          costPerHour: 0,
+          plannedStart: null,
+          plannedEnd: null,
+          isRemoved: true,
+        }),
+      });
+
+      const task = await taskRepository.findById(manualTaskId);
+      expect(task).toBeNull();
+
+      const snaps = await global.prisma.taskProgressSnapshot.findMany({
+        where: { taskId: manualTaskId },
+        orderBy: { snapshotAt: 'asc' },
+      });
+      expect(snaps).toHaveLength(2);
+      expect(snaps[snaps.length - 1].isRemoved).toBe(true);
+      expect(snaps[snaps.length - 1].syncLogId).toBeNull();
+    });
+  });
+
   describe('エラーケース', () => {
     it('存在しないIDを指定した場合はnullを返すこと', async () => {
       const nonExistingTask = await taskRepository.findById(999999);

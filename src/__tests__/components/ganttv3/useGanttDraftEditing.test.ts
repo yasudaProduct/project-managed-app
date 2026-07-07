@@ -134,6 +134,25 @@ describe("useGanttDraftEditing", () => {
     expect(result.current.editMode).toBe(false);
   });
 
+  it("保存: 進捗率のみの変更でも updateTask が呼ばれ progressRate が送られる", async () => {
+    const tasks = [makeTask({ id: "1", dbId: 10, progressRate: 20 })];
+    const { result } = setup(tasks);
+    act(() => result.current.handleEnterEditMode());
+    act(() =>
+      result.current.handleDraftTaskUpdate({ ...tasks[0], progressRate: 80 }),
+    );
+
+    await act(async () => {
+      await result.current.handleSaveEdit();
+    });
+
+    expect(mockUpdateTask).toHaveBeenCalledTimes(1);
+    expect(mockUpdateTask.mock.calls[0][1]).toMatchObject({
+      id: 10,
+      progressRate: 80,
+    });
+  });
+
   it("変更が無ければサーバー更新は呼ばれない", async () => {
     const tasks = [makeTask({ id: "1", dbId: 10 })];
     const { result } = setup(tasks);

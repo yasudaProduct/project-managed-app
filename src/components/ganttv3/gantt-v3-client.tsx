@@ -318,6 +318,9 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
             onSaveEdit={handleSaveEdit}
             onCancelEdit={handleCancelEdit}
             onEditDependencies={handleEditDependencies}
+            onDependencyCreate={
+              editMode ? handleDraftDependencyAdd : handleDependencyAdd
+            }
             isSaving={isSavingEdit}
             isDataLoading={isLoading}
           />

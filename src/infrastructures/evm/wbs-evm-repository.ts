@@ -263,6 +263,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       snapshotAt: r.snapshotAt,
       progressRate: r.progressRate !== null ? Number(r.progressRate) : null,
       status: r.status,
+      syncLogId: r.syncLogId,
     }));
   }
 
