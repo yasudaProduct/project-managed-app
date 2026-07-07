@@ -6,6 +6,8 @@ import type {
   ISchedulingApplicationService,
   ScheduleCalculationParams,
   ScheduleCalculationResult,
+  SchedulePreviewRecalcParams,
+  SchedulePreviewRecalcResult,
 } from "@/applications/task-scheduling/ischeduling-application-service";
 
 /**
@@ -20,4 +22,18 @@ export async function calculateSchedule(
     SYMBOL.ISchedulingApplicationService
   );
   return service.calculateSchedule(wbsId, params);
+}
+
+/**
+ * 手動調整後のスケジュールから担当者別負荷・TSV・終了日超過警告を再計算する。
+ * タスクの再スケジュールは行わず、DBへの書き込みも一切行わない（読み取り専用）。
+ */
+export async function recalculateSchedulePreview(
+  wbsId: number,
+  params: SchedulePreviewRecalcParams
+): Promise<SchedulePreviewRecalcResult> {
+  const service = container.get<ISchedulingApplicationService>(
+    SYMBOL.ISchedulingApplicationService
+  );
+  return service.recalculatePreview(wbsId, params);
 }

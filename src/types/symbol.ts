@@ -4,16 +4,11 @@ export const SYMBOL = {
     IUserApplicationService: Symbol.for('IUserApplicationService'),
     IWbsApplicationService: Symbol.for('IWbsApplicationService'),
     ITaskApplicationService: Symbol.for('ITaskApplicationService'),
-    IScheduleGenerateService: Symbol.for('IScheduleGenerateService'),
     IAssigneeGanttService: Symbol.for('IAssigneeGanttService'),
     IDashboardApplicationService: Symbol.for('IDashboardApplicationService'),
     IPhaseApplicationService: Symbol.for('IPhaseApplicationService'),
     IMilestoneApplicationService: Symbol.for('IMilestoneApplicationService'),
     IScheduleApplicationService: Symbol.for('IScheduleApplicationService'),
-
-    // ドメインサービス
-    GetOperationPossible: Symbol.for('GetOperationPossible'),
-    ScheduleGenerate: Symbol.for('ScheduleGenerate'),
 
     // リポジトリ
     IProjectRepository: Symbol.for('IProjectRepository'),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,14 +11,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Play, Download, AlertTriangle, Calendar } from "lucide-react";
+import {
+  Play,
+  Download,
+  AlertTriangle,
+  Calendar,
+  RotateCcw,
+  Loader2,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { calculateSchedule } from "./scheduling-actions";
-import type { ScheduleCalculationResult } from "@/applications/task-scheduling/ischeduling-application-service";
+import {
+  calculateSchedule,
+  recalculateSchedulePreview,
+} from "./scheduling-actions";
+import type {
+  ScheduleCalculationResult,
+  SchedulePreviewRecalcResult,
+  ScheduledTaskDto,
+} from "@/applications/task-scheduling/ischeduling-application-service";
 import type { BaselineMode } from "@/types/scheduling-settings";
+import type { Task as GanttTask } from "@/components/ganttv3/gantt";
 import {
   scheduledToGanttTasks,
   scheduledToGanttPhases,
+  applyGanttTaskToScheduled,
+  scheduledToAssigneeOptions,
 } from "./adapters/scheduled-to-gantt";
 import { SchedulingGanttPreview } from "./scheduling-gantt-preview";
 import { AssigneeGanttChart } from "@/app/wbs/[id]/assignee-gantt/assignee-gantt-chart";
@@ -32,11 +49,24 @@ const WARNING_LABELS: Record<string, string> = {
   NO_YOTEI_KOSU: "予定工数未設定",
   CYCLIC_DEPENDENCY: "循環依存",
   STEADY_NO_PERIOD: "定常タスク期間未設定",
+  ON_HOLD: "保留タスク",
+  COMPLETED_NO_PERIOD: "完了タスク日程なし",
+  EXCEEDS_PROJECT_END: "プロジェクト終了日超過",
 };
+
+/** 手動調整のデバウンス間隔（連続編集中の負荷再計算を抑える） */
+const RECALC_DEBOUNCE_MS = 500;
 
 // <input type="date"> の "YYYY-MM-DD" をその日のUTC 0時の ISO に正規化（CLAUDE.md ポリシー）
 function dateInputToUtcIso(local: string): string {
   return new Date(`${local}T00:00:00.000Z`).toISOString();
+}
+
+/** 手動調整の巻き戻し用スナップショット */
+interface AdjustmentSnapshot {
+  edited: ScheduledTaskDto[] | null;
+  overlay: SchedulePreviewRecalcResult | null;
+  editedIds: Set<number>;
 }
 
 export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
@@ -46,9 +76,35 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ScheduleCalculationResult | null>(null);
 
+  // --- 手動調整（画面上のみ。DBへは書き込まない） ---
+  // 調整後のスケジュール。null = 未調整（計算結果をそのまま表示）
+  const [edited, setEdited] = useState<ScheduledTaskDto[] | null>(null);
+  // 調整後スケジュールから再計算した負荷・TSV・超過警告
+  const [overlay, setOverlay] = useState<SchedulePreviewRecalcResult | null>(
+    null
+  );
+  const [editedIds, setEditedIds] = useState<Set<number>>(new Set());
+  const [isAdjusting, setIsAdjusting] = useState(false);
+  const [isRecalcing, setIsRecalcing] = useState(false);
+  // 調整モードに入った時点の状態（キャンセルで巻き戻す）
+  const snapshotRef = useRef<AdjustmentSnapshot | null>(null);
+  // 古い再計算レスポンスを無視するためのシーケンス
+  const recalcSeqRef = useRef(0);
+
+  const resetAdjustment = () => {
+    recalcSeqRef.current++;
+    setEdited(null);
+    setOverlay(null);
+    setEditedIds(new Set());
+    setIsAdjusting(false);
+    setIsRecalcing(false);
+    snapshotRef.current = null;
+  };
+
   const handleCalculate = async () => {
     setIsLoading(true);
     setResult(null);
+    resetAdjustment();
     try {
       const res = await calculateSchedule(wbsId, {
         baselineMode,
@@ -69,10 +125,93 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
     }
   };
 
+  // 調整後の表示値（未調整なら元の計算結果）
+  const displayTasks = edited ?? result?.scheduledTasks ?? [];
+  const displayWorkloads = overlay?.workloads ?? result?.workloads ?? [];
+  const displayTsv = overlay?.tsv ?? result?.tsv ?? "";
+  const displayWarnings = result
+    ? overlay
+      ? [
+          ...result.warnings.filter((w) => w.kind !== "EXCEEDS_PROJECT_END"),
+          ...overlay.warnings,
+        ]
+      : result.warnings
+    : [];
+
+  // ガント上の編集（ドラッグ・インライン編集）をクライアント状態へ反映
+  const handleGanttTaskUpdate = (task: GanttTask) => {
+    if (!result || task.dbId == null) return;
+    const target = displayTasks.find((d) => d.taskId === task.dbId);
+    if (!target) return;
+    if (target.fixed) {
+      toast({
+        title: "調整できません",
+        description: "完了（実績固定）タスクは手動調整の対象外です。",
+      });
+      return;
+    }
+    setEdited((prev) =>
+      applyGanttTaskToScheduled(prev ?? result.scheduledTasks, task)
+    );
+    setEditedIds((prev) => new Set(prev).add(task.dbId!));
+  };
+
+  // 調整内容から負荷・TSV・超過警告をデバウンス付きで再計算（読み取り専用の server action）
+  useEffect(() => {
+    if (!edited || !result) return;
+    const seq = ++recalcSeqRef.current;
+    const timer = setTimeout(async () => {
+      setIsRecalcing(true);
+      try {
+        const res = await recalculateSchedulePreview(wbsId, {
+          baselineDateIso: result.baselineDate,
+          scheduledTasks: edited,
+        });
+        if (seq === recalcSeqRef.current) setOverlay(res);
+      } catch (error) {
+        if (seq === recalcSeqRef.current) {
+          toast({
+            title: "負荷の再計算エラー",
+            description:
+              error instanceof Error ? error.message : String(error),
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (seq === recalcSeqRef.current) setIsRecalcing(false);
+      }
+    }, RECALC_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [edited, result, wbsId]);
+
+  const handleEnterAdjust = () => {
+    snapshotRef.current = { edited, overlay, editedIds };
+    setIsAdjusting(true);
+  };
+
+  const handleSaveAdjust = () => {
+    // 「保存」= 画面上の調整を確定して調整モードを抜けるだけ（DBへは書き込まない）
+    snapshotRef.current = null;
+    setIsAdjusting(false);
+  };
+
+  const handleCancelAdjust = () => {
+    const snap = snapshotRef.current;
+    recalcSeqRef.current++;
+    setIsRecalcing(false);
+    if (snap) {
+      setEdited(snap.edited);
+      setOverlay(snap.overlay);
+      setEditedIds(snap.editedIds);
+    }
+    snapshotRef.current = null;
+    setIsAdjusting(false);
+  };
+
   const handleDownloadTsv = () => {
     if (!result) return;
     const bom = "﻿";
-    const blob = new Blob([bom + result.tsv], {
+    const blob = new Blob([bom + displayTsv], {
       type: "text/tab-separated-values;charset=utf-8",
     });
     const url = URL.createObjectURL(blob);
@@ -85,16 +224,17 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
     URL.revokeObjectURL(url);
   };
 
-  const ganttTasks = result ? scheduledToGanttTasks(result.scheduledTasks) : [];
-  const ganttPhases = result
-    ? scheduledToGanttPhases(result.scheduledTasks)
+  const ganttTasks = scheduledToGanttTasks(displayTasks);
+  const ganttPhases = scheduledToGanttPhases(displayTasks);
+  const assigneeOptions = result
+    ? scheduledToAssigneeOptions(result.scheduledTasks)
     : [];
   const baseDate = result ? new Date(result.baselineDate) : undefined;
 
   const summary = result
     ? {
-        scheduled: result.scheduledTasks.filter((t) => !t.skipped).length,
-        skipped: result.scheduledTasks.filter((t) => t.skipped).length,
+        scheduled: displayTasks.filter((t) => !t.skipped).length,
+        skipped: displayTasks.filter((t) => t.skipped).length,
       }
     : null;
 
@@ -141,6 +281,7 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
           <Button
             onClick={handleDownloadTsv}
             variant="outline"
+            disabled={isRecalcing}
             className="flex items-center gap-2"
           >
             <Download className="h-4 w-4" />
@@ -150,17 +291,17 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
       </div>
 
       {/* 前提警告 */}
-      {result && result.warnings.length > 0 && (
+      {result && displayWarnings.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
-              前提条件の警告 ({result.warnings.length}件)
+              前提条件の警告 ({displayWarnings.length}件)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-1 text-sm">
-              {result.warnings.map((w, i) => (
+              {displayWarnings.map((w, i) => (
                 <li key={i} className="flex items-center gap-2 flex-wrap">
                   <Badge variant="secondary">
                     {WARNING_LABELS[w.kind] ?? w.kind}
@@ -182,36 +323,72 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
 
       {/* サマリー */}
       {summary && (
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="default">計算対象 {summary.scheduled}件</Badge>
           {summary.skipped > 0 && (
             <Badge variant="secondary">除外 {summary.skipped}件</Badge>
           )}
+          {editedIds.size > 0 && (
+            <>
+              <Badge variant="outline" className="border-blue-400 text-blue-600">
+                手動調整 {editedIds.size}件（画面上のみ・DB未保存）
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1 text-xs text-gray-600"
+                onClick={resetAdjustment}
+              >
+                <RotateCcw className="h-3 w-3" />
+                調整を破棄して計算結果に戻す
+              </Button>
+            </>
+          )}
+          {isRecalcing && (
+            <span className="flex items-center gap-1 text-xs text-gray-500">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              負荷を再計算中...
+            </span>
+          )}
         </div>
       )}
 
-      {/* 結果ガント */}
+      {/* 結果ガント（調整モードでドラッグ・インライン編集可能） */}
       {result && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               スケジュール（ガント）
+              {isAdjusting && (
+                <span className="text-xs font-normal text-blue-600">
+                  調整モード: バーのドラッグ／クリックで編集できます（DBには保存されません）
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <SchedulingGanttPreview tasks={ganttTasks} categories={ganttPhases} />
+            <SchedulingGanttPreview
+              tasks={ganttTasks}
+              categories={ganttPhases}
+              editMode={isAdjusting}
+              assignees={assigneeOptions}
+              onTaskUpdate={handleGanttTaskUpdate}
+              onEnterEditMode={handleEnterAdjust}
+              onSaveEdit={handleSaveAdjust}
+              onCancelEdit={handleCancelAdjust}
+            />
           </CardContent>
         </Card>
       )}
 
       {/* 担当者別負荷（AssigneeGanttChart を計算結果プレビューとして利用） */}
-      {result && result.workloads.length > 0 && (
+      {result && displayWorkloads.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-base font-medium">担当者別負荷</h3>
           <AssigneeGanttChart
             wbsId={wbsId}
-            previewWorkloads={result.workloads}
+            previewWorkloads={displayWorkloads}
             previewBaseDate={baseDate}
           />
         </div>

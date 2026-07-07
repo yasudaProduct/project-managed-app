@@ -8,6 +8,7 @@ import type {
   GanttStyle,
   TimelineScale,
 } from "@/components/ganttv3/gantt";
+import type { AssigneeOption } from "@/components/ganttv3/inline-task-edit-panel";
 import {
   Select,
   SelectContent,
@@ -43,15 +44,35 @@ const previewStyle: GanttStyle = {
 interface SchedulingGanttPreviewProps {
   tasks: GanttTask[];
   categories: GanttPhase[];
+  /** 手動調整モード（trueでバーのドラッグ・インライン編集が有効） */
+  editMode?: boolean;
+  /** インライン編集パネルの担当者プルダウン選択肢 */
+  assignees?: AssigneeOption[];
+  /** 編集内容の通知（親が画面上の状態として保持する。DBには書き込まない） */
+  onTaskUpdate?: (task: GanttTask) => void;
+  /** 調整モードに入る（未指定なら調整UIは表示されず読み取り専用） */
+  onEnterEditMode?: () => void;
+  /** 調整を確定して調整モードを抜ける */
+  onSaveEdit?: () => void;
+  /** 調整を破棄して調整モードを抜ける */
+  onCancelEdit?: () => void;
 }
 
 /**
- * スケジューリング結果を ganttv3 の GanttChart で読み取り専用表示するラッパ。
- * editMode=false 固定なので DB への書き戻しは構造的に発生しない。
+ * スケジューリング結果を ganttv3 の GanttChart で表示するラッパ。
+ * 既定は読み取り専用。編集系props（onEnterEditMode等）を渡すと手動調整モードが
+ * 有効になるが、編集は onTaskUpdate で親のクライアント状態に反映されるだけで、
+ * DB への書き戻しは構造的に発生しない。
  */
 export function SchedulingGanttPreview({
   tasks,
   categories,
+  editMode = false,
+  assignees = [],
+  onTaskUpdate,
+  onEnterEditMode,
+  onSaveEdit,
+  onCancelEdit,
 }: SchedulingGanttPreviewProps) {
   const [timelineScale, setTimelineScale] = useState<TimelineScale>("week");
   const [zoomLevel, setZoomLevel] = useState(1.0);
@@ -118,10 +139,14 @@ export function SchedulingGanttPreview({
           zoomLevel={zoomLevel}
           groupBy="phase"
           sortBy="startDate"
-          onTaskUpdate={() => {}}
+          assignees={assignees}
+          onTaskUpdate={onTaskUpdate ?? (() => {})}
           onCategoryToggle={handleCategoryToggle}
           onZoomChange={setZoomLevel}
-          editMode={false}
+          editMode={editMode}
+          onEnterEditMode={onEnterEditMode}
+          onSaveEdit={onSaveEdit}
+          onCancelEdit={onCancelEdit}
         />
       </div>
     </div>

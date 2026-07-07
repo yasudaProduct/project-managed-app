@@ -13,9 +13,14 @@ import type {
   ISchedulingApplicationService,
   ScheduleCalculationParams,
   ScheduleCalculationResult,
+  SchedulePreviewRecalcParams,
+  SchedulePreviewRecalcResult,
   ScheduledTaskDto,
 } from "./ischeduling-application-service";
-import { CompanyCalendar } from "@/domains/calendar/company-calendar";
+import {
+  CompanyCalendar,
+  type CompanyHoliday,
+} from "@/domains/calendar/company-calendar";
 import {
   AssigneeWorkingCalendar,
   type UserSchedule,
@@ -88,19 +93,10 @@ export class SchedulingApplicationService
       this.systemSettingsRepository.get(),
     ]);
 
-    // 会社休日・個人予定の取得範囲。完了タスクは基準日より前にもありうるため前後に余裕を確保
-    const rangeStart = addCalendarDays(baselineDate, -366);
-    const rangeEnd = addCalendarDays(baselineDate, 366 * 2);
-    const [companyHolidays, userSchedules] = await Promise.all([
-      this.companyHolidayRepository.findByDateRange(rangeStart, rangeEnd),
-      assignees.length > 0
-        ? this.userScheduleRepository.findByUsersAndDateRange(
-            assignees.map((a) => a.userId),
-            rangeStart,
-            rangeEnd
-          )
-        : Promise.resolve([] as UserSchedule[]),
-    ]);
+    const { companyHolidays, userSchedules } = await this.loadCalendarInputs(
+      assignees,
+      baselineDate
+    );
 
     const companyCalendar = new CompanyCalendar(
       systemSettings.standardWorkingHours,
@@ -142,6 +138,16 @@ export class SchedulingApplicationService
       },
     });
 
+    // 計算結果がプロジェクト終了日に収まらないタスクを警告（リスケ判断の主要シグナル）
+    if (project.endDate) {
+      warnings.push(
+        ...SchedulingPreconditionService.checkProjectEnd(
+          scheduledTasks,
+          project.endDate
+        )
+      );
+    }
+
     const workloads = this.buildWorkloads(
       scheduledTasks,
       assignees,
@@ -157,6 +163,89 @@ export class SchedulingApplicationService
       workloads,
       tsv: convertScheduledTasksToTsv(scheduledTasks),
     };
+  }
+
+  /**
+   * 手動調整後のスケジュール（画面編集済みDTO）から負荷・TSV・超過警告のみを再計算する。
+   * タスクの再スケジュール（前詰め）は行わず、DBへの書き込みも一切行わない読み取り専用処理。
+   */
+  async recalculatePreview(
+    wbsId: number,
+    params: SchedulePreviewRecalcParams
+  ): Promise<SchedulePreviewRecalcResult> {
+    const wbs = await this.wbsRepository.findById(wbsId);
+    if (!wbs) throw new Error("WBSが見つかりません");
+    if (!wbs.projectId)
+      throw new Error("WBSに紐づくプロジェクトが見つかりません");
+
+    const project = await this.projectRepository.findById(wbs.projectId);
+    if (!project) throw new Error("プロジェクトが見つかりません");
+
+    const baselineDate = new Date(params.baselineDateIso);
+    if (Number.isNaN(baselineDate.getTime())) {
+      throw new Error("基準日が不正です");
+    }
+
+    const scheduledTasks = params.scheduledTasks.map(dtoToScheduledTask);
+
+    const [assignees, systemSettings] = await Promise.all([
+      this.wbsAssigneeRepository.findByWbsId(wbsId),
+      this.systemSettingsRepository.get(),
+    ]);
+
+    const { companyHolidays, userSchedules } = await this.loadCalendarInputs(
+      assignees,
+      baselineDate
+    );
+
+    const companyCalendar = new CompanyCalendar(
+      systemSettings.standardWorkingHours,
+      companyHolidays
+    );
+
+    const workloads = this.buildWorkloads(
+      scheduledTasks,
+      assignees,
+      userSchedules,
+      companyCalendar,
+      baselineDate
+    );
+
+    const warnings = project.endDate
+      ? SchedulingPreconditionService.checkProjectEnd(
+          scheduledTasks,
+          project.endDate
+        )
+      : [];
+
+    return {
+      workloads,
+      warnings,
+      tsv: convertScheduledTasksToTsv(scheduledTasks),
+    };
+  }
+
+  /** 会社休日・個人予定の取得。完了タスクは基準日より前にもありうるため前後に余裕を確保 */
+  private async loadCalendarInputs(
+    assignees: WbsAssignee[],
+    baselineDate: Date
+  ): Promise<{
+    companyHolidays: CompanyHoliday[];
+    userSchedules: UserSchedule[];
+  }> {
+    const rangeStart = addCalendarDays(baselineDate, -366);
+    const rangeEnd = addCalendarDays(baselineDate, 366 * 2);
+    const [companyHolidays, userSchedules] = await Promise.all([
+      this.companyHolidayRepository.findByDateRange(rangeStart, rangeEnd),
+      assignees.length > 0
+        ? this.userScheduleRepository.findByUsersAndDateRange(
+            assignees.map((a) => a.userId),
+            rangeStart,
+            rangeEnd
+          )
+        : Promise.resolve([] as UserSchedule[]),
+    ]);
+    return { companyHolidays, userSchedules };
   }
 
   private buildWorkloads(
@@ -219,6 +308,19 @@ export class SchedulingApplicationService
     }
     return result;
   }
+}
+
+/** 画面編集済みDTO（日付はISO文字列）をドメインの ScheduledTask（Date）へ戻す */
+function dtoToScheduledTask(dto: ScheduledTaskDto): ScheduledTask {
+  return {
+    ...dto,
+    scheduledStartDate: dto.scheduledStartDate
+      ? new Date(dto.scheduledStartDate)
+      : undefined,
+    scheduledEndDate: dto.scheduledEndDate
+      ? new Date(dto.scheduledEndDate)
+      : undefined,
+  };
 }
 
 function toDto(st: ScheduledTask): ScheduledTaskDto {

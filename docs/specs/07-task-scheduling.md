@@ -5,7 +5,7 @@
 本仕様書は、WBSのタスクに対して**基準日を起点に予定開始日・終了日を前詰めで試算する**スケジューリング機能を定義する。タスクの依存関係・担当者の稼働カレンダー・定常タスク・タスクのステータスを考慮し、現実的なスケジュールをシミュレートする。
 
 > **重要な前提（スコープ）**
-> 計算結果は **画面プレビューと TSV 出力までに留め、WBSタスクのDB（予定日程）には一切書き戻さない**。WBSへの予定日程の反映は MySQL/Excel インポート（[06: MySQLインポート](./06-mysql-import.md)）が本流であり、本機能は見積もり・確認のための**読み取り専用の試算**である。
+> 計算結果は **画面プレビューと TSV 出力までに留め、WBSタスクのDB（予定日程）には一切書き戻さない**。WBSへの予定日程の反映は MySQL/Excel インポート（[06: MySQLインポート](./06-mysql-import.md)）が本流であり、本機能は見積もり・確認のための**読み取り専用の試算**である。計算結果の手動調整（[§9.4](#94-手動調整)）もクライアント状態と読み取り専用の再計算のみで実現し、この前提を維持する。
 
 > **関連仕様書との位置づけ**
 > - [01: 営業日按分ロジック](./01-working-hours-allocation.md): 担当者の「いつ・何時間稼働できるか」（`AssigneeWorkingCalendar` / `CompanyCalendar`）を計算する。本機能はこれを稼働量の基盤として利用する。
@@ -60,7 +60,7 @@
 | --- | --- |
 | ドメイン（エンジン） | `src/domains/task-scheduling/forward-scheduler.ts` ほか同ディレクトリ |
 | ドメイン（依存・カレンダー） | `src/domains/task-dependency/`, `src/domains/calendar/` |
-| アプリケーション | `src/applications/task-scheduling/scheduling-application.service.ts` |
+| アプリケーション | `src/applications/task-scheduling/scheduling-application-service.ts` |
 | Server Action | `src/components/task-scheduling/scheduling-actions.ts` |
 | UI | `src/components/task-scheduling/scheduling-workbench.tsx` ほか |
 | 設定 | `project_settings.schedulingSettings`（Json列） |
@@ -153,11 +153,11 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 ### 7.4 開始日の丸めと工数消化
 依存下限・担当者の前タスク終了（`assigneeFreeFrom`）・基準日の最大を開始下限とし、`working-calendar-walker.ts` の関数で確定する。
 
-- `nextAvailableDay(下限, cal, consumed)`: 実効稼働時間が正になる最初の日。実効稼働 = `max(0, getAvailableHours − consumed)`。
-- `consumeUntilDone(開始, 残工数, cal, consumed)`: 各稼働日の実効稼働で工数を消化し、消化し切った最後の稼働日を終了日とする。
-- `nextBusinessDay(終了, cal, consumed)`: 同一担当者の次タスクの起点（翌営業日）。
+- `nextAvailableDay(下限, cal, consumed)`: 実効稼働時間が正になる最初の日。実効稼働 = `max(0, getAvailableHours − consumed)`（浮動小数の按分残差は epsilon でゼロ扱い）。
+- `consumeUntilDone(開始, 残工数, cal, consumed)`: 各稼働日の実効稼働から `min(実効稼働, 残工数)` を消化し、消化し切った最後の稼働日を終了日とする。**実際に消化した量は `consumed` に記録される**。
+- 同一担当者の次タスクは前タスクの**終了日を起点**とする（`assigneeFreeFrom`）。終了日に稼働の残余があれば**同日に詰め込まれ**、使い切っていれば `nextAvailableDay` により翌稼働日以降へ送られる。これにより小さいタスクが多数あっても1タスクが1日を占有しない。
 
-担当者の稼働量計算（土日祝・会社休日・個人予定・参画率）は `AssigneeWorkingCalendar.getAvailableHours` に委譲する（[01仕様書](./01-working-hours-allocation.md)）。定常タスクの消費は `consumed` マップで合成され、カレンダー本体は改変しない。
+担当者の稼働量計算（土日祝・会社休日・個人予定・参画率）は `AssigneeWorkingCalendar.getAvailableHours` に委譲する（[01仕様書](./01-working-hours-allocation.md)）。定常タスク・通常タスクの消費は `consumed` マップ（担当者ごと）で合成され、カレンダー本体は改変しない。
 
 ### 7.5 無限ループ防止
 `nextAvailableDay` / `consumeUntilDone` / `countWorkingDays` は反復上限（約5年=`366×5`日）を持ち、全日稼働0等で消化できない場合は打ち切る。`consumeUntilDone` が打ち切った場合は `SCHEDULE_OVERFLOW` を立てる。
@@ -177,6 +177,9 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 | `NO_YOTEI_KOSU` | 非定常で予定工数が未設定/0以下 |
 | `STEADY_NO_PERIOD` | 定常タスクに予定期間（開始・終了日）が無い |
 | `CYCLIC_DEPENDENCY` | 依存に循環あり（`cycleTaskNos` に該当タスクNo） |
+| `ON_HOLD` | 保留タスクが含まれる（計算対象になる旨の注意喚起。挙動は未着手と同じ） |
+| `COMPLETED_NO_PERIOD` | 完了タスクに日程（実績・予定）が無い（日程未確定のまま固定され、後続の依存制約に反映されない） |
+| `EXCEEDS_PROJECT_END` | **計算後の検証**: 算出した終了日がプロジェクト終了日を超過（`checkProjectEnd`、日単位比較。完了固定タスクの実績超過も含む） |
 
 循環検出は `TaskDependencyValidator.detectCycles`（Tarjanの強連結成分、サイズ2以上を循環とみなす）。
 
@@ -201,7 +204,17 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 計算結果を `WorkloadCalculationService.calculateDailyAllocationsFromSchedule` に流し、`AssigneeGanttChart` に `previewWorkloads` props として渡す（サーバー取得をスキップして計算結果を表示）。過負荷・参画率超過のセル色分けは既存ロジックを踏襲。
 
 ### 9.3 TSV
-`convertScheduledTasksToTsv`（`tsv-converter.ts`）が `タスクNo / タスク名 / 担当者 / フェーズ / ステータス / 定常 / 予定開始日 / 予定終了日 / 予定工数 / 備考` の列を生成。ダウンロードは Blob + BOM 付与方式。
+`convertScheduledTasksToTsv`（`tsv-converter.ts`）が `タスクNo / タスク名 / 担当者 / フェーズ / ステータス / 定常 / 予定開始日 / 予定終了日 / 予定工数 / 備考` の列を生成。ダウンロードは Blob + BOM 付与方式。手動調整中は調整後の内容が出力される。
+
+### 9.4 手動調整
+自動計算結果を起点にユーザーが画面上で最終調整するモード。ガントのツールバー「編集モード」で開始する。
+
+- **編集手段**: バーのドラッグ（移動／両端リサイズ）と、バークリックで開くインライン編集パネル（予定開始日・終了日・工数・担当者）。ganttv3 の既存編集UI（制御コンポーネント）をそのまま利用しており、**ganttv3 本体は無修正**。
+- **状態管理**: 編集は `onTaskUpdate` → `applyGanttTaskToScheduled`（`adapters/scheduled-to-gantt.ts`）で `ScheduledTaskDto[]` のクライアント状態へ非破壊反映されるだけで、**DBへの書き込みは一切発生しない**（一時テーブルも不使用）。
+- **負荷・TSV・警告への反映**: 編集からデバウンス（500ms）後に読み取り専用の Server Action `recalculateSchedulePreview` → `recalculatePreview`（アプリケーション層）を呼び、担当者別負荷（`AssigneeGanttChart` の `previewWorkloads`）・TSV・`EXCEEDS_PROJECT_END` 警告を再計算して差し替える。前詰め（`forwardSchedule`）は再実行しない。
+- **対象外**: 完了（実績固定, `fixed`）タスクは調整不可（トーストで通知）。
+- **巻き戻し**: ツールバーの「キャンセル」は調整モード進入時点へ復元。サマリー行の「調整を破棄して計算結果に戻す」で全調整を破棄。手動調整がある間は件数バッジ（DB未保存の明示）を表示する。
+- **再計算**: 「スケジュール計算」を再実行すると調整は破棄され、新しい計算結果に置き換わる。
 
 ---
 
@@ -210,6 +223,8 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 - **DB書き戻し非対応**: 計算結果はプレビュー＋TSVのみ。WBSへの反映は MySQL/Excel インポートが本流（[§1](#1-概要)）。
 - **FF/SF依存は近似**: 後続の所要日数を理想営業日数で近似するため、休暇・参画率が絡むと誤差が出る。終了日からの逆算（`consumeBackward`）による厳密化は局所改修で対応可能だが未実装。
 - **リソース制約の同時最適化は非対応**: 依存・担当者稼働・定常消費を満たす厳密な最適解（リソース制約付きスケジューリング）は対象外。前詰めヒューリスティックによる試算である。
+- **タイムゾーン前提**: エンジンの日付キーは**サーバーのローカル日付**（`toDateKey`）で、入力の日付（プロジェクト開始日・CUSTOM基準日等）は UTC 深夜の `Date` を想定する。サーバーTZが UTC（推奨）または UTC+側（JST等）なら日付は一致するが、UTC−側のTZでは1日ずれる。実行環境の TZ は UTC 固定を推奨（CLAUDE.md の日付ポリシー参照）。
+- **全日休暇キーワードのハードコード**: 個人予定を全日休暇とみなすタイトル（「休暇」「有給」等）は `AssigneeWorkingCalendar` にハードコードされており、設定化は未対応。
 
 ---
 
@@ -221,14 +236,14 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 - `steady-task-classifier.ts` — 定常タスク判定
 - `topological-sort.ts` — トポロジカルソート
 - `working-calendar-walker.ts` — 稼働日探索・工数消化
-- `scheduling-precondition.service.ts` — 前提条件チェック
+- `scheduling-precondition-service.ts` — 前提条件チェック
 - `src/domains/task-dependency/task-dependency-validator.ts` — `detectCycles`
 
 ### アプリケーション (`src/applications/task-scheduling/`)
-- `scheduling-application.service.ts` — オーケストレーション
+- `scheduling-application-service.ts` — オーケストレーション
 - `scheduling-task-mapper.ts` — `Task` → `SchedulingTask`
 - `baseline-resolver.ts` / `tsv-converter.ts`
-- `ischeduling-application.service.ts` / `ischeduling-settings-repository.ts`
+- `ischeduling-application-service.ts` / `ischeduling-settings-repository.ts`
 - `src/infrastructures/scheduling-settings-repository.ts`
 
 ### UI (`src/components/task-scheduling/`)

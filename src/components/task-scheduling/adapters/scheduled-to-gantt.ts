@@ -48,6 +48,48 @@ export function scheduledToGanttTasks(dtos: ScheduledTaskDto[]): GanttTask[] {
     }));
 }
 
+/**
+ * ganttv3 上での編集（日付ドラッグ・インライン編集）を ScheduledTaskDto へ逆反映する。
+ * 対象は dbId(=taskId) が一致するDTOのみ。非破壊で新しい配列を返す。
+ */
+export function applyGanttTaskToScheduled(
+  dtos: ScheduledTaskDto[],
+  edited: GanttTask
+): ScheduledTaskDto[] {
+  if (edited.dbId == null || !dtos.some((d) => d.taskId === edited.dbId)) {
+    return dtos;
+  }
+  return dtos.map((d) =>
+    d.taskId === edited.dbId
+      ? {
+          ...d,
+          scheduledStartDate: edited.startDate.toISOString(),
+          scheduledEndDate: edited.endDate.toISOString(),
+          scheduledManHours: edited.duration,
+          assigneeId: edited.assigneeId,
+          assigneeName: edited.assignee,
+        }
+      : d
+  );
+}
+
+/**
+ * スケジューリング結果に含まれる担当者から、インライン編集パネルの
+ * 担当者プルダウン選択肢（wbs_assignee.id ベース）を生成する。
+ */
+export function scheduledToAssigneeOptions(
+  dtos: ScheduledTaskDto[]
+): { id: number; name: string }[] {
+  const options: { id: number; name: string }[] = [];
+  const seen = new Set<number>();
+  for (const d of dtos) {
+    if (d.assigneeId == null || seen.has(d.assigneeId)) continue;
+    seen.add(d.assigneeId);
+    options.push({ id: d.assigneeId, name: d.assigneeName ?? String(d.assigneeId) });
+  }
+  return options;
+}
+
 /** スケジューリング結果から ganttv3 のフェーズ(カテゴリ)一覧を生成する */
 export function scheduledToGanttPhases(dtos: ScheduledTaskDto[]): GanttPhase[] {
   const order = buildPhaseOrder(dtos);

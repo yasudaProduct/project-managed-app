@@ -100,7 +100,6 @@ export function Header() {
     if (pathname.startsWith("/work-records/geppo")) return "月報";
     if (pathname.startsWith("/work-records")) return "作業実績";
     if (pathname.startsWith("/schedule")) return "スケジュール";
-    if (pathname.startsWith("/schedule-generator")) return "予定自動作成";
 
     if (pathname.includes("/dashboard")) return "ダッシュボード";
     if (pathname.includes("/ganttv2")) return "ガントチャート";

@@ -29,6 +29,12 @@ describe("working-calendar-walker", () => {
         nextAvailableDay(new Date(2026, 5, 15), weekday8, consumed)
       ).toEqual(new Date(2026, 5, 16));
     });
+    test("部分消費で稼働が残る日はその日を返す", () => {
+      const consumed = new Map([["2026-06-15", 6]]);
+      expect(
+        nextAvailableDay(new Date(2026, 5, 15), weekday8, consumed)
+      ).toEqual(new Date(2026, 5, 15));
+    });
   });
 
   describe("nextBusinessDay", () => {
@@ -66,6 +72,27 @@ describe("working-calendar-walker", () => {
       const noWork: WorkingCalendar = { getAvailableHours: () => 0 };
       const r = consumeUntilDone(new Date(2026, 5, 15), 8, noWork);
       expect(r.overflow).toBe(true);
+    });
+    test("消化した工数をconsumedに記録する（部分消費）", () => {
+      const consumed = new Map<string, number>();
+      const r = consumeUntilDone(new Date(2026, 5, 15), 2, weekday8, consumed);
+      expect(r.endDate).toEqual(new Date(2026, 5, 15));
+      expect(consumed.get("2026-06-15")).toBe(2);
+    });
+    test("既存のconsumedを差し引いた残りから消化し、消費を積み増す", () => {
+      const consumed = new Map([["2026-06-15", 6]]);
+      const r = consumeUntilDone(new Date(2026, 5, 15), 4, weekday8, consumed);
+      // 06-15の残り2hを使い、残工数2hは06-16へ
+      expect(r.endDate).toEqual(new Date(2026, 5, 16));
+      expect(consumed.get("2026-06-15")).toBe(8);
+      expect(consumed.get("2026-06-16")).toBe(2);
+    });
+    test("複数日にまたがる消費もconsumedに記録する", () => {
+      const consumed = new Map<string, number>();
+      const r = consumeUntilDone(new Date(2026, 5, 15), 10, weekday8, consumed);
+      expect(r.endDate).toEqual(new Date(2026, 5, 16));
+      expect(consumed.get("2026-06-15")).toBe(8);
+      expect(consumed.get("2026-06-16")).toBe(2);
     });
   });
 

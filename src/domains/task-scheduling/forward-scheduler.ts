@@ -10,7 +10,6 @@ import { topologicalSort, type TopoEdge } from "./topological-sort";
 import {
   type WorkingCalendar,
   nextAvailableDay,
-  nextBusinessDay,
   consumeUntilDone,
   countWorkingDays,
   addCalendarDays,
@@ -220,6 +219,7 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
     const start = nextAvailableDay(startLB, cal, cons);
 
     if (remaining <= 0) {
+      // 工数0は稼働を消費しないため、同日の残余をそのまま次タスクへ渡す
       result.set(taskId, {
         ...r,
         note,
@@ -227,10 +227,12 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
         scheduledEndDate: start,
         scheduledManHours: 0,
       });
-      assigneeFreeFrom.set(assigneeId, nextBusinessDay(start, cal, cons));
+      assigneeFreeFrom.set(assigneeId, start);
       continue;
     }
 
+    // consumeUntilDone が消化分を cons に記録するため、終了日に残余稼働があれば
+    // 同一担当者の次タスクは同日から開始できる（nextAvailableDay が残余0の日をスキップ）
     const { endDate, overflow } = consumeUntilDone(start, remaining, cal, cons);
     result.set(taskId, {
       ...r,
@@ -239,7 +241,7 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       scheduledEndDate: endDate,
       scheduledManHours: remaining,
     });
-    assigneeFreeFrom.set(assigneeId, nextBusinessDay(endDate, cal, cons));
+    assigneeFreeFrom.set(assigneeId, endDate);
   }
 
   // 元のtask順をベースに、開始日→taskNoでソートして返す
