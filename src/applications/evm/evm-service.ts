@@ -5,6 +5,7 @@ import { EvmMetrics, type EvmHealthStatus } from '@/domains/evm/evm-metrics';
 import { TaskEvmData, type BusinessDayCounter } from '@/domains/evm/task-evm-data';
 import { DEFAULT_COST_PER_HOUR } from '@/domains/evm/evm-constants';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
+import { utcNextDayStartMs, addUtcMonthsClamped } from '@/utils/date-util';
 import type { ProgressMeasurementMethod } from '@/types/progress-measurement';
 import { TASK_STATUSES, type TaskStatus } from '@/types/wbs';
 import type { EvmForecastMethod } from '@/types/evm-forecast-method';
@@ -624,12 +625,9 @@ export class EvmService implements IEvmService {
     const thresholds = this.resolveThresholds(wbsData.settings);
 
     return (evalDate: Date, ac: number): EvmMetrics => {
-      // 評価日 d の終了時刻 = 翌日00:00（ローカル）。これ未満の最新スナップショットを d に反映。
-      const cutoffMs = new Date(
-        evalDate.getFullYear(),
-        evalDate.getMonth(),
-        evalDate.getDate() + 1
-      ).getTime();
+      // 評価日 d の終了時刻 = 翌日00:00（UTC）。これ未満の最新スナップショットを d に反映。
+      // 累積ACの日付キー（UTC暦日）と同一基準に揃え、サーバーTZ依存を排除する。
+      const cutoffMs = utcNextDayStartMs(evalDate);
 
       let pv = 0;
       let pv_base = 0;
@@ -742,22 +740,30 @@ export class EvmService implements IEvmService {
     interval: 'daily' | 'weekly' | 'monthly'
   ): Date[] {
     const dates: Date[] = [];
-    const current = new Date(startDate);
 
-    while (current <= endDate) {
-      dates.push(new Date(current));
-
-      switch (interval) {
-        case 'daily':
-          current.setDate(current.getDate() + 1);
-          break;
-        case 'weekly':
-          current.setDate(current.getDate() + 7);
-          break;
-        case 'monthly':
-          current.setMonth(current.getMonth() + 1);
-          break;
+    if (interval === 'monthly') {
+      // 常に開始日基準で i ヶ月加算（累積setMonthのドリフト回避。同日が無い月は月末にクランプ）
+      for (let i = 0; ; i++) {
+        const d = addUtcMonthsClamped(startDate, i);
+        if (d.getTime() > endDate.getTime()) break;
+        dates.push(d);
       }
+    } else {
+      const stepDays = interval === 'daily' ? 1 : 7;
+      const current = new Date(startDate);
+      while (current <= endDate) {
+        dates.push(new Date(current));
+        current.setUTCDate(current.getUTCDate() + stepDays);
+      }
+    }
+
+    // 終端補正: 刻みがendDateに一致しない場合、最終点としてendDateを追加する
+    // （チャート・テーブルの最終週/最終日欠けを防ぐ）
+    if (
+      dates.length > 0 &&
+      dates[dates.length - 1].getTime() < endDate.getTime()
+    ) {
+      dates.push(new Date(endDate));
     }
 
     return dates;

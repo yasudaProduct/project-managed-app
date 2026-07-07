@@ -16,6 +16,7 @@ import type { IUserMappingService } from '@/applications/geppo-import/iuser-mapp
 import type { ITaskMappingService, TaskMappingEntry } from '@/applications/geppo-import/itask-mapping-service'
 import { buildTaskMapKey } from '@/applications/geppo-import/itask-mapping-service'
 import { Geppo, GeppoSearchFilters } from '@/domains/geppo/types'
+import { utcDateFromYmd } from '@/utils/date-util'
 
 export interface IGeppoImportApplicationService {
   validateImportData(options: GeppoImportOptions): Promise<GeppoImportValidation>
@@ -182,9 +183,10 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
 
         if (userIds.length > 0 && wbsIds.length > 0) {
           if (options.targetMonth) {
-            // 特定月の場合は月単位で削除
-            const monthStart = new Date(`${options.targetMonth}-01`)
-            const monthEnd = new Date(`${options.targetMonth}-31`)
+            // 特定月の場合は月単位で削除（月末はUTCで算出。"-31"連結は6月等でInvalid Dateになるため不可）
+            const [ty, tm] = options.targetMonth.split('-').map((v) => parseInt(v, 10))
+            const monthStart = utcDateFromYmd(ty, tm, 1)
+            const monthEnd = new Date(Date.UTC(ty, tm, 0)) // 当月末日（翌月0日）
             deletedCount = await this.workRecordService.deleteByUserAndDateRange(userIds, monthStart, monthEnd, wbsIds)
           } else {
             // 全期間の場合は、インポートされたデータの日付範囲で削除
@@ -254,9 +256,10 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
     const filters: GeppoSearchFilters = {}
 
     if (targetMonth) {
-      // 特定の月が指定されている場合
-      filters.dateFrom = new Date(`${targetMonth}-01`)
-      filters.dateTo = new Date(`${targetMonth}-31`)
+      // 特定の月が指定されている場合（月末はUTCで算出。"-31"連結は6月等でInvalid Dateになる）
+      const [ty, tm] = targetMonth.split('-').map((v) => parseInt(v, 10))
+      filters.dateFrom = utcDateFromYmd(ty, tm, 1)
+      filters.dateTo = new Date(Date.UTC(ty, tm, 0)) // 当月末日（翌月0日）
     }
     // targetMonthが指定されていない場合は、全期間を対象とする（フィルタなし）
 
@@ -340,8 +343,9 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
    */
   private createDateFromYearMonthDay(yyyymm: string, day: number): Date {
     const year = parseInt(yyyymm.substring(0, 4))
-    const month = parseInt(yyyymm.substring(4, 6)) - 1 // Dateは0ベース
-    return new Date(year, month, day)
+    const month = parseInt(yyyymm.substring(4, 6)) // 1〜12
+    // 保存はUTC前提（ローカルTZ解釈だとサーバーTZ次第で日付が1日ずれる）
+    return utcDateFromYmd(year, month, day)
   }
 
   private convertWorkRecordsToImportRecords(workRecords: WorkRecord[]): GeppoImportRecord[] {

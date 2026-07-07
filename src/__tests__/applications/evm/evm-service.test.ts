@@ -511,10 +511,12 @@ describe('EvmService', () => {
 
       const result = await evmService.getEvmTimeSeries(1, startDate, endDate, 'weekly', 'hours');
 
-      expect(result).toHaveLength(3); // 1/1, 1/8, 1/15
+      // 週次刻み + 終端補正（endDate=1/20 が最終点として含まれる）
+      expect(result).toHaveLength(4); // 1/1, 1/8, 1/15, 1/20
       expect(result[0].date).toEqual(new Date('2025-01-01'));
       expect(result[1].date).toEqual(new Date('2025-01-08'));
       expect(result[2].date).toEqual(new Date('2025-01-15'));
+      expect(result[3].date).toEqual(new Date('2025-01-20'));
     });
 
     it('月次の時系列データを生成する', async () => {
@@ -549,10 +551,12 @@ describe('EvmService', () => {
 
       const result = await evmService.getEvmTimeSeries(1, startDate, endDate, 'monthly', 'hours');
 
-      expect(result).toHaveLength(3); // 1/1, 2/1, 3/1
+      // 月次刻み + 終端補正（endDate=3/15 が最終点として含まれる）
+      expect(result).toHaveLength(4); // 1/1, 2/1, 3/1, 3/15
       expect(result[0].date).toEqual(new Date('2025-01-01'));
       expect(result[1].date).toEqual(new Date('2025-02-01'));
       expect(result[2].date).toEqual(new Date('2025-03-01'));
+      expect(result[3].date).toEqual(new Date('2025-03-15'));
     });
 
     it('進捗率測定方法を指定できる', async () => {
