@@ -47,6 +47,12 @@ export type TaskEvmDataSerialized = {
   selfReportedProgress: number | null;
   earnedValue: number;
   earnedValueCost: number;
+  /** ダッシュボードで選択中の測定方式を適用した進捗率（0〜100） */
+  methodProgressRate: number;
+  /** 選択中の測定方式を適用した出来高（工数ベース）。合計EVと整合する */
+  methodEarnedValue: number;
+  /** 選択中の測定方式を適用した出来高（金額ベース） */
+  methodEarnedValueCost: number;
 };
 
 export type EvmDateRangeData = {
@@ -93,7 +99,10 @@ export function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
   };
 }
 
-export function serializeTaskEvmData(task: TaskEvmData): TaskEvmDataSerialized {
+export function serializeTaskEvmData(
+  task: TaskEvmData,
+  progressMethod: ProgressMeasurementMethod = 'SELF_REPORTED'
+): TaskEvmDataSerialized {
   return {
     taskId: task.taskId,
     taskNo: task.taskNo,
@@ -110,6 +119,9 @@ export function serializeTaskEvmData(task: TaskEvmData): TaskEvmDataSerialized {
     selfReportedProgress: task.selfReportedProgress,
     earnedValue: task.earnedValue,
     earnedValueCost: task.earnedValueCost,
+    methodProgressRate: task.getDirectProgressRate(progressMethod),
+    methodEarnedValue: task.getEarnedValueDirect('hours', progressMethod),
+    methodEarnedValueCost: task.getEarnedValueDirect('cost', progressMethod),
   };
 }
 
@@ -119,10 +131,14 @@ export function serializeEvmDashboardData(result: {
   taskDetails: TaskEvmData[];
   dateRange: EvmDateRange;
 }): EvmDashboardData {
+  // タスク明細のEVは、合計EVと同じ「解決済みの測定方式」で算出する（明細と合計の不一致を防ぐ）
+  const progressMethod = result.currentMetrics.progressMethod;
   return {
     currentMetrics: serializeEvmMetrics(result.currentMetrics),
     timeSeries: result.timeSeries.map(serializeEvmMetrics),
-    taskDetails: result.taskDetails.map(serializeTaskEvmData),
+    taskDetails: result.taskDetails.map((t) =>
+      serializeTaskEvmData(t, progressMethod)
+    ),
     dateRange: {
       projectStartDate: null,
       projectEndDate: null,

@@ -98,11 +98,11 @@ export class TaskEvmData {
       calculationMode === 'cost'
         ? this.plannedManHours * this.costPerHour
         : this.plannedManHours;
-    return base * (this.directRate(progressMethod) / 100);
+    return base * (this.getDirectProgressRate(progressMethod) / 100);
   }
 
-  /** 方式別の直接進捗率（0〜100、按分なし） */
-  private directRate(method: ProgressMeasurementMethod): number {
+  /** 方式別の直接進捗率（0〜100、按分なし）。タスク別明細の方式別表示にも使用する */
+  getDirectProgressRate(method: ProgressMeasurementMethod): number {
     switch (method) {
       case 'ZERO_HUNDRED':
         return this.status === 'COMPLETED' ? 100 : 0;

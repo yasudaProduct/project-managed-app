@@ -304,7 +304,11 @@ export function EvmDashboard({
         </TabsContent>
 
         <TabsContent value="tasks">
-          <TaskEvmTable tasks={taskDetails} calculationMode={calculationMode} />
+          <TaskEvmTable
+            tasks={taskDetails}
+            calculationMode={calculationMode}
+            progressMethod={progressMethod}
+          />
         </TabsContent>
       </Tabs>
 
