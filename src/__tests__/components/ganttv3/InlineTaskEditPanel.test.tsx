@@ -34,12 +34,13 @@ function setup(taskOverrides = {}) {
 }
 
 describe("InlineTaskEditPanel", () => {
-  it("タスク名/番号を表示し、通常タスクは終了日・工数・担当者入力を出す", () => {
+  it("タスク名/番号を表示し、通常タスクは終了日・工数・進捗率・担当者入力を出す", () => {
     setup();
     expect(screen.getByText(/実装/)).toBeInTheDocument();
     expect(screen.getByText("予定開始日")).toBeInTheDocument();
     expect(screen.getByText("予定終了日")).toBeInTheDocument();
     expect(screen.getByText("予定工数(h)")).toBeInTheDocument();
+    expect(screen.getByText("進捗率(%)")).toBeInTheDocument();
     expect(screen.getByText("担当者")).toBeInTheDocument();
   });
 
@@ -71,6 +72,30 @@ describe("InlineTaskEditPanel", () => {
       target: { value: "2" },
     });
     expect(onChange).toHaveBeenCalledWith({ assigneeId: 2, assignee: "鈴木" });
+  });
+
+  it("進捗率変更で onChange に progressRate が渡る", () => {
+    const { onChange } = setup({ progressRate: 30 });
+    fireEvent.change(screen.getByDisplayValue("30"), {
+      target: { value: "70" },
+    });
+    expect(onChange).toHaveBeenCalledWith({ progressRate: 70 });
+  });
+
+  it("進捗率は0-100にクランプされる", () => {
+    const { onChange } = setup({ progressRate: 30 });
+    fireEvent.change(screen.getByDisplayValue("30"), {
+      target: { value: "150" },
+    });
+    expect(onChange).toHaveBeenCalledWith({ progressRate: 100 });
+  });
+
+  it("進捗率を空にすると undefined（未変更扱い）が渡る", () => {
+    const { onChange } = setup({ progressRate: 30 });
+    fireEvent.change(screen.getByDisplayValue("30"), {
+      target: { value: "" },
+    });
+    expect(onChange).toHaveBeenCalledWith({ progressRate: undefined });
   });
 
   it("閉じるボタンで onClose", () => {

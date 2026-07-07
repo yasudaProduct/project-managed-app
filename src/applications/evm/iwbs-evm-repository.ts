@@ -49,6 +49,7 @@ export interface EditableProgressSnapshot {
   snapshotAt: Date;
   progressRate: number | null;
   status: TaskStatus;
+  syncLogId: number | null; // null = 手動編集（ガント等）による記録
 }
 
 // 進捗スナップショット1件の読み出し用レコード（時点データ・自己完結）

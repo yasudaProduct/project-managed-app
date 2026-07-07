@@ -9,6 +9,7 @@ import type { IPhaseRepository } from '@/applications/task/iphase-repository';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import type { ITaskRepository, TaskSyncState, TaskProgressSnapshotInput } from '@/applications/task/itask-repository';
+import { buildProgressSnapshotInput, DEFAULT_COST_PER_HOUR } from '@/applications/task/progress-snapshot-input-builder';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/task-status';
 import type { IWbsRepository } from '../wbs/iwbs-repository';
@@ -76,6 +77,7 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
 
       // [事前検証フェーズ] 全Excel行をドメイン構築＆検証（DB無変更）。
       // 1行でもエラーがあればmutationせず中断し、部分置換を起こさない。
+      validationErrors.push(...this.detectDuplicateTaskNos(excelDataWithRowNumbers));
       const builtTasks: Task[] = [];
       for (const { data: excelWbs, rowNumber } of excelDataWithRowNumbers) {
         try {
@@ -197,6 +199,7 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       const state = await this.taskRepository.findSyncStateByWbsId(wbsId);
 
       // [事前検証フェーズ] 全Excel行をドメイン構築＆検証（DB更新なし）
+      validationErrors.push(...this.detectDuplicateTaskNos(excelDataWithRowNumbers));
       const builtTasks: Task[] = [];
       for (const { data: excelWbs, rowNumber } of excelDataWithRowNumbers) {
         try {
@@ -316,6 +319,38 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
     }
   }
 
+  /**
+   * Excel内のタスクNo（WBS_ID）重複を検出する。
+   * 重複を許すと、両方新規なら (taskNo, wbsId) ユニーク制約違反でトランザクション全体が
+   * 不透明なエラーで失敗し、既存taskNoへの更新なら後勝ちの黙った上書き＋同一タスクの
+   * スナップショット二重記録（EVM二重計上）が起きるため、事前検証で全件中断する。
+   */
+  private detectDuplicateTaskNos(
+    rows: { data: ExcelWbs; rowNumber: number }[]
+  ): ValidationError[] {
+    const rowNumbersByTaskNo = new Map<string, number[]>();
+    for (const { data, rowNumber } of rows) {
+      if (!data.WBS_ID) continue; // 空のタスクNoは行検証（必須チェック）側で報告される
+      const list = rowNumbersByTaskNo.get(data.WBS_ID);
+      if (list) list.push(rowNumber);
+      else rowNumbersByTaskNo.set(data.WBS_ID, [rowNumber]);
+    }
+
+    const errors: ValidationError[] = [];
+    for (const [taskNo, rowNumbers] of rowNumbersByTaskNo) {
+      if (rowNumbers.length > 1) {
+        errors.push({
+          taskNo,
+          field: 'taskNo',
+          message: `タスクNo「${taskNo}」がExcel内で重複しています（行: ${rowNumbers.join(', ')}）`,
+          value: taskNo,
+          rowNumber: rowNumbers[0],
+        });
+      }
+    }
+    return errors;
+  }
+
   // エクセル側のでwbsデータを取得
   // エクセルデータはWBS名で取得する
   private async fetchExcelData(wbsName: string): Promise<ExcelWbs[]> {
@@ -331,6 +366,10 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
 
       return excelWbs;
     } catch (error) {
+      // 自分で投げた検証エラー（0件）まで接続エラーに変換しない
+      if (error instanceof SyncError) {
+        throw error;
+      }
       throw new SyncError(
         'Excel側のデータ取得に失敗しました',
         SyncErrorType.CONNECTION_ERROR,
@@ -418,36 +457,17 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
       if (a.id !== undefined) costByAssigneeId.set(a.id, a.getCostPerHour());
     });
 
-    const normalKosu = (period?: { manHours: { kosu: number; type: { type: string } }[] }): number =>
-      (period?.manHours ?? [])
-        .filter(m => m.type.type === 'NORMAL')
-        .reduce((sum, m) => sum + Number(m.kosu), 0);
-
     const inputs: TaskProgressSnapshotInput[] = activeTasks.map((task) => {
-      const taskNo = task.taskNo.getValue();
-      const kijun = task.periods?.find(p => p.type.type === 'KIJUN');
-      const yotei = task.periods?.find(p => p.type.type === 'YOTEI');
-      const baseManHours = normalKosu(kijun);
-      const plannedManHours = yotei ? normalKosu(yotei) : baseManHours;
-      const excel = excelByTaskNo.get(taskNo);
-
-      return {
-        taskId: task.id ?? null, // 新規はnull（create後にtaskNoで解決）
-        taskNo,
-        progressRate: task.progressRate ?? null,
-        status: task.status.status,
-        plannedManHours,
-        baseManHours,
+      const excel = excelByTaskNo.get(task.taskNo.getValue());
+      return buildProgressSnapshotInput({
+        task,
         costPerHour:
-          task.assigneeId !== undefined ? (costByAssigneeId.get(task.assigneeId) ?? 5000) : 5000,
-        plannedStart: yotei?.startDate ?? null,
-        plannedEnd: yotei?.endDate ?? null,
-        baseStart: kijun?.startDate ?? null,
-        baseEnd: kijun?.endDate ?? null,
+          task.assigneeId !== undefined
+            ? (costByAssigneeId.get(task.assigneeId) ?? DEFAULT_COST_PER_HOUR)
+            : DEFAULT_COST_PER_HOUR,
         actualStart: excel?.JISSEKI_START_DATE ?? null,
         actualEnd: excel?.JISSEKI_END_DATE ?? null,
-        isRemoved: false,
-      };
+      });
     });
 
     // 消失タスクは tombstone スナップショット（値は読み出し時に無視）

@@ -404,6 +404,24 @@ describe('Task', () => {
         }).toThrow('タスクステータスは必須です');
       });
 
+      it('進捗率を更新できること', () => {
+        task.updateProgressRate(75);
+        expect(task.progressRate).toBe(75);
+      });
+
+      it('進捗率の境界値（0と100）を受け付けること', () => {
+        task.updateProgressRate(0);
+        expect(task.progressRate).toBe(0);
+        task.updateProgressRate(100);
+        expect(task.progressRate).toBe(100);
+      });
+
+      it('進捗率が範囲外の場合、エラーを返すこと', () => {
+        expect(() => task.updateProgressRate(-1)).toThrow('進捗率は0〜100の範囲で指定してください');
+        expect(() => task.updateProgressRate(101)).toThrow('進捗率は0〜100の範囲で指定してください');
+        expect(() => task.updateProgressRate(NaN)).toThrow('進捗率は0〜100の範囲で指定してください');
+      });
+
       it('担当者が未設定でも更新できること（未割当を許容）', () => {
         task.update({
           name: '更新後タスク',

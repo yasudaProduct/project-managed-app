@@ -10,7 +10,8 @@ export interface Task {
   actualEndDate?: Date; // 実績終了日（未完了で実績開始のみの場合は本日が入る）
   color: string; // 色
   isMilestone: boolean; // マイルストーンかどうか
-  progress: number; // 進捗
+  progress: number; // 進捗（進捗測定方式で算出した実効値。表示用）
+  progressRate?: number; // 自己申告進捗率（0-100の生値。編集・保存用）
   predecessors: Dependency[]; // 先行タスク
   level: number; // レベル
   isManuallyScheduled: boolean; // 手動でスケジュールされたかどうか

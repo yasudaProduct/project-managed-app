@@ -1,5 +1,5 @@
 import { WbsSyncApplicationService } from '@/applications/wbs-sync/wbs-sync-application-service';
-import { ExcelWbs } from '@/domains/sync/excel-wbs';
+import { ExcelWbs, SyncErrorType, ValidationError } from '@/domains/sync/excel-wbs';
 import type { IWbsRepository } from '@/applications/wbs/iwbs-repository';
 import type { IExcelWbsRepository } from '@/applications/wbs-sync/iexcel-wbs-repository';
 import type { ISyncLogRepository } from '@/applications/wbs-sync/isync-log-repository';
@@ -62,6 +62,7 @@ describe('WbsSyncApplicationService.syncDiff', () => {
     taskRepository = {
       findSyncStateByWbsId: jest.fn(),
       applySyncDiff: jest.fn().mockResolvedValue({ syncLogId: 1 }),
+      replaceAllTasks: jest.fn().mockResolvedValue({ deleted: 0, added: 0 }),
     } as unknown as jest.Mocked<ITaskRepository>;
 
     // 既定のスタブ
@@ -211,5 +212,196 @@ describe('WbsSyncApplicationService.syncDiff', () => {
     expect(syncLogRepository.recordSync).toHaveBeenCalledWith(
       expect.objectContaining({ syncStatus: 'FAILED' }),
     );
+  });
+
+  it('Excel内に重複したタスクNoがあると事前検証で失敗し applySyncDiff を呼ばない', async () => {
+    stubExcel([
+      makeExcelRow({ WBS_ID: 'D1-0001', ROW_NO: 1 }),
+      makeExcelRow({ WBS_ID: 'D1-0002', ROW_NO: 3 }),
+      makeExcelRow({ WBS_ID: 'D1-0001', ROW_NO: 5 }), // 重複
+    ]);
+    stubState([]);
+
+    const result = await service.syncDiff(WBS_ID);
+
+    expect(taskRepository.applySyncDiff).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    const errors = (result.errorDetails as { validationErrors: ValidationError[] })
+      .validationErrors;
+    const dup = errors.find((e) => e.field === 'taskNo' && e.taskNo === 'D1-0001');
+    expect(dup).toBeDefined();
+    expect(dup!.message).toContain('重複');
+    expect(dup!.message).toContain('1, 5'); // 重複行番号が特定できる
+    expect(syncLogRepository.recordSync).toHaveBeenCalledWith(
+      expect.objectContaining({ syncStatus: 'FAILED' }),
+    );
+  });
+
+  it('存在しない担当者は検証エラー（field=assignee）になる', async () => {
+    stubExcel([makeExcelRow({ TANTO: '存在しない担当者' })]);
+    stubState([]);
+
+    const result = await service.syncDiff(WBS_ID);
+
+    expect(result.success).toBe(false);
+    const errors = (result.errorDetails as { validationErrors: ValidationError[] })
+      .validationErrors;
+    expect(errors).toHaveLength(1);
+    expect(errors[0].field).toBe('assignee');
+    expect(errors[0].value).toBe('存在しない担当者');
+  });
+
+  it('PROGRESS_RATE のクランプと STATUS のマッピングがドメインに反映される', async () => {
+    stubExcel([
+      makeExcelRow({ WBS_ID: 'D1-0001', PROGRESS_RATE: 150, STATUS: '完了' }),
+      makeExcelRow({ WBS_ID: 'D1-0002', ROW_NO: 2, PROGRESS_RATE: -10, STATUS: '着手中' }),
+    ]);
+    stubState([]);
+
+    await service.syncDiff(WBS_ID);
+
+    const [t1, t2] = lastBuckets().toCreate;
+    expect(t1.progressRate).toBe(100);
+    expect(t1.status.status).toBe('COMPLETED');
+    expect(t2.progressRate).toBe(0);
+    expect(t2.status.status).toBe('IN_PROGRESS');
+  });
+
+  it('snapshotInputs に工数・単価・実績日・進捗率が時点データとして入る', async () => {
+    (wbsAssigneeRepository.findByWbsId as jest.Mock).mockResolvedValue([
+      { id: 7, userName: '田中', getCostPerHour: () => 4000 },
+    ]);
+    stubExcel([
+      makeExcelRow({
+        TANTO: '田中',
+        KIJUN_START_DATE: new Date('2025-05-01'),
+        KIJUN_END_DATE: new Date('2025-05-31'),
+        KIJUN_KOSU: 10,
+        YOTEI_START_DATE: new Date('2025-06-01'),
+        YOTEI_END_DATE: new Date('2025-06-30'),
+        YOTEI_KOSU: 20,
+        JISSEKI_START_DATE: new Date('2025-06-02'),
+        JISSEKI_END_DATE: new Date('2025-06-20'),
+        PROGRESS_RATE: 55,
+      }),
+    ]);
+    stubState([]);
+
+    await service.syncDiff(WBS_ID);
+
+    const input = lastContext().snapshotInputs[0];
+    expect(input).toEqual(
+      expect.objectContaining({
+        taskNo: 'D1-0001',
+        progressRate: 55,
+        plannedManHours: 20,
+        baseManHours: 10,
+        costPerHour: 4000,
+        plannedStart: new Date('2025-06-01'),
+        plannedEnd: new Date('2025-06-30'),
+        baseStart: new Date('2025-05-01'),
+        baseEnd: new Date('2025-05-31'),
+        actualStart: new Date('2025-06-02'),
+        actualEnd: new Date('2025-06-20'),
+        isRemoved: false,
+      }),
+    );
+  });
+
+  it('YOTEI期間が無い場合 plannedManHours は KIJUN 工数にフォールバックし、担当者未設定はデフォルト単価になる', async () => {
+    stubExcel([
+      makeExcelRow({
+        TANTO: null,
+        KIJUN_START_DATE: new Date('2025-05-01'),
+        KIJUN_END_DATE: new Date('2025-05-31'),
+        KIJUN_KOSU: 12,
+      }),
+    ]);
+    stubState([]);
+
+    await service.syncDiff(WBS_ID);
+
+    const input = lastContext().snapshotInputs[0];
+    expect(input.plannedManHours).toBe(12); // KIJUNへフォールバック
+    expect(input.baseManHours).toBe(12);
+    expect(input.plannedStart).toBeNull();
+    expect(input.costPerHour).toBe(5000); // デフォルト単価
+  });
+
+  it('revive されたタスクも snapshotInputs に taskId 付き（isRemoved=false）で含まれる', async () => {
+    stubExcel([makeExcelRow({ WBS_ID: 'D1-0001' })]);
+    stubState([{ id: 5, taskNo: 'D1-0001', isDeleted: true }]);
+
+    await service.syncDiff(WBS_ID);
+
+    const inputs = lastContext().snapshotInputs as Array<{
+      taskId: number | null;
+      taskNo: string;
+      isRemoved: boolean;
+    }>;
+    const revived = inputs.find((s) => s.taskNo === 'D1-0001')!;
+    expect(revived.taskId).toBe(5);
+    expect(revived.isRemoved).toBe(false);
+  });
+
+  it('WBSが存在しない場合は throw せず errorDetails を返す（Excelへアクセスしない）', async () => {
+    (wbsRepository.findById as jest.Mock).mockResolvedValue(null);
+
+    const result = await service.syncDiff(WBS_ID);
+
+    expect(result.success).toBe(false);
+    expect(result.errorDetails).toEqual({ message: 'WBSが見つかりません' });
+    expect(excelWbsRepository.findByWbsName).not.toHaveBeenCalled();
+  });
+
+  it('Excelデータが0件なら VALIDATION_ERROR の SyncError を投げ FAILED ログを残す', async () => {
+    stubExcel([]);
+    stubState([]);
+
+    await expect(service.syncDiff(WBS_ID)).rejects.toMatchObject({
+      name: 'SyncError',
+      type: SyncErrorType.VALIDATION_ERROR, // 接続エラーへ誤分類しない
+    });
+    expect(taskRepository.applySyncDiff).not.toHaveBeenCalled();
+    expect(syncLogRepository.recordSync).toHaveBeenCalledWith(
+      expect.objectContaining({ syncStatus: 'FAILED' }),
+    );
+  });
+
+  it('applySyncDiff が失敗したら FAILED ログを記録し SyncError(TRANSACTION_ERROR) を投げる', async () => {
+    stubExcel([makeExcelRow()]);
+    stubState([]);
+    (taskRepository.applySyncDiff as jest.Mock).mockRejectedValue(new Error('DB接続断'));
+
+    await expect(service.syncDiff(WBS_ID)).rejects.toMatchObject({
+      name: 'SyncError',
+      type: SyncErrorType.TRANSACTION_ERROR,
+    });
+    expect(syncLogRepository.recordSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        syncStatus: 'FAILED',
+        errorDetails: expect.objectContaining({ message: 'DB接続断' }),
+      }),
+    );
+  });
+
+  describe('replaceAll（洗い替え）の事前検証', () => {
+    it('Excel内に重複したタスクNoがあると replaceAllTasks を呼ばず FAILED で返す', async () => {
+      stubExcel([
+        makeExcelRow({ WBS_ID: 'D1-0001', ROW_NO: 1 }),
+        makeExcelRow({ WBS_ID: 'D1-0001', ROW_NO: 2 }), // 重複
+      ]);
+
+      const result = await service.replaceAll(WBS_ID);
+
+      expect(taskRepository.replaceAllTasks).not.toHaveBeenCalled();
+      expect(result.success).toBe(false);
+      const errors = (result.errorDetails as { validationErrors: ValidationError[] })
+        .validationErrors;
+      expect(errors.some((e) => e.field === 'taskNo' && e.message.includes('重複'))).toBe(true);
+      expect(syncLogRepository.recordSync).toHaveBeenCalledWith(
+        expect.objectContaining({ syncStatus: 'FAILED' }),
+      );
+    });
   });
 });

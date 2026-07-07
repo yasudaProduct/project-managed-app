@@ -469,7 +469,7 @@ model TaskProgressSnapshot {
   taskId          Int
   wbsId           Int
   taskNo          String
-  snapshotAt      DateTime   @db.Timestamptz // 同期実行時刻（UTC）
+  snapshotAt      DateTime   @db.Timestamptz // 記録時刻（同期実行 or 手動編集。UTC）
   progressRate    Decimal? // SELF_REPORTED用
   status          TaskStatus
   plannedManHours Decimal // YOTEI NORMAL（無ければKIJUN）
@@ -482,8 +482,8 @@ model TaskProgressSnapshot {
   actualStart     DateTime?  @db.Date // Excel JISSEKI（自己申告実績）
   actualEnd       DateTime?  @db.Date
   isRemoved       Boolean    @default(false) // soft-delete連動のtombstone
-  syncLogId       Int
-  syncLog         SyncLog    @relation(fields: [syncLogId], references: [id])
+  syncLogId       Int? // null = 手動編集（ガント等のタスク更新）による記録
+  syncLog         SyncLog?   @relation(fields: [syncLogId], references: [id])
   createdAt       DateTime   @default(now()) @db.Timestamptz
 
   @@index([taskId, snapshotAt])

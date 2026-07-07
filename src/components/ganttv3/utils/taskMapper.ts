@@ -26,5 +26,6 @@ export function toWbsTask(task: Task): WbsTask {
     yoteiStart: task.startDate,
     yoteiEnd: task.endDate,
     yoteiKosu: task.duration,
+    progressRate: task.progressRate,
   };
 }

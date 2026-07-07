@@ -101,4 +101,119 @@ describe("TaskBar", () => {
     fireEvent.mouseEnter(container.querySelector("g")!);
     expect(container.querySelectorAll(".cursor-ew-resize")).toHaveLength(2);
   });
+
+  describe("接続ハンドル（依存関係ドラッグ）", () => {
+    it("editable かつ onConnectStart 指定時、ホバーで左右の接続ハンドルを表示", () => {
+      const { container } = renderInSvg(
+        <TaskBar
+          {...baseProps}
+          editable
+          onConnectStart={jest.fn()}
+          task={makeTask({ id: "1" })}
+          style={makeStyle()}
+        />,
+      );
+      expect(container.querySelectorAll(".gantt-connect-handle")).toHaveLength(0);
+      fireEvent.mouseEnter(container.querySelector("g")!);
+      const handles = container.querySelectorAll(".gantt-connect-handle");
+      expect(handles).toHaveLength(2);
+      expect(handles[0]).toHaveAttribute("data-side", "start");
+      expect(handles[1]).toHaveAttribute("data-side", "end");
+    });
+
+    it("ハンドルの mousedown で onConnectStart(taskId, e, side) が発火", () => {
+      const onConnectStart = jest.fn();
+      const { container } = renderInSvg(
+        <TaskBar
+          {...baseProps}
+          editable
+          onConnectStart={onConnectStart}
+          task={makeTask({ id: "abc" })}
+          style={makeStyle()}
+        />,
+      );
+      fireEvent.mouseEnter(container.querySelector("g")!);
+      fireEvent.mouseDown(
+        container.querySelector('.gantt-connect-handle[data-side="end"]')!,
+      );
+      expect(onConnectStart).toHaveBeenCalledWith(
+        "abc",
+        expect.anything(),
+        "end",
+      );
+    });
+
+    it("接続ハンドルの mousedown ではバー移動の onDragStart を発火しない", () => {
+      const onDragStart = jest.fn();
+      const { container } = renderInSvg(
+        <TaskBar
+          {...baseProps}
+          editable
+          onDragStart={onDragStart}
+          onConnectStart={jest.fn()}
+          task={makeTask({ id: "1" })}
+          style={makeStyle()}
+        />,
+      );
+      fireEvent.mouseEnter(container.querySelector("g")!);
+      fireEvent.mouseDown(
+        container.querySelector('.gantt-connect-handle[data-side="start"]')!,
+      );
+      expect(onDragStart).not.toHaveBeenCalled();
+    });
+
+    it("非 editable では表示しない", () => {
+      const { container } = renderInSvg(
+        <TaskBar
+          {...baseProps}
+          onConnectStart={jest.fn()}
+          task={makeTask({ id: "1" })}
+          style={makeStyle()}
+        />,
+      );
+      fireEvent.mouseEnter(container.querySelector("g")!);
+      expect(container.querySelectorAll(".gantt-connect-handle")).toHaveLength(0);
+    });
+
+    it("onConnectStart 未指定では表示しない", () => {
+      const { container } = renderInSvg(
+        <TaskBar
+          {...baseProps}
+          editable
+          task={makeTask({ id: "1" })}
+          style={makeStyle()}
+        />,
+      );
+      fireEvent.mouseEnter(container.querySelector("g")!);
+      expect(container.querySelectorAll(".gantt-connect-handle")).toHaveLength(0);
+    });
+
+    it("マイルストーンには表示しない", () => {
+      const { container } = renderInSvg(
+        <TaskBar
+          {...baseProps}
+          editable
+          onConnectStart={jest.fn()}
+          task={makeTask({ id: "1", isMilestone: true })}
+          style={makeStyle()}
+        />,
+      );
+      fireEvent.mouseEnter(container.querySelector("g")!);
+      expect(container.querySelectorAll(".gantt-connect-handle")).toHaveLength(0);
+    });
+
+    it("isConnectSource のときはホバーなしでも表示（ドラッグ中の起点保持）", () => {
+      const { container } = renderInSvg(
+        <TaskBar
+          {...baseProps}
+          editable
+          isConnectSource
+          onConnectStart={jest.fn()}
+          task={makeTask({ id: "1" })}
+          style={makeStyle()}
+        />,
+      );
+      expect(container.querySelectorAll(".gantt-connect-handle")).toHaveLength(2);
+    });
+  });
 });
