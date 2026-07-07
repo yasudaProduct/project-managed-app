@@ -409,9 +409,9 @@ describe('EvmService', () => {
 
       const result = await evmService.calculateCurrentEvmMetrics(1, evaluationDate, 'cost');
 
-      // BAC: (100 * 5000) + 20 = 500,020
-      // Note: バッファは工数として加算され、金額換算されない
-      expect(result.bac).toBe(500020);
+      // BAC: (100 * 5000) + (20h × デフォルト単価5,000) = 600,000
+      // バッファは単価換算して加算する（設定なし時はAVERAGE_RATE→平均単価不明→デフォルト単価）
+      expect(result.bac).toBe(600000);
     });
 
     it('タスクが空の場合、すべての値が0になる', async () => {
