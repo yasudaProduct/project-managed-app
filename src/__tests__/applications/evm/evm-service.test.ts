@@ -14,6 +14,7 @@ describe('EvmService', () => {
       getWbsEvmData: jest.fn(),
       getTasksEvmData: jest.fn(),
       getActualCostByDate: jest.fn(),
+      getActualCostByTask: jest.fn().mockResolvedValue(new Map()),
       getBuffers: jest.fn(),
       getProjectSettings: jest.fn(),
       getProgressSnapshots: jest.fn().mockResolvedValue([]),

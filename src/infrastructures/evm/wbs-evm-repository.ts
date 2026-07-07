@@ -80,7 +80,14 @@ export class WbsEvmRepository implements IWbsEvmRepository {
         task.status as TaskStatus,
         task.progressRate ?? 0,
         costPerHour,
-        task.progressRate // 自己申告進捗率
+        task.progressRate, // 自己申告進捗率
+        {
+          // 内訳集計用（フェーズ別・担当者別）。追加クエリ不要（getWbsTasksで取得済み）
+          phaseId: task.phase?.id ?? null,
+          phaseName: task.phase?.name ?? null,
+          assigneeId: task.assignee?.id ?? null,
+          assigneeName: task.assignee?.displayName ?? null,
+        }
       );
     });
 
@@ -211,6 +218,40 @@ export class WbsEvmRepository implements IWbsEvmRepository {
           : Number(record.hours_worked);
 
       costMap.set(dateKey, currentCost + cost);
+    });
+
+    return costMap;
+  }
+
+  async getActualCostByTask(
+    wbsId: number,
+    endDate: Date,
+    calculationMode: EvmCalculationMode = 'hours'
+  ): Promise<Map<number | null, number>> {
+    const workRecords = await prisma.workRecord.findMany({
+      where: {
+        // getActualCostByDateと同一の対象範囲（タスク経由 OR wbsId直接紐付け）
+        OR: [{ task: { wbsId } }, { wbsId }],
+        date: { lte: endDate },
+      },
+    });
+
+    // コスト単価は記録者のWBS単価（getActualCostByDateと同一基準）
+    let rateByUserId = new Map<string, number>();
+    if (calculationMode === 'cost') {
+      const assignees = await prisma.wbsAssignee.findMany({ where: { wbsId } });
+      rateByUserId = new Map(assignees.map((a) => [a.assigneeId, a.costPerHour]));
+    }
+
+    const costMap = new Map<number | null, number>();
+    workRecords.forEach((record) => {
+      const key = record.taskId; // タスク未紐付け実績はnullキー
+      const cost =
+        calculationMode === 'cost'
+          ? Number(record.hours_worked) *
+            (rateByUserId.get(record.userId) ?? DEFAULT_COST_PER_HOUR)
+          : Number(record.hours_worked);
+      costMap.set(key, (costMap.get(key) ?? 0) + cost);
     });
 
     return costMap;

@@ -10,6 +10,17 @@ export type EvmCalculationMode = 'hours' | 'cost';
  */
 export type BusinessDayCounter = (start: Date, end: Date) => number;
 
+/**
+ * 内訳集計（フェーズ別・担当者別）用の付帯情報。
+ * グルーピングキーはID（同名フェーズ・同姓同名の衝突回避）、表示は名前を使う。
+ */
+export type TaskEvmMeta = {
+  phaseId: number | null;
+  phaseName: string | null;
+  assigneeId: string | null;
+  assigneeName: string | null;
+};
+
 export class TaskEvmData {
   constructor(
     public readonly taskId: number,
@@ -27,7 +38,8 @@ export class TaskEvmData {
     public readonly status: TaskStatus,
     public readonly progressRate: number,
     public readonly costPerHour: number = DEFAULT_COST_PER_HOUR,
-    public readonly selfReportedProgress: number | null = null
+    public readonly selfReportedProgress: number | null = null,
+    public readonly meta?: TaskEvmMeta
   ) { }
 
   // 工数ベースの出来高計算

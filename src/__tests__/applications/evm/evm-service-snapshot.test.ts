@@ -20,6 +20,7 @@ describe('EvmService - スナップショットas-of時系列（2B）', () => {
       getWbsEvmData: jest.fn(),
       getTasksEvmData: jest.fn(),
       getActualCostByDate: jest.fn().mockResolvedValue(new Map()),
+      getActualCostByTask: jest.fn().mockResolvedValue(new Map()),
       getBuffers: jest.fn(),
       getProjectSettings: jest.fn(),
       getProgressSnapshots: jest.fn().mockResolvedValue([]),

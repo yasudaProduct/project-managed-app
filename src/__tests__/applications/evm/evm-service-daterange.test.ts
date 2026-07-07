@@ -27,6 +27,7 @@ describe('EvmService: 時系列日付レンジ', () => {
       getWbsEvmData: jest.fn().mockResolvedValue(emptyWbsData),
       getTasksEvmData: jest.fn(),
       getActualCostByDate: jest.fn().mockResolvedValue(new Map()),
+      getActualCostByTask: jest.fn().mockResolvedValue(new Map()),
       getBuffers: jest.fn(),
       getProjectSettings: jest.fn(),
       getProgressSnapshots: jest.fn().mockResolvedValue([]),

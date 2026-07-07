@@ -14,11 +14,13 @@ import { EvmChart } from "./evm-chart";
 import { EvmMetricsCard } from "./evm-metrics-card";
 import { TaskEvmTable } from "./task-evm-table";
 import { EvmTimeSeriesTable } from "./evm-timeseries-table";
+import { EvmBreakdownTable } from "./evm-breakdown-table";
 import { getEvmDashboardData } from "@/app/wbs/[id]/actions/evm-actions";
 import type {
   EvmMetricsData,
   TaskEvmDataSerialized,
   ScheduleForecastData,
+  EvmBreakdownRow,
 } from "@/applications/evm/evm-dashboard-dto";
 import { exportTableData } from "@/utils/export-table";
 import { Loader2, TrendingUp, DollarSign, Info, Download } from "lucide-react";
@@ -49,6 +51,10 @@ export function EvmDashboard({
   const [taskDetails, setTaskDetails] = useState<TaskEvmDataSerialized[]>([]);
   const [scheduleForecast, setScheduleForecast] =
     useState<ScheduleForecastData | null>(null);
+  const [phaseBreakdown, setPhaseBreakdown] = useState<EvmBreakdownRow[]>([]);
+  const [assigneeBreakdown, setAssigneeBreakdown] = useState<EvmBreakdownRow[]>(
+    []
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,6 +119,8 @@ export function EvmDashboard({
       setTimeSeriesData(result.data.timeSeries);
       setTaskDetails(result.data.taskDetails);
       setScheduleForecast(result.data.scheduleForecast ?? null);
+      setPhaseBreakdown(result.data.phaseBreakdown ?? []);
+      setAssigneeBreakdown(result.data.assigneeBreakdown ?? []);
     } catch (err) {
       console.error("Failed to load EVM data:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -389,6 +397,7 @@ export function EvmDashboard({
           <TabsTrigger value="chart">トレンドチャート</TabsTrigger>
           <TabsTrigger value="timeseries">時系列データ</TabsTrigger>
           <TabsTrigger value="tasks">タスク別詳細</TabsTrigger>
+          <TabsTrigger value="breakdown">内訳</TabsTrigger>
         </TabsList>
 
         <TabsContent value="chart">
@@ -407,6 +416,21 @@ export function EvmDashboard({
             tasks={taskDetails}
             calculationMode={calculationMode}
             progressMethod={progressMethod}
+          />
+        </TabsContent>
+
+        <TabsContent value="breakdown" className="space-y-4">
+          <EvmBreakdownTable
+            title="フェーズ別内訳"
+            rows={phaseBreakdown}
+            calculationMode={calculationMode}
+            note="現在時点のライブタスクによる集計です。BACにバッファは含まれません。「未紐付け・削除済み」はタスクに紐付かない実績と削除済みタスクの実績です。"
+          />
+          <EvmBreakdownTable
+            title="担当者別内訳"
+            rows={assigneeBreakdown}
+            calculationMode={calculationMode}
+            note="担当者軸はタスクの現担当者です（作業実績の記録者ではありません）。BACにバッファは含まれません。"
           />
         </TabsContent>
       </Tabs>

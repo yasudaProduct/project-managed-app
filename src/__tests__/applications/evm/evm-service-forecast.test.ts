@@ -73,6 +73,7 @@ describe('EvmService: 予測完了日（Earned Schedule）と予測線延長', (
       getWbsEvmData: jest.fn().mockResolvedValue(makeWbsData()),
       getTasksEvmData: jest.fn(),
       getActualCostByDate: jest.fn().mockResolvedValue(new Map()),
+      getActualCostByTask: jest.fn().mockResolvedValue(new Map()),
       getBuffers: jest.fn(),
       getProjectSettings: jest.fn(),
       getProgressSnapshots: jest.fn().mockResolvedValue([]),

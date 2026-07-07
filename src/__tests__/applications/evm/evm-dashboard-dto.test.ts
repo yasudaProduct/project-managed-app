@@ -107,6 +107,8 @@ describe('evm-dashboard-dto', () => {
           delayDays: 5,
           spiT: 0.5,
         },
+        phaseBreakdown: [],
+        assigneeBreakdown: [],
       });
 
       expect(result.taskDetails[0].methodProgressRate).toBe(0);

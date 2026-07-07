@@ -22,6 +22,13 @@ export interface IWbsEvmRepository {
     calculationMode?: EvmCalculationMode
   ): Promise<Map<string, number>>;
 
+  // タスク別の実績コスト集計（内訳表示用）。キーはtaskId、タスク未紐付け実績はnullキー
+  getActualCostByTask(
+    wbsId: number,
+    endDate: Date,
+    calculationMode?: EvmCalculationMode
+  ): Promise<Map<number | null, number>>;
+
   // バッファ情報の取得
   getBuffers(wbsId: number): Promise<BufferData[]>;
 

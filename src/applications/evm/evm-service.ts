@@ -50,6 +50,24 @@ export type ScheduleForecast = {
   spiT: number | null;
 };
 
+/**
+ * フェーズ別・担当者別のEVM内訳1行。
+ * バッファはグループBACに含めない（合計はカードBACと一致しない。UI側で注記）。
+ */
+export type EvmBreakdownRow = {
+  key: string;
+  name: string;
+  taskCount: number;
+  pv: number;
+  ev: number;
+  ac: number;
+  bac: number;
+  spi: number | null;
+  cpi: number | null;
+  /** タスク未紐付け・削除済みタスクのAC行（PV/EV/BACなし） */
+  isUnlinked?: boolean;
+};
+
 type EvmDashboardOptions = {
   calculationMode?: EvmCalculationMode;
   progressMethod?: ProgressMeasurementMethod;
@@ -88,6 +106,8 @@ export interface IEvmService {
     taskDetails: TaskEvmData[];
     dateRange: EvmDateRange;
     scheduleForecast: ScheduleForecast;
+    phaseBreakdown: EvmBreakdownRow[];
+    assigneeBreakdown: EvmBreakdownRow[];
   }>;
   getEvmDashboardDataSerialized(
     wbsId: number,
@@ -243,6 +263,8 @@ export class EvmService implements IEvmService {
     taskDetails: TaskEvmData[];
     dateRange: EvmDateRange;
     scheduleForecast: ScheduleForecast;
+    phaseBreakdown: EvmBreakdownRow[];
+    assigneeBreakdown: EvmBreakdownRow[];
   }> {
     const {
       calculationMode = 'hours',
@@ -322,12 +344,25 @@ export class EvmService implements IEvmService {
       );
     }
 
+    // (8) フェーズ別・担当者別内訳（現在時点・ライブタスク限定。
+    //     スナップショットにフェーズ/担当者情報が無いため過去日のas-of内訳は算出しない）
+    const acByTask = await this.wbsEvmRepository.getActualCostByTask(
+      wbsId,
+      now,
+      calculationMode
+    );
+    const { phaseBreakdown, assigneeBreakdown } = this.computeBreakdowns(
+      wbsData, acByTask, now, calculationMode, method, businessDayCounter
+    );
+
     return {
       currentMetrics,
       timeSeries,
       taskDetails: wbsData.tasks,
       dateRange,
       scheduleForecast,
+      phaseBreakdown,
+      assigneeBreakdown,
     };
   }
 
@@ -645,6 +680,112 @@ export class EvmService implements IEvmService {
 
     return (start: Date, end: Date) =>
       Math.max(0, cumAt(end.getTime()) - cumAt(start.getTime()));
+  }
+
+  /**
+   * フェーズ別・担当者別のEVM内訳を集計する。
+   * - 軸はタスクの現担当者（作業記録の記録者ではない）。グルーピングキーはID。
+   * - タスク未紐付け実績（taskId=null）とライブタスクに存在しないtaskId（削除済み）のACは
+   *   「未紐付け・削除済み」行へ合算し、内訳AC合計 = 全体AC を維持する。
+   * - 未紐付け行はEV=0のためCPIが「正当な0」に見えてしまうので、SPI/CPIとも明示的にnull。
+   */
+  private computeBreakdowns(
+    wbsData: WbsEvmData,
+    acByTask: Map<number | null, number>,
+    now: Date,
+    calculationMode: EvmCalculationMode,
+    method: ProgressMeasurementMethod,
+    businessDayCounter?: BusinessDayCounter
+  ): { phaseBreakdown: EvmBreakdownRow[]; assigneeBreakdown: EvmBreakdownRow[] } {
+    type Acc = Omit<EvmBreakdownRow, 'spi' | 'cpi'>;
+    const phaseMap = new Map<string, Acc>();
+    const assigneeMap = new Map<string, Acc>();
+    const liveTaskIds = new Set<number>();
+
+    const accumulate = (
+      map: Map<string, Acc>,
+      key: string,
+      name: string,
+      pv: number,
+      ev: number,
+      ac: number,
+      bac: number
+    ) => {
+      const acc = map.get(key) ?? {
+        key,
+        name,
+        taskCount: 0,
+        pv: 0,
+        ev: 0,
+        ac: 0,
+        bac: 0,
+      };
+      acc.taskCount += 1;
+      acc.pv += pv;
+      acc.ev += ev;
+      acc.ac += ac;
+      acc.bac += bac;
+      map.set(key, acc);
+    };
+
+    for (const task of wbsData.tasks) {
+      liveTaskIds.add(task.taskId);
+      const pv = task.getPlannedValueAtDate(
+        'YOTEI', now, calculationMode, method, businessDayCounter
+      );
+      const ev = task.getEarnedValue(now, calculationMode, method, now);
+      const bac =
+        calculationMode === 'cost'
+          ? task.baseManHours * task.costPerHour
+          : task.baseManHours;
+      const ac = acByTask.get(task.taskId) ?? 0;
+
+      const phaseKey =
+        task.meta?.phaseId != null ? `phase:${task.meta.phaseId}` : 'phase:none';
+      const phaseName = task.meta?.phaseName ?? '未分類';
+      accumulate(phaseMap, phaseKey, phaseName, pv, ev, ac, bac);
+
+      const assigneeKey =
+        task.meta?.assigneeId != null
+          ? `assignee:${task.meta.assigneeId}`
+          : 'assignee:none';
+      const assigneeName = task.meta?.assigneeName ?? '未割当';
+      accumulate(assigneeMap, assigneeKey, assigneeName, pv, ev, ac, bac);
+    }
+
+    // 未紐付け・削除済みタスクのAC（内訳AC合計 = 全体AC の不変式を守る）
+    let unlinkedAc = 0;
+    for (const [taskId, ac] of acByTask) {
+      if (taskId === null || !liveTaskIds.has(taskId)) unlinkedAc += ac;
+    }
+
+    const toRows = (map: Map<string, Acc>): EvmBreakdownRow[] => {
+      const rows: EvmBreakdownRow[] = Array.from(map.values()).map((acc) => ({
+        ...acc,
+        spi: acc.pv === 0 ? null : acc.ev / acc.pv,
+        cpi: acc.ac === 0 ? null : acc.ev / acc.ac,
+      }));
+      if (unlinkedAc > 0) {
+        rows.push({
+          key: 'unlinked',
+          name: '未紐付け・削除済み',
+          taskCount: 0,
+          pv: 0,
+          ev: 0,
+          ac: unlinkedAc,
+          bac: 0,
+          spi: null,
+          cpi: null,
+          isUnlinked: true,
+        });
+      }
+      return rows;
+    };
+
+    return {
+      phaseBreakdown: toRows(phaseMap),
+      assigneeBreakdown: toRows(assigneeMap),
+    };
   }
 
   /**

@@ -5,9 +5,12 @@ import type { EvmMetrics } from '@/domains/evm/evm-metrics';
 import type { TaskEvmData } from '@/domains/evm/task-evm-data';
 import type {
   EvmDateRange,
+  EvmBreakdownRow,
   ScheduleForecast,
   ScheduleForecastStatus,
 } from '@/applications/evm/evm-service';
+
+export type { EvmBreakdownRow };
 
 export type EvmMetricsData = {
   date: string;
@@ -82,6 +85,8 @@ export type EvmDashboardData = {
   taskDetails: TaskEvmDataSerialized[];
   dateRange: EvmDateRangeData;
   scheduleForecast: ScheduleForecastData;
+  phaseBreakdown: EvmBreakdownRow[];
+  assigneeBreakdown: EvmBreakdownRow[];
 };
 
 export function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
@@ -144,6 +149,8 @@ export function serializeEvmDashboardData(result: {
   taskDetails: TaskEvmData[];
   dateRange: EvmDateRange;
   scheduleForecast: ScheduleForecast;
+  phaseBreakdown: EvmBreakdownRow[];
+  assigneeBreakdown: EvmBreakdownRow[];
 }): EvmDashboardData {
   // タスク明細のEVは、合計EVと同じ「解決済みの測定方式」で算出する（明細と合計の不一致を防ぐ）
   const progressMethod = result.currentMetrics.progressMethod;
@@ -170,5 +177,7 @@ export function serializeEvmDashboardData(result: {
       delayDays: result.scheduleForecast.delayDays,
       spiT: result.scheduleForecast.spiT,
     },
+    phaseBreakdown: result.phaseBreakdown,
+    assigneeBreakdown: result.assigneeBreakdown,
   };
 }
