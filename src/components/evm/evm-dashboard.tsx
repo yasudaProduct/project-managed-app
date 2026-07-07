@@ -15,7 +15,11 @@ import { EvmMetricsCard } from "./evm-metrics-card";
 import { TaskEvmTable } from "./task-evm-table";
 import { EvmTimeSeriesTable } from "./evm-timeseries-table";
 import { getEvmDashboardData } from "@/app/wbs/[id]/actions/evm-actions";
-import type { EvmMetricsData, TaskEvmDataSerialized } from "@/applications/evm/evm-dashboard-dto";
+import type {
+  EvmMetricsData,
+  TaskEvmDataSerialized,
+  ScheduleForecastData,
+} from "@/applications/evm/evm-dashboard-dto";
 import { exportTableData } from "@/utils/export-table";
 import { Loader2, TrendingUp, DollarSign, Info, Download } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -43,6 +47,8 @@ export function EvmDashboard({
   );
   const [timeSeriesData, setTimeSeriesData] = useState<EvmMetricsData[]>([]);
   const [taskDetails, setTaskDetails] = useState<TaskEvmDataSerialized[]>([]);
+  const [scheduleForecast, setScheduleForecast] =
+    useState<ScheduleForecastData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,6 +112,7 @@ export function EvmDashboard({
       setCurrentMetrics(result.data.currentMetrics);
       setTimeSeriesData(result.data.timeSeries);
       setTaskDetails(result.data.taskDetails);
+      setScheduleForecast(result.data.scheduleForecast ?? null);
     } catch (err) {
       console.error("Failed to load EVM data:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -405,7 +412,7 @@ export function EvmDashboard({
       </Tabs>
 
       {/* メトリクスカード */}
-      <EvmMetricsCard metrics={currentMetrics} />
+      <EvmMetricsCard metrics={currentMetrics} scheduleForecast={scheduleForecast} />
     </div>
   );
 }

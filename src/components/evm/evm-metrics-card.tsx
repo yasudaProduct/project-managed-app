@@ -2,7 +2,10 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { EvmMetricsData } from "@/applications/evm/evm-dashboard-dto";
+import type {
+  EvmMetricsData,
+  ScheduleForecastData,
+} from "@/applications/evm/evm-dashboard-dto";
 import {
   TrendingUp,
   TrendingDown,
@@ -20,9 +23,66 @@ import {
 
 type EvmMetricsCardProps = {
   metrics: EvmMetricsData;
+  scheduleForecast?: ScheduleForecastData | null;
 };
 
-export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
+export function EvmMetricsCard({ metrics, scheduleForecast }: EvmMetricsCardProps) {
+  const formatForecastDate = (iso: string | null): string =>
+    iso ? new Date(iso).toLocaleDateString("ja-JP") : "—";
+
+  const renderForecastCompletion = () => {
+    if (!scheduleForecast) return null;
+    const f = scheduleForecast;
+    const statusText: Record<string, string> = {
+      no_plan: "計画がありません",
+      not_started: "プロジェクト開始前",
+      no_progress: "出来高がないため予測できません",
+      completed_scope: "全量完了済み",
+    };
+    return (
+      <div className="space-y-1">
+        <p className="flex items-center text-sm text-muted-foreground">
+          予測完了日
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>{<Info className="w-4 ml-2" />}</TooltipTrigger>
+              <TooltipContent className="max-w-sm">
+                Earned Schedule法による予測です。
+                <br />
+                PV曲線上で現在のEVに相当する時点（ES）と実経過時間の比
+                （時間ベースSPI）から、完了時期を推定します。
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </p>
+        {f.status === "ok" ? (
+          <>
+            <p className="text-xl font-semibold">
+              {formatForecastDate(f.forecastCompletionDate)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              計画終了日: {formatForecastDate(f.plannedEndDate)}
+              {f.delayDays !== null && f.delayDays !== 0 && (
+                <span
+                  className={
+                    f.delayDays > 0
+                      ? "ml-1 text-red-600 font-medium"
+                      : "ml-1 text-green-600 font-medium"
+                  }
+                >
+                  （{f.delayDays > 0 ? `+${f.delayDays}日遅延` : `${-f.delayDays}日前倒し`}）
+                </span>
+              )}
+            </p>
+          </>
+        ) : (
+          <p className="text-xl font-semibold text-muted-foreground">
+            {statusText[f.status] ?? "—"}
+          </p>
+        )}
+      </div>
+    );
+  };
   const getHealthBadge = () => {
     switch (metrics.healthStatus) {
       case "healthy":
@@ -336,6 +396,7 @@ export function EvmMetricsCard({ metrics }: EvmMetricsCardProps) {
                   {getVarianceIcon(metrics.vac)}
                 </div>
               </div>
+              {renderForecastCompletion()}
             </div>
             {/* 基本指標 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">

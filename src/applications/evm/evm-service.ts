@@ -25,6 +25,31 @@ export type EvmDateRange = {
   recommendedEndDate: Date;
 };
 
+/**
+ * スケジュール予測（Earned Schedule）の状態
+ * - ok: 予測完了日を算出できた
+ * - no_plan: 計画（タスク/総PV）が存在しない
+ * - not_started: プロジェクト開始前（経過時間なし）
+ * - no_progress: 出来高ゼロで予測不能
+ * - completed_scope: 全量完了済み（EV >= 総PV）
+ */
+export type ScheduleForecastStatus =
+  | 'ok'
+  | 'no_plan'
+  | 'not_started'
+  | 'no_progress'
+  | 'completed_scope';
+
+export type ScheduleForecast = {
+  status: ScheduleForecastStatus;
+  forecastCompletionDate: Date | null;
+  plannedEndDate: Date | null;
+  /** 計画終了日に対する遅延日数（負値は前倒し） */
+  delayDays: number | null;
+  /** 時間ベースのスケジュール効率（ES / 実経過日数） */
+  spiT: number | null;
+};
+
 type EvmDashboardOptions = {
   calculationMode?: EvmCalculationMode;
   progressMethod?: ProgressMeasurementMethod;
@@ -62,6 +87,7 @@ export interface IEvmService {
     timeSeries: EvmMetrics[];
     taskDetails: TaskEvmData[];
     dateRange: EvmDateRange;
+    scheduleForecast: ScheduleForecast;
   }>;
   getEvmDashboardDataSerialized(
     wbsId: number,
@@ -216,6 +242,7 @@ export class EvmService implements IEvmService {
     timeSeries: EvmMetrics[];
     taskDetails: TaskEvmData[];
     dateRange: EvmDateRange;
+    scheduleForecast: ScheduleForecast;
   }> {
     const {
       calculationMode = 'hours',
@@ -262,15 +289,45 @@ export class EvmService implements IEvmService {
 
     // (6) 時系列メトリクス
     const dates = this.generateDateRange(startDate, endDate, interval);
-    const timeSeries = this.computeTimeSeries(
+    let timeSeries = this.computeTimeSeries(
       wbsData, dates, computeCumulativeAc, computeHistorical, now, calculationMode, method, fMethod, showPrediction, businessDayCounter
     );
+
+    // (7) スケジュール予測（Earned Schedule）と予測線のBAC到達延長
+    const scheduleForecast = this.computeScheduleForecast(
+      wbsData, currentMetrics.ev, dateRange, now, calculationMode, method, businessDayCounter
+    );
+    if (
+      showPrediction &&
+      periodMode === 'project' &&
+      scheduleForecast.status === 'ok' &&
+      scheduleForecast.forecastCompletionDate &&
+      scheduleForecast.forecastCompletionDate.getTime() > endDate.getTime() &&
+      timeSeries.length > 0
+    ) {
+      timeSeries = timeSeries.concat(
+        this.buildForecastExtension(
+          wbsData,
+          timeSeries[timeSeries.length - 1],
+          currentMetrics,
+          endDate,
+          scheduleForecast.forecastCompletionDate,
+          startDate,
+          interval,
+          calculationMode,
+          method,
+          fMethod,
+          businessDayCounter
+        )
+      );
+    }
 
     return {
       currentMetrics,
       timeSeries,
       taskDetails: wbsData.tasks,
       dateRange,
+      scheduleForecast,
     };
   }
 
@@ -588,6 +645,174 @@ export class EvmService implements IEvmService {
 
     return (start: Date, end: Date) =>
       Math.max(0, cumAt(end.getTime()) - cumAt(start.getTime()));
+  }
+
+  /**
+   * Earned Schedule法によるスケジュール予測。
+   * ES = PV曲線（単調非減少）上で現在EVと同額に達する経過日数（日単位2分探索＋線形補間）。
+   * SPIt = ES / 実経過日数。予測完了日 = 開始日 + 計画総日数 / SPIt。
+   * 過去日への完了予測は現在日にクランプする。
+   */
+  private computeScheduleForecast(
+    wbsData: WbsEvmData,
+    currentEv: number,
+    dateRange: EvmDateRange,
+    now: Date,
+    calculationMode: EvmCalculationMode,
+    method: ProgressMeasurementMethod,
+    businessDayCounter?: BusinessDayCounter
+  ): ScheduleForecast {
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+    const none: Omit<ScheduleForecast, 'status'> = {
+      forecastCompletionDate: null,
+      plannedEndDate: null,
+      delayDays: null,
+      spiT: null,
+    };
+
+    const start = dateRange.taskMinStartDate;
+    const end = dateRange.taskMaxEndDate;
+    if (!start || !end || end.getTime() <= start.getTime()) {
+      return { status: 'no_plan', ...none };
+    }
+
+    const pvAt = (d: Date): number =>
+      wbsData.tasks.reduce(
+        (sum, task) =>
+          sum + task.getPlannedValueAtDate('YOTEI', d, calculationMode, method, businessDayCounter),
+        0
+      );
+
+    // 計画終了日以降の評価で総PV（全タスク全額）
+    const totalPv = pvAt(new Date(end.getTime() + MS_PER_DAY));
+    if (totalPv <= 0) {
+      return { status: 'no_plan', ...none };
+    }
+
+    const atDays = (now.getTime() - start.getTime()) / MS_PER_DAY;
+    if (atDays <= 0) {
+      return { status: 'not_started', ...none, plannedEndDate: end };
+    }
+
+    if (currentEv >= totalPv) {
+      return {
+        status: 'completed_scope',
+        forecastCompletionDate: now,
+        plannedEndDate: end,
+        delayDays: Math.ceil((now.getTime() - end.getTime()) / MS_PER_DAY),
+        spiT: null,
+      };
+    }
+
+    if (currentEv <= 0) {
+      return { status: 'no_progress', ...none, plannedEndDate: end };
+    }
+
+    // ES: PV(start + d日) >= currentEv となる最小の日数dを2分探索
+    const totalDays = Math.ceil((end.getTime() - start.getTime()) / MS_PER_DAY);
+    let lo = 0;
+    let hi = totalDays;
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      const pvMid = pvAt(new Date(start.getTime() + mid * MS_PER_DAY));
+      if (pvMid >= currentEv) hi = mid;
+      else lo = mid + 1;
+    }
+    // 隣接日間を線形補間してESを小数日で求める
+    let es: number;
+    if (lo === 0) {
+      es = 0;
+    } else {
+      const pvHi = pvAt(new Date(start.getTime() + lo * MS_PER_DAY));
+      const pvLo = pvAt(new Date(start.getTime() + (lo - 1) * MS_PER_DAY));
+      const frac = pvHi > pvLo ? (currentEv - pvLo) / (pvHi - pvLo) : 0;
+      es = lo - 1 + frac;
+    }
+
+    const spiT = es / atDays;
+    if (spiT <= 0) {
+      return { status: 'no_progress', ...none, plannedEndDate: end };
+    }
+
+    const plannedDurationDays = (end.getTime() - start.getTime()) / MS_PER_DAY;
+    const forecastMs = start.getTime() + (plannedDurationDays / spiT) * MS_PER_DAY;
+    // 過去日への完了予測は出さない（現在日にクランプ）
+    const forecast = new Date(Math.max(forecastMs, now.getTime()));
+
+    return {
+      status: 'ok',
+      forecastCompletionDate: forecast,
+      plannedEndDate: end,
+      delayDays: Math.ceil((forecast.getTime() - end.getTime()) / MS_PER_DAY),
+      spiT,
+    };
+  }
+
+  /**
+   * 予測線をプロジェクト計画終了日以降、予測完了日まで延長するセグメントを生成する。
+   * EVは終了日時点の予測EVからBACへ線形に増加（予測完了日でBAC到達）、
+   * ACはCPI（未定義/0は1）で追随、PV/PV_BASEは計画期間後のため全額フラット。
+   * 表示の暴走防止のため、延長は「開始日から計画期間の2倍」の時点で打ち切る
+   * （打ち切られた場合、EVはBAC未到達のまま線が終わる）。
+   */
+  private buildForecastExtension(
+    wbsData: WbsEvmData,
+    lastPoint: EvmMetrics,
+    currentMetrics: EvmMetrics,
+    endDate: Date,
+    forecastDate: Date,
+    projectStart: Date,
+    interval: 'daily' | 'weekly' | 'monthly',
+    calculationMode: EvmCalculationMode,
+    method: ProgressMeasurementMethod,
+    fMethod: EvmForecastMethod,
+    businessDayCounter?: BusinessDayCounter
+  ): EvmMetrics[] {
+    const capMs =
+      projectStart.getTime() + 2 * (endDate.getTime() - projectStart.getTime());
+    const targetMs = Math.min(forecastDate.getTime(), Math.max(capMs, endDate.getTime()));
+    if (targetMs <= endDate.getTime()) return [];
+
+    const extDates = this.generateDateRange(endDate, new Date(targetMs), interval).slice(1);
+    if (extDates.length === 0) return [];
+
+    const evStart = lastPoint.ev;
+    const bac = lastPoint.bac;
+    const fullSpan = forecastDate.getTime() - endDate.getTime();
+    const cpi = currentMetrics.cpi;
+    const effectiveCpi = cpi === null || cpi === 0 ? 1 : cpi;
+    const thresholds = this.resolveThresholds(wbsData.settings);
+
+    return extDates.map((date) => {
+      const frac = Math.min(1, (date.getTime() - endDate.getTime()) / fullSpan);
+      const ev = evStart + (bac - evStart) * frac;
+      const ac =
+        currentMetrics.ac + Math.max(0, ev - currentMetrics.ev) / effectiveCpi;
+      const pv = wbsData.tasks.reduce(
+        (sum, task) =>
+          sum + task.getPlannedValueAtDate('YOTEI', date, calculationMode, method, businessDayCounter),
+        0
+      );
+      const pv_base = wbsData.tasks.reduce(
+        (sum, task) =>
+          sum + task.getPlannedValueAtDate('BASE', date, calculationMode, method, businessDayCounter),
+        0
+      );
+
+      return EvmMetrics.create({
+        date,
+        pv_base,
+        pv,
+        ev,
+        ac,
+        bac,
+        calculationMode,
+        progressMethod: method,
+        forecastMethod: fMethod,
+        isPredicted: true,
+        ...thresholds,
+      });
+    });
   }
 
   /**

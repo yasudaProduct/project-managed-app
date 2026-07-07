@@ -100,6 +100,13 @@ describe('evm-dashboard-dto', () => {
           recommendedStartDate: new Date('2025-01-01'),
           recommendedEndDate: new Date('2025-01-10'),
         },
+        scheduleForecast: {
+          status: 'ok',
+          forecastCompletionDate: new Date('2025-01-15'),
+          plannedEndDate: new Date('2025-01-10'),
+          delayDays: 5,
+          spiT: 0.5,
+        },
       });
 
       expect(result.taskDetails[0].methodProgressRate).toBe(0);

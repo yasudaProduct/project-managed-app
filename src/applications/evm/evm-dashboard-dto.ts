@@ -3,7 +3,11 @@ import type { EvmForecastMethod } from '@/types/evm-forecast-method';
 import type { EvmCalculationMode } from '@/types/evm';
 import type { EvmMetrics } from '@/domains/evm/evm-metrics';
 import type { TaskEvmData } from '@/domains/evm/task-evm-data';
-import type { EvmDateRange } from '@/applications/evm/evm-service';
+import type {
+  EvmDateRange,
+  ScheduleForecast,
+  ScheduleForecastStatus,
+} from '@/applications/evm/evm-service';
 
 export type EvmMetricsData = {
   date: string;
@@ -64,11 +68,20 @@ export type EvmDateRangeData = {
   recommendedEndDate: string;
 };
 
+export type ScheduleForecastData = {
+  status: ScheduleForecastStatus;
+  forecastCompletionDate: string | null;
+  plannedEndDate: string | null;
+  delayDays: number | null;
+  spiT: number | null;
+};
+
 export type EvmDashboardData = {
   currentMetrics: EvmMetricsData;
   timeSeries: EvmMetricsData[];
   taskDetails: TaskEvmDataSerialized[];
   dateRange: EvmDateRangeData;
+  scheduleForecast: ScheduleForecastData;
 };
 
 export function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
@@ -130,6 +143,7 @@ export function serializeEvmDashboardData(result: {
   timeSeries: EvmMetrics[];
   taskDetails: TaskEvmData[];
   dateRange: EvmDateRange;
+  scheduleForecast: ScheduleForecast;
 }): EvmDashboardData {
   // タスク明細のEVは、合計EVと同じ「解決済みの測定方式」で算出する（明細と合計の不一致を防ぐ）
   const progressMethod = result.currentMetrics.progressMethod;
@@ -146,6 +160,15 @@ export function serializeEvmDashboardData(result: {
       taskMaxEndDate: result.dateRange.taskMaxEndDate?.toISOString() ?? null,
       recommendedStartDate: result.dateRange.recommendedStartDate.toISOString(),
       recommendedEndDate: result.dateRange.recommendedEndDate.toISOString(),
+    },
+    scheduleForecast: {
+      status: result.scheduleForecast.status,
+      forecastCompletionDate:
+        result.scheduleForecast.forecastCompletionDate?.toISOString() ?? null,
+      plannedEndDate:
+        result.scheduleForecast.plannedEndDate?.toISOString() ?? null,
+      delayDays: result.scheduleForecast.delayDays,
+      spiT: result.scheduleForecast.spiT,
     },
   };
 }
