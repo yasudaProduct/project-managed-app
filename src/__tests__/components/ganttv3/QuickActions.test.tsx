@@ -53,6 +53,7 @@ describe("QuickActions", () => {
     ["クリティカルパス表示", "showCriticalPath"],
     ["本日ライン表示", "showTodayLine"],
     ["実績バー表示（予定の下段に実績を表示）", "showActual"],
+    ["見通しバー表示（実績の下段に見通しを表示）", "showForecast"],
   ] as const)("%s ボタンで %s がトグルされる", (title, flag) => {
     const style = makeStyle();
     render(<QuickActions {...baseProps} style={style} />);
