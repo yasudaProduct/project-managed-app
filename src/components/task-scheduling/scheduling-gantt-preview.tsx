@@ -23,6 +23,7 @@ const previewStyle: GanttStyle = {
   showGrid: true,
   showProgress: false,
   showActual: false,
+  showForecast: false,
   showDependencies: true,
   showCriticalPath: false,
   showWeekends: true,

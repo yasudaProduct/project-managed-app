@@ -24,6 +24,7 @@ import {
   Download,
   ArrowUpDown,
   BarChart3,
+  TrendingUp,
 } from "lucide-react";
 
 interface QuickActionsProps {
@@ -300,6 +301,22 @@ export const QuickActions = ({
         >
           <BarChart3 className="w-4 h-4" />
           実績
+        </Button>
+
+        <Button
+          variant={style.showForecast ? "default" : "outline"}
+          size="sm"
+          title="見通しバー表示（実績の下段に見通しを表示）"
+          className="gap-1"
+          onClick={() =>
+            onStyleChange({
+              ...style,
+              showForecast: !style.showForecast,
+            })
+          }
+        >
+          <TrendingUp className="w-4 h-4" />
+          見通し
         </Button>
       </div>
 
