@@ -12,6 +12,13 @@ import { QuickActions } from "@/components/ganttv3/quick-actions";
 import { GanttChart } from "@/components/ganttv3/gantt-chart";
 import { TaskTable, TaskTableColumn } from "@/components/ganttv3/task-table";
 import { DependencyEditModal } from "@/components/ganttv3/dependency-edit-modal";
+import { TaskFilterControl } from "@/components/ganttv3/task-filter-control";
+import { TaskDetailSidebar } from "@/components/ganttv3/task-detail-sidebar";
+import {
+  type TaskFilter,
+  EMPTY_TASK_FILTER,
+  filterTasks,
+} from "@/components/ganttv3/utils/taskFilter";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { HoursUnit, HOURS_UNIT_LABELS } from "@/utils/hours-converter";
 import { getGanttTasksTsv } from "@/app/wbs/[id]/ganttv3/export-actions";
@@ -67,10 +74,13 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   const [ganttStyle, setGanttStyle] = useState<GanttStyle>(defaultGanttStyle); // グラントチャートのスタイル
   const [groupBy, setGroupBy] = useState<GroupBy>("phase"); // グループ化の基準
   const [sortBy, setSortBy] = useState<TaskSortBy>("taskNo"); // グループ内のタスクの並び順
+  const [filter, setFilter] = useState<TaskFilter>(EMPTY_TASK_FILTER); // タスク絞り込み条件
 
   // モーダル制御（編集対象はIDで保持し、最新の tasks から都度引き直す）
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [dependencyTaskId, setDependencyTaskId] = useState<string | null>(null);
+  // バークリックで開くタスク詳細サイドバーの対象ID
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
 
   // テーブルの工数表示単位（時間 / 人日）
   const [kosuUnit, setKosuUnit] = useState<HoursUnit>("hours"); // 工数表示単位
@@ -191,6 +201,22 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   // 先行タスク名の引き当て用（O(1) ルックアップ）
   const taskById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
 
+  // 絞り込み後のタスク（チャートは編集ドラフト chartTasks、テーブルは確定 tasks を対象）
+  const filteredChartTasks = useMemo(
+    () => filterTasks(chartTasks, filter),
+    [chartTasks, filter],
+  );
+  const filteredTableTasks = useMemo(
+    () => filterTasks(tasks, filter),
+    [tasks, filter],
+  );
+
+  // 詳細サイドバーの対象タスク（最新 tasks から引く）
+  const detailTask = useMemo(
+    () => tasks.find((t) => t.id === detailTaskId) ?? null,
+    [tasks, detailTaskId],
+  );
+
   // テーブルの列定義（組み立ては taskTableColumns ファクトリへ委譲）
   const columns = useMemo<TaskTableColumn[]>(
     () =>
@@ -218,6 +244,13 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           />
 
           <div className="flex items-center gap-4">
+            {/* タスク絞り込み */}
+            <TaskFilterControl
+              filter={filter}
+              onChange={setFilter}
+              assignees={assignees}
+            />
+
             {/* クイックアクション */}
             <QuickActions
               timelineScale={timelineScale}
@@ -302,7 +335,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
       <div className="flex-1 overflow-hidden">
         {currentView === "gantt" ? (
           <GanttChart
-            tasks={chartTasks}
+            tasks={filteredChartTasks}
             categories={categories}
             timelineScale={timelineScale}
             style={ganttStyle}
@@ -314,6 +347,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
             onTaskUpdate={editMode ? handleDraftTaskUpdate : handleTaskUpdate}
             onCategoryToggle={handleCategoryToggle}
             onZoomChange={setZoomLevel}
+            onTaskSelect={setDetailTaskId}
             editMode={editMode}
             onEnterEditMode={handleEnterEditMode}
             onSaveEdit={handleSaveEdit}
@@ -327,7 +361,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           />
         ) : (
           <TaskTable
-            tasks={tasks}
+            tasks={filteredTableTasks}
             columns={columns}
             rowHeight={48}
             headerHeight={44}
@@ -358,6 +392,15 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
           }}
         />
       )}
+
+      {/* タスク詳細サイドバー（バークリックで表示） */}
+      <TaskDetailSidebar
+        task={detailTask}
+        open={detailTask !== null}
+        onOpenChange={(open) => {
+          if (!open) setDetailTaskId(null);
+        }}
+      />
 
       {/* 依存関係編集モーダル */}
       <DependencyEditModal

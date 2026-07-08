@@ -33,6 +33,8 @@ import {
 } from "./utils/dependencyConnect";
 import { TimelineHeader } from "./timeline-header";
 import { TaskBar } from "./task-bar";
+import { BarLabel } from "./bar-label";
+import { TaskTooltip } from "./task-tooltip";
 import { TaskListRow } from "./task-list-row";
 import { InlineTaskEditPanel } from "./inline-task-edit-panel";
 import { GridLines } from "./grid-lines";
@@ -84,6 +86,8 @@ interface GanttChartProps {
   onTaskUpdate: (task: Task) => void;
   onCategoryToggle: (categoryName: string) => void;
   onZoomChange?: (zoom: number) => void;
+  /** タスクバーのクリック（非編集モードで詳細サイドバーを開く） */
+  onTaskSelect?: (taskId: string) => void;
   /** 編集モードかどうか（trueのときバーのドラッグ／インライン編集が有効） */
   editMode?: boolean;
   /** 編集モードに入る */
@@ -133,6 +137,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       onTaskUpdate,
       onCategoryToggle,
       onZoomChange,
+      onTaskSelect,
       editMode = false,
       onEnterEditMode,
       onSaveEdit,
@@ -183,6 +188,33 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     // 行高さスケール（Ctrl+ホイールで全行の高さを均等に増減）
     const [rowScale, setRowScale] = useState(1);
     const chartContentRef = useRef<HTMLDivElement>(null);
+
+    // ホバー中のタスクとカーソル位置（ツールチップ表示用）
+    const [hoveredTask, setHoveredTask] = useState<{
+      task: Task;
+      x: number;
+      y: number;
+    } | null>(null);
+    const handleBarHover = useCallback((task: Task, e: React.MouseEvent) => {
+      setHoveredTask({ task, x: e.clientX, y: e.clientY });
+    }, []);
+    const handleBarHoverEnd = useCallback(() => setHoveredTask(null), []);
+
+    // バークリック（非編集モード）→ 詳細サイドバー。ツールチップは閉じる。
+    const handleBarSelect = useCallback(
+      (taskId: string) => {
+        setHoveredTask(null);
+        onTaskSelect?.(taskId);
+      },
+      [onTaskSelect],
+    );
+
+    // ホイールズーム（日付ヘッダー上）で参照する最新値。リスナ再登録を避けるため ref に保持。
+    const zoomLevelRef = useRef(zoomLevel);
+    zoomLevelRef.current = zoomLevel;
+    const onZoomChangeRef = useRef(onZoomChange);
+    onZoomChangeRef.current = onZoomChange;
+    const headerWrapperRef = useRef<HTMLDivElement>(null);
 
     // タスクリスト幅（マウスドラッグでリサイズ可能）
     const [taskListWidth, setTaskListWidth] = useState(440);
@@ -317,6 +349,46 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
           const next = prev * Math.exp(-e.deltaY * 0.001);
           return Math.min(ROW_SCALE_MAX, Math.max(ROW_SCALE_MIN, next));
         });
+      };
+
+      el.addEventListener("wheel", handleWheel, { passive: false });
+      return () => el.removeEventListener("wheel", handleWheel);
+    }, []);
+
+    // 日付ヘッダー上でのホイール操作で横方向のズーム（拡大縮小）を行う。
+    // Ctrl併用時は行高スケール（上のリスナ）に委ねる。カーソル位置の日付が
+    // 動かないようズーム後にスクロール量を補正する。
+    useEffect(() => {
+      const el = headerWrapperRef.current;
+      if (!el) return;
+
+      const handleWheel = (e: WheelEvent) => {
+        if (e.ctrlKey) return; // Ctrl+ホイールは行高スケールへ
+        const onZoom = onZoomChangeRef.current;
+        if (!onZoom) return;
+        e.preventDefault();
+
+        const oldZoom = zoomLevelRef.current;
+        // 上スクロールで拡大・下スクロールで縮小（deltaYに比例した滑らかな変化）
+        const next = Math.min(
+          3.0,
+          Math.max(0.3, oldZoom * Math.exp(-e.deltaY * 0.0015)),
+        );
+        if (next === oldZoom) return;
+
+        const scroller = timelineScrollRef.current;
+        const cursorOffset = e.clientX - el.getBoundingClientRect().left;
+        const contentX = (scroller?.scrollLeft ?? 0) + cursorOffset;
+        const ratio = next / oldZoom;
+
+        onZoom(next);
+
+        // 再レンダー後（列幅反映後）にカーソル位置の日付が保たれるよう補正
+        if (scroller && typeof requestAnimationFrame === "function") {
+          requestAnimationFrame(() => {
+            scroller.scrollLeft = Math.max(0, contentX * ratio - cursorOffset);
+          });
+        }
       };
 
       el.addEventListener("wheel", handleWheel, { passive: false });
@@ -669,6 +741,8 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         setConnectPreview(null);
         dragRef.current = null;
       }
+      // モード切替時はツールチップを閉じる（バーの操作性が変わるため）
+      setHoveredTask(null);
     }, [editMode]);
 
     // インライン編集パネル対象のタスク
@@ -1084,6 +1158,15 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
               </div>
             </div>
 
+            {/* ホバー中タスクのツールチップ（ドラッグ/接続中は非表示） */}
+            {hoveredTask && !draggedTaskId && !connectPreview && (
+              <TaskTooltip
+                task={hoveredTask.task}
+                x={hoveredTask.x}
+                y={hoveredTask.y}
+              />
+            )}
+
             {/* タスクリスト幅のリサイズハンドル */}
             <div
               role="separator"
@@ -1097,8 +1180,12 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
             <div className="flex-1 flex flex-col min-w-0">
               {/* タイムラインコンテンツのコンテナ */}
               <div className="flex-1 flex flex-col min-h-0">
-                {/* タイムラインヘッダー */}
-                <div style={{ height: HEADER_HEIGHT }}>
+                {/* タイムラインヘッダー（この上でのホイール操作で横方向ズーム） */}
+                <div
+                  ref={headerWrapperRef}
+                  data-testid="ganttv3-timeline-header"
+                  style={{ height: HEADER_HEIGHT }}
+                >
                   <TimelineHeader
                     start={timelineBounds.start}
                     end={timelineBounds.end}
@@ -1302,6 +1389,16 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                   stroke={task.color}
                                   strokeWidth={1}
                                 />
+                                {style.labelPosition === "inside" && (
+                                  <BarLabel
+                                    x={actualX}
+                                    y={actualBarY}
+                                    width={actualWidth}
+                                    height={TASK_HEIGHT}
+                                    name={task.name}
+                                    hours={task.duration}
+                                  />
+                                )}
                               </g>
                             );
                           }
@@ -1340,6 +1437,16 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                   strokeWidth={1}
                                   strokeDasharray="4 2"
                                 />
+                                {style.labelPosition === "inside" && (
+                                  <BarLabel
+                                    x={forecastX}
+                                    y={forecastBarY}
+                                    width={forecastWidth}
+                                    height={TASK_HEIGHT}
+                                    name={task.name}
+                                    hours={task.duration}
+                                  />
+                                )}
                               </g>
                             );
                           }
@@ -1371,6 +1478,11 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                 isConnectSource={
                                   connectPreview?.fromTaskId === task.id
                                 }
+                                onSelect={
+                                  editMode ? undefined : handleBarSelect
+                                }
+                                onHover={handleBarHover}
+                                onHoverEnd={handleBarHoverEnd}
                               />
                               {actualBar}
                               {forecastBar}

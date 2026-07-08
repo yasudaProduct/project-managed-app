@@ -1,5 +1,6 @@
 import {
   formatMonthDay,
+  formatYmd,
   statusColor,
 } from "@/components/ganttv3/utils/taskFormat";
 
@@ -11,6 +12,17 @@ describe("formatMonthDay", () => {
 
   it("undefined は空文字", () => {
     expect(formatMonthDay(undefined)).toBe("");
+  });
+});
+
+describe("formatYmd", () => {
+  it("YYYY/MM/DD 形式（ゼロ埋め）で整形する", () => {
+    expect(formatYmd(new Date(2024, 0, 5))).toBe("2024/01/05");
+    expect(formatYmd(new Date(2024, 11, 25))).toBe("2024/12/25");
+  });
+
+  it("undefined は空文字", () => {
+    expect(formatYmd(undefined)).toBe("");
   });
 });
 

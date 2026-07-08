@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { GanttChart } from "@/components/ganttv3/gantt-chart";
 import { makeTask, makePhase, makeStyle } from "./_fixtures";
@@ -599,6 +599,150 @@ describe("GanttChart", () => {
       expect(onTaskUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ id: "1", duration: 16 }),
       );
+    });
+  });
+
+  describe("バー内ラベル（inside 配置）", () => {
+    const insideStyle = makeStyle({
+      showDependencies: false,
+      showTodayLine: false,
+      labelPosition: "inside",
+      showProgress: true,
+    });
+
+    it("予定バー内にタスク名と工数を表示する", () => {
+      render(<GanttChart {...defaultProps} style={insideStyle} />);
+      // makeTask 既定の duration=2
+      expect(screen.getByText("タスクA (2h)")).toBeInTheDocument();
+      expect(screen.getByText("タスクB (2h)")).toBeInTheDocument();
+    });
+
+    it("実績・見通しバーにもタスク名ラベルを描画する", () => {
+      const withActual = [
+        makeTask({
+          id: "1",
+          name: "タスクA",
+          category: "設計",
+          startDate: new Date("2024-01-01T00:00:00.000Z"),
+          endDate: new Date("2024-01-03T00:00:00.000Z"),
+          actualStartDate: new Date("2024-01-02T00:00:00.000Z"),
+          actualEndDate: new Date("2024-01-04T00:00:00.000Z"),
+          forecastStartDate: new Date("2024-01-02T00:00:00.000Z"),
+          forecastEndDate: new Date("2024-01-08T00:00:00.000Z"),
+        }),
+      ];
+      render(
+        <GanttChart
+          {...defaultProps}
+          tasks={withActual}
+          style={makeStyle({
+            showDependencies: false,
+            showTodayLine: false,
+            labelPosition: "inside",
+            showActual: true,
+            showForecast: true,
+          })}
+        />,
+      );
+      // タスクリスト行(1) + 予定/実績/見通しの3バー = 計4箇所
+      expect(screen.getAllByText(/タスクA/).length).toBeGreaterThanOrEqual(4);
+      // 予定/実績/見通しの3バーとも「名前 + 工数」を表示（duration=2）
+      expect(screen.getAllByText("タスクA (2h)").length).toBe(3);
+    });
+  });
+
+  describe("バーのクリックで詳細（非編集モード）", () => {
+    it("バーのクリックで onTaskSelect(taskId) が発火する", () => {
+      const onTaskSelect = jest.fn();
+      const { container } = render(
+        <GanttChart {...defaultProps} onTaskSelect={onTaskSelect} />,
+      );
+      fireEvent.click(container.querySelector('[data-task-id="1"] rect')!);
+      expect(onTaskSelect).toHaveBeenCalledWith("1");
+    });
+
+    it("編集モードではバークリックで onTaskSelect を発火しない", () => {
+      const onTaskSelect = jest.fn();
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          editMode
+          onTaskSelect={onTaskSelect}
+        />,
+      );
+      mouseDownOnBar(container, "1", 100);
+      fireEvent.mouseUp(document);
+      expect(onTaskSelect).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("ホバーでツールチップ", () => {
+    it("バーのホバーでツールチップを表示し、離脱で消える", () => {
+      const { container } = render(<GanttChart {...defaultProps} />);
+      expect(
+        screen.queryByTestId("ganttv3-task-tooltip"),
+      ).not.toBeInTheDocument();
+
+      const bar = container.querySelector('[data-task-id="1"]')!;
+      fireEvent.mouseEnter(bar);
+      const tip = screen.getByTestId("ganttv3-task-tooltip");
+      expect(within(tip).getByText(/タスクA/)).toBeInTheDocument();
+
+      fireEvent.mouseLeave(bar);
+      expect(
+        screen.queryByTestId("ganttv3-task-tooltip"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("日付ヘッダーでのホイールズーム", () => {
+    it("ホイール（上方向）で onZoomChange が拡大方向に発火する", () => {
+      const onZoomChange = jest.fn();
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          zoomLevel={1.0}
+          onZoomChange={onZoomChange}
+        />,
+      );
+      const header = container.querySelector(
+        '[data-testid="ganttv3-timeline-header"]',
+      )!;
+      fireEvent.wheel(header, { deltaY: -100 });
+      expect(onZoomChange).toHaveBeenCalledTimes(1);
+      expect(onZoomChange.mock.calls[0][0]).toBeGreaterThan(1.0);
+    });
+
+    it("ホイール（下方向）で onZoomChange が縮小方向に発火する", () => {
+      const onZoomChange = jest.fn();
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          zoomLevel={1.0}
+          onZoomChange={onZoomChange}
+        />,
+      );
+      const header = container.querySelector(
+        '[data-testid="ganttv3-timeline-header"]',
+      )!;
+      fireEvent.wheel(header, { deltaY: 100 });
+      expect(onZoomChange.mock.calls[0][0]).toBeLessThan(1.0);
+    });
+
+    it("Ctrl+ホイールは横ズーム（onZoomChange）を発火しない", () => {
+      const onZoomChange = jest.fn();
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          zoomLevel={1.0}
+          onZoomChange={onZoomChange}
+        />,
+      );
+      const header = container.querySelector(
+        '[data-testid="ganttv3-timeline-header"]',
+      )!;
+      fireEvent.wheel(header, { deltaY: -100, ctrlKey: true });
+      expect(onZoomChange).not.toHaveBeenCalled();
     });
   });
 });
