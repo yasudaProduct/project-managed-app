@@ -237,11 +237,12 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     // 行の寸法 - rowScale に比例（Ctrl+ホイールで均等に増減）
     const TASK_HEIGHT = Math.round(BASE_TASK_HEIGHT * rowScale);
     const ROW_SPACING = Math.round(BASE_ROW_SPACING * rowScale);
-    // 実績バー表示時は予定／実績の2本を縦に並べるため行高を拡張する
-    const ACTUAL_BAR_GAP = Math.max(2, Math.round(2 * rowScale));
-    const ROW_HEIGHT = style.showActual
-      ? TASK_HEIGHT * 2 + ACTUAL_BAR_GAP + ROW_SPACING
-      : TASK_HEIGHT + ROW_SPACING;
+    // 実績・見通しバー表示時は予定／実績／見通しを縦に並べるため行高を拡張する
+    const BAR_GAP = Math.max(2, Math.round(2 * rowScale));
+    const barsPerRow =
+      1 + (style.showActual ? 1 : 0) + (style.showForecast ? 1 : 0);
+    const ROW_HEIGHT =
+      TASK_HEIGHT * barsPerRow + BAR_GAP * (barsPerRow - 1) + ROW_SPACING;
     const CATEGORY_HEIGHT = Math.round(BASE_CATEGORY_HEIGHT * rowScale);
     const HEADER_HEIGHT = 50;
     const TASK_LIST_WIDTH = taskListWidth;
@@ -1245,17 +1246,25 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                         } else if (row.type === "task" && row.task) {
                           // タスクバー - タスクリスト行と完全に一致するY位置
                           const task = row.task;
-                          // 実績バー表示時は予定（上段）・実績（下段）を縦に並べる。
+                          // 実績・見通しバー表示時は予定（上段）・実績（中段）・見通し（下段）を縦に並べる。
                           // マイルストーンは1本扱いのため常に行中央に配置する。
                           const showActualBar =
                             style.showActual && !task.isMilestone;
-                          const blockHeight = showActualBar
-                            ? TASK_HEIGHT * 2 + ACTUAL_BAR_GAP
-                            : TASK_HEIGHT;
+                          const showForecastBar =
+                            style.showForecast && !task.isMilestone;
+                          const rowBars =
+                            1 +
+                            (showActualBar ? 1 : 0) +
+                            (showForecastBar ? 1 : 0);
+                          const blockHeight =
+                            TASK_HEIGHT * rowBars + BAR_GAP * (rowBars - 1);
                           const plannedBarY =
                             row.y + (row.height - blockHeight) / 2;
                           const actualBarY =
-                            plannedBarY + TASK_HEIGHT + ACTUAL_BAR_GAP;
+                            plannedBarY + TASK_HEIGHT + BAR_GAP;
+                          const forecastBarY =
+                            plannedBarY +
+                            (showActualBar ? 2 : 1) * (TASK_HEIGHT + BAR_GAP);
                           // ドラッグ中はプレビュー日付でバーを描画
                           const preview =
                             dragPreview && dragPreview.taskId === task.id
@@ -1297,6 +1306,44 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             );
                           }
 
+                          // 見通しバー（見通し日付がある非マイルストーンのみ。
+                          // 実績未入力・完了タスクにはサーバー側で日付が付かない）
+                          let forecastBar: JSX.Element | null = null;
+                          if (
+                            showForecastBar &&
+                            task.forecastStartDate &&
+                            task.forecastEndDate
+                          ) {
+                            const forecastX = dateToX(task.forecastStartDate);
+                            const forecastEndX = dateToXEnd(
+                              task.forecastEndDate,
+                            );
+                            const forecastWidth = Math.max(
+                              forecastEndX - forecastX,
+                              20,
+                            );
+                            forecastBar = (
+                              <g
+                                key={`${row.id}-forecast`}
+                                data-testid="ganttv3-forecast-bar"
+                                style={{ pointerEvents: "none" }}
+                              >
+                                <rect
+                                  x={forecastX}
+                                  y={forecastBarY}
+                                  width={forecastWidth}
+                                  height={TASK_HEIGHT}
+                                  rx={4}
+                                  fill={task.color}
+                                  fillOpacity={0.2}
+                                  stroke={task.color}
+                                  strokeWidth={1}
+                                  strokeDasharray="4 2"
+                                />
+                              </g>
+                            );
+                          }
+
                           return (
                             <g key={row.id}>
                               <TaskBar
@@ -1326,6 +1373,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                 }
                               />
                               {actualBar}
+                              {forecastBar}
                             </g>
                           );
                         }

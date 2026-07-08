@@ -30,6 +30,7 @@ const defaultGanttStyle: GanttStyle = {
   showGrid: true,
   showProgress: true,
   showActual: false,
+  showForecast: false,
   showDependencies: true,
   showCriticalPath: true,
   showWeekends: true,

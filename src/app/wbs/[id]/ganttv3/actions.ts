@@ -11,7 +11,9 @@ import type { ITaskDependencyService } from "@/applications/task-dependency/task
 import { DependencyType } from "@/components/ganttv3/gantt";
 import { statusColor } from "@/components/ganttv3/utils/taskFormat";
 import { ProgressMeasurementMethod } from "@/types/progress-measurement";
+import { ForecastCalculationMethod, toForecastMethodOption } from "@/types/forecast-calculation-method";
 import type { IProjectSettingsApplicationService } from "@/applications/project-settings/project-settings-application-service";
+import type { IForecastApplicationService } from "@/applications/forecast/forecast-application-service";
 
 // フェーズ色用の固定パレット（seq/index順に決定的に割り当てる）
 const PHASE_COLOR_PALETTE = [
@@ -35,13 +37,46 @@ export async function getGanttTasks(wbsId: number): Promise<GanttTask[]> {
     const tasks = await taskService.getTaskAll(wbsId);
     const milestones = await milestoneService.getMilestones(wbsId);
 
-    // プロジェクトの進捗測定方式を取得（進捗率の算出に使用。未設定は自己申告）
-    const progressMethod = await getProgressMeasurementMethod(wbsId);
+    // プロジェクトの進捗測定方式・見通し工数算出方式を取得（未設定は既定値）
+    const { progressMeasurementMethod, forecastCalculationMethod } =
+        await getProjectGanttSettings(wbsId);
 
     const ganttTasks: GanttTask[] = [
         ...milestones.map(convertMilestone).filter((milestone): milestone is GanttTask => milestone !== undefined),
-        ...tasks.map((task) => convertTask(task, progressMethod, taskService)).filter((task): task is GanttTask => task !== undefined)
+        ...tasks.map((task) => convertTask(task, progressMeasurementMethod, taskService)).filter((task): task is GanttTask => task !== undefined)
     ];
+
+    // 見通しバー用の日付を付与する（実績があり残工数が正のタスクのみ）
+    try {
+        const forecastService = container.get<IForecastApplicationService>(
+            SYMBOL.IForecastApplicationService
+        );
+        const forecastDates = await forecastService.calculateTasksForecastDates(
+            wbsId,
+            {
+                method: toForecastMethodOption(forecastCalculationMethod),
+                progressMeasurementMethod,
+            }
+        );
+        const forecastByTaskId = new Map(
+            forecastDates.map((forecast) => [forecast.taskId, forecast])
+        );
+
+        for (const task of ganttTasks) {
+            if (task.isMilestone || task.dbId === undefined) continue;
+            const forecast = forecastByTaskId.get(String(task.dbId));
+            if (
+                forecast?.forecastEndDate &&
+                task.actualStartDate
+            ) {
+                // 開始日は実績バーと揃えるため gantt タスク側の実績開始日を使う
+                task.forecastStartDate = task.actualStartDate;
+                task.forecastEndDate = forecast.forecastEndDate;
+            }
+        }
+    } catch (e) {
+        console.error("見通し日付の取得に失敗しました", e);
+    }
 
     // タスクバーの色をフェーズ色（getPhases と同じパレット・順序）に合わせる
     try {
@@ -158,24 +193,34 @@ export async function getPhases(wbsId: number): Promise<GanttPhase[]> {
     }));
 }
 
-// WBS（プロジェクト）の進捗測定方式を取得する。未設定時は自己申告進捗率。
-async function getProgressMeasurementMethod(
-    wbsId: number
-): Promise<ProgressMeasurementMethod> {
+// WBS（プロジェクト）の進捗測定方式・見通し工数算出方式を取得する。
+// 未設定・取得失敗時は既定値（自己申告進捗率／現実的）。
+async function getProjectGanttSettings(wbsId: number): Promise<{
+    progressMeasurementMethod: ProgressMeasurementMethod;
+    forecastCalculationMethod: ForecastCalculationMethod;
+}> {
+    const defaults = {
+        progressMeasurementMethod: "SELF_REPORTED" as const,
+        forecastCalculationMethod: "REALISTIC" as const,
+    };
     try {
         const wbsService = container.get<IWbsApplicationService>(
             SYMBOL.IWbsApplicationService
         );
         const wbs = await wbsService.getWbsById(wbsId);
-        if (!wbs) return "SELF_REPORTED";
+        if (!wbs) return defaults;
 
         const projectSettingsService = container.get<IProjectSettingsApplicationService>(
             SYMBOL.IProjectSettingsApplicationService
         );
-        return await projectSettingsService.getProgressMeasurementMethod(wbs.projectId);
+        const settings = await projectSettingsService.getProjectSettings(wbs.projectId);
+        return {
+            progressMeasurementMethod: settings.progressMeasurementMethod,
+            forecastCalculationMethod: settings.forecastCalculationMethod,
+        };
     } catch (e) {
-        console.error("進捗測定方式の取得に失敗しました", e);
-        return "SELF_REPORTED";
+        console.error("プロジェクト設定の取得に失敗しました", e);
+        return defaults;
     }
 }
 

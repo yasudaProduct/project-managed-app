@@ -90,6 +90,75 @@ describe("GanttChart", () => {
     });
   });
 
+  describe("見通しバーの描画", () => {
+    const tasksWithForecast = [
+      makeTask({
+        id: "1",
+        name: "タスクA",
+        category: "設計",
+        startDate: new Date("2024-01-01T00:00:00.000Z"),
+        endDate: new Date("2024-01-03T00:00:00.000Z"),
+        actualStartDate: new Date("2024-01-02T00:00:00.000Z"),
+        actualEndDate: new Date("2024-01-04T00:00:00.000Z"),
+        forecastStartDate: new Date("2024-01-02T00:00:00.000Z"),
+        forecastEndDate: new Date("2024-01-08T00:00:00.000Z"),
+      }),
+      makeTask({
+        id: "2",
+        name: "タスクB",
+        category: "設計",
+        startDate: new Date("2024-01-05T00:00:00.000Z"),
+        endDate: new Date("2024-01-10T00:00:00.000Z"),
+      }),
+    ];
+
+    it("showForecast ON かつ見通し日付ありのタスクに破線の見通しバーを描画する", () => {
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={tasksWithForecast}
+          style={makeStyle({
+            showDependencies: false,
+            showTodayLine: false,
+            showForecast: true,
+          })}
+        />,
+      );
+      const bars = container.querySelectorAll(
+        '[data-testid="ganttv3-forecast-bar"]',
+      );
+      // 見通し日付を持つタスクAのみ描画される（タスクBには描画されない）
+      expect(bars).toHaveLength(1);
+      expect(bars[0].querySelector("rect")).toHaveAttribute(
+        "stroke-dasharray",
+      );
+    });
+
+    it("showForecast OFF では見通しバーを描画しない", () => {
+      const { container } = render(
+        <GanttChart {...defaultProps} tasks={tasksWithForecast} />,
+      );
+      expect(
+        container.querySelectorAll('[data-testid="ganttv3-forecast-bar"]'),
+      ).toHaveLength(0);
+    });
+
+    it("showForecast ON でも行の予定バーは通常どおり描画される", () => {
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={tasksWithForecast}
+          style={makeStyle({
+            showDependencies: false,
+            showTodayLine: false,
+            showForecast: true,
+          })}
+        />,
+      );
+      expect(container.querySelectorAll("[data-task-id]")).toHaveLength(2);
+    });
+  });
+
   describe("ズーム操作", () => {
     it("ズームイン/アウトで onZoomChange が 1.2倍/÷1.2 で発火", () => {
       const onZoomChange = jest.fn();
