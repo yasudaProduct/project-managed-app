@@ -693,6 +693,23 @@ describe("GanttChart", () => {
         screen.queryByTestId("ganttv3-task-tooltip"),
       ).not.toBeInTheDocument();
     });
+
+    it("ドラッグ後にツールチップが古い位置で再表示されない（編集モード）", () => {
+      const { container } = render(<GanttChart {...defaultProps} editMode />);
+      const bar = container.querySelector('[data-task-id="1"]')!;
+      // ホバーでツールチップ表示 → そのままドラッグ（mouseleave は発火しない）
+      fireEvent.mouseEnter(bar);
+      expect(screen.getByTestId("ganttv3-task-tooltip")).toBeInTheDocument();
+
+      mouseDownOnBar(container, "1", 100);
+      fireEvent.mouseMove(document, { clientX: 100 + PX_PER_DAY * 2 });
+      fireEvent.mouseUp(document);
+
+      // ドラッグ確定後に古い座標のツールチップが残らない
+      expect(
+        screen.queryByTestId("ganttv3-task-tooltip"),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("日付ヘッダーでのホイールズーム", () => {

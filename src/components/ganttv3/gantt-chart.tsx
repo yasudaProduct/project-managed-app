@@ -564,6 +564,8 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
         if (!source || !scroller) return;
         e.preventDefault();
         e.stopPropagation();
+        // ドラッグ中に固定表示されたツールチップがドラッグ後に残らないよう閉じる
+        setHoveredTask(null);
 
         const fromX = side === "start" ? source.x : source.endX;
         const fromY = source.top + source.height / 2;
@@ -671,6 +673,8 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
           moved: false,
         };
         setDraggedTaskId(taskId);
+        // ドラッグ中に固定表示されたツールチップがドラッグ後に残らないよう閉じる
+        setHoveredTask(null);
         document.body.style.userSelect = "none";
       },
       [editMode, tasks],
