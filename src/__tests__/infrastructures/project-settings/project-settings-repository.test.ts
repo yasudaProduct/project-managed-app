@@ -155,6 +155,7 @@ describe("ProjectSettingsRepository", () => {
         steadyTaskKeywords: ["定例"],
         consumeSteadyTaskCapacity: true,
         steadyDailyHoursMode: "FIXED",
+        steadyTaskForecastMode: "PLANNED",
       });
     });
 
@@ -167,6 +168,7 @@ describe("ProjectSettingsRepository", () => {
         steadyTaskKeywords: [],
         consumeSteadyTaskCapacity: false,
         steadyDailyHoursMode: "PRORATE",
+        steadyTaskForecastMode: "PLANNED",
       });
     });
   });
@@ -179,6 +181,7 @@ describe("ProjectSettingsRepository", () => {
         steadyTaskKeywords: ["定例"],
         consumeSteadyTaskCapacity: true,
         steadyDailyHoursMode: "FIXED" as const,
+        steadyTaskForecastMode: "PLANNED" as const,
       };
 
       await repository.upsertSchedulingSettings("p1", settings);
