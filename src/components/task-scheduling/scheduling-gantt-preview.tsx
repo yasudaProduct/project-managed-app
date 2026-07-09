@@ -24,10 +24,12 @@ const previewStyle: GanttStyle = {
   showProgress: false,
   showActual: false,
   showForecast: false,
+  colorMode: "phase",
   showDependencies: true,
   showCriticalPath: false,
   showWeekends: true,
   showTodayLine: true,
+  showProgressLine: false,
   taskHeight: 16,
   rowSpacing: 4,
   labelPosition: "inside",
@@ -39,6 +41,7 @@ const previewStyle: GanttStyle = {
     criticalPath: "#DC2626",
     weekend: "#F3F4F6",
     today: "#F59E0B",
+    progressLine: "#DB2777",
   },
 };
 

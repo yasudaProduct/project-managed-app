@@ -5,6 +5,7 @@ export { BarLabel } from './bar-label';
 export { TimelineHeader } from './timeline-header';
 export { GridLines } from './grid-lines';
 export { DependencyArrows } from './dependency-arrows';
+export { ProgressLine } from './progress-line';
 export { ViewSwitcher } from './view-switcher';
 export { QuickActions } from './quick-actions';
 export { TaskFilterControl } from './task-filter-control';

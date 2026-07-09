@@ -8,8 +8,10 @@ export interface Task {
   duration: number; // 予定工数(時間)。暦日数ではない（実日程は startDate/endDate）
   actualStartDate?: Date; // 実績開始日
   actualEndDate?: Date; // 実績終了日（未完了で実績開始のみの場合は本日が入る）
+  actualDuration?: number; // 実績工数（時間）
   forecastStartDate?: Date; // 見通し開始日（実績開始日と同じ。実績なし・完了タスクは未設定）
   forecastEndDate?: Date; // 見通し終了日（残見通し工数を基準稼働時間で消化し終える営業日）
+  forecastDuration?: number; // 見通し工数（時間）
   color: string; // 色
   isMilestone: boolean; // マイルストーンかどうか
   progress: number; // 進捗（進捗測定方式で算出した実効値。表示用）
@@ -57,16 +59,21 @@ export type DependencyType = 'FS' | 'SS' | 'FF' | 'SF';
 
 export type TimelineScale = 'day' | 'week' | 'month' | 'quarter' | 'year';
 
+/** タスクバーの色分け方式（フェーズ別 or 予定/実績/見通し別） */
+export type GanttColorMode = 'phase' | 'planActualForecast';
+
 export interface GanttStyle {
   theme: 'modern' | 'classic';
   showGrid: boolean;
   showProgress: boolean;
   showActual: boolean; // 実績バー（予定の下段）の表示
   showForecast: boolean; // 見通しバー（実績の下段）の表示
+  colorMode: GanttColorMode; // タスクバーの色分け方式
   showDependencies: boolean;
   showCriticalPath: boolean;
   showWeekends: boolean;
   showTodayLine: boolean;
+  showProgressLine: boolean; // イナズマ線（進捗線）の表示
   taskHeight: number;
   rowSpacing: number;
   labelPosition: 'inside' | 'outside';
@@ -78,6 +85,7 @@ export interface GanttStyle {
     criticalPath: string;
     weekend: string;
     today: string;
+    progressLine: string; // イナズマ線の色
   };
 }
 

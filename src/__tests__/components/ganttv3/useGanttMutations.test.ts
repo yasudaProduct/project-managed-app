@@ -1,7 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { useGanttMutations } from "@/components/ganttv3/hooks/useGanttMutations";
 import type { Task, GanttPhase } from "@/components/ganttv3/gantt";
-import { makeTask, makePhase, makeDependency } from "./_fixtures";
+import { makeTask, makeDependency } from "./_fixtures";
 
 jest.mock("@/app/wbs/[id]/actions/wbs-task-actions", () => ({
   createTask: jest.fn(),
@@ -105,28 +105,6 @@ describe("useGanttMutations", () => {
       });
       // 楽観的更新 + ロールバック
       expect(setTasks).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  describe("handleTaskAdd", () => {
-    it("成功時: createTask→refetchTasks", async () => {
-      const { result, refetchTasks } = setup([], [makePhase({ id: "5", name: "設計" })]);
-      await act(async () => {
-        await result.current.handleTaskAdd(makeTask({ id: "tmp", phaseId: undefined }));
-      });
-      expect(mockCreateTask).toHaveBeenCalledTimes(1);
-      // categories[0].id から phaseId を補完
-      expect(mockCreateTask.mock.calls[0][1]).toMatchObject({ phaseId: 5 });
-      expect(refetchTasks).toHaveBeenCalledTimes(1);
-    });
-
-    it("フェーズが無いと createTask せず終了", async () => {
-      const { result, refetchTasks } = setup([], []);
-      await act(async () => {
-        await result.current.handleTaskAdd(makeTask({ id: "tmp" }));
-      });
-      expect(mockCreateTask).not.toHaveBeenCalled();
-      expect(refetchTasks).not.toHaveBeenCalled();
     });
   });
 

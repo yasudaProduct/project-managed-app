@@ -109,12 +109,21 @@ const formSchema = z
     }
   );
 
+/** タスクモーダルのフォーム入力値（Zod スキーマから導出） */
+export type TaskFormValues = z.infer<typeof formSchema>;
+
 interface TaskModalProps {
   wbsId: number;
   task?: WbsTask;
   children?: ReactNode;
   isOpen?: boolean;
   onClose?: () => void;
+  /**
+   * 指定時、新規作成（task未指定）の送信で createTask を直接呼ばず、
+   * 入力内容をこのコールバックへ渡すだけにする（DBへの反映は呼び出し側に委ねる）。
+   * ganttv3 の編集モードでタスクをドラフト追加する際に使用する。
+   */
+  onCreateDraft?: (values: TaskFormValues) => void;
 }
 
 export function TaskModal({
@@ -123,6 +132,7 @@ export function TaskModal({
   children,
   isOpen: externalIsOpen,
   onClose,
+  onCreateDraft,
 }: TaskModalProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
@@ -228,6 +238,14 @@ export function TaskModal({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsSubmitting(true);
+      if (!task && onCreateDraft) {
+        onCreateDraft(values);
+        toast({
+          title: "タスクをガントに追加しました",
+          description: "「保存」を押すとDBに反映されます",
+        });
+        return;
+      }
       if (!task) {
         const result = await createTask(wbsId, {
           // id: values.id,

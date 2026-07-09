@@ -19,7 +19,7 @@ import {
   EMPTY_TASK_FILTER,
   filterTasks,
 } from "@/components/ganttv3/utils/taskFilter";
-import { TaskModal } from "@/components/wbs/task-modal";
+import { TaskModal, type TaskFormValues } from "@/components/wbs/task-modal";
 import { HoursUnit, HOURS_UNIT_LABELS } from "@/utils/hours-converter";
 import { getGanttTasksTsv } from "@/app/wbs/[id]/ganttv3/export-actions";
 import { groupTasksByType } from "@/components/ganttv3/utils/groupTasks";
@@ -27,6 +27,7 @@ import { useGanttData } from "@/components/ganttv3/hooks/useGanttData";
 import { useGanttMutations } from "@/components/ganttv3/hooks/useGanttMutations";
 import { useGanttDraftEditing } from "@/components/ganttv3/hooks/useGanttDraftEditing";
 import { toWbsTask } from "@/components/ganttv3/utils/taskMapper";
+import { fromDateInputValue } from "@/components/ganttv3/utils/dateInput";
 import { createTaskColumns } from "@/components/ganttv3/taskTableColumns";
 import { tsvBlob, downloadBlob } from "@/components/ganttv3/utils/downloadBlob";
 import { toErrorMessage } from "@/components/ganttv3/utils/toErrorMessage";
@@ -38,10 +39,12 @@ const defaultGanttStyle: GanttStyle = {
   showProgress: true,
   showActual: false,
   showForecast: false,
+  colorMode: "phase",
   showDependencies: true,
   showCriticalPath: true,
   showWeekends: true,
   showTodayLine: true,
+  showProgressLine: false,
   taskHeight: 16,
   rowSpacing: 4,
   labelPosition: "inside",
@@ -53,6 +56,7 @@ const defaultGanttStyle: GanttStyle = {
     criticalPath: "#DC2626",
     weekend: "#F3F4F6",
     today: "#F59E0B",
+    progressLine: "#DB2777",
   },
 };
 
@@ -81,6 +85,8 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   const [dependencyTaskId, setDependencyTaskId] = useState<string | null>(null);
   // バークリックで開くタスク詳細サイドバーの対象ID
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  // タスク追加モーダル（編集モード中のみ開ける。追加内容はドラフトへ反映し、保存でDBへ反映）
+  const [isAddingTask, setIsAddingTask] = useState(false);
 
   // テーブルの工数表示単位（時間 / 人日）
   const [kosuUnit, setKosuUnit] = useState<HoursUnit>("hours"); // 工数表示単位
@@ -93,6 +99,8 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
     handleEnterEditMode,
     handleCancelEdit,
     handleDraftTaskUpdate,
+    handleDraftTaskAdd,
+    handleDraftTaskDelete,
     handleDraftDependencyAdd,
     handleDraftDependencyRemove,
     handleDraftDependencyUpdate,
@@ -126,7 +134,6 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   // 確定タスク/依存関係のサーバー反映（楽観的更新＋ロールバック）
   const {
     handleTaskUpdate,
-    handleTaskAdd,
     handleTaskDelete,
     handleTaskDuplicate,
     handleDependencyAdd,
@@ -164,6 +171,41 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
   const handleEditDependencies = useCallback((taskId: string) => {
     setDependencyTaskId(taskId);
   }, []);
+
+  // タスク追加モーダルの「作成」→ サーバーへは送らずドラフトへ追加する（保存時にDB反映）
+  const handleCreateDraftTask = useCallback(
+    (values: TaskFormValues) => {
+      const phase = categories.find((c) => c.id === String(values.phaseId));
+      const assigneeId = Number(values.assigneeId);
+      // フォームの日付は "YYYY/MM/DD"（タイムゾーン情報なし）のため、
+      // ブラウザのローカルTZ解釈に依存しないよう UTC 0時の Date へ正規化する
+      const startDate = fromDateInputValue(
+        values.yoteiStartDate.replace(/\//g, "-"),
+      );
+      const endDate = fromDateInputValue(values.yoteiEndDate.replace(/\//g, "-"));
+      if (!startDate || !endDate) return;
+      handleDraftTaskAdd({
+        name: values.name,
+        startDate,
+        endDate,
+        duration: values.yoteiKosu,
+        color: phase?.color ?? "#3B82F6",
+        isMilestone: false,
+        progress: values.progressRate ?? 0,
+        progressRate: values.progressRate,
+        predecessors: [],
+        level: 0,
+        isManuallyScheduled: true,
+        category: phase?.name,
+        assignee: assignees.find((a) => a.id === assigneeId)?.name,
+        status: values.status,
+        assigneeId,
+        phaseId: values.phaseId,
+      });
+      setIsAddingTask(false);
+    },
+    [categories, assignees, handleDraftTaskAdd],
+  );
 
   // カテゴリの展開/折りたたみ
   const handleCategoryToggle = useCallback((categoryName: string) => {
@@ -258,25 +300,15 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
               style={ganttStyle}
               onStyleChange={setGanttStyle}
               selectedTasks={selectedTasks}
-              onAddTask={() => {
-                const newTask = {
-                  name: "New Task",
-                  startDate: new Date(),
-                  endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-                  duration: 5,
-                  color: "#3B82F6",
-                  isMilestone: false,
-                  progress: 0,
-                  predecessors: [],
-                  level: 0,
-                  isManuallyScheduled: false,
-                  category: "TEST",
-                  description: "",
-                  resources: [],
-                };
-                handleTaskAdd(newTask);
+              onAddTask={() => setIsAddingTask(true)}
+              onDeleteTasks={() => {
+                if (editMode) {
+                  handleDraftTaskDelete(Array.from(selectedTasks));
+                  setSelectedTasks(new Set());
+                } else {
+                  handleTaskDelete(Array.from(selectedTasks));
+                }
               }}
-              onDeleteTasks={() => handleTaskDelete(Array.from(selectedTasks))}
               onDuplicateTasks={() =>
                 handleTaskDuplicate(Array.from(selectedTasks))
               }
@@ -285,7 +317,9 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
               sortBy={sortBy}
               onSortByChange={setSortBy}
               onExportTsv={handleExportTsv}
-              taskOpsDisabled={editMode}
+              addDisabled={!editMode || isSavingEdit || isLoading}
+              duplicateDisabled={editMode}
+              deleteDisabled={isSavingEdit}
             />
 
             {/* カテゴリの展開/折りたたみ */}
@@ -353,6 +387,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
             onSaveEdit={handleSaveEdit}
             onCancelEdit={handleCancelEdit}
             onEditDependencies={handleEditDependencies}
+            onDeleteTask={editMode ? (id) => handleDraftTaskDelete([id]) : undefined}
             onDependencyCreate={
               editMode ? handleDraftDependencyAdd : handleDependencyAdd
             }
@@ -390,6 +425,16 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
             // ドラフトが陳腐化する（保存時に古い値で上書きされる）ため抑止する。
             if (!editMode) refetchTasks();
           }}
+        />
+      )}
+
+      {/* タスク追加モーダル（編集モードのみ開ける。追加はドラフトへ反映し、保存でDBへ反映） */}
+      {isAddingTask && (
+        <TaskModal
+          wbsId={wbsId}
+          isOpen={true}
+          onClose={() => setIsAddingTask(false)}
+          onCreateDraft={handleCreateDraftTask}
         />
       )}
 

@@ -1,7 +1,14 @@
 import { useState, useCallback, useRef } from "react";
 import type { Task, DependencyType } from "../gantt";
-import { updateTask } from "@/app/wbs/[id]/actions/wbs-task-actions";
-import { updateMilestone } from "@/app/wbs/[id]/actions/milestone-actions";
+import {
+  createTask,
+  updateTask,
+  deleteTask,
+} from "@/app/wbs/[id]/actions/wbs-task-actions";
+import {
+  updateMilestone,
+  deleteMilestone,
+} from "@/app/wbs/[id]/actions/milestone-actions";
 import {
   createGanttDependency,
   deleteGanttDependency,
@@ -37,6 +44,8 @@ export function useGanttDraftEditing({
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   // ドラフトで新規追加した依存関係に振る一時ID（負値）
   const tempDepIdRef = useRef(-1);
+  // ドラフトで新規追加したタスクに振る一時ID（dbId未設定＝未保存タスクの目印）
+  const tempTaskIdRef = useRef(1);
 
   // チャートで表示・編集するタスク（編集中はドラフト、それ以外は確定タスク）
   const chartTasks = editMode && draftTasks ? draftTasks : tasks;
@@ -65,6 +74,44 @@ export function useGanttDraftEditing({
       prev
         ? calculateCriticalPath(
             prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)),
+          )
+        : prev,
+    );
+  }, []);
+
+  // ドラフトへタスクを新規追加する（タスクモーダルの「追加」から呼ばれる）。
+  // dbId は付与しない（未保存の目印）。DBへの反映は保存時（handleSaveEdit）にまとめて行う。
+  const handleDraftTaskAdd = useCallback((newTask: Omit<Task, "id">) => {
+    const tempId = `new-task-${tempTaskIdRef.current}`;
+    tempTaskIdRef.current += 1;
+    setDraftTasks((prev) =>
+      prev
+        ? calculateCriticalPath([
+            ...prev,
+            {
+              ...newTask,
+              id: tempId,
+              predecessors: newTask.predecessors.map((p) => ({ ...p })),
+            },
+          ])
+        : prev,
+    );
+  }, []);
+
+  // ドラフトからタスクを削除する（DBへの反映は保存時にまとめて行う）。
+  // 削除対象を指す依存（predecessors）が他タスクに残らないよう併せて取り除く。
+  const handleDraftTaskDelete = useCallback((taskIds: string[]) => {
+    setDraftTasks((prev) =>
+      prev
+        ? calculateCriticalPath(
+            prev
+              .filter((t) => !taskIds.includes(t.id))
+              .map((t) => ({
+                ...t,
+                predecessors: t.predecessors.filter(
+                  (p) => !taskIds.includes(p.taskId),
+                ),
+              })),
           )
         : prev,
     );
@@ -158,8 +205,49 @@ export function useGanttDraftEditing({
     setIsSavingEdit(true);
     try {
       const origById = new Map(tasks.map((t) => [t.id, t]));
+      const draftIds = new Set(draftTasks.map((t) => t.id));
 
-      // 1) 予定開始日・終了日・工数（マイルストーンは日付）の変更を保存
+      // 1) ドラフトで新規追加したタスクを作成する（dbId未設定＝未保存の目印）
+      const newDraftTasks = draftTasks.filter((dt) => dt.dbId === undefined);
+      for (const dt of newDraftTasks) {
+        if (dt.isMilestone || !dt.phaseId) {
+          throw new Error(`「${dt.name}」の追加に失敗しました（フェーズが未設定です）`);
+        }
+        const res = await createTask(wbsId, {
+          name: dt.name,
+          periods: [
+            {
+              startDate: dt.startDate.toISOString(),
+              endDate: dt.endDate.toISOString(),
+              type: "YOTEI",
+              kosus: [{ kosu: dt.duration ?? 0, type: "NORMAL" }],
+            },
+          ],
+          status: dt.status ?? "NOT_STARTED",
+          assigneeId:
+            dt.assigneeId !== undefined ? String(dt.assigneeId) : undefined,
+          phaseId: dt.phaseId,
+        });
+        if (!res.success) {
+          throw new Error(res.error ?? `「${dt.name}」の追加に失敗しました`);
+        }
+      }
+
+      // 2) ドラフトで削除したタスクをサーバーから削除する。
+      // 紐づく実績データ（work_records）はDBのFK制約（ON DELETE SET NULL）により保持される。
+      const deletedTasks = tasks.filter((t) => !draftIds.has(t.id));
+      for (const t of deletedTasks) {
+        const dbId = t.dbId ?? parseDbId(t.id);
+        const res = t.isMilestone
+          ? await deleteMilestone(dbId, wbsId)
+          : await deleteTask(dbId);
+        if (!res.success) {
+          throw new Error(res.error ?? `「${t.name}」の削除に失敗しました`);
+        }
+      }
+
+      // 3) 予定開始日・終了日・工数（マイルストーンは日付）の変更を保存
+      // （新規追加タスクは dbId 未設定のため orig が見つからず自動的に対象外になる）
       for (const dt of draftTasks) {
         const orig = origById.get(dt.id);
         if (!orig) continue;
@@ -202,15 +290,40 @@ export function useGanttDraftEditing({
         }
       }
 
-      // 2) 依存関係の差分を保存
-      const { deletes, creates } = diffDependencies(tasks, draftTasks);
+      // 4) 依存関係の差分を保存。
+      // 削除済みタスクに関わる依存はタスク削除のカスケードで既に消えているため、
+      // 元タスク側からも削除済みタスク・削除済みタスクへの参照を除いてから差分を取る
+      // （残すと「既に無い依存行」への削除APIを再度呼んでしまう）。
+      const survivingOriginalTasks = tasks
+        .filter((t) => draftIds.has(t.id))
+        .map((t) => ({
+          ...t,
+          predecessors: t.predecessors.filter((p) => draftIds.has(p.taskId)),
+        }));
+      const { deletes, creates } = diffDependencies(
+        survivingOriginalTasks,
+        draftTasks,
+      );
       for (const dbId of deletes) {
         const res = await deleteGanttDependency(wbsId, dbId);
         if (!res.success) {
           throw new Error(res.error ?? "依存関係の削除に失敗しました");
         }
       }
-      for (const input of creates) {
+      // 新規追加タスク（未保存＝数値dbIdを持たない）が絡む依存は今回保存できないため除外する
+      const validCreates = creates.filter(
+        (c) =>
+          Number.isFinite(c.successorTaskId) &&
+          Number.isFinite(c.predecessorTaskId),
+      );
+      if (validCreates.length !== creates.length) {
+        toast({
+          title: "一部の依存関係は保存されませんでした",
+          description:
+            "新規追加したタスクに対する依存関係は、保存後に改めて設定してください。",
+        });
+      }
+      for (const input of validCreates) {
         const res = await createGanttDependency(wbsId, input);
         if (!res.success) {
           throw new Error(res.error ?? "依存関係の作成に失敗しました");
@@ -242,6 +355,8 @@ export function useGanttDraftEditing({
     handleEnterEditMode,
     handleCancelEdit,
     handleDraftTaskUpdate,
+    handleDraftTaskAdd,
+    handleDraftTaskDelete,
     handleDraftDependencyAdd,
     handleDraftDependencyRemove,
     handleDraftDependencyUpdate,

@@ -100,59 +100,6 @@ export function useGanttMutations({
     [tasks, setTasks, wbsId],
   );
 
-  // タスク追加（サーバーに作成 → 再取得）
-  const handleTaskAdd = useCallback(
-    async (newTask: Omit<Task, "id">) => {
-      const phaseId =
-        newTask.phaseId ??
-        (categories[0] ? Number(categories[0].id) : undefined);
-      if (!phaseId) {
-        toast({
-          title: "タスクを追加できません",
-          description: "フェーズが存在しません",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      try {
-        const result = await createTask(wbsId, {
-          name: newTask.name,
-          periods: [
-            {
-              startDate: newTask.startDate.toISOString(),
-              endDate: newTask.endDate.toISOString(),
-              type: "YOTEI",
-              kosus: [{ kosu: newTask.duration ?? 0, type: "NORMAL" }],
-            },
-          ],
-          status: newTask.status ?? "NOT_STARTED",
-          assigneeId: newTask.assigneeId
-            ? String(newTask.assigneeId)
-            : undefined,
-          phaseId,
-        });
-
-        if (result.success) {
-          await refetchTasks();
-        } else {
-          toast({
-            title: "タスクの追加に失敗しました",
-            description: result.error,
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "タスクの追加に失敗しました",
-          description: toErrorMessage(error),
-          variant: "destructive",
-        });
-      }
-    },
-    [wbsId, categories, refetchTasks],
-  );
-
   // タスク/マイルストーン削除（楽観的削除 → サーバー削除 → 失敗時は再取得で同期）
   const handleTaskDelete = useCallback(
     async (taskIds: string[]) => {
@@ -403,7 +350,6 @@ export function useGanttMutations({
 
   return {
     handleTaskUpdate,
-    handleTaskAdd,
     handleTaskDelete,
     handleTaskDuplicate,
     handleDependencyAdd,
