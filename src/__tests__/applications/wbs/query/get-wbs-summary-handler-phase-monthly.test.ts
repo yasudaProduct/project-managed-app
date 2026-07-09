@@ -7,6 +7,7 @@ import type { IUserScheduleRepository } from '@/applications/calendar/iuser-sche
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
 import type { IProjectSettingsRepository } from '@/applications/project-settings/iproject-settings-repository';
+import { DEFAULT_SCHEDULING_SETTINGS } from '@/types/scheduling-settings';
 
 const makeTask = (overrides: Partial<WbsTaskData>): WbsTaskData => ({
   id: 't1',
@@ -111,7 +112,7 @@ describe('GetWbsSummaryHandler monthlyPhaseSummary (server-side pre-aggregation)
       upsertProjectSettings: jest.fn(),
       upsertDashboardSettings: jest.fn(),
       upsertEvmSettings: jest.fn(),
-      findSchedulingSettings: jest.fn(),
+      findSchedulingSettings: jest.fn().mockResolvedValue(DEFAULT_SCHEDULING_SETTINGS),
       upsertSchedulingSettings: jest.fn(),
     } as IProjectSettingsRepository;
   });

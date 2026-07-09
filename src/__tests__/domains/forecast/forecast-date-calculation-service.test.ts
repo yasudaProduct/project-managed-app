@@ -109,6 +109,25 @@ describe('ForecastDateCalculationService', () => {
       expect(end).toBeNull();
     });
 
+    it('hoursPerDayを指定した場合はそのペースで消化する（定常タスク用）', () => {
+      // 残15h。標準7.5h/日なら2営業日だが、3h/日なら5営業日かかる。
+      // 2026-07-08(水) から 3h/日: 7/8,7/9,7/10,7/13,7/14 → 火曜(7/14)
+      const end = ForecastDateCalculationService.calculateForecastEndDate(
+        { forecastHours: 15, actualHours: 0, baseDate: new Date(2026, 6, 8), hoursPerDay: 3 },
+        calendar
+      );
+      expect(end).toEqual(new Date(2026, 6, 14));
+    });
+
+    it('hoursPerDayが0以下の場合は標準稼働時間で消化する', () => {
+      const end = ForecastDateCalculationService.calculateForecastEndDate(
+        { forecastHours: 15, actualHours: 0, baseDate: new Date(2026, 6, 8), hoursPerDay: 0 },
+        calendar
+      );
+      // 標準7.5h/日 → 2営業日
+      expect(end).toEqual(new Date(2026, 6, 9));
+    });
+
     it('異常に大きい残工数でも無限ループせず上限日で打ち切る', () => {
       const end = ForecastDateCalculationService.calculateForecastEndDate(
         { forecastHours: 1_000_000, actualHours: 0, baseDate: new Date(2026, 6, 8) },

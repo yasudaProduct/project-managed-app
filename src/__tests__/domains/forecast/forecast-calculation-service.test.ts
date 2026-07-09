@@ -449,4 +449,76 @@ describe('ForecastCalculationService', () => {
       expect(results[0].forecastHours).toBeCloseTo(100, 5);
     });
   });
+
+  describe('定常タスク（isSteady）は進捗率ベースではなく定常方式で算出する', () => {
+    it('isSteady=true の場合、進捗率に依らず定常方式（PLANNED既定）で算出する', () => {
+      // 進捗率0・実績超過でも、通常方式なら plannedHours=100 になるが、
+      // 定常PLANNEDは max(予定, 実績)=130 を返す
+      const task = createTask({
+        name: 'プロジェクト管理',
+        yoteiKosu: 100,
+        jissekiKosu: 130,
+        progressRate: 0,
+        status: 'IN_PROGRESS',
+        isSteady: true,
+      });
+      const result = ForecastCalculationService.calculateTaskForecast(task, {
+        method: 'realistic',
+        progressMeasurementMethod: 'SELF_REPORTED',
+      });
+      expect(result.forecastHours).toBe(130);
+      expect(result.isSteady).toBe(true);
+    });
+
+    it('ACTUAL_PACE は稼働日数から実績ペースを投影し、日次ペースも返す', () => {
+      const task = createTask({
+        name: 'プロジェクト管理',
+        yoteiKosu: 100,
+        jissekiKosu: 48,
+        progressRate: 0,
+        status: 'IN_PROGRESS',
+        isSteady: true,
+        steadyWorkingDays: { total: 20, elapsed: 8 },
+      });
+      const result = ForecastCalculationService.calculateTaskForecast(task, {
+        method: 'realistic',
+        steadyTaskForecastMode: 'ACTUAL_PACE',
+      });
+      // (48/8)*20 = 120h, 日次ペース 6h/日
+      expect(result.forecastHours).toBeCloseTo(120, 5);
+      expect(result.steadyDailyRate).toBeCloseTo(6, 5);
+    });
+
+    it('稼働日数が無い場合は PLANNED 相当にフォールバックする', () => {
+      const task = createTask({
+        name: 'プロジェクト管理',
+        yoteiKosu: 100,
+        jissekiKosu: 48,
+        progressRate: 0,
+        status: 'IN_PROGRESS',
+        isSteady: true,
+      });
+      const result = ForecastCalculationService.calculateTaskForecast(task, {
+        method: 'realistic',
+        steadyTaskForecastMode: 'ACTUAL_PACE',
+      });
+      expect(result.forecastHours).toBe(100); // max(100, 48)
+    });
+
+    it('isSteady 未指定のタスクは従来どおり進捗率ベースで算出する', () => {
+      const task = createTask({
+        yoteiKosu: 100,
+        jissekiKosu: 48,
+        progressRate: 0,
+        status: 'IN_PROGRESS',
+      });
+      const result = ForecastCalculationService.calculateTaskForecast(task, {
+        method: 'realistic',
+        steadyTaskForecastMode: 'ACTUAL_PACE',
+      });
+      // progressRate<=0 → plannedHours=100（定常方式は適用されない）
+      expect(result.forecastHours).toBe(100);
+      expect(result.isSteady).toBeUndefined();
+    });
+  });
 });

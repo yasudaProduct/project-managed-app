@@ -195,6 +195,54 @@ describe('ForecastApplicationService.calculateTasksForecastDates', () => {
     expect(mockCompanyHolidayRepository.findAll).toHaveBeenCalledTimes(1);
   });
 
+  it('定常タスクは定常方式で見通し工数を算出し、終了日を日次消費ペースで求める', async () => {
+    // 定常タスク「定例会議」: 予定期間 2026-07-01〜07-31（稼働22日）、
+    // 基準日 2026-07-08 時点の経過稼働日数 6日、実績6h。
+    // ACTUAL_PACE: 日次ペース = 6/6 = 1h/日, 見通し = 1 × 22 = 22h, 残 = 22 - 6 = 16h。
+    // 残16hを 1h/日 で消化 → 基準日から16営業日目の 2026-07-30 が終了日
+    // （7/20 海の日はスキップ）。
+    const task = createTask({
+      name: '定例会議',
+      yoteiKosu: 40,
+      jissekiKosu: 6,
+      yoteiStart: new Date(2026, 6, 1),
+      yoteiEnd: new Date(2026, 6, 31),
+      jissekiStart: new Date(2026, 6, 2),
+      progressRate: 50,
+      status: 'IN_PROGRESS',
+    });
+    mockWbsQueryRepository.getWbsTasks.mockResolvedValue([task]);
+
+    const result = await service.calculateTasksForecastDates(
+      1,
+      { method: 'realistic', progressMeasurementMethod: 'SELF_REPORTED' },
+      baseDate,
+      { keywords: ['定例'], mode: 'ACTUAL_PACE' }
+    );
+
+    expect(result[0].forecastHours).toBeCloseTo(22, 5);
+    expect(result[0].actualHours).toBe(6);
+    expect(result[0].remainingHours).toBeCloseTo(16, 5);
+    expect(result[0].forecastStartDate).toEqual(new Date(2026, 6, 2));
+    expect(result[0].forecastEndDate).toEqual(new Date(2026, 6, 30));
+  });
+
+  it('定常キーワードに一致しないタスクは従来どおり進捗率ベースで算出する', async () => {
+    // steadyConfig を渡しても、名前が一致しなければ通常方式（realistic）
+    mockWbsQueryRepository.getWbsTasks.mockResolvedValue([createTask()]);
+
+    const result = await service.calculateTasksForecastDates(
+      1,
+      { method: 'realistic', progressMeasurementMethod: 'SELF_REPORTED' },
+      baseDate,
+      { keywords: ['定例'], mode: 'ACTUAL_PACE' }
+    );
+
+    // createTask は進捗50%・実績10h・予定20h → realistic 見通し20h（既存テストと同値）
+    expect(result[0].forecastHours).toBe(20);
+    expect(result[0].forecastEndDate).toEqual(new Date(2026, 6, 9));
+  });
+
   it('taskIdは文字列に正規化される($queryRaw由来でnumberの場合がある)', async () => {
     mockWbsQueryRepository.getWbsTasks.mockResolvedValue([
       createTask({ id: 123 as unknown as string }),

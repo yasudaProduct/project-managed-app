@@ -15,6 +15,11 @@ export interface ForecastEndDateInput {
   actualHours: number;
   /** 消化を開始する基準日（通常は「今日」）。時刻成分は無視する */
   baseDate: Date;
+  /**
+   * 1営業日あたりの消化量（h/営業日）。正値を指定した場合はこのペースで消化する（定常タスク用）。
+   * 未指定・0以下の場合は会社カレンダーの基準稼働時間を使用する。
+   */
+  hoursPerDay?: number;
 }
 
 export class ForecastDateCalculationService {
@@ -53,7 +58,11 @@ export class ForecastDateCalculationService {
       return null;
     }
 
-    const hoursPerDay = calendar.getStandardWorkingHours();
+    // 定常タスクはその日次消費ペースで、通常タスクは基準稼働時間で消化する
+    const hoursPerDay =
+      input.hoursPerDay && input.hoursPerDay > 0
+        ? input.hoursPerDay
+        : calendar.getStandardWorkingHours();
     let current = startOfDay(input.baseDate);
     let lastBusinessDay: Date | null = null;
 

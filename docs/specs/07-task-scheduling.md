@@ -77,6 +77,7 @@
 | `consumeSteadyTaskCapacity` | `boolean` | `false` | 定常タスクが担当者の稼働を消費するか |
 | `steadyDailyHoursMode` | `'PRORATE' \| 'FIXED'` | `'PRORATE'` | 定常タスクの日次消費量の決定方式 |
 | `steadyFixedHoursByKeyword` | `Record<string, number>?` | なし | FIXED時のキーワード別日次固定時間(h/日) |
+| `steadyTaskForecastMode` | `'PLANNED' \| 'ACTUAL_PACE' \| 'PLANNED_PACE'` | `'PLANNED'` | 定常タスクの**見通し工数**算出方式（月別集計・ganttV3の見通しで使用。前詰め計算には影響しない）。詳細は [03: 見通し工数計算 §4.7](./03-forecast-calculation.md) |
 
 - 永続化された Json は `parseSchedulingSettings()` で正規化される（数値以外の固定値は除外、不正な mode は `PRORATE` にフォールバック）。
 - 編集UIは WBS管理画面「設定」タブ（`src/components/wbs/project-settings.tsx`）。FIXED選択時のみキーワード別の固定時間入力欄が表示され、**現在のキーワードに存在するキーのみ**保存される（キーワード削除で固定値も連動して落ちる）。空欄のキーワードは按分（PRORATE）にフォールバックする。

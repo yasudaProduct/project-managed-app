@@ -4,6 +4,7 @@
  */
 
 import { ForecastTaskInput } from "@/domains/forecast/forecast-task-input";
+import { calculateSteadyTaskForecast } from "@/domains/forecast/steady-task-forecast-service";
 import { TaskProgressCalculator } from "@/domains/task/task-progress-calculator";
 import type {
   ForecastCalculationOptions,
@@ -44,6 +45,31 @@ export class ForecastCalculationService {
       options.progressMeasurementMethod || 'SELF_REPORTED'
     );
     console.log('effectiveProgressRate', effectiveProgressRate);
+
+    // 定常タスクは進捗率ベースの通常方式に馴染まないため、専用方式で算出する
+    if (task.isSteady) {
+      const steady = calculateSteadyTaskForecast(
+        options.steadyTaskForecastMode ?? 'PLANNED',
+        {
+          plannedHours,
+          actualHours,
+          totalWorkingDays: task.steadyWorkingDays?.total ?? 0,
+          elapsedWorkingDays: task.steadyWorkingDays?.elapsed ?? 0,
+        }
+      );
+      return {
+        taskId: task.id,
+        taskName: task.name,
+        plannedHours,
+        actualHours,
+        progressRate: task.progressRate || 0,
+        effectiveProgressRate,
+        forecastHours: steady.forecastHours,
+        completionStatus: task.status,
+        isSteady: true,
+        steadyDailyRate: steady.dailyRate,
+      };
+    }
 
     // 見通し工数計算
     const forecastHours = this.calculateForecastHours(
