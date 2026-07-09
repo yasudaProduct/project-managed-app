@@ -11,6 +11,9 @@ export { TaskManager } from './TaskManager';
 export { StyleCustomizer } from './StyleCustomizer';
 export { ExportModal } from './ExportModal';
 export { ImportModal } from './ImportModal';
+export { TaskFormModal } from './TaskFormModal';
+export type { NewTaskInput } from './TaskFormModal';
+export { TaskDetailSidebar } from './TaskDetailSidebar';
 
 // Type exports
 export type {
@@ -23,6 +26,7 @@ export type {
     ProjectData,
     GroupBy,
     TaskStatus,
+    ColorMode,
 } from './gantt';
 
 // Default export for convenience

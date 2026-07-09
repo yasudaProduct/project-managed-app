@@ -7,11 +7,25 @@ import React, {
   useEffect,
   JSX,
 } from "react";
-import { Task, TimelineScale, GanttStyle, GanttPhase, GroupBy } from "./gantt";
+import {
+  Task,
+  TimelineScale,
+  GanttStyle,
+  GanttPhase,
+  GroupBy,
+  ColorMode,
+} from "./gantt";
 import { groupTasksByType } from "./utils/groupTasks";
 import { TimelineHeader } from "./TimelineHeader";
 import { TaskBar } from "./TaskBar";
 import { GridLines } from "./GridLines";
+import {
+  PLAN_COLOR,
+  ACTUAL_COLOR,
+  FORECAST_COLOR,
+  getPhaseColor,
+  calcForecastEnd,
+} from "./colorMode";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DependencyArrows } from "./DependencyArrows";
@@ -22,6 +36,7 @@ import {
   Maximize2,
   ZoomIn,
   ZoomOut,
+  Trash2,
 } from "lucide-react";
 
 interface GanttChartProps {
@@ -32,9 +47,13 @@ interface GanttChartProps {
   expandedCategories: Set<string>;
   zoomLevel?: number;
   groupBy?: GroupBy;
+  colorMode?: ColorMode;
+  isEditMode?: boolean;
   onTaskUpdate: (task: Task) => void;
   onCategoryToggle: (categoryName: string) => void;
   onZoomChange?: (zoom: number) => void;
+  onTaskClick?: (task: Task) => void;
+  onDeleteTask?: (task: Task) => void;
 }
 
 // 単一行タイプ - タスクリストとタイムラインの両方で使用し、完全な1:1整列を保証する
@@ -58,9 +77,13 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       expandedCategories,
       zoomLevel = 1.0,
       groupBy = "phase",
+      colorMode = "phase",
+      isEditMode = false,
       onTaskUpdate,
       onCategoryToggle,
       onZoomChange,
+      onTaskClick,
+      onDeleteTask,
     },
     ref
   ) => {
@@ -419,6 +442,31 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
             )}
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            {colorMode === "planActual" && (
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1">
+                  <span
+                    className="w-2.5 h-2.5 rounded-sm"
+                    style={{ backgroundColor: PLAN_COLOR }}
+                  />
+                  予定
+                </span>
+                <span className="flex items-center gap-1">
+                  <span
+                    className="w-2.5 h-2.5 rounded-sm"
+                    style={{ backgroundColor: ACTUAL_COLOR }}
+                  />
+                  実績
+                </span>
+                <span className="flex items-center gap-1">
+                  <span
+                    className="w-2.5 h-2.5 rounded-sm"
+                    style={{ backgroundColor: FORECAST_COLOR, opacity: 0.6 }}
+                  />
+                  見通し
+                </span>
+              </div>
+            )}
             <span>Zoom: {Math.round(zoomLevel * 100)}%</span>
             <span>
               {timelineBounds.start
@@ -525,10 +573,17 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                       );
                     } else if (row.type === "task" && row.task) {
                       const task = row.task;
+                      const listDotColor =
+                        task.isOnCriticalPath && style.showCriticalPath
+                          ? style.colors.criticalPath
+                          : colorMode === "phase"
+                          ? getPhaseColor(task, categories)
+                          : PLAN_COLOR;
+                      const canDelete = isEditMode && !task.isMilestone;
                       return (
                         <div
                           key={row.id}
-                          className={`px-4 py-0 border-b border-border hover:bg-muted/30 transition-colors absolute w-full flex items-center ${
+                          className={`px-4 py-0 border-b border-border hover:bg-muted/30 transition-colors absolute w-full flex items-center cursor-pointer ${
                             task.isOnCriticalPath && style.showCriticalPath
                               ? "bg-red-50/50"
                               : ""
@@ -539,6 +594,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             paddingLeft: `${16 + task.level * 16}px`,
                             lineHeight: `${row.height}px`,
                           }}
+                          onClick={() => onTaskClick?.(task)}
                         >
                           <div className="flex items-center justify-between w-full h-full">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -547,23 +603,35 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                               )}
                               <div
                                 className="w-2 h-2 rounded-full flex-shrink-0"
-                                style={{
-                                  backgroundColor:
-                                    task.isOnCriticalPath &&
-                                    style.showCriticalPath
-                                      ? style.colors.criticalPath
-                                      : task.color,
-                                }}
+                                style={{ backgroundColor: listDotColor }}
                               />
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium truncate text-xs leading-tight">
                                   {task.name}
                                 </div>
                               </div>
+                              {task.isNew && (
+                                <span className="text-[10px] px-1 rounded bg-blue-100 text-blue-700 flex-shrink-0">
+                                  未保存
+                                </span>
+                              )}
                             </div>
-                            <div className="text-xs text-muted-foreground ml-2">
-                              {task.isMilestone ? "M" : `${task.duration}d`}
-                            </div>
+                            {canDelete ? (
+                              <button
+                                className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive flex-shrink-0"
+                                title="タスクを削除"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteTask?.(task);
+                                }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            ) : (
+                              <div className="text-xs text-muted-foreground ml-2">
+                                {task.isMilestone ? "M" : `${task.duration}d`}
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -713,21 +781,130 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                           const taskBarY =
                             row.y + (row.height - TASK_HEIGHT) / 2;
 
+                          // マイルストーンは色分けモードに関わらずダイヤ表示
+                          if (task.isMilestone) {
+                            return (
+                              <g
+                                key={row.id}
+                                className="cursor-pointer"
+                                onClick={() => onTaskClick?.(task)}
+                              >
+                                <TaskBar
+                                  task={task}
+                                  x={dateToX(task.startDate)}
+                                  y={taskBarY}
+                                  width={0}
+                                  height={TASK_HEIGHT}
+                                  style={style}
+                                  onDragStart={() => {}}
+                                  isDragging={false}
+                                />
+                              </g>
+                            );
+                          }
+
+                          // 予定・実績・見通しによる色分け
+                          if (colorMode === "planActual") {
+                            const laneH = Math.max(
+                              Math.floor((TASK_HEIGHT - 2) / 2),
+                              5
+                            );
+                            const planX = dateToX(task.startDate);
+                            const planW = Math.max(
+                              dateToX(task.endDate) - planX,
+                              4
+                            );
+                            const bottomLaneY = taskBarY + TASK_HEIGHT - laneH;
+
+                            const forecast = calcForecastEnd(task);
+                            const forecastX = forecast
+                              ? dateToX(forecast.start)
+                              : 0;
+                            const forecastW = forecast
+                              ? Math.max(dateToX(forecast.end) - forecastX, 4)
+                              : 0;
+
+                            const hasActual = !!(
+                              task.jissekiStart && task.jissekiEnd
+                            );
+                            const actualX = hasActual
+                              ? dateToX(task.jissekiStart!)
+                              : 0;
+                            const actualW = hasActual
+                              ? Math.max(
+                                  dateToX(task.jissekiEnd!) - actualX,
+                                  4
+                                )
+                              : 0;
+
+                            return (
+                              <g
+                                key={row.id}
+                                className="cursor-pointer"
+                                onClick={() => onTaskClick?.(task)}
+                              >
+                                {/* 予定バー（上段） */}
+                                <rect
+                                  x={planX}
+                                  y={taskBarY}
+                                  width={planW}
+                                  height={laneH}
+                                  rx={2}
+                                  fill={PLAN_COLOR}
+                                  fillOpacity={0.85}
+                                />
+                                {/* 見通しバー（下段・背面） */}
+                                {forecast && (
+                                  <rect
+                                    x={forecastX}
+                                    y={bottomLaneY}
+                                    width={forecastW}
+                                    height={laneH}
+                                    rx={2}
+                                    fill={FORECAST_COLOR}
+                                    fillOpacity={0.4}
+                                  />
+                                )}
+                                {/* 実績バー（下段・前面） */}
+                                {hasActual && (
+                                  <rect
+                                    x={actualX}
+                                    y={bottomLaneY}
+                                    width={actualW}
+                                    height={laneH}
+                                    rx={2}
+                                    fill={ACTUAL_COLOR}
+                                  />
+                                )}
+                              </g>
+                            );
+                          }
+
+                          // フェーズによる色分け
                           return (
-                            <TaskBar
+                            <g
                               key={row.id}
-                              task={task}
-                              x={dateToX(task.startDate)}
-                              y={taskBarY}
-                              width={Math.max(
-                                dateToX(task.endDate) - dateToX(task.startDate),
-                                task.isMilestone ? 0 : 20
-                              )}
-                              height={TASK_HEIGHT}
-                              style={style}
-                              onDragStart={() => {}}
-                              isDragging={false}
-                            />
+                              className="cursor-pointer"
+                              onClick={() => onTaskClick?.(task)}
+                            >
+                              <TaskBar
+                                task={{
+                                  ...task,
+                                  color: getPhaseColor(task, categories),
+                                }}
+                                x={dateToX(task.startDate)}
+                                y={taskBarY}
+                                width={Math.max(
+                                  dateToX(task.endDate) -
+                                    dateToX(task.startDate),
+                                  20
+                                )}
+                                height={TASK_HEIGHT}
+                                style={style}
+                                onDragStart={() => {}}
+                                isDragging={false}
+                              />
+                            </g>
                           );
                         }
                         return null;

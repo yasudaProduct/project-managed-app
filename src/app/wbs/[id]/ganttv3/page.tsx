@@ -1,19 +1,38 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Task,
   TimelineScale,
   GanttStyle,
   Category,
-  // ProjectHeader,
   ViewSwitcher,
   QuickActions,
   GanttChart,
   GroupBy,
+  ColorMode,
+  TaskStatus,
+  TaskFormModal,
+  NewTaskInput,
+  TaskDetailSidebar,
 } from "@/components/ganttv3";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ChevronsUpDown, ChevronsDownUp } from "lucide-react";
 import { useParams } from "next/navigation";
-import { getGanttTasks as getGanttTasks, getPhases } from "./action";
+import { toast } from "@/hooks/use-toast";
+import {
+  getGanttTasks as getGanttTasks,
+  getPhases,
+  getGanttAssignees,
+  createGanttTask,
+  deleteGanttTask,
+} from "./action";
 
 const defaultGanttStyle: GanttStyle = {
   theme: "modern",
@@ -37,6 +56,20 @@ const defaultGanttStyle: GanttStyle = {
   },
 };
 
+// ステータス→タスクバー色（action.ts の convertTask と揃える）
+const statusToColor = (status?: TaskStatus): string => {
+  switch (status) {
+    case "COMPLETED":
+      return "green";
+    case "IN_PROGRESS":
+      return "blue";
+    case "ON_HOLD":
+      return "yellow";
+    default:
+      return "gray";
+  }
+};
+
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
 
@@ -46,10 +79,24 @@ export default function App() {
   const [timelineScale, setTimelineScale] = useState<TimelineScale>("month");
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(categories.map((c) => c.name))
+    new Set()
   );
   const params = useParams();
   const wbsId = Number(params.id);
+
+  // 追加された機能用の状態
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [colorMode, setColorMode] = useState<ColorMode>("phase");
+  const [selectedTaskDetail, setSelectedTaskDetail] = useState<Task | null>(
+    null
+  );
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [assignees, setAssignees] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [deletedTaskIds, setDeletedTaskIds] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
+  const newTaskCounter = useRef(0);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -59,9 +106,16 @@ export default function App() {
     const fetchPhases = async () => {
       const phases = await getPhases(wbsId);
       setCategories(phases);
+      // 初期表示ではフェーズを展開する
+      setExpandedCategories(new Set(phases.map((p) => p.name)));
+    };
+    const fetchAssignees = async () => {
+      const assignees = await getGanttAssignees(wbsId);
+      setAssignees(assignees);
     };
     fetchTasks();
     fetchPhases();
+    fetchAssignees();
   }, [wbsId]);
 
   // Add zoom level state
@@ -71,28 +125,6 @@ export default function App() {
 
   // Add groupBy state
   const [groupBy, setGroupBy] = useState<GroupBy>("phase");
-
-  // プロジェクト統計を計算
-  // const projectStats = useMemo(() => {
-  //   const projectName = "ソフトウェア開発プロジェクト";
-  //   const totalTasks = tasks.length;
-  //   const completedTasks = tasks.filter((t) => t.progress === 100).length;
-  //   const milestones = tasks.filter((t) => t.isMilestone).length;
-  //   const criticalTasks = tasks.filter((t) => t.isOnCriticalPath).length;
-  //   const avgProgress =
-  //     totalTasks > 0
-  //       ? Math.round(tasks.reduce((sum, t) => sum + t.progress, 0) / totalTasks)
-  //       : 0;
-
-  //   return {
-  //     projectName,
-  //     totalTasks,
-  //     completedTasks,
-  //     milestones,
-  //     criticalTasks,
-  //     avgProgress,
-  //   };
-  // }, [tasks]);
 
   // クリティカルパス計算
   const calculateCriticalPath = useCallback((updatedTasks: Task[]): Task[] => {
@@ -193,14 +225,46 @@ export default function App() {
     [tasks, calculateCriticalPath]
   );
 
-  const handleTaskAdd = useCallback(
-    (newTask: Omit<Task, "id">) => {
+  // タスクモーダルから追加（ローカル状態に反映。DB反映は保存時）
+  const handleAddTaskFromModal = useCallback(
+    (input: NewTaskInput) => {
       const task: Task = {
-        ...newTask,
-        id: Date.now().toString(),
-        isOnCriticalPath: false,
+        id: `new-${newTaskCounter.current++}`,
+        name: input.name,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        duration: input.yoteiKosu,
+        color: statusToColor(input.status),
+        isMilestone: false,
+        progress: 0,
+        predecessors: [],
+        level: 0,
+        isManuallyScheduled: true,
+        category: input.phaseName,
+        assignee: input.assigneeName,
+        status: input.status,
+        yoteiKosu: input.yoteiKosu,
+        isNew: true,
+        phaseId: input.phaseId,
+        assigneeId: input.assigneeId,
       };
       setTasks((prev) => calculateCriticalPath([...prev, task]));
+      // 追加先フェーズを展開して見えるようにする
+      setExpandedCategories((prev) => new Set([...prev, input.phaseName]));
+    },
+    [calculateCriticalPath]
+  );
+
+  // 編集モードでの単一タスク削除（実績データは保持したままDB反映は保存時）
+  const handleDeleteTask = useCallback(
+    (task: Task) => {
+      if (!task.isNew) {
+        setDeletedTaskIds((prev) => new Set(prev).add(task.id));
+      }
+      setTasks((prev) =>
+        calculateCriticalPath(prev.filter((t) => t.id !== task.id))
+      );
+      setSelectedTaskDetail((prev) => (prev?.id === task.id ? null : prev));
     },
     [calculateCriticalPath]
   );
@@ -228,7 +292,7 @@ export default function App() {
       const tasksToClone = tasks.filter((task) => taskIds.includes(task.id));
       const clonedTasks = tasksToClone.map((task) => ({
         ...task,
-        id: Date.now().toString() + Math.random(),
+        id: `new-${newTaskCounter.current++}`,
         name: `${task.name} (Copy)`,
         predecessors: [],
         isOnCriticalPath: false,
@@ -238,95 +302,61 @@ export default function App() {
     [tasks, calculateCriticalPath]
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleTaskIndent = useCallback(
-    (taskId: string) => {
-      const updatedTasks = tasks.map((task) =>
-        task.id === taskId
-          ? { ...task, level: Math.min(task.level + 1, 3) }
-          : task
-      );
-      setTasks(calculateCriticalPath(updatedTasks));
-    },
-    [tasks, calculateCriticalPath]
-  );
+  // 保存：新規タスクの作成と削除タスクのDB反映を行う
+  const hasUnsavedChanges =
+    tasks.some((t) => t.isNew) || deletedTaskIds.size > 0;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleTaskOutdent = useCallback(
-    (taskId: string) => {
-      const updatedTasks = tasks.map((task) =>
-        task.id === taskId
-          ? { ...task, level: Math.max(task.level - 1, 0) }
-          : task
-      );
-      setTasks(calculateCriticalPath(updatedTasks));
-    },
-    [tasks, calculateCriticalPath]
-  );
+  const handleSave = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      // 新規タスクをDBに登録
+      const newTasks = tasks.filter((t) => t.isNew);
+      for (const t of newTasks) {
+        if (t.phaseId == null) {
+          throw new Error(`「${t.name}」のフェーズが未設定です`);
+        }
+        const res = await createGanttTask(wbsId, {
+          name: t.name,
+          phaseId: t.phaseId,
+          assigneeId: t.assigneeId,
+          yoteiStartDate: t.startDate.toISOString(),
+          yoteiEndDate: t.endDate.toISOString(),
+          yoteiKosu: t.yoteiKosu ?? 0,
+          status: t.status ?? "NOT_STARTED",
+        });
+        if (!res.success) {
+          throw new Error(res.error || "タスクの作成に失敗しました");
+        }
+      }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleCategoryUpdate = useCallback((updatedCategory: Category) => {
-    setCategories((prev) =>
-      prev.map((cat) => (cat.id === updatedCategory.id ? updatedCategory : cat))
-    );
-  }, []);
+      // 削除タスクをDBから削除（紐づく実績データは保持される）
+      for (const id of Array.from(deletedTaskIds)) {
+        const res = await deleteGanttTask(Number(id));
+        if (!res.success) {
+          throw new Error(res.error || "タスクの削除に失敗しました");
+        }
+      }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleCategoryAdd = useCallback((newCategory: Omit<Category, "id">) => {
-    const category: Category = {
-      ...newCategory,
-      id: Date.now().toString(),
-    };
-    setCategories((prev) => [...prev, category]);
-    // Expand new categories by default
-    setExpandedCategories((prev) => new Set([...prev, category.name]));
-  }, []);
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleCategoryDelete = useCallback(
-    (categoryToDelete: Category) => {
-      // Find a default category to move tasks to (first available category)
-      const remainingCategories = categories.filter(
-        (cat) => cat.id !== categoryToDelete.id
-      );
-      const defaultCategory =
-        remainingCategories.length > 0
-          ? remainingCategories[0].name
-          : "Uncategorized";
-
-      // Move all tasks from deleted category to default category
-      const updatedTasks = tasks.map((task) =>
-        task.category === categoryToDelete.name
-          ? { ...task, category: defaultCategory }
-          : task
-      );
-
-      // Remove category from list
-      setCategories(remainingCategories);
-
-      // Remove from expanded categories
-      setExpandedCategories((prev) => {
-        const newExpanded = new Set(prev);
-        newExpanded.delete(categoryToDelete.name);
-        return newExpanded;
+      // 最新のタスクを再取得
+      const reloaded = await getGanttTasks(wbsId);
+      setTasks(calculateCriticalPath(reloaded));
+      setDeletedTaskIds(new Set());
+      setSelectedTaskDetail(null);
+      toast({ title: "保存しました" });
+    } catch (error) {
+      toast({
+        title: "保存に失敗しました",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [tasks, deletedTaskIds, wbsId, calculateCriticalPath]);
 
-      // Update tasks
-      setTasks(calculateCriticalPath(updatedTasks));
-    },
-    [categories, tasks, calculateCriticalPath]
-  );
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleTaskMove = useCallback(
-    (taskId: string, newCategory: string) => {
-      const updatedTasks = tasks.map((task) =>
-        task.id === taskId ? { ...task, category: newCategory } : task
-      );
-      setTasks(calculateCriticalPath(updatedTasks));
-    },
-    [tasks, calculateCriticalPath]
-  );
+  const handleToggleEditMode = useCallback(() => {
+    setIsEditMode((prev) => !prev);
+  }, []);
 
   const handleTimelineScaleChange = useCallback((scale: TimelineScale) => {
     setTimelineScale(scale);
@@ -353,103 +383,117 @@ export default function App() {
   }, []);
 
   return (
-    <div className="h-screen bg-background flex flex-col">
-      {/* Main Navigation */}
-      <div className="border-b bg-card px-2 py-2">
-        <div className="flex items-center justify-between">
-          <ViewSwitcher
-            currentView={currentView}
-            onViewChange={setCurrentView}
-          />
-
-          <div className="flex items-center gap-4">
-            <QuickActions
-              timelineScale={timelineScale}
-              onTimelineScaleChange={handleTimelineScaleChange}
-              style={ganttStyle}
-              onStyleChange={setGanttStyle}
-              selectedTasks={selectedTasks}
-              onAddTask={() => {
-                const newTask = {
-                  name: "New Task",
-                  startDate: new Date(),
-                  endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-                  duration: 5,
-                  color: "#3B82F6",
-                  isMilestone: false,
-                  progress: 0,
-                  predecessors: [],
-                  level: 0,
-                  isManuallyScheduled: false,
-                  category: "TEST",
-                  description: "",
-                  resources: [],
-                };
-                handleTaskAdd(newTask);
-              }}
-              onDeleteTasks={() => handleTaskDelete(Array.from(selectedTasks))}
-              onDuplicateTasks={() =>
-                handleTaskDuplicate(Array.from(selectedTasks))
-              }
-              groupBy={groupBy}
-              onGroupByChange={setGroupBy}
+    <TooltipProvider delayDuration={200}>
+      <div className="h-screen bg-background flex flex-col">
+        {/* Main Navigation */}
+        <div className="border-b bg-card px-2 py-2">
+          <div className="flex items-center justify-between">
+            <ViewSwitcher
+              currentView={currentView}
+              onViewChange={setCurrentView}
             />
 
-            {currentView === "gantt" && (
-              <div className="flex items-center gap-2 border-l pl-4">
-                <button
-                  onClick={handleExpandAllCategories}
-                  className="px-3 py-1 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
-                >
-                  全て展開
-                </button>
-                <button
-                  onClick={handleCollapseAllCategories}
-                  className="px-3 py-1 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
-                >
-                  全て閉じる
-                </button>
+            <div className="flex items-center gap-4">
+              <QuickActions
+                timelineScale={timelineScale}
+                onTimelineScaleChange={handleTimelineScaleChange}
+                style={ganttStyle}
+                onStyleChange={setGanttStyle}
+                selectedTasks={selectedTasks}
+                onAddTask={() => setIsTaskModalOpen(true)}
+                onDeleteTasks={() => handleTaskDelete(Array.from(selectedTasks))}
+                onDuplicateTasks={() =>
+                  handleTaskDuplicate(Array.from(selectedTasks))
+                }
+                groupBy={groupBy}
+                onGroupByChange={setGroupBy}
+                colorMode={colorMode}
+                onColorModeChange={setColorMode}
+                isEditMode={isEditMode}
+                onToggleEditMode={handleToggleEditMode}
+                onSave={handleSave}
+                isSaving={isSaving}
+                hasUnsavedChanges={hasUnsavedChanges}
+              />
+
+              {currentView === "gantt" && (
+                <div className="flex items-center gap-1 border-l pl-4">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={handleExpandAllCategories}
+                      >
+                        <ChevronsUpDown className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>全て展開</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={handleCollapseAllCategories}
+                      >
+                        <ChevronsDownUp className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>全て閉じる</TooltipContent>
+                  </Tooltip>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-hidden flex">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            {currentView === "gantt" ? (
+              <GanttChart
+                tasks={tasks}
+                categories={categories}
+                timelineScale={timelineScale}
+                style={ganttStyle}
+                expandedCategories={expandedCategories}
+                zoomLevel={zoomLevel}
+                groupBy={groupBy}
+                colorMode={colorMode}
+                isEditMode={isEditMode}
+                onTaskUpdate={handleTaskUpdate}
+                onCategoryToggle={handleCategoryToggle}
+                onZoomChange={setZoomLevel}
+                onTaskClick={setSelectedTaskDetail}
+                onDeleteTask={handleDeleteTask}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <p>Table view is temporarily unavailable</p>
               </div>
             )}
           </div>
+
+          {selectedTaskDetail && (
+            <TaskDetailSidebar
+              task={selectedTaskDetail}
+              onClose={() => setSelectedTaskDetail(null)}
+            />
+          )}
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
-        {currentView === "gantt" ? (
-          <GanttChart
-            tasks={tasks}
-            categories={categories}
-            timelineScale={timelineScale}
-            style={ganttStyle}
-            expandedCategories={expandedCategories}
-            zoomLevel={zoomLevel}
-            groupBy={groupBy}
-            onTaskUpdate={handleTaskUpdate}
-            onCategoryToggle={handleCategoryToggle}
-            onZoomChange={setZoomLevel}
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            <p>Table view is temporarily unavailable</p>
-          </div>
-        )}
-      </div>
-
-      {/* Status Bar */}
-      {/* <div className="border-t bg-muted/30 px-6 py-2">
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <div className="flex items-center gap-6">
-            <span>{projectStats.totalTasks} tasks</span>
-            <span>{projectStats.completedTasks} completed</span>
-            <span>{projectStats.milestones} milestones</span>
-            <span>{projectStats.criticalTasks} critical</span>
-            <span>{projectStats.avgProgress}% average progress</span>
-          </div>
-          <span>Auto-saved • Ready for export</span>
-        </div>
-      </div> */}
-    </div>
+      {/* タスク追加モーダル */}
+      <TaskFormModal
+        open={isTaskModalOpen}
+        onOpenChange={setIsTaskModalOpen}
+        categories={categories}
+        assignees={assignees}
+        onSubmit={handleAddTaskFromModal}
+      />
+    </TooltipProvider>
   );
 }

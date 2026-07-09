@@ -1,8 +1,8 @@
 export interface Task {
   id: string;
   name: string; // タスク名
-  startDate: Date; // 開始日
-  endDate: Date; // 終了日
+  startDate: Date; // 開始日（予定開始日）
+  endDate: Date; // 終了日（予定終了日）
   duration: number; // 期間
   color: string; // 色
   isMilestone: boolean; // マイルストーンかどうか
@@ -16,11 +16,27 @@ export interface Task {
   resources?: string[]; // リソース
   assignee?: string; // 担当者
   status?: TaskStatus; // ステータス
+  // 工数・実績関連
+  yoteiKosu?: number; // 予定工数
+  jissekiKosu?: number; // 実績工数
+  forecastKosu?: number; // 見通し工数
+  jissekiStart?: Date; // 実績開始日
+  jissekiEnd?: Date; // 実績終了日
+  progressRate?: number; // 進捗率（0-100）
+  // 永続化用
+  isNew?: boolean; // 未保存の新規タスクかどうか
+  phaseId?: number; // フェーズID（新規作成・保存用）
+  assigneeId?: number; // 担当者ID（新規作成・保存用）
 }
 
 export type TaskStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD';
 
 export type GroupBy = 'none' | 'phase' | 'assignee' | 'status';
+
+// チャートの色分けモード
+// - phase: フェーズによる色分け
+// - planActual: 予定・実績・見通しによる色分け
+export type ColorMode = 'phase' | 'planActual';
 
 export interface GanttPhase {
   id: string;
