@@ -1,7 +1,7 @@
 import { memo, type ReactNode } from "react";
 import type { Task } from "./gantt";
 import { getTaskStatusName } from "@/utils/utils";
-import { formatYmd } from "./utils/taskFormat";
+import { formatYmd, formatHours } from "./utils/taskFormat";
 import {
   Sheet,
   SheetContent,
@@ -96,6 +96,12 @@ export const TaskDetailSidebar = memo(function TaskDetailSidebar({
                   value={formatYmd(task.actualEndDate)}
                 />
               )}
+              {task.actualStartDate && (
+                <DetailRow
+                  label="実績工数"
+                  value={formatHours(task.actualDuration)}
+                />
+              )}
               {task.forecastStartDate && (
                 <DetailRow
                   label="見通し開始"
@@ -106,6 +112,12 @@ export const TaskDetailSidebar = memo(function TaskDetailSidebar({
                 <DetailRow
                   label="見通し終了"
                   value={formatYmd(task.forecastEndDate)}
+                />
+              )}
+              {task.forecastDuration !== undefined && (
+                <DetailRow
+                  label="見通し工数"
+                  value={formatHours(task.forecastDuration)}
                 />
               )}
               {task.isOnCriticalPath && (

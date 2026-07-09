@@ -32,4 +32,13 @@ describe("TaskListRow", () => {
     expect(row.style.top).toBe("40px");
     expect(row.style.height).toBe("24px");
   });
+
+  it("barColor 指定時は先頭ドットの色に使われる（task.colorより優先）", () => {
+    const task = makeTask({ id: "1", name: "T", color: "#000000" });
+    const { container } = render(
+      <TaskListRow task={task} top={0} height={20} barColor="#3B82F6" />,
+    );
+    const dot = container.querySelector(".w-2.h-2");
+    expect(dot).toHaveStyle({ backgroundColor: "#3B82F6" });
+  });
 });

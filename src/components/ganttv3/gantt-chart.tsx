@@ -17,6 +17,7 @@ import {
   DependencyType,
 } from "./gantt";
 import { groupTasksByType } from "./utils/groupTasks";
+import { resolveBarColor } from "./utils/phase-colors";
 import {
   getScaleMultiplier,
   getTotalDays,
@@ -98,6 +99,8 @@ interface GanttChartProps {
   onCancelEdit?: () => void;
   /** 依存関係編集モーダルを開く */
   onEditDependencies?: (taskId: string) => void;
+  /** タスクを削除する（編集モードのインライン編集パネルから呼ばれる） */
+  onDeleteTask?: (taskId: string) => void;
   /** チャート上のドラッグ接続で依存関係を作成する（後続, 先行, タイプ, ラグ） */
   onDependencyCreate?: (
     successorTaskId: string,
@@ -143,6 +146,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
       onSaveEdit,
       onCancelEdit,
       onEditDependencies,
+      onDeleteTask,
       onDependencyCreate,
       isSaving = false,
       isDataLoading = false,
@@ -1045,6 +1049,14 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
             assignees={assignees}
             onChange={updateEditingField}
             onEditDependencies={onEditDependencies}
+            onDelete={
+              onDeleteTask
+                ? () => {
+                    onDeleteTask(editingTask.id);
+                    setEditingTaskId(null);
+                  }
+                : undefined
+            }
             onClose={() => setEditingTaskId(null)}
           />
         )}
@@ -1153,6 +1165,11 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                           task={row.task}
                           top={row.y}
                           height={row.height}
+                          barColor={resolveBarColor(
+                            row.task,
+                            style.colorMode,
+                            "planned",
+                          )}
                         />
                       );
                     }
@@ -1377,9 +1394,15 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                               actualEndX - actualX,
                               20,
                             );
+                            const actualColor = resolveBarColor(
+                              task,
+                              style.colorMode,
+                              "actual",
+                            );
                             actualBar = (
                               <g
                                 key={`${row.id}-actual`}
+                                data-testid="ganttv3-actual-bar"
                                 style={{ pointerEvents: "none" }}
                               >
                                 <rect
@@ -1388,9 +1411,9 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                   width={actualWidth}
                                   height={TASK_HEIGHT}
                                   rx={4}
-                                  fill={task.color}
+                                  fill={actualColor}
                                   fillOpacity={0.55}
-                                  stroke={task.color}
+                                  stroke={actualColor}
                                   strokeWidth={1}
                                 />
                                 {style.labelPosition === "inside" && (
@@ -1423,6 +1446,11 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                               forecastEndX - forecastX,
                               20,
                             );
+                            const forecastColor = resolveBarColor(
+                              task,
+                              style.colorMode,
+                              "forecast",
+                            );
                             forecastBar = (
                               <g
                                 key={`${row.id}-forecast`}
@@ -1435,9 +1463,9 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                   width={forecastWidth}
                                   height={TASK_HEIGHT}
                                   rx={4}
-                                  fill={task.color}
+                                  fill={forecastColor}
                                   fillOpacity={0.2}
-                                  stroke={task.color}
+                                  stroke={forecastColor}
                                   strokeWidth={1}
                                   strokeDasharray="4 2"
                                 />
@@ -1459,6 +1487,11 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             <g key={row.id}>
                               <TaskBar
                                 task={task}
+                                barColor={resolveBarColor(
+                                  task,
+                                  style.colorMode,
+                                  "planned",
+                                )}
                                 x={dateToX(barStart)}
                                 y={plannedBarY}
                                 width={Math.max(

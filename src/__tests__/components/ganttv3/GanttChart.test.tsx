@@ -600,6 +600,98 @@ describe("GanttChart", () => {
         expect.objectContaining({ id: "1", duration: 16 }),
       );
     });
+
+    it("onDeleteTask未指定では削除ボタンを表示しない", () => {
+      const { container } = render(<GanttChart {...defaultProps} editMode />);
+      mouseDownOnBar(container, "1", 100);
+      fireEvent.mouseUp(document);
+      expect(screen.queryByText("削除")).not.toBeInTheDocument();
+    });
+
+    it("パネルの削除ボタンで onDeleteTask(taskId) が発火しパネルが閉じる", () => {
+      const onDeleteTask = jest.fn();
+      const { container } = render(
+        <GanttChart {...defaultProps} editMode onDeleteTask={onDeleteTask} />,
+      );
+
+      mouseDownOnBar(container, "1", 100);
+      fireEvent.mouseUp(document);
+      expect(screen.getByText("削除")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("削除"));
+
+      expect(onDeleteTask).toHaveBeenCalledWith("1");
+      expect(screen.queryByText("予定開始日")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("色分けモード", () => {
+    const coloredTask = [
+      makeTask({
+        id: "1",
+        name: "タスクA",
+        category: "設計",
+        color: "#123456",
+        startDate: new Date("2024-01-01T00:00:00.000Z"),
+        endDate: new Date("2024-01-03T00:00:00.000Z"),
+        actualStartDate: new Date("2024-01-02T00:00:00.000Z"),
+        actualEndDate: new Date("2024-01-04T00:00:00.000Z"),
+        forecastStartDate: new Date("2024-01-02T00:00:00.000Z"),
+        forecastEndDate: new Date("2024-01-08T00:00:00.000Z"),
+      }),
+    ];
+
+    it("phase モード（既定）ではフェーズ色（task.color）がそのまま使われる", () => {
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={coloredTask}
+          style={makeStyle({
+            showDependencies: false,
+            showTodayLine: false,
+            showActual: true,
+            showForecast: true,
+            colorMode: "phase",
+          })}
+        />,
+      );
+      const bar = container.querySelector('[data-task-id="1"] rect')!;
+      expect(bar.getAttribute("fill")).toBe("#12345620");
+      const actualRect = container.querySelector(
+        '[data-testid="ganttv3-actual-bar"] rect',
+      )!;
+      expect(actualRect.getAttribute("fill")).toBe("#123456");
+      const forecastRect = container.querySelector(
+        '[data-testid="ganttv3-forecast-bar"] rect',
+      )!;
+      expect(forecastRect.getAttribute("fill")).toBe("#123456");
+    });
+
+    it("planActualForecast モードでは予定/実績/見通しごとに固定色になる", () => {
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={coloredTask}
+          style={makeStyle({
+            showDependencies: false,
+            showTodayLine: false,
+            showActual: true,
+            showForecast: true,
+            colorMode: "planActualForecast",
+          })}
+        />,
+      );
+      const bar = container.querySelector('[data-task-id="1"] rect')!;
+      expect(bar.getAttribute("fill")).toBe("#3B82F620"); // 予定=固定の青
+      const actualRect = container.querySelector(
+        '[data-testid="ganttv3-actual-bar"] rect',
+      )!;
+      expect(actualRect.getAttribute("fill")).toBe("#10B981"); // 実績=固定の緑
+      const forecastRect = container.querySelector(
+        '[data-testid="ganttv3-forecast-bar"] rect',
+      )!;
+      expect(forecastRect.getAttribute("fill")).toBe("#F59E0B"); // 見通し=固定の橙
+    });
   });
 
   describe("バー内ラベル（inside 配置）", () => {

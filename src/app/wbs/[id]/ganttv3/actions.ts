@@ -65,10 +65,12 @@ export async function getGanttTasks(wbsId: number): Promise<GanttTask[]> {
         for (const task of ganttTasks) {
             if (task.isMilestone || task.dbId === undefined) continue;
             const forecast = forecastByTaskId.get(String(task.dbId));
-            if (
-                forecast?.forecastEndDate &&
-                task.actualStartDate
-            ) {
+            if (!forecast) continue;
+
+            // 見通し工数はサイドバー表示用に、見通しバーの表示可否に関わらず常に付与する
+            task.forecastDuration = forecast.forecastHours;
+
+            if (forecast.forecastEndDate && task.actualStartDate) {
                 // 開始日は実績バーと揃えるため gantt タスク側の実績開始日を使う
                 task.forecastStartDate = task.actualStartDate;
                 task.forecastEndDate = forecast.forecastEndDate;
@@ -274,6 +276,7 @@ function convertTask(
             duration: task.yoteiKosu ?? 0,
             actualStartDate,
             actualEndDate,
+            actualDuration: task.jissekiKosu ?? undefined,
             color: color,
             isMilestone: false,
             progress,

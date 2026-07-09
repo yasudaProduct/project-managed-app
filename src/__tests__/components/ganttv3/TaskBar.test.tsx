@@ -70,6 +70,28 @@ describe("TaskBar", () => {
     ).toBeInTheDocument();
   });
 
+  it("barColor 指定時は task.color より優先して使われる", () => {
+    const task = makeTask({ id: "1", color: "#000000" });
+    const { container } = renderInSvg(
+      <TaskBar {...baseProps} task={task} barColor="#3B82F6" style={makeStyle()} />,
+    );
+    expect(container.querySelector("rect")).toHaveAttribute(
+      "fill",
+      "#3B82F620",
+    );
+  });
+
+  it("barColor 未指定では task.color が使われる", () => {
+    const task = makeTask({ id: "1", color: "#123456" });
+    const { container } = renderInSvg(
+      <TaskBar {...baseProps} task={task} style={makeStyle()} />,
+    );
+    expect(container.querySelector("rect")).toHaveAttribute(
+      "fill",
+      "#12345620",
+    );
+  });
+
   it("data-task-id 属性を持つ（E2E用フック）", () => {
     const { container } = renderInSvg(
       <TaskBar {...baseProps} task={makeTask({ id: "task-9" })} style={makeStyle()} />,

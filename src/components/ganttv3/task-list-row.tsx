@@ -7,6 +7,8 @@ interface TaskListRowProps {
   task: Task;
   top: number;
   height: number;
+  /** 先頭ドットの表示色（色分けモードに応じて呼び出し側で解決した値）。未指定なら task.color を使う */
+  barColor?: string;
 }
 
 /**
@@ -18,6 +20,7 @@ export const TaskListRow = memo(function TaskListRow({
   task,
   top,
   height,
+  barColor,
 }: TaskListRowProps) {
   return (
     <div
@@ -35,7 +38,7 @@ export const TaskListRow = memo(function TaskListRow({
         )}
         <div
           className="w-2 h-2 flex-shrink-0"
-          style={{ backgroundColor: task.color }}
+          style={{ backgroundColor: barColor ?? task.color }}
         />
         <div className="w-16 flex-shrink-0 text-xs text-muted-foreground truncate">
           {task.taskNo ?? ""}

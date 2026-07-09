@@ -17,6 +17,12 @@ export function formatYmd(date?: Date): string {
   return `${year}/${month}/${day}`;
 }
 
+/** 工数(時間)を小数第1位までに丸めて "12.5h" のように整形する（実績/見通し工数の表示用） */
+export function formatHours(hours?: number): string | undefined {
+  if (hours === undefined) return undefined;
+  return `${Math.round(hours * 10) / 10}h`;
+}
+
 /** ステータスを表す色（左リストのステータスドット用） */
 export function statusColor(status: Task["status"]): string {
   switch (status) {

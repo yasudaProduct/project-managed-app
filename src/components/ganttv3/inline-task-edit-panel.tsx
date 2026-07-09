@@ -1,6 +1,6 @@
 import type { Task } from "./gantt";
 import { Button } from "../ui/button";
-import { Link2, X } from "lucide-react";
+import { Link2, Trash2, X } from "lucide-react";
 import { toDateInputValue, fromDateInputValue } from "./utils/dateInput";
 
 export type AssigneeOption = { id: number; name: string };
@@ -14,6 +14,8 @@ interface InlineTaskEditPanelProps {
   onChange: (patch: Partial<Task>) => void;
   /** 依存関係編集モーダルを開く（任意） */
   onEditDependencies?: (taskId: string) => void;
+  /** タスクを削除する（指定時のみ削除ボタンを表示） */
+  onDelete?: () => void;
   /** パネルを閉じる */
   onClose: () => void;
 }
@@ -27,6 +29,7 @@ export const InlineTaskEditPanel = ({
   assignees,
   onChange,
   onEditDependencies,
+  onDelete,
   onClose,
 }: InlineTaskEditPanelProps) => {
   return (
@@ -147,6 +150,18 @@ export const InlineTaskEditPanel = ({
         >
           <Link2 className="w-4 h-4" />
           依存関係
+        </Button>
+      )}
+
+      {onDelete && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 text-destructive hover:text-destructive"
+          onClick={onDelete}
+        >
+          <Trash2 className="w-4 h-4" />
+          削除
         </Button>
       )}
 

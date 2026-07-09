@@ -5,6 +5,8 @@ import { BarLabel } from "./bar-label";
 
 interface TaskBarProps {
   task: Task;
+  /** バーの表示色（色分けモードに応じて呼び出し側で解決した値）。未指定なら task.color を使う */
+  barColor?: string;
   x: number;
   y: number;
   width: number;
@@ -36,6 +38,7 @@ interface TaskBarProps {
 
 export const TaskBar = memo(function TaskBar({
   task,
+  barColor,
   x,
   y,
   width,
@@ -65,8 +68,8 @@ export const TaskBar = memo(function TaskBar({
   };
 
   const isOnCriticalPath = task.isOnCriticalPath && style.showCriticalPath;
-  // クリティカルパス上でもバー色・枠線はフェーズ色（task.color）に合わせる
-  const taskColor = task.color;
+  // クリティカルパス上でもバー色・枠線は色分けモードで解決した色に合わせる
+  const taskColor = barColor ?? task.color;
 
   if (task.isMilestone) {
     // Render milestone as diamond

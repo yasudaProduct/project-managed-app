@@ -8,7 +8,7 @@ const assignees = [
   { id: 2, name: "鈴木" },
 ];
 
-function setup(taskOverrides = {}) {
+function setup(taskOverrides = {}, extraProps = {}) {
   const onChange = jest.fn();
   const onClose = jest.fn();
   const onEditDependencies = jest.fn();
@@ -28,6 +28,7 @@ function setup(taskOverrides = {}) {
       onChange={onChange}
       onEditDependencies={onEditDependencies}
       onClose={onClose}
+      {...extraProps}
     />,
   );
   return { onChange, onClose, onEditDependencies, task };
@@ -110,5 +111,17 @@ describe("InlineTaskEditPanel", () => {
     expect(screen.queryByText("予定終了日")).not.toBeInTheDocument();
     expect(screen.queryByText("予定工数(h)")).not.toBeInTheDocument();
     expect(screen.queryByText("担当者")).not.toBeInTheDocument();
+  });
+
+  it("onDelete未指定では削除ボタンを表示しない", () => {
+    setup();
+    expect(screen.queryByText("削除")).not.toBeInTheDocument();
+  });
+
+  it("onDelete指定時は削除ボタンを表示し、クリックで発火する", () => {
+    const onDelete = jest.fn();
+    setup({}, { onDelete });
+    fireEvent.click(screen.getByText("削除"));
+    expect(onDelete).toHaveBeenCalledTimes(1);
   });
 });

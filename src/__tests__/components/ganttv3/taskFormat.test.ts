@@ -1,6 +1,7 @@
 import {
   formatMonthDay,
   formatYmd,
+  formatHours,
   statusColor,
 } from "@/components/ganttv3/utils/taskFormat";
 
@@ -23,6 +24,18 @@ describe("formatYmd", () => {
 
   it("undefined は空文字", () => {
     expect(formatYmd(undefined)).toBe("");
+  });
+});
+
+describe("formatHours", () => {
+  it("小数第1位に丸めて h を付与する", () => {
+    expect(formatHours(12.34)).toBe("12.3h");
+    expect(formatHours(8)).toBe("8h");
+    expect(formatHours(0)).toBe("0h");
+  });
+
+  it("undefined は undefined を返す", () => {
+    expect(formatHours(undefined)).toBeUndefined();
   });
 });
 

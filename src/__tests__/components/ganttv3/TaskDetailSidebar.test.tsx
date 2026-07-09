@@ -35,7 +35,9 @@ describe("TaskDetailSidebar", () => {
       startDate: new Date(2024, 0, 1),
       endDate: new Date(2024, 0, 3),
       actualStartDate: new Date(2024, 0, 2),
+      actualDuration: 12.34,
       forecastEndDate: new Date(2024, 0, 8),
+      forecastDuration: 20,
       description: "レビュー観点の説明",
     });
     render(
@@ -54,6 +56,10 @@ describe("TaskDetailSidebar", () => {
     expect(screen.getByText("8h")).toBeInTheDocument();
     expect(screen.getByText("2024/01/02")).toBeInTheDocument(); // 実績開始
     expect(screen.getByText("2024/01/08")).toBeInTheDocument(); // 見通し終了
+    expect(screen.getByText("実績工数")).toBeInTheDocument();
+    expect(screen.getByText("12.3h")).toBeInTheDocument(); // 実績工数（小数第1位に丸め）
+    expect(screen.getByText("見通し工数")).toBeInTheDocument();
+    expect(screen.getByText("20h")).toBeInTheDocument();
     expect(screen.getByText("レビュー観点の説明")).toBeInTheDocument();
   });
 

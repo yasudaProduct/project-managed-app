@@ -46,6 +46,7 @@ export function makeStyle(overrides: Partial<GanttStyle> = {}): GanttStyle {
     showProgress: true,
     showActual: false,
     showForecast: false,
+    colorMode: "phase",
     showDependencies: true,
     showCriticalPath: true,
     showWeekends: true,
