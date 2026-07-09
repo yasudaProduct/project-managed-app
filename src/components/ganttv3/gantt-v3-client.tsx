@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import type {
-  Task,
   TimelineScale,
   GanttStyle,
   GroupBy,
@@ -20,7 +19,7 @@ import {
   EMPTY_TASK_FILTER,
   filterTasks,
 } from "@/components/ganttv3/utils/taskFilter";
-import { TaskModal } from "@/components/wbs/task-modal";
+import { TaskModal, type TaskFormValues } from "@/components/wbs/task-modal";
 import { HoursUnit, HOURS_UNIT_LABELS } from "@/utils/hours-converter";
 import { getGanttTasksTsv } from "@/app/wbs/[id]/ganttv3/export-actions";
 import { groupTasksByType } from "@/components/ganttv3/utils/groupTasks";
@@ -173,16 +172,7 @@ export function GanttV3Client({ wbsId }: GanttV3ClientProps) {
 
   // タスク追加モーダルの「作成」→ サーバーへは送らずドラフトへ追加する（保存時にDB反映）
   const handleCreateDraftTask = useCallback(
-    (values: {
-      name: string;
-      assigneeId: string;
-      yoteiStartDate: string;
-      yoteiEndDate: string;
-      yoteiKosu: number;
-      status: Task["status"];
-      progressRate?: number;
-      phaseId: number;
-    }) => {
+    (values: TaskFormValues) => {
       const phase = categories.find((c) => c.id === String(values.phaseId));
       const assigneeId = Number(values.assigneeId);
       // フォームの日付は "YYYY/MM/DD"（タイムゾーン情報なし）のため、

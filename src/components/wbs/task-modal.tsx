@@ -109,6 +109,9 @@ const formSchema = z
     }
   );
 
+/** タスクモーダルのフォーム入力値（Zod スキーマから導出） */
+export type TaskFormValues = z.infer<typeof formSchema>;
+
 interface TaskModalProps {
   wbsId: number;
   task?: WbsTask;
@@ -120,7 +123,7 @@ interface TaskModalProps {
    * 入力内容をこのコールバックへ渡すだけにする（DBへの反映は呼び出し側に委ねる）。
    * ganttv3 の編集モードでタスクをドラフト追加する際に使用する。
    */
-  onCreateDraft?: (values: z.infer<typeof formSchema>) => void;
+  onCreateDraft?: (values: TaskFormValues) => void;
 }
 
 export function TaskModal({
