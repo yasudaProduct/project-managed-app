@@ -73,6 +73,7 @@ export interface GanttStyle {
   showCriticalPath: boolean;
   showWeekends: boolean;
   showTodayLine: boolean;
+  showProgressLine: boolean; // イナズマ線（進捗線）の表示
   taskHeight: number;
   rowSpacing: number;
   labelPosition: 'inside' | 'outside';
@@ -84,6 +85,7 @@ export interface GanttStyle {
     criticalPath: string;
     weekend: string;
     today: string;
+    progressLine: string; // イナズマ線の色
   };
 }
 

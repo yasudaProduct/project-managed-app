@@ -64,6 +64,7 @@ describe("QuickActions", () => {
     ["依存関係表示", "showDependencies"],
     ["クリティカルパス表示", "showCriticalPath"],
     ["本日ライン表示", "showTodayLine"],
+    ["イナズマ線（進捗線）表示", "showProgressLine"],
     ["実績バー表示（予定の下段に実績を表示）", "showActual"],
     ["見通しバー表示（実績の下段に見通しを表示）", "showForecast"],
   ] as const)("%s ボタンで %s がトグルされる", (label, flag) => {

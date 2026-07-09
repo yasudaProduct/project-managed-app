@@ -159,6 +159,50 @@ describe("GanttChart", () => {
     });
   });
 
+  describe("イナズマ線（進捗線）", () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    // 基準日(今日)がタイムライン範囲内に入るよう、実行時の現在日を跨ぐ期間にする
+    const now = new Date();
+    const inazumaTasks = [
+      makeTask({
+        id: "1",
+        name: "タスクA",
+        category: "設計",
+        startDate: new Date(now.getTime() - 5 * DAY),
+        endDate: new Date(now.getTime() + 5 * DAY),
+        progress: 30,
+      }),
+    ];
+
+    it("showProgressLine ON でイナズマ線を描画する", () => {
+      const { queryByTestId } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={inazumaTasks}
+          style={makeStyle({
+            showDependencies: false,
+            showProgressLine: true,
+          })}
+        />,
+      );
+      expect(queryByTestId("ganttv3-progress-line")).toBeInTheDocument();
+    });
+
+    it("showProgressLine OFF ではイナズマ線を描画しない", () => {
+      const { queryByTestId } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={inazumaTasks}
+          style={makeStyle({
+            showDependencies: false,
+            showProgressLine: false,
+          })}
+        />,
+      );
+      expect(queryByTestId("ganttv3-progress-line")).not.toBeInTheDocument();
+    });
+  });
+
   describe("ズーム操作", () => {
     it("ズームイン/アウトで onZoomChange が 1.2倍/÷1.2 で発火", () => {
       const onZoomChange = jest.fn();

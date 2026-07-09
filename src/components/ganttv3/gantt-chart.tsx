@@ -40,6 +40,7 @@ import { TaskListRow } from "./task-list-row";
 import { InlineTaskEditPanel } from "./inline-task-edit-panel";
 import { GridLines } from "./grid-lines";
 import { DependencyArrows } from "./dependency-arrows";
+import { ProgressLine } from "./progress-line";
 import { Button } from "../ui/button";
 import {
   ChevronLeft,
@@ -1544,6 +1545,20 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                               ? handleArrowClick
                               : undefined
                           }
+                        />
+                      )}
+
+                      {/* イナズマ線（進捗線）。基準日ラインに対し各タスクの進捗を結ぶ */}
+                      {style.showProgressLine && (
+                        <ProgressLine
+                          tasks={visibleTasks}
+                          centerYById={taskCenterYById}
+                          dateToX={dateToX}
+                          timelineStart={timelineBounds.start}
+                          timelineEnd={timelineBounds.end}
+                          topY={0}
+                          bottomY={scrollContentHeight}
+                          color={style.colors.progressLine}
                         />
                       )}
 

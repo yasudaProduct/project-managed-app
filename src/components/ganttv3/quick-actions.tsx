@@ -39,6 +39,7 @@ import {
   TrendingUp,
   Palette,
   Blend,
+  Zap,
 } from "lucide-react";
 
 interface QuickActionsProps {
@@ -357,6 +358,19 @@ export const QuickActions = ({
             }
           >
             <Calendar className="w-4 h-4" />
+          </IconActionButton>
+
+          <IconActionButton
+            label="イナズマ線（進捗線）表示"
+            active={style.showProgressLine}
+            onClick={() =>
+              onStyleChange({
+                ...style,
+                showProgressLine: !style.showProgressLine,
+              })
+            }
+          >
+            <Zap className="w-4 h-4" />
           </IconActionButton>
 
           <IconActionButton

@@ -51,6 +51,7 @@ export function makeStyle(overrides: Partial<GanttStyle> = {}): GanttStyle {
     showCriticalPath: true,
     showWeekends: true,
     showTodayLine: true,
+    showProgressLine: false,
     taskHeight: 20,
     rowSpacing: 8,
     labelPosition: "outside",
@@ -62,6 +63,7 @@ export function makeStyle(overrides: Partial<GanttStyle> = {}): GanttStyle {
       criticalPath: "#DC2626",
       weekend: "#F3F4F6",
       today: "#10B981",
+      progressLine: "#DB2777",
     },
     ...overrides,
   };
