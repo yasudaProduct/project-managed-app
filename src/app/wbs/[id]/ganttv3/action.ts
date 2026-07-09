@@ -12,7 +12,6 @@ import { ForecastCalculationService } from "@/domains/forecast/forecast-calculat
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 import { IPhaseApplicationService } from "@/applications/phase/phase-application-service";
 import { TaskStatus as TaskStatusDomain } from "@/domains/task/value-object/project-status";
-import prisma from "@/lib/prisma/prisma";
 
 /**
  * タスクごとの実績・見通し工数などの付加情報
@@ -187,33 +186,16 @@ export async function createGanttTask(
  * ガントチャートからタスクを削除する
  *
  * 注意: タスクに紐づく実績（作業実績 = work_records）データは削除しない。
- *       タスクとの関連のみ解除（taskId を null に）し、実績データ自体は保持する。
+ *       実際の削除処理（実績データの保持を含む）は TaskRepository.delete() に
+ *       集約されており、他画面からのタスク削除と同じ挙動になる。
  */
 export async function deleteGanttTask(
     taskId: number
 ): Promise<{ success: boolean; error?: string }> {
-    try {
-        await prisma.$transaction(async (tx) => {
-            // 紐づく実績データは削除せず、タスクとの関連のみ解除する
-            await tx.workRecord.updateMany({
-                where: { taskId },
-                data: { taskId: null },
-            });
-
-            // ステータスログはタスクに付随するログのため削除する
-            await tx.taskStatusLog.deleteMany({ where: { taskId } });
-
-            // タスク本体を削除（予定期間・工数・依存関係はカスケード削除される）
-            await tx.wbsTask.delete({ where: { id: taskId } });
-        });
-
-        return { success: true };
-    } catch (error) {
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : "タスクの削除に失敗しました",
-        };
-    }
+    const taskService = container.get<ITaskApplicationService>(
+        SYMBOL.ITaskApplicationService
+    );
+    return taskService.deleteTask(taskId);
 }
 
 function convertTask(task: WbsTask): GanttTask | undefined {

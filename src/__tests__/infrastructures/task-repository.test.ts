@@ -10,9 +10,11 @@ import { ManHourType } from "@/domains/task/value-object/man-hour-type";
 import prisma from "@/lib/prisma/prisma";
 
 // Prismaクライアントのモック化
-jest.mock('@/lib/prisma/prisma', () => ({
-  __esModule: true,
-  default: {
+jest.mock('@/lib/prisma/prisma', () => {
+  // delete() が $transaction 経由で呼び出す tx は、通常の prisma クライアントと
+  // 同じモデル操作を持つため、同一のモックオブジェクトをトランザクションクライアント
+  // としても流用する（$transaction(cb) は cb(mockClient) を実行するだけにする）
+  const mockClient = {
     wbsTask: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
@@ -28,11 +30,24 @@ jest.mock('@/lib/prisma/prisma', () => ({
       create: jest.fn(),
       upsert: jest.fn(),
     },
+    taskStatusLog: {
+      deleteMany: jest.fn(),
+    },
     workRecord: {
       findMany: jest.fn(),
     },
-  },
-}));
+  };
+
+  return {
+    __esModule: true,
+    default: {
+      ...mockClient,
+      $transaction: jest.fn((callback: (tx: typeof mockClient) => unknown) =>
+        callback(mockClient)
+      ),
+    },
+  };
+});
 
 describe('TaskRepository', () => {
   let taskRepository: TaskRepository;
@@ -504,12 +519,29 @@ describe('TaskRepository', () => {
   describe('delete', () => {
     it('タスクを削除できること', async () => {
       (prismaMock.wbsTask.delete as jest.Mock).mockResolvedValue({});
+      (
+        prismaMock.taskStatusLog.deleteMany as jest.Mock
+      ).mockResolvedValue({ count: 0 });
 
       await taskRepository.delete(1);
 
       expect(prismaMock.wbsTask.delete).toHaveBeenCalledWith({
         where: { id: 1 }
       });
+    });
+
+    it('ステータス変更履歴を先に削除してからタスクを削除すること（FK制約対策）', async () => {
+      (prismaMock.wbsTask.delete as jest.Mock).mockResolvedValue({});
+      (
+        prismaMock.taskStatusLog.deleteMany as jest.Mock
+      ).mockResolvedValue({ count: 2 });
+
+      await taskRepository.delete(1);
+
+      expect(prismaMock.taskStatusLog.deleteMany).toHaveBeenCalledWith({
+        where: { taskId: 1 }
+      });
+      expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
     });
   });
 });

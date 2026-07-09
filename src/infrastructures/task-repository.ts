@@ -259,8 +259,16 @@ export class TaskRepository implements ITaskRepository {
     }
 
     async delete(id: number): Promise<void> {
-        await prisma.wbsTask.delete({
-            where: { id },
+        await prisma.$transaction(async (tx) => {
+            // タスクに紐づくステータス変更履歴を削除する
+            // （task_status_log.taskId は ON DELETE RESTRICT のため、
+            //   先に削除しないとタスク本体の削除がFK制約違反になる）
+            await tx.taskStatusLog.deleteMany({ where: { taskId: id } });
+
+            // タスク本体を削除する
+            // 実績データ（work_records）は work_records.taskId が ON DELETE SET NULL の
+            // ため、レコード自体は削除されずタスクとの関連のみ解除される
+            await tx.wbsTask.delete({ where: { id } });
         });
     }
 

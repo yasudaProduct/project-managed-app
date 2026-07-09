@@ -193,4 +193,97 @@ describe('TaskRepository Integration Tests', () => {
       expect(tasks).toEqual([]);
     });
   });
+
+  describe('タスク削除時の関連データ処理', () => {
+    let userId: string;
+    let taskIdToDelete: number;
+    let workRecordId: number;
+
+    beforeAll(async () => {
+      // 実績データ・ステータス履歴の記録者となるユーザーを作成
+      const user = await global.prisma.users.create({
+        data: {
+          id: `test-user-${Date.now()}`,
+          email: `test-user-${Date.now()}@example.com`,
+          name: '結合テストユーザー',
+          displayName: '結合テストユーザー',
+        },
+      });
+      userId = user.id;
+
+      // 削除対象のタスクを作成
+      const taskId = TaskNo.reconstruct(`TEST-DEL-${Date.now() % 1000}`);
+      const task = Task.create({
+        taskNo: taskId,
+        wbsId: testIds.wbsId,
+        name: '削除対象タスク',
+        phaseId: testIds.phaseId,
+        status: new TaskStatus({ status: 'IN_PROGRESS' }),
+        periods: [
+          Period.create({
+            startDate: new Date('2025-07-01'),
+            endDate: new Date('2025-07-10'),
+            type: new PeriodType({ type: 'YOTEI' }),
+            manHours: [
+              ManHour.create({ kosu: 8, type: new ManHourType({ type: 'NORMAL' }) })
+            ]
+          })
+        ]
+      });
+      const createdTask = await taskRepository.create(task);
+      taskIdToDelete = createdTask.id!;
+
+      // タスクに紐づく実績データ（work_records）を作成
+      const workRecord = await global.prisma.workRecord.create({
+        data: {
+          userId,
+          taskId: taskIdToDelete,
+          date: new Date('2025-07-02'),
+          hours_worked: 4,
+        },
+      });
+      workRecordId = workRecord.id;
+
+      // タスクに紐づくステータス変更履歴を作成
+      // （task_status_log.taskId は ON DELETE RESTRICT のため、
+      //   削除処理内で先に片付けないとタスク削除自体がFK制約違反になる）
+      await global.prisma.taskStatusLog.create({
+        data: {
+          taskId: taskIdToDelete,
+          status: 'IN_PROGRESS',
+          changedAt: new Date('2025-07-02'),
+          changedBy: userId,
+        },
+      });
+    });
+
+    afterAll(async () => {
+      // 実績データはテストで削除されない想定のため、明示的にクリーンアップする
+      await global.prisma.workRecord.delete({ where: { id: workRecordId } }).catch(() => { });
+      await global.prisma.users.delete({ where: { id: userId } }).catch(() => { });
+    });
+
+    it('タスクを削除しても、紐づく実績データ（work_records）は削除されないこと', async () => {
+      await taskRepository.delete(taskIdToDelete);
+
+      // タスク本体は削除される
+      const deletedTask = await taskRepository.findById(taskIdToDelete);
+      expect(deletedTask).toBeNull();
+
+      // 実績データは削除されず、タスクとの関連のみが解除される
+      const workRecord = await global.prisma.workRecord.findUnique({
+        where: { id: workRecordId },
+      });
+      expect(workRecord).not.toBeNull();
+      expect(workRecord?.taskId).toBeNull();
+      expect(Number(workRecord?.hours_worked)).toBe(4);
+    });
+
+    it('タスクを削除すると、紐づくステータス変更履歴（task_status_log）は削除されること', async () => {
+      const logs = await global.prisma.taskStatusLog.findMany({
+        where: { taskId: taskIdToDelete },
+      });
+      expect(logs).toEqual([]);
+    });
+  });
 });
