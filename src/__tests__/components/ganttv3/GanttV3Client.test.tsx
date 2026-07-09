@@ -63,6 +63,12 @@ jest.mock("@/components/ganttv3/view-switcher", () => ({
 jest.mock("@/components/ganttv3/quick-actions", () => ({
   QuickActions: () => <div data-testid="quick-actions" />,
 }));
+jest.mock("@/components/ganttv3/task-filter-control", () => ({
+  TaskFilterControl: () => <div data-testid="task-filter" />,
+}));
+jest.mock("@/components/ganttv3/task-detail-sidebar", () => ({
+  TaskDetailSidebar: () => null,
+}));
 
 jest.mock("@/components/ganttv3/task-table", () => ({
   TaskTable: ({ tasks }: { tasks: unknown[] }) => (

@@ -102,6 +102,83 @@ describe("TaskBar", () => {
     expect(container.querySelectorAll(".cursor-ew-resize")).toHaveLength(2);
   });
 
+  describe("inside ラベル（タスク名+工数+進捗）", () => {
+    it("inside 配置ではバー内にタスク名と工数を表示する", () => {
+      const task = makeTask({ id: "1", name: "実装", duration: 8, progress: 40 });
+      renderInSvg(
+        <TaskBar
+          {...baseProps}
+          task={task}
+          style={makeStyle({ labelPosition: "inside", showProgress: true })}
+        />,
+      );
+      expect(screen.getByText("実装 (8h)")).toBeInTheDocument();
+      expect(screen.getByText("40%")).toBeInTheDocument();
+    });
+
+    it("outside 配置ではバー内ラベル(foreignObject)を描画しない", () => {
+      const task = makeTask({ id: "1", name: "実装" });
+      const { container } = renderInSvg(
+        <TaskBar
+          {...baseProps}
+          task={task}
+          style={makeStyle({ labelPosition: "outside" })}
+        />,
+      );
+      expect(container.querySelector("foreignObject")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("クリック/ホバー", () => {
+    it("onSelect 指定時、バーのクリックで onSelect(taskId) が発火", () => {
+      const onSelect = jest.fn();
+      const { container } = renderInSvg(
+        <TaskBar
+          {...baseProps}
+          onSelect={onSelect}
+          task={makeTask({ id: "abc" })}
+          style={makeStyle()}
+        />,
+      );
+      fireEvent.click(container.querySelector("rect")!);
+      expect(onSelect).toHaveBeenCalledWith("abc");
+    });
+
+    it("マイルストーンもクリックで onSelect が発火", () => {
+      const onSelect = jest.fn();
+      const { container } = renderInSvg(
+        <TaskBar
+          {...baseProps}
+          onSelect={onSelect}
+          task={makeTask({ id: "ms", isMilestone: true })}
+          style={makeStyle({ labelPosition: "inside" })}
+        />,
+      );
+      fireEvent.click(container.querySelector("polygon")!);
+      expect(onSelect).toHaveBeenCalledWith("ms");
+    });
+
+    it("ホバーで onHover、離脱で onHoverEnd が発火", () => {
+      const onHover = jest.fn();
+      const onHoverEnd = jest.fn();
+      const task = makeTask({ id: "1" });
+      const { container } = renderInSvg(
+        <TaskBar
+          {...baseProps}
+          onHover={onHover}
+          onHoverEnd={onHoverEnd}
+          task={task}
+          style={makeStyle()}
+        />,
+      );
+      const g = container.querySelector("g")!;
+      fireEvent.mouseEnter(g);
+      expect(onHover).toHaveBeenCalledWith(task, expect.anything());
+      fireEvent.mouseLeave(g);
+      expect(onHoverEnd).toHaveBeenCalled();
+    });
+  });
+
   describe("接続ハンドル（依存関係ドラッグ）", () => {
     it("editable かつ onConnectStart 指定時、ホバーで左右の接続ハンドルを表示", () => {
       const { container } = renderInSvg(

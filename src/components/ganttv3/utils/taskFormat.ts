@@ -8,6 +8,15 @@ export function formatMonthDay(date?: Date): string {
   return `${month}/${day}`;
 }
 
+/** 日付を YYYY/MM/DD へ整形する（ローカル基準。ツールチップ/詳細サイドバー用） */
+export function formatYmd(date?: Date): string {
+  if (!date) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}/${month}/${day}`;
+}
+
 /** ステータスを表す色（左リストのステータスドット用） */
 export function statusColor(status: Task["status"]): string {
   switch (status) {
