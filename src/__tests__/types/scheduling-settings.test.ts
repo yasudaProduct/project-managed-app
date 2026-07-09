@@ -49,4 +49,20 @@ describe("parseSchedulingSettings", () => {
     const r = parseSchedulingSettings({ steadyTaskKeywords: ["管理"] });
     expect(r.steadyFixedHoursByKeyword).toBeUndefined();
   });
+
+  test("steadyTaskForecastModeは有効値のみ採用しデフォルトはPLANNED", () => {
+    expect(parseSchedulingSettings({}).steadyTaskForecastMode).toBe("PLANNED");
+    expect(
+      parseSchedulingSettings({ steadyTaskForecastMode: "ACTUAL_PACE" })
+        .steadyTaskForecastMode
+    ).toBe("ACTUAL_PACE");
+    expect(
+      parseSchedulingSettings({ steadyTaskForecastMode: "PLANNED_PACE" })
+        .steadyTaskForecastMode
+    ).toBe("PLANNED_PACE");
+    expect(
+      parseSchedulingSettings({ steadyTaskForecastMode: "XXX" })
+        .steadyTaskForecastMode
+    ).toBe("PLANNED");
+  });
 });

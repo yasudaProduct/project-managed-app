@@ -3,7 +3,10 @@ import { SYMBOL } from '@/types/symbol';
 import type { IWbsQueryRepository } from '@/applications/wbs/query/iwbs-query-repository';
 import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
 import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
-import { toForecastTaskInput } from '@/applications/wbs/query/to-forecast-task-input';
+import {
+  toForecastTaskInput,
+  buildSteadyForecastContext,
+} from '@/applications/wbs/query/to-forecast-task-input';
 import { ForecastCalculationService } from '@/domains/forecast/forecast-calculation-service';
 import { ForecastDateCalculationService } from '@/domains/forecast/forecast-date-calculation-service';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
@@ -11,6 +14,15 @@ import type {
   ForecastCalculationOptions,
   ForecastCalculationResult,
 } from '@/types/forecast-calculation';
+import type { SteadyTaskForecastMode } from '@/types/scheduling-settings';
+
+/**
+ * 定常タスクの見通し設定（ガント見通しバー算出で使用）。
+ */
+export interface SteadyForecastConfig {
+  keywords: string[];
+  mode: SteadyTaskForecastMode;
+}
 
 /**
  * タスクごとの見通し日付（ガントチャートの見通しバー用）
@@ -42,7 +54,8 @@ export interface IForecastApplicationService {
   calculateTasksForecastDates(
     wbsId: number,
     options?: ForecastCalculationOptions,
-    baseDate?: Date
+    baseDate?: Date,
+    steadyConfig?: SteadyForecastConfig
   ): Promise<TaskForecastDate[]>;
 
   getForecastMethods(): Promise<
@@ -67,7 +80,7 @@ export class ForecastApplicationService implements IForecastApplicationService {
   ): Promise<ForecastCalculationResult[]> {
     const tasks = await this.wbsQueryRepository.getWbsTasks(wbsId);
     return ForecastCalculationService.calculateMultipleTasksForecast(
-      tasks.map(toForecastTaskInput),
+      tasks.map((task) => toForecastTaskInput(task)),
       options
     );
   }
@@ -92,7 +105,8 @@ export class ForecastApplicationService implements IForecastApplicationService {
   async calculateTasksForecastDates(
     wbsId: number,
     options: ForecastCalculationOptions = { method: 'realistic' },
-    baseDate: Date = new Date()
+    baseDate: Date = new Date(),
+    steadyConfig?: SteadyForecastConfig
   ): Promise<TaskForecastDate[]> {
     const [tasks, settings, holidays] = await Promise.all([
       this.wbsQueryRepository.getWbsTasks(wbsId),
@@ -104,10 +118,19 @@ export class ForecastApplicationService implements IForecastApplicationService {
       holidays
     );
 
+    const steadyOptions: ForecastCalculationOptions = steadyConfig
+      ? { ...options, steadyTaskForecastMode: steadyConfig.mode }
+      : options;
+
     return tasks.map((task) => {
+      // 定常タスクは進捗率ベースではなく定常方式で見通しを算出する
+      const steadyContext = steadyConfig
+        ? buildSteadyForecastContext(task, steadyConfig.keywords, calendar, baseDate)
+        : undefined;
+
       const forecast = ForecastCalculationService.calculateTaskForecast(
-        toForecastTaskInput(task),
-        options
+        toForecastTaskInput(task, steadyContext),
+        steadyContext?.isSteady ? steadyOptions : options
       );
       const remainingHours = ForecastDateCalculationService.calculateRemainingHours(
         forecast.forecastHours,
@@ -132,11 +155,13 @@ export class ForecastApplicationService implements IForecastApplicationService {
       return {
         ...base,
         forecastStartDate: task.jissekiStart,
+        // 定常タスクはその日次消費ペースで、通常タスクは基準稼働時間で残見通しを消化して終了日を求める
         forecastEndDate: ForecastDateCalculationService.calculateForecastEndDate(
           {
             forecastHours: forecast.forecastHours,
             actualHours: forecast.actualHours,
             baseDate,
+            hoursPerDay: forecast.steadyDailyRate,
           },
           calendar
         ),

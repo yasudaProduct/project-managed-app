@@ -17,6 +17,12 @@ import {
 import type {
   SchedulingSettings,
   SteadyDailyHoursMode,
+  SteadyTaskForecastMode,
+} from "@/types/scheduling-settings";
+import {
+  STEADY_TASK_FORECAST_MODES,
+  STEADY_TASK_FORECAST_MODE_LABELS,
+  STEADY_TASK_FORECAST_MODE_DESCRIPTIONS,
 } from "@/types/scheduling-settings";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import {
@@ -74,6 +80,8 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
     useState<boolean>(false);
   const [steadyDailyHoursMode, setSteadyDailyHoursMode] =
     useState<SteadyDailyHoursMode>("PRORATE");
+  const [steadyTaskForecastMode, setSteadyTaskForecastMode] =
+    useState<SteadyTaskForecastMode>("PLANNED");
   const [steadyFixedHours, setSteadyFixedHours] = useState<
     Record<string, number>
   >({});
@@ -115,6 +123,7 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         setSteadyKeywordsText(sched.steadyTaskKeywords.join("\n"));
         setConsumeSteadyTaskCapacity(sched.consumeSteadyTaskCapacity);
         setSteadyDailyHoursMode(sched.steadyDailyHoursMode);
+        setSteadyTaskForecastMode(sched.steadyTaskForecastMode);
         setSteadyFixedHours(sched.steadyFixedHoursByKeyword ?? {});
       } catch {}
     })();
@@ -143,6 +152,7 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
       consumeSteadyTaskCapacity,
       steadyDailyHoursMode,
       steadyFixedHoursByKeyword: fixedHours,
+      steadyTaskForecastMode,
       ...override,
     };
   };
@@ -170,6 +180,16 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
   const onSteadyKeywordsBlur = () => {
     startTransition(async () => {
       await updateSchedulingSettings(projectId, buildSchedulingSettings({}));
+    });
+  };
+
+  const onSteadyForecastModeChange = (value: SteadyTaskForecastMode) => {
+    setSteadyTaskForecastMode(value);
+    startTransition(async () => {
+      await updateSchedulingSettings(
+        projectId,
+        buildSchedulingSettings({ steadyTaskForecastMode: value })
+      );
     });
   };
 
@@ -868,6 +888,46 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* 定常タスクの見通し工数算出方式 */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">
+              定常タスクの見通し工数算出方式
+            </Label>
+            <div className="text-xs text-gray-500">
+              定常タスクは「完了」概念を持たないため、進捗率ベースの通常見通しではなく専用方式で算出します。月別集計・ガントの見通しに適用されます。
+            </div>
+            <RadioGroup
+              value={steadyTaskForecastMode}
+              onValueChange={(v) =>
+                onSteadyForecastModeChange(v as SteadyTaskForecastMode)
+              }
+              name="steadyTaskForecastMode"
+            >
+              {STEADY_TASK_FORECAST_MODES.map((mode) => (
+                <div key={mode} className="flex items-start space-x-3">
+                  <RadioGroupItem
+                    value={mode}
+                    id={`steady-forecast-${mode}`}
+                    disabled={saving}
+                  />
+                  <Label
+                    htmlFor={`steady-forecast-${mode}`}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {STEADY_TASK_FORECAST_MODE_LABELS[mode]}
+                      </span>
+                      <span className="text-xs text-gray-500 font-normal">
+                        {STEADY_TASK_FORECAST_MODE_DESCRIPTIONS[mode]}
+                      </span>
+                    </div>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
           </div>
         </div>
       </CardContent>

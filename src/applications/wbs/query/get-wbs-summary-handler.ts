@@ -16,9 +16,12 @@ import { AllocationQuantizer } from "@/domains/wbs/allocation-quantizer";
 import { MonthlySummaryAccumulator } from "./monthly-summary-accumulator";
 import { MonthlyPhaseSummaryAccumulator } from "./monthly-phase-summary-accumulator";
 import { ForecastCalculationService } from "@/domains/forecast/forecast-calculation-service";
-import { toForecastTaskInput } from "@/applications/wbs/query/to-forecast-task-input";
+import { toForecastTaskInput, buildSteadyForecastContext } from "@/applications/wbs/query/to-forecast-task-input";
+import type { SteadyForecastContext } from "@/applications/wbs/query/to-forecast-task-input";
+import { isSteadyTask } from "@/domains/task-scheduling/steady-task-classifier";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import { toForecastMethodOption } from "@/types/forecast-calculation-method";
+import type { SteadyTaskForecastMode } from "@/types/scheduling-settings";
 import { distributeForecastAcrossMonths } from "./monthly-forecast-distributor";
 import type { IProjectSettingsRepository } from "@/applications/project-settings/iproject-settings-repository";
 import { withProjectSettingsDefaults } from "@/types/project-settings";
@@ -75,6 +78,11 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     const forecastCalculationMethod = settings.forecastCalculationMethod;
     const forecastMethodOption = toForecastMethodOption(forecastCalculationMethod);
 
+    // 定常タスクの見通し設定（判定キーワード・見通し算出方式）を取得
+    const schedulingSettings = await this.projectSettingsRepository.findSchedulingSettings(query.projectId);
+    const steadyTaskKeywords = schedulingSettings.steadyTaskKeywords;
+    const steadyTaskForecastMode = schedulingSettings.steadyTaskForecastMode;
+
     // 月別・担当者別集計
     let monthlyAssigneeSummary: MonthlyAssigneeSummary;
     let monthlyPhaseSummary;
@@ -89,7 +97,9 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
             forecastMethodOption,
             phases,
             wbsAssignees,
-            taskActualsMap
+            taskActualsMap,
+            steadyTaskKeywords,
+            steadyTaskForecastMode
           );
           monthlyAssigneeSummary = monthlySummaries.assignee;
           monthlyPhaseSummary = monthlySummaries.phase;
@@ -103,7 +113,9 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
             forecastMethodOption,
             phases,
             wbsAssignees,
-            taskActualsMap
+            taskActualsMap,
+            steadyTaskKeywords,
+            steadyTaskForecastMode
           );
           monthlyAssigneeSummary = monthlySummaries.assignee;
           monthlyPhaseSummary = monthlySummaries.phase;
@@ -219,7 +231,9 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     forecastMethodOption: 'conservative' | 'realistic' | 'optimistic' | 'plannedOrActual' = 'realistic',
     phases: PhaseData[] = [],
     wbsAssignees: import("@/domains/wbs/wbs-assignee").WbsAssignee[] = [],
-    taskActualsMap: Map<string, TaskActualMonthly[]> = new Map()
+    taskActualsMap: Map<string, TaskActualMonthly[]> = new Map(),
+    steadyTaskKeywords: string[] = [],
+    steadyTaskForecastMode: SteadyTaskForecastMode = 'PLANNED'
   ) {
     // 会社休日とWorking Hours Allocation Serviceの準備
     const systemSettings = await this.systemSettingsRepository.get();
@@ -288,11 +302,19 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
           quantizer
         );
 
+        // 定常タスクは進捗率ベースではなく定常方式で見通しを算出する
+        const steadyContext = buildSteadyForecastContext(
+          task,
+          steadyTaskKeywords,
+          companyCalendar
+        );
+
         const forecastResult = ForecastCalculationService.calculateTaskForecast(
-          toForecastTaskInput(task),
+          toForecastTaskInput(task, steadyContext),
           {
             method: forecastMethodOption,
-            progressMeasurementMethod
+            progressMeasurementMethod,
+            steadyTaskForecastMode
           }
         );
         totalForecastHours = forecastResult.forecastHours;
@@ -476,7 +498,9 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
     forecastMethodOption: 'conservative' | 'realistic' | 'optimistic' | 'plannedOrActual' = 'realistic',
     phases: PhaseData[] = [],
     wbsAssignees: import("@/domains/wbs/wbs-assignee").WbsAssignee[] = [],
-    taskActualsMap: Map<string, TaskActualMonthly[]> = new Map()
+    taskActualsMap: Map<string, TaskActualMonthly[]> = new Map(),
+    steadyTaskKeywords: string[] = [],
+    steadyTaskForecastMode: SteadyTaskForecastMode = 'PLANNED'
   ) {
     // seq情報を構築
     const assigneeSeqMap = new Map<string, number>();
@@ -501,11 +525,18 @@ export class GetWbsSummaryHandler implements IQueryHandler<GetWbsSummaryQuery, W
         const date = new Date(task.yoteiStart);
         plannedYearMonth = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
 
+        // 開始日基準モードは月別稼働日数を持たないため、定常タスクは PLANNED 相当（稼働日数なし）で算出する
+        const isSteady = isSteadyTask(task.name, steadyTaskKeywords);
+        const steadyContext: SteadyForecastContext | undefined = isSteady
+          ? { isSteady: true }
+          : undefined;
+
         const forecastResult = ForecastCalculationService.calculateTaskForecast(
-          toForecastTaskInput(task),
+          toForecastTaskInput(task, steadyContext),
           {
             method: forecastMethodOption,
-            progressMeasurementMethod
+            progressMeasurementMethod,
+            steadyTaskForecastMode
           }
         );
         totalForecastHours = forecastResult.forecastHours;

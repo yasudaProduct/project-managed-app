@@ -124,6 +124,7 @@ const schedulingSettingsSchema = z.object({
     consumeSteadyTaskCapacity: z.boolean(),
     steadyDailyHoursMode: z.enum(["PRORATE", "FIXED"]),
     steadyFixedHoursByKeyword: z.record(z.number()).optional(),
+    steadyTaskForecastMode: z.enum(["PLANNED", "ACTUAL_PACE", "PLANNED_PACE"]),
 });
 
 const updateSchedulingSettingsSchema = z.object({

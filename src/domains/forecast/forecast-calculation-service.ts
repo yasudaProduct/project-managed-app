@@ -4,6 +4,7 @@
  */
 
 import { ForecastTaskInput } from "@/domains/forecast/forecast-task-input";
+import { calculateSteadyTaskForecast } from "@/domains/forecast/steady-task-forecast-service";
 import { TaskProgressCalculator } from "@/domains/task/task-progress-calculator";
 import type {
   ForecastCalculationOptions,
@@ -44,6 +45,42 @@ export class ForecastCalculationService {
       options.progressMeasurementMethod || 'SELF_REPORTED'
     );
     console.log('effectiveProgressRate', effectiveProgressRate);
+
+    // 定常タスクは進捗率ベースの通常方式に馴染まないため、専用方式で算出する
+    if (task.isSteady) {
+      const steadyBase = {
+        taskId: task.id,
+        taskName: task.name,
+        plannedHours,
+        actualHours,
+        progressRate: task.progressRate || 0,
+        effectiveProgressRate,
+        completionStatus: task.status,
+        isSteady: true as const,
+      };
+
+      // 完了済みは全方式共通の境界条件（§4.2）と同様、実績工数を確定値として返す。
+      // ここで打ち切らないと、完了後もPLANNED/ACTUAL_PACE/PLANNED_PACEの投影計算が働き、
+      // 予算内で終わった定常タスクの見通しが実績を上回って表示されてしまう。
+      if (effectiveProgressRate >= 100) {
+        return { ...steadyBase, forecastHours: actualHours };
+      }
+
+      const steady = calculateSteadyTaskForecast(
+        options.steadyTaskForecastMode ?? 'PLANNED',
+        {
+          plannedHours,
+          actualHours,
+          totalWorkingDays: task.steadyWorkingDays?.total ?? 0,
+          elapsedWorkingDays: task.steadyWorkingDays?.elapsed ?? 0,
+        }
+      );
+      return {
+        ...steadyBase,
+        forecastHours: steady.forecastHours,
+        steadyDailyRate: steady.dailyRate,
+      };
+    }
 
     // 見通し工数計算
     const forecastHours = this.calculateForecastHours(

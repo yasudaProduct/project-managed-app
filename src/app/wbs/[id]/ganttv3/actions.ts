@@ -12,6 +12,7 @@ import { DependencyType } from "@/components/ganttv3/gantt";
 import { statusColor } from "@/components/ganttv3/utils/taskFormat";
 import { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import { ForecastCalculationMethod, toForecastMethodOption } from "@/types/forecast-calculation-method";
+import type { SteadyTaskForecastMode } from "@/types/scheduling-settings";
 import type { IProjectSettingsApplicationService } from "@/applications/project-settings/project-settings-application-service";
 import type { IForecastApplicationService } from "@/applications/forecast/forecast-application-service";
 
@@ -37,8 +38,8 @@ export async function getGanttTasks(wbsId: number): Promise<GanttTask[]> {
     const tasks = await taskService.getTaskAll(wbsId);
     const milestones = await milestoneService.getMilestones(wbsId);
 
-    // プロジェクトの進捗測定方式・見通し工数算出方式を取得（未設定は既定値）
-    const { progressMeasurementMethod, forecastCalculationMethod } =
+    // プロジェクトの進捗測定方式・見通し工数算出方式・定常タスク設定を取得（未設定は既定値）
+    const { progressMeasurementMethod, forecastCalculationMethod, steadyTaskKeywords, steadyTaskForecastMode } =
         await getProjectGanttSettings(wbsId);
 
     const ganttTasks: GanttTask[] = [
@@ -56,7 +57,9 @@ export async function getGanttTasks(wbsId: number): Promise<GanttTask[]> {
             {
                 method: toForecastMethodOption(forecastCalculationMethod),
                 progressMeasurementMethod,
-            }
+            },
+            undefined,
+            { keywords: steadyTaskKeywords, mode: steadyTaskForecastMode }
         );
         const forecastByTaskId = new Map(
             forecastDates.map((forecast) => [forecast.taskId, forecast])
@@ -195,15 +198,19 @@ export async function getPhases(wbsId: number): Promise<GanttPhase[]> {
     }));
 }
 
-// WBS（プロジェクト）の進捗測定方式・見通し工数算出方式を取得する。
-// 未設定・取得失敗時は既定値（自己申告進捗率／現実的）。
+// WBS（プロジェクト）の進捗測定方式・見通し工数算出方式・定常タスク設定を取得する。
+// 未設定・取得失敗時は既定値（自己申告進捗率／現実的／定常なし・PLANNED）。
 async function getProjectGanttSettings(wbsId: number): Promise<{
     progressMeasurementMethod: ProgressMeasurementMethod;
     forecastCalculationMethod: ForecastCalculationMethod;
+    steadyTaskKeywords: string[];
+    steadyTaskForecastMode: SteadyTaskForecastMode;
 }> {
     const defaults = {
         progressMeasurementMethod: "SELF_REPORTED" as const,
         forecastCalculationMethod: "REALISTIC" as const,
+        steadyTaskKeywords: [] as string[],
+        steadyTaskForecastMode: "PLANNED" as const,
     };
     try {
         const wbsService = container.get<IWbsApplicationService>(
@@ -215,10 +222,15 @@ async function getProjectGanttSettings(wbsId: number): Promise<{
         const projectSettingsService = container.get<IProjectSettingsApplicationService>(
             SYMBOL.IProjectSettingsApplicationService
         );
-        const settings = await projectSettingsService.getProjectSettings(wbs.projectId);
+        const [settings, schedulingSettings] = await Promise.all([
+            projectSettingsService.getProjectSettings(wbs.projectId),
+            projectSettingsService.getSchedulingSettings(wbs.projectId),
+        ]);
         return {
             progressMeasurementMethod: settings.progressMeasurementMethod,
             forecastCalculationMethod: settings.forecastCalculationMethod,
+            steadyTaskKeywords: schedulingSettings.steadyTaskKeywords,
+            steadyTaskForecastMode: schedulingSettings.steadyTaskForecastMode,
         };
     } catch (e) {
         console.error("プロジェクト設定の取得に失敗しました", e);
