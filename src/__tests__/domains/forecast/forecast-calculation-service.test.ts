@@ -505,6 +505,48 @@ describe('ForecastCalculationService', () => {
       expect(result.forecastHours).toBe(100); // max(100, 48)
     });
 
+    it('完了済み（effectiveProgressRate>=100）の定常タスクは、モードに関わらず実績工数を返す', () => {
+      // 予算内(80h)で終わった定常タスク。PLANNEDのmax(100,80)=100や
+      // ACTUAL_PACEの投影(elapsed<totalなら実績を超える)ではなく、確定値である実績を返すべき。
+      const modes = ['PLANNED', 'ACTUAL_PACE', 'PLANNED_PACE'] as const;
+      for (const steadyTaskForecastMode of modes) {
+        const task = createTask({
+          name: '定例会議',
+          yoteiKosu: 100,
+          jissekiKosu: 80,
+          progressRate: 100,
+          status: 'COMPLETED',
+          isSteady: true,
+          steadyWorkingDays: { total: 20, elapsed: 15 },
+        });
+        const result = ForecastCalculationService.calculateTaskForecast(task, {
+          method: 'realistic',
+          steadyTaskForecastMode,
+        });
+        expect(result.forecastHours).toBe(80);
+        expect(result.isSteady).toBe(true);
+      }
+    });
+
+    it('自己申告進捗率100%（ステータスはIN_PROGRESS）の定常タスクも実績工数を返す', () => {
+      // TaskProgressCalculator.calculateSelfReported は status=COMPLETED でなくても
+      // 申告値100%ならeffectiveProgressRate=100を返すため、その経路も確認する
+      const task = createTask({
+        name: '定例会議',
+        yoteiKosu: 100,
+        jissekiKosu: 80,
+        progressRate: 100,
+        status: 'IN_PROGRESS',
+        isSteady: true,
+        steadyWorkingDays: { total: 20, elapsed: 15 },
+      });
+      const result = ForecastCalculationService.calculateTaskForecast(task, {
+        method: 'realistic',
+        steadyTaskForecastMode: 'ACTUAL_PACE',
+      });
+      expect(result.forecastHours).toBe(80);
+    });
+
     it('isSteady 未指定のタスクは従来どおり進捗率ベースで算出する', () => {
       const task = createTask({
         yoteiKosu: 100,
