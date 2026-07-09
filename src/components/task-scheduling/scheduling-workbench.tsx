@@ -12,12 +12,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   Play,
   Download,
   AlertTriangle,
   Calendar,
   RotateCcw,
   Loader2,
+  Info,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -289,6 +296,67 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
           </Button>
         )}
       </div>
+
+      {/* 機能説明 */}
+      <Accordion type="single" collapsible className="rounded-lg border px-4">
+        <AccordionItem value="about" className="border-none">
+          <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+            <span className="flex items-center gap-2">
+              <Info className="h-4 w-4 text-muted-foreground" />
+              この機能について（用途・注意事項）
+            </span>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-3 text-sm text-gray-600">
+              <div>
+                <p className="font-medium text-gray-800">用途・使い方</p>
+                <ul className="list-disc space-y-0.5 pl-5">
+                  <li>
+                    プロジェクト開始時に、タスクの依存関係や担当者の稼働予定を踏まえた予定日程を自動で試算します（基準日「プロジェクト開始日」）。
+                  </li>
+                  <li>
+                    プロジェクト途中のリスケジュールにも使えます（基準日「今日」または「任意の日付」）。完了タスクは実績日程のまま固定され、未着手・進行中タスクのみ基準日以降に再配置されます。
+                  </li>
+                  <li>
+                    計算結果は画面プレビューとTSV出力のみです。WBSのタスク日程に自動反映はされません。実際の予定に反映する場合はTSVをダウンロードし、MySQL/Excelインポート機能で取り込んでください。
+                  </li>
+                  <li>
+                    「編集モード」に入るとガント上で計算結果をドラッグ・微調整できますが、この調整も画面上のみでDBには保存されません。
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium text-gray-800">
+                  注意事項（警告・計算対象外になるケース）
+                </p>
+                <ul className="list-disc space-y-0.5 pl-5">
+                  <li>
+                    担当者未設定・予定工数未設定のタスクは計算対象外（スキップ）になります。
+                  </li>
+                  <li>
+                    定常タスク（タスク名が設定キーワードに一致するもの）は前詰めせず既存の期間のまま据え置かれます。期間が未設定だと計算対象外になります。
+                  </li>
+                  <li>
+                    タスクの依存関係が循環している場合、該当タスクは計算から除外されます。
+                  </li>
+                  <li>
+                    保留タスクは警告付きで計算対象に含まれます（未着手タスクと同様に扱われます）。
+                  </li>
+                  <li>
+                    完了タスクに実績・予定のいずれの日程もない場合、日程未確定のまま固定され、後続タスクの依存関係には反映されません。
+                  </li>
+                  <li>
+                    計算後、予定終了日がプロジェクト終了日を超えるタスクがあると警告が表示されます（計算自体がエラーになるわけではありません）。
+                  </li>
+                  <li>
+                    基準日に「任意の日付」を選んだ場合、日付を入力せずに計算するとエラーになります。
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       {/* 前提警告 */}
       {result && displayWarnings.length > 0 && (
