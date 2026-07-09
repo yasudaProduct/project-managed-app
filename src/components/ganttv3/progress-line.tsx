@@ -67,7 +67,9 @@ export const ProgressLine = memo(function ProgressLine({
     );
   }, [today, tasks, centerYById, dateToX, timelineStart, timelineEnd, topY, bottomY]);
 
-  if (!points) return null;
+  // points が端点のみ（進捗点が1つも無い）の場合は、本日ラインと重複する
+  // 意味のない縦線になるため描画しない
+  if (!points || points.length <= 2) return null;
 
   const pointsAttr = points.map((p) => `${round(p.x)},${round(p.y)}`).join(" ");
   // 頂点ドット（先頭・末尾の基準日端点は除く）

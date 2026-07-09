@@ -59,7 +59,7 @@ describe("ProgressLine", () => {
     expect(container.querySelectorAll("circle")).toHaveLength(2);
   });
 
-  it("基準日がタイムライン範囲外なら何も描画しない", () => {
+  it("基準日がタイムライン終了より後なら何も描画しない", () => {
     const { queryByTestId } = renderInSvg(
       <ProgressLine
         tasks={[makeTask({ id: "1" })]}
@@ -71,6 +71,48 @@ describe("ProgressLine", () => {
         bottomY={100}
         color="#DB2777"
         today={new Date("2024-03-01T00:00:00.000Z")}
+      />,
+    );
+    expect(queryByTestId("ganttv3-progress-line")).not.toBeInTheDocument();
+  });
+
+  it("基準日がタイムライン開始より前なら何も描画しない", () => {
+    const { queryByTestId } = renderInSvg(
+      <ProgressLine
+        tasks={[makeTask({ id: "1" })]}
+        centerYById={new Map([["1", 10]])}
+        dateToX={dateToX}
+        timelineStart={timelineStart}
+        timelineEnd={timelineEnd}
+        topY={0}
+        bottomY={100}
+        color="#DB2777"
+        today={new Date("2023-12-01T00:00:00.000Z")}
+      />,
+    );
+    expect(queryByTestId("ganttv3-progress-line")).not.toBeInTheDocument();
+  });
+
+  it("進捗点が1つも無い（全てマイルストーン）場合は縦線を描画しない", () => {
+    const tasks = [
+      makeTask({ id: "1", isMilestone: true }),
+      makeTask({ id: "2", isMilestone: true }),
+    ];
+    const centerYById = new Map([
+      ["1", 10],
+      ["2", 30],
+    ]);
+    const { queryByTestId } = renderInSvg(
+      <ProgressLine
+        tasks={tasks}
+        centerYById={centerYById}
+        dateToX={dateToX}
+        timelineStart={timelineStart}
+        timelineEnd={timelineEnd}
+        topY={0}
+        bottomY={100}
+        color="#DB2777"
+        today={today}
       />,
     );
     expect(queryByTestId("ganttv3-progress-line")).not.toBeInTheDocument();

@@ -49,6 +49,8 @@ export function progressPointX(
   dateToX: (date: Date) => number,
 ): number | null {
   if (task.isMilestone) return null;
+  // 非有限な進捗率（NaN 等）は座標を定義できないため対象外（NaN頂点の混入を防ぐ）
+  if (!Number.isFinite(task.progress)) return null;
 
   const startMs = task.startDate.getTime();
   const endMs = task.endDate.getTime();

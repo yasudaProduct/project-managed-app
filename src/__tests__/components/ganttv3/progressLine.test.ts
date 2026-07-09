@@ -86,6 +86,11 @@ describe("progressPointX", () => {
     expect(progressPointX(t, todayMs, todayX, dateToX)).toBeNull();
   });
 
+  it("非有限な進捗率（NaN）は進捗点を持たない（null）", () => {
+    const t = task("2024-01-01", "2024-01-11", Number.NaN);
+    expect(progressPointX(t, todayMs, todayX, dateToX)).toBeNull();
+  });
+
   it("進捗率は0-100にクランプされる", () => {
     const over = task("2024-01-01", "2024-01-11", 150);
     const under = task("2024-01-01", "2024-01-11", -20);
@@ -127,6 +132,25 @@ describe("buildProgressLinePoints", () => {
     expect(points[1].x).toBeLessThan(todayX);
     expect(points[2].y).toBe(30);
     expect(points[2].x).toBeGreaterThan(todayX);
+  });
+
+  it("有効な行の間にスキップ行が挟まっても、両端の有効点のみを通る", () => {
+    const rows = [
+      rowOf(task("2024-01-01", "2024-01-11", 50), 10), // 有効
+      rowOf(task("2024-01-10", "2024-01-10", 0, true), 20), // マイルストーン→スキップ
+      rowOf(task("2024-01-01", "2024-01-11", 100), 30), // 有効
+    ];
+    const points = buildProgressLinePoints(
+      rows,
+      todayMs,
+      todayX,
+      dateToX,
+      0,
+      100,
+    );
+    // 端点2 + 有効タスク2 = 4頂点。スキップ行のY(20)は通らない。
+    expect(points).toHaveLength(4);
+    expect(points.map((p) => p.y)).toEqual([0, 10, 30, 100]);
   });
 
   it("マイルストーン/ゼロ期間の行はスキップする（端点のみ残る）", () => {
