@@ -19,6 +19,18 @@ describe("parseSchedulingSettings", () => {
     expect(r.steadyTaskKeywords).toEqual(["管理", "会議"]);
   });
 
+  test("fixedDateTaskKeywordsは文字列のみ・trim・空除外で正規化", () => {
+    const r = parseSchedulingSettings({
+      fixedDateTaskKeywords: [" 本番導入 ", "", 7, "リリース"],
+    });
+    expect(r.fixedDateTaskKeywords).toEqual(["本番導入", "リリース"]);
+  });
+
+  test("fixedDateTaskKeywords欠損時は空配列", () => {
+    expect(parseSchedulingSettings({}).fixedDateTaskKeywords).toEqual([]);
+    expect(DEFAULT_SCHEDULING_SETTINGS.fixedDateTaskKeywords).toEqual([]);
+  });
+
   test("consumeSteadyTaskCapacity / steadyDailyHoursMode を正規化", () => {
     const r = parseSchedulingSettings({
       consumeSteadyTaskCapacity: true,

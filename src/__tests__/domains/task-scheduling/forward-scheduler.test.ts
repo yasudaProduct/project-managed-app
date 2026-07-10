@@ -20,6 +20,7 @@ const baseOptions = (
   baselineDate,
   consumeSteadyTaskCapacity: false,
   steadyTaskKeywords: [],
+  fixedDateTaskKeywords: [],
   steadyDailyHoursMode: "PRORATE",
   ...over,
 });
@@ -445,6 +446,273 @@ describe("forwardSchedule", () => {
       expect(result.find((r) => r.taskId === 3)!.scheduledEndDate).toEqual(
         new Date(2026, 5, 15)
       );
+    });
+  });
+
+  describe("実施日固定タスク", () => {
+    // 06-25 は木曜（06-15 月曜起点）
+    const DEPLOY = new Date(2026, 5, 25);
+
+    test("キーワード一致タスクは前詰めせずYOTEI期間で固定する", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 }),
+          task({
+            taskId: 2,
+            taskNo: "0002",
+            taskName: "本番導入",
+            assigneeId: 2,
+            yoteiStartDate: DEPLOY,
+            yoteiEndDate: DEPLOY,
+            yoteiKosu: 8,
+          }),
+        ],
+        dependencies: [dep(1, 2, "FS")],
+        calendars: new Map([
+          [1, weekday8()],
+          [2, weekday8()],
+        ]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON, { fixedDateTaskKeywords: ["本番導入"] }),
+      });
+      const deploy = result.find((r) => r.taskId === 2)!;
+      expect(deploy.note).toBe("FIXED_DATE");
+      expect(deploy.isSteady).toBe(false);
+      expect(deploy.fixed).toBe(false);
+      expect(deploy.scheduledStartDate).toEqual(DEPLOY);
+      expect(deploy.scheduledEndDate).toEqual(DEPLOY);
+    });
+
+    test("固定キーワードが無ければ通常どおり前詰めされる（対比）", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 }),
+          task({
+            taskId: 2,
+            taskNo: "0002",
+            taskName: "本番導入",
+            assigneeId: 2,
+            yoteiStartDate: DEPLOY,
+            yoteiEndDate: DEPLOY,
+            yoteiKosu: 8,
+          }),
+        ],
+        dependencies: [dep(1, 2, "FS")],
+        calendars: new Map([
+          [1, weekday8()],
+          [2, weekday8()],
+        ]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      // 固定しない場合は先行(06-15終了)の翌営業日 06-16 に前詰め
+      expect(result.find((r) => r.taskId === 2)!.scheduledStartDate).toEqual(
+        new Date(2026, 5, 16)
+      );
+    });
+
+    test("固定タスクの後続は固定終了日の翌営業日から前詰めされる", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 }),
+          task({
+            taskId: 2,
+            taskNo: "0002",
+            taskName: "本番導入",
+            assigneeId: 2,
+            yoteiStartDate: DEPLOY,
+            yoteiEndDate: DEPLOY,
+            yoteiKosu: 8,
+          }),
+          task({ taskId: 3, taskNo: "0003", assigneeId: 3, yoteiKosu: 8 }),
+        ],
+        dependencies: [dep(1, 2, "FS"), dep(2, 3, "FS")],
+        calendars: new Map([
+          [1, weekday8()],
+          [2, weekday8()],
+          [3, weekday8()],
+        ]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON, { fixedDateTaskKeywords: ["本番導入"] }),
+      });
+      // 固定 06-25(木) の翌営業日 06-26(金)
+      expect(result.find((r) => r.taskId === 3)!.scheduledStartDate).toEqual(
+        new Date(2026, 5, 26)
+      );
+    });
+
+    test("固定タスクは担当者の稼働を消費し同一担当者の通常タスクを後ろ倒しする", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({
+            taskId: 1,
+            taskNo: "0001",
+            taskName: "本番導入",
+            assigneeId: 1,
+            yoteiStartDate: MON, // 06-15
+            yoteiEndDate: MON,
+            yoteiKosu: 8, // 06-15 を丸一日消費
+          }),
+          task({ taskId: 2, taskNo: "0002", assigneeId: 1, yoteiKosu: 8 }),
+        ],
+        dependencies: [],
+        calendars: new Map([[1, weekday8()]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON, { fixedDateTaskKeywords: ["本番導入"] }),
+      });
+      // 06-15 は固定タスクで満杯 → 通常タスクは翌営業日 06-16 から
+      expect(result.find((r) => r.taskId === 2)!.scheduledStartDate).toEqual(
+        new Date(2026, 5, 16)
+      );
+    });
+
+    test("固定タスクの部分消費: 同日の残り稼働に通常タスクが詰め込まれる", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({
+            taskId: 1,
+            taskNo: "0001",
+            taskName: "本番導入",
+            assigneeId: 1,
+            yoteiStartDate: MON,
+            yoteiEndDate: MON,
+            yoteiKosu: 4, // 06-15 に4hだけ消費
+          }),
+          task({ taskId: 2, taskNo: "0002", assigneeId: 1, yoteiKosu: 8 }),
+        ],
+        dependencies: [],
+        calendars: new Map([[1, weekday8()]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON, { fixedDateTaskKeywords: ["本番導入"] }),
+      });
+      const t2 = result.find((r) => r.taskId === 2)!;
+      // 06-15 の残り4h + 06-16 の4h → 06-15開始・06-16終了
+      expect(t2.scheduledStartDate).toEqual(new Date(2026, 5, 15));
+      expect(t2.scheduledEndDate).toEqual(new Date(2026, 5, 16));
+    });
+
+    test("別担当者の固定タスクは当該通常タスクの稼働に影響しない", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({
+            taskId: 1,
+            taskNo: "0001",
+            taskName: "本番導入",
+            assigneeId: 2,
+            yoteiStartDate: MON,
+            yoteiEndDate: MON,
+            yoteiKosu: 8,
+          }),
+          task({ taskId: 2, taskNo: "0002", assigneeId: 1, yoteiKosu: 8 }),
+        ],
+        dependencies: [],
+        calendars: new Map([
+          [1, weekday8()],
+          [2, weekday8()],
+        ]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON, { fixedDateTaskKeywords: ["本番導入"] }),
+      });
+      // 担当者1は固定タスク(担当者2)の消費を受けず 06-15 から
+      expect(result.find((r) => r.taskId === 2)!.scheduledStartDate).toEqual(
+        new Date(2026, 5, 15)
+      );
+    });
+
+    test("期間未設定の固定タスクはskip(FIXED_NO_PERIOD)", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({
+            taskId: 1,
+            taskNo: "0001",
+            taskName: "本番導入",
+            yoteiStartDate: undefined,
+            yoteiEndDate: undefined,
+          }),
+        ],
+        dependencies: [],
+        calendars: new Map([[1, weekday8()]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON, { fixedDateTaskKeywords: ["本番導入"] }),
+      });
+      expect(result[0].skipped).toBe(true);
+      expect(result[0].note).toBe("FIXED_NO_PERIOD");
+    });
+
+    test("予定工数0の固定タスクもマイルストーンとして固定配置する", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({
+            taskId: 1,
+            taskNo: "0001",
+            taskName: "本番導入",
+            yoteiKosu: 0,
+            yoteiStartDate: DEPLOY,
+            yoteiEndDate: DEPLOY,
+          }),
+        ],
+        dependencies: [],
+        calendars: new Map([[1, weekday8()]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON, { fixedDateTaskKeywords: ["本番導入"] }),
+      });
+      expect(result[0].skipped).toBe(false);
+      expect(result[0].note).toBe("FIXED_DATE");
+      expect(result[0].scheduledStartDate).toEqual(DEPLOY);
+      expect(result[0].scheduledManHours).toBe(0);
+    });
+
+    test("先行タスクが固定日を超える場合はFIXED_DATE_CONFLICT", () => {
+      const result = forwardSchedule({
+        tasks: [
+          // 80h → 06-15..06-26(金) まで掛かり、固定日 06-25 を超える
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 80 }),
+          task({
+            taskId: 2,
+            taskNo: "0002",
+            taskName: "本番導入",
+            assigneeId: 2,
+            yoteiStartDate: DEPLOY,
+            yoteiEndDate: DEPLOY,
+            yoteiKosu: 8,
+          }),
+        ],
+        dependencies: [dep(1, 2, "FS")],
+        calendars: new Map([
+          [1, weekday8()],
+          [2, weekday8()],
+        ]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON, { fixedDateTaskKeywords: ["本番導入"] }),
+      });
+      const deploy = result.find((r) => r.taskId === 2)!;
+      expect(deploy.note).toBe("FIXED_DATE_CONFLICT");
+      // 競合していても日付は固定のまま
+      expect(deploy.scheduledStartDate).toEqual(DEPLOY);
+    });
+
+    test("固定と定常の両方に一致する場合は固定を優先する", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({
+            taskId: 1,
+            taskNo: "0001",
+            taskName: "本番導入",
+            yoteiStartDate: DEPLOY,
+            yoteiEndDate: DEPLOY,
+            yoteiKosu: 8,
+          }),
+        ],
+        dependencies: [],
+        calendars: new Map([[1, weekday8()]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON, {
+          steadyTaskKeywords: ["導入"],
+          fixedDateTaskKeywords: ["本番導入"],
+        }),
+      });
+      expect(result[0].note).toBe("FIXED_DATE");
+      expect(result[0].isSteady).toBe(false);
     });
   });
 

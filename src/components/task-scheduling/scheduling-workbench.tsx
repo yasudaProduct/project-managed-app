@@ -56,6 +56,8 @@ const WARNING_LABELS: Record<string, string> = {
   NO_YOTEI_KOSU: "予定工数未設定",
   CYCLIC_DEPENDENCY: "循環依存",
   STEADY_NO_PERIOD: "定常タスク期間未設定",
+  FIXED_NO_PERIOD: "実施日固定タスク期間未設定",
+  FIXED_DATE_CONFLICT: "実施日固定タスク前工程超過",
   ON_HOLD: "保留タスク",
   COMPLETED_NO_PERIOD: "完了タスク日程なし",
   EXCEEDS_PROJECT_END: "プロジェクト終了日超過",

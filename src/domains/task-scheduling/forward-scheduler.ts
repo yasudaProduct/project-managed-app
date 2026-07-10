@@ -6,6 +6,7 @@ import type {
   DependencyType,
 } from "@/domains/task-dependency/task-dependency";
 import { isSteadyTask } from "./steady-task-classifier";
+import { isFixedDateTask } from "./fixed-date-task-classifier";
 import { topologicalSort, type TopoEdge } from "./topological-sort";
 import {
   type WorkingCalendar,
@@ -25,7 +26,32 @@ export interface ForwardSchedulerInput {
   options: SchedulingOptions;
 }
 
-const STEADY_MAX_DAYS = 366 * 5;
+const MAX_PERIOD_DAYS = 366 * 5;
+
+/**
+ * タスクの日次消費量を期間内の各稼働日に加算し、担当者の消費マップへ反映する。
+ * 前詰めしないタスク（実施日固定・定常）が担当者の稼働を占有していることを、
+ * 後続の通常タスクの前詰めへ反映するために使う。
+ */
+function consumePeriodCapacity(
+  periodStart: Date,
+  periodEnd: Date,
+  dailyHours: number,
+  cal: WorkingCalendar,
+  consumed: Map<string, number>
+): void {
+  if (dailyHours <= 0) return;
+  let cur = new Date(periodStart);
+  let iter = 0;
+  while (cur.getTime() <= periodEnd.getTime() && iter < MAX_PERIOD_DAYS) {
+    if (cal.getAvailableHours(cur) > 0) {
+      const key = toDateKey(cur);
+      consumed.set(key, (consumed.get(key) ?? 0) + dailyHours);
+    }
+    cur = addCalendarDays(cur, 1);
+    iter++;
+  }
+}
 
 /**
  * 依存関係・担当者稼働・定常タスク・ステータスを考慮した前詰めスケジューリング。
@@ -33,7 +59,7 @@ const STEADY_MAX_DAYS = 366 * 5;
 export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
   const { tasks, dependencies, calendars, standardWorkingHours, options } =
     input;
-  const { baselineDate, steadyTaskKeywords } = options;
+  const { baselineDate, steadyTaskKeywords, fixedDateTaskKeywords } = options;
 
   const taskById = new Map<number, SchedulingTask>();
   for (const t of tasks) taskById.set(t.taskId, t);
@@ -85,6 +111,7 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       continue;
     }
     const steady = isSteadyTask(t.taskName, steadyTaskKeywords);
+    const fixedDate = isFixedDateTask(t.taskName, fixedDateTaskKeywords);
     if (t.status === "COMPLETED") {
       result.set(t.taskId, {
         ...baseResult(t),
@@ -97,13 +124,60 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       });
       continue;
     }
-    if (!steady && (t.yoteiKosu == null || t.yoteiKosu <= 0)) {
+    // 定常・実施日固定タスクはマイルストーン的に工数0でも配置するため対象外
+    if (!steady && !fixedDate && (t.yoteiKosu == null || t.yoteiKosu <= 0)) {
       result.set(t.taskId, {
         ...baseResult(t),
         skipped: true,
         note: "NO_YOTEI_KOSU",
       });
       continue;
+    }
+  }
+
+  // ---- フェーズA2: 実施日固定タスクを予定期間で固定（前詰めしない） ----
+  // 本番導入・定例会など実施日が確定しているタスクは、前詰めの対象から外し
+  // 入力済みのYOTEI期間をそのまま採用する。定常判定より優先する。
+  for (const t of tasks) {
+    if (result.has(t.taskId)) continue;
+    if (!isFixedDateTask(t.taskName, fixedDateTaskKeywords)) continue;
+    if (!t.yoteiStartDate || !t.yoteiEndDate) {
+      result.set(t.taskId, {
+        ...baseResult(t),
+        skipped: true,
+        note: "FIXED_NO_PERIOD",
+      });
+      continue;
+    }
+    result.set(t.taskId, {
+      ...baseResult(t),
+      note: "FIXED_DATE",
+      scheduledStartDate: t.yoteiStartDate,
+      scheduledEndDate: t.yoteiEndDate,
+      scheduledManHours: t.yoteiKosu ?? 0,
+    });
+
+    // 固定タスクは一回性の確定作業であり、通常タスク同様に担当者の稼働を消費する。
+    // 予定工数を固定期間内の稼働日へ按分し、同一担当者の通常タスクが固定タスクの
+    // 占有時間を避けて前詰めされるようにする。
+    if (t.assigneeId != null) {
+      const cal = calendars.get(t.assigneeId);
+      if (cal) {
+        const workingDays = countWorkingDays(
+          t.yoteiStartDate,
+          t.yoteiEndDate,
+          cal
+        );
+        const dailyHours =
+          workingDays > 0 ? (t.yoteiKosu ?? 0) / workingDays : 0;
+        consumePeriodCapacity(
+          t.yoteiStartDate,
+          t.yoteiEndDate,
+          dailyHours,
+          cal,
+          consumedOf(t.assigneeId)
+        );
+      }
     }
   }
 
@@ -132,23 +206,13 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
     if (options.consumeSteadyTaskCapacity && t.assigneeId != null) {
       const cal = calendars.get(t.assigneeId);
       if (cal) {
-        const dailyHours = computeSteadyDailyHours(t, cal, options);
-        if (dailyHours > 0) {
-          const m = consumedOf(t.assigneeId);
-          let cur = new Date(t.yoteiStartDate);
-          let iter = 0;
-          while (
-            cur.getTime() <= t.yoteiEndDate.getTime() &&
-            iter < STEADY_MAX_DAYS
-          ) {
-            if (cal.getAvailableHours(cur) > 0) {
-              const key = toDateKey(cur);
-              m.set(key, (m.get(key) ?? 0) + dailyHours);
-            }
-            cur = addCalendarDays(cur, 1);
-            iter++;
-          }
-        }
+        consumePeriodCapacity(
+          t.yoteiStartDate,
+          t.yoteiEndDate,
+          computeSteadyDailyHours(t, cal, options),
+          cal,
+          consumedOf(t.assigneeId)
+        );
       }
     }
   }
@@ -197,20 +261,14 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
 
     // 依存制約による最早開始下限
     let startLB = baselineDate;
-    for (const p of predecessorsOf.get(taskId) ?? []) {
-      const pr = result.get(p.taskId);
-      if (!pr || pr.skipped || !pr.scheduledStartDate || !pr.scheduledEndDate) {
-        continue;
-      }
-      const impl = impliedStart(
-        p.type,
-        p.lag,
-        pr.scheduledStartDate,
-        pr.scheduledEndDate,
-        estimatedDurationDays(t, standardWorkingHours)
-      );
-      if (impl.getTime() > startLB.getTime()) startLB = impl;
-    }
+    const predLB = predecessorLowerBound(
+      taskId,
+      t,
+      predecessorsOf,
+      result,
+      standardWorkingHours
+    );
+    if (predLB && predLB.getTime() > startLB.getTime()) startLB = predLB;
     // 同一担当者の稼働列制約
     const freeFrom = assigneeFreeFrom.get(assigneeId);
     if (freeFrom && freeFrom.getTime() > startLB.getTime()) startLB = freeFrom;
@@ -242,6 +300,30 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       scheduledManHours: remaining,
     });
     assigneeFreeFrom.set(assigneeId, endDate);
+  }
+
+  // ---- フェーズD: 実施日固定タスクの先行超過を検出 ----
+  // 先行タスクの算出結果が固定開始日より後ろへずれ込む場合、前工程が固定日に
+  // 間に合わない競合として note を FIXED_DATE_CONFLICT に更新する（日付は固定のまま）。
+  const conflictIds: number[] = [];
+  for (const [taskId, r] of result) {
+    if (r.note !== "FIXED_DATE" || !r.scheduledStartDate) continue;
+    const t = taskById.get(taskId);
+    if (!t) continue;
+    const predLB = predecessorLowerBound(
+      taskId,
+      t,
+      predecessorsOf,
+      result,
+      standardWorkingHours
+    );
+    if (predLB && predLB.getTime() > r.scheduledStartDate.getTime()) {
+      conflictIds.push(taskId);
+    }
+  }
+  for (const taskId of conflictIds) {
+    const r = result.get(taskId)!;
+    result.set(taskId, { ...r, note: "FIXED_DATE_CONFLICT" });
   }
 
   // 元のtask順をベースに、開始日→taskNoでソートして返す
@@ -277,7 +359,7 @@ function computeSteadyDailyHours(
   return (t.yoteiKosu ?? 0) / workingDays;
 }
 
-/** 後続タスクの仮の所要営業日数（FF/SF の開始下限近似に使用） */
+/** タスクの仮の所要営業日数（FF/SF の開始下限近似、固定タスクの先行超過判定に使用） */
 function estimatedDurationDays(
   t: SchedulingTask,
   standardWorkingHours: number
@@ -285,6 +367,36 @@ function estimatedDurationDays(
   const kosu = t.yoteiKosu ?? 0;
   if (kosu <= 0 || standardWorkingHours <= 0) return 1;
   return Math.max(1, Math.ceil(kosu / standardWorkingHours));
+}
+
+/**
+ * 先行タスクの確定結果から taskId の最早開始下限を求める（未確定の先行は無視）。
+ * 先行が無い、または全先行が未確定なら undefined。
+ * フェーズC（通常タスクの開始下限）とフェーズD（固定タスクの先行超過検出）で共用する。
+ */
+function predecessorLowerBound(
+  taskId: number,
+  t: SchedulingTask,
+  predecessorsOf: Map<number, ScheduledPredecessor[]>,
+  result: Map<number, ScheduledTask>,
+  standardWorkingHours: number
+): Date | undefined {
+  let lb: Date | undefined;
+  for (const p of predecessorsOf.get(taskId) ?? []) {
+    const pr = result.get(p.taskId);
+    if (!pr || pr.skipped || !pr.scheduledStartDate || !pr.scheduledEndDate) {
+      continue;
+    }
+    const impl = impliedStart(
+      p.type,
+      p.lag,
+      pr.scheduledStartDate,
+      pr.scheduledEndDate,
+      estimatedDurationDays(t, standardWorkingHours)
+    );
+    if (!lb || impl.getTime() > lb.getTime()) lb = impl;
+  }
+  return lb;
 }
 
 /**

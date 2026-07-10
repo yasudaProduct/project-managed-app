@@ -48,6 +48,12 @@ export const STEADY_TASK_FORECAST_MODE_DESCRIPTIONS: Record<
 export interface SchedulingSettings {
   /** 定常タスク判定に使うキーワード（タスク名の部分一致） */
   steadyTaskKeywords: string[];
+  /**
+   * 実施日固定タスク判定に使うキーワード（タスク名の部分一致）。
+   * 本番導入・定例会など実施日が確定しているタスクは前詰めせず、
+   * 入力済みの予定開始日・終了日をそのまま採用する。
+   */
+  fixedDateTaskKeywords: string[];
   /** 定常タスクが担当者の稼働可能時間を消費する（通常タスクの前詰めに影響する）か */
   consumeSteadyTaskCapacity: boolean;
   /** 定常タスクの日次消費量の決定方式 */
@@ -60,6 +66,7 @@ export interface SchedulingSettings {
 
 export const DEFAULT_SCHEDULING_SETTINGS: SchedulingSettings = {
   steadyTaskKeywords: [],
+  fixedDateTaskKeywords: [],
   consumeSteadyTaskCapacity: false,
   steadyDailyHoursMode: "PRORATE",
   steadyTaskForecastMode: "PLANNED",
@@ -75,12 +82,16 @@ export function parseSchedulingSettings(raw: unknown): SchedulingSettings {
   }
   const obj = raw as Record<string, unknown>;
 
-  const steadyTaskKeywords = Array.isArray(obj.steadyTaskKeywords)
-    ? obj.steadyTaskKeywords
-        .filter((k): k is string => typeof k === "string")
-        .map((k) => k.trim())
-        .filter((k) => k.length > 0)
-    : [];
+  const normalizeKeywords = (value: unknown): string[] =>
+    Array.isArray(value)
+      ? value
+          .filter((k): k is string => typeof k === "string")
+          .map((k) => k.trim())
+          .filter((k) => k.length > 0)
+      : [];
+
+  const steadyTaskKeywords = normalizeKeywords(obj.steadyTaskKeywords);
+  const fixedDateTaskKeywords = normalizeKeywords(obj.fixedDateTaskKeywords);
 
   const steadyFixedHoursByKeyword =
     obj.steadyFixedHoursByKeyword &&
@@ -102,6 +113,7 @@ export function parseSchedulingSettings(raw: unknown): SchedulingSettings {
 
   return {
     steadyTaskKeywords,
+    fixedDateTaskKeywords,
     consumeSteadyTaskCapacity:
       typeof obj.consumeSteadyTaskCapacity === "boolean"
         ? obj.consumeSteadyTaskCapacity

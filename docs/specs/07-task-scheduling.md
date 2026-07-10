@@ -26,6 +26,9 @@
 ### 定常タスク (Steady Task)
 プロジェクト管理など、期間中ずっと一定の工数を消費し続けるタスク。タスク名が設定キーワードに**部分一致**するもの。前詰めの対象外とし、既存の予定期間（YOTEI）をそのまま使う。
 
+### 実施日固定タスク (Fixed-date Task)
+本番導入・定例会など**実施日が確定している**一回性のタスク。タスク名が設定キーワード（`fixedDateTaskKeywords`）に**部分一致**するもの。前詰めの対象外とし、入力済みの予定開始日・終了日（YOTEI）をそのまま採用する。定常タスクと似るが、①一回性のイベントで見通し工数の専用算出（定常）を伴わない、②定常判定より優先される、点が異なる。先行タスクの算出結果が固定日を超える場合は競合として警告する。
+
 ### 依存関係 (Dependency)
 タスク間の前後制約。種別は FS / SS / FF / SF の4種、遅延 `lag`（カレンダー日）を持つ。詳細は [§7.3](#73-依存制約)。
 
@@ -74,6 +77,7 @@
 | フィールド | 型 | 既定値 | 説明 |
 | --- | --- | --- | --- |
 | `steadyTaskKeywords` | `string[]` | `[]` | 定常タスク判定キーワード（タスク名の部分一致） |
+| `fixedDateTaskKeywords` | `string[]` | `[]` | 実施日固定タスク判定キーワード（タスク名の部分一致）。一致タスクは前詰めせずYOTEI期間で固定 |
 | `consumeSteadyTaskCapacity` | `boolean` | `false` | 定常タスクが担当者の稼働を消費するか |
 | `steadyDailyHoursMode` | `'PRORATE' \| 'FIXED'` | `'PRORATE'` | 定常タスクの日次消費量の決定方式 |
 | `steadyFixedHoursByKeyword` | `Record<string, number>?` | なし | FIXED時のキーワード別日次固定時間(h/日) |
@@ -105,10 +109,13 @@ UIの基準日が非稼働日（土日祝等）の場合でも、実際の各タ
 | 区分 | 条件 | 扱い | `note` | `skipped`/`fixed` |
 | --- | --- | --- | --- | --- |
 | 担当者未設定 | `assigneeId` が null | 計算対象外 | `NO_ASSIGNEE` | skipped |
-| 工数未設定 | 非定常で `yoteiKosu` が null/0以下 | 計算対象外 | `NO_YOTEI_KOSU` | skipped |
+| 工数未設定 | 非定常・非固定で `yoteiKosu` が null/0以下 | 計算対象外 | `NO_YOTEI_KOSU` | skipped |
 | 完了 | `status = COMPLETED` | **実績日程で固定**（前詰めしない） | `COMPLETED_FIXED` | fixed |
 | 進行中 | `status = IN_PROGRESS` | **残工数**を基準日以降に前詰め | `IN_PROGRESS_REMAINING` | — |
 | 未着手 | `status = NOT_STARTED` 等 | フル工数を前詰め | `NORMAL` | — |
+| 実施日固定 | タスク名が `fixedDateTaskKeywords` に部分一致 | **前詰めせずYOTEI期間で固定**（工数0でも配置） | `FIXED_DATE` | — |
+| 実施日固定・先行超過 | 固定タスクの先行がその固定日を超える | 固定日は維持しつつ競合を通知 | `FIXED_DATE_CONFLICT` | — |
+| 実施日固定・期間なし | 固定だが YOTEI 期間が無い | 計算対象外 | `FIXED_NO_PERIOD` | skipped |
 | 定常 | タスク名がキーワードに部分一致 | **前詰めせずYOTEI期間のまま** | `STEADY_FIXED_PERIOD` | — |
 | 定常・期間なし | 定常だが YOTEI 期間が無い | 計算対象外 | `STEADY_NO_PERIOD` | skipped |
 | 循環依存 | 依存の循環に含まれる | 計算対象外 | `CYCLIC` | skipped |
@@ -121,13 +128,16 @@ UIの基準日が非稼働日（土日祝等）の場合でも、実際の各タ
 
 ## 7. スケジューリングアルゴリズム
 
-中核は `forwardSchedule(input)`（`forward-scheduler.ts`）。入力はタスク・依存・担当者カレンダー・標準稼働時間・オプション。処理は3フェーズ。
+中核は `forwardSchedule(input)`（`forward-scheduler.ts`）。入力はタスク・依存・担当者カレンダー・標準稼働時間・オプション。処理は「分類 → 実施日固定の先置き → 定常の先置き → 通常タスクの前詰め → 固定タスクの競合検出」の順に進む。
 
 ### 7.1 フェーズA: 分類と完了固定
-全タスクを走査し、担当者未設定 → `NO_ASSIGNEE` skip、完了 → 実績で固定、非定常で工数未設定 → `NO_YOTEI_KOSU` skip、に振り分ける。
+全タスクを走査し、担当者未設定 → `NO_ASSIGNEE` skip、完了 → 実績で固定、**非定常かつ非固定**で工数未設定 → `NO_YOTEI_KOSU` skip、に振り分ける。定常・実施日固定タスクは工数0（マイルストーン）でも計算対象として残す。
 
-### 7.2 フェーズB: 定常タスクの先置き
-定常タスク（キーワード部分一致, `isSteadyTask`）を YOTEI 期間のまま結果に**先置き**する（依存の先行として参照可能にするため）。期間が無ければ `STEADY_NO_PERIOD` skip。
+### 7.2 フェーズB: 実施日固定・定常タスクの先置き
+前詰めしないタスクを、依存の先行として参照可能にするため YOTEI 期間のまま結果に**先置き**する。判定は**実施日固定を優先**し、その後に定常を判定する（両方のキーワードに一致する場合は固定扱い）。
+
+- **実施日固定タスク**（`isFixedDateTask`）: `scheduledStart = yoteiStart`, `scheduledEnd = yoteiEnd`, `note = FIXED_DATE`。工数0でも配置する。YOTEI 期間が無ければ `FIXED_NO_PERIOD` skip。**通常タスクと同様に担当者の稼働を消費する**（一回性の確定作業のため。予定工数を固定期間内の稼働日へ按分し `consumed` へ加算。フラグ不要で常時消費）。同一担当者の通常タスクはこの占有を避けて前詰めされる。
+- **定常タスク**（`isSteadyTask`）: YOTEI 期間のまま先置き。期間が無ければ `STEADY_NO_PERIOD` skip。稼働消費は `consumeSteadyTaskCapacity`（既定 false）に従う。
 
 `consumeSteadyTaskCapacity = true` の場合、定常タスクが期間中の各稼働日に消費する工数を担当者ごとの消費マップ `consumed[assigneeId][YYYY-MM-DD]` に加算する。日次消費量は次で決まる:
 
@@ -166,20 +176,25 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 ### 7.6 出力順
 結果は `予定開始日 → タスクNo（数値昇順）` でソートする。日付未確定（skip）は末尾。
 
+### 7.7 実施日固定タスクの競合検出（計算後）
+通常タスクの前詰め後、各実施日固定タスク（`FIXED_DATE`）について先行タスクの `impliedStart`（[§7.3](#73-依存制約)と同じ式）を求め、その最早開始下限が固定開始日を超える場合は `note` を `FIXED_DATE_CONFLICT` に更新する。**固定日そのものは変更しない**（前工程が固定日に間に合わないというリスケ判断シグナルとしてのみ扱う）。この結果は `SchedulingPreconditionService.checkFixedDateConflicts` により `FIXED_DATE_CONFLICT` 警告へ変換される。
+
 ---
 
 ## 8. 前提条件チェック
 
-`SchedulingPreconditionService.check(tasks, dependencies, steadyKeywords)` が計算前の警告を返す（`scheduling-precondition.service.ts`）。**警告があっても計算は続行**し、対象タスクは skip / 循環は除外される。
+`SchedulingPreconditionService.check(tasks, dependencies, steadyKeywords, fixedDateKeywords?)` が計算前の警告を返す（`scheduling-precondition.service.ts`）。**警告があっても計算は続行**し、対象タスクは skip / 循環は除外される。
 
 | `kind` | 条件 |
 | --- | --- |
 | `NO_ASSIGNEE` | 担当者未設定 |
-| `NO_YOTEI_KOSU` | 非定常で予定工数が未設定/0以下 |
+| `NO_YOTEI_KOSU` | 非定常・非固定で予定工数が未設定/0以下 |
 | `STEADY_NO_PERIOD` | 定常タスクに予定期間（開始・終了日）が無い |
+| `FIXED_NO_PERIOD` | 実施日固定タスクに実施日（予定開始・終了日）が無い |
 | `CYCLIC_DEPENDENCY` | 依存に循環あり（`cycleTaskNos` に該当タスクNo） |
 | `ON_HOLD` | 保留タスクが含まれる（計算対象になる旨の注意喚起。挙動は未着手と同じ） |
 | `COMPLETED_NO_PERIOD` | 完了タスクに日程（実績・予定）が無い（日程未確定のまま固定され、後続の依存制約に反映されない） |
+| `FIXED_DATE_CONFLICT` | **計算後の検証**: 実施日固定タスクの先行がその固定日を超える（`checkFixedDateConflicts`。前工程が固定日に間に合わない） |
 | `EXCEEDS_PROJECT_END` | **計算後の検証**: 算出した終了日がプロジェクト終了日を超過（`checkProjectEnd`、日単位比較。完了固定タスクの実績超過も含む） |
 
 循環検出は `TaskDependencyValidator.detectCycles`（Tarjanの強連結成分、サイズ2以上を循環とみなす）。
@@ -224,6 +239,7 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 - **DB書き戻し非対応**: 計算結果はプレビュー＋TSVのみ。WBSへの反映は MySQL/Excel インポートが本流（[§1](#1-概要)）。
 - **FF/SF依存は近似**: 後続の所要日数を理想営業日数で近似するため、休暇・参画率が絡むと誤差が出る。終了日からの逆算（`consumeBackward`）による厳密化は局所改修で対応可能だが未実装。
 - **リソース制約の同時最適化は非対応**: 依存・担当者稼働・定常消費を満たす厳密な最適解（リソース制約付きスケジューリング）は対象外。前詰めヒューリスティックによる試算である。
+- **実施日固定タスクの判定はキーワード方式**: 固定対象はタスク名の部分一致（`fixedDateTaskKeywords`）で判定する。命名に依存するため、1タスク単位の厳密な指定が必要な場合は将来的にタスク単位のフラグ（例: `WbsTask.scheduleFixed`）への拡張が想定される。なお固定タスクは通常タスク同様に担当者の稼働を消費する（同一担当者の通常タスクは固定タスクの占有を避けて前詰めされる）。工数の期間内配分は按分（`予定工数 ÷ 固定期間内の稼働日数`）で近似する。
 - **タイムゾーン前提**: エンジンの日付キーは**サーバーのローカル日付**（`toDateKey`）で、入力の日付（プロジェクト開始日・CUSTOM基準日等）は UTC 深夜の `Date` を想定する。サーバーTZが UTC（推奨）または UTC+側（JST等）なら日付は一致するが、UTC−側のTZでは1日ずれる。実行環境の TZ は UTC 固定を推奨（CLAUDE.md の日付ポリシー参照）。
 - **全日休暇キーワードのハードコード**: 個人予定を全日休暇とみなすタイトル（「休暇」「有給」等）は `AssigneeWorkingCalendar` にハードコードされており、設定化は未対応。
 
@@ -235,6 +251,7 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 - `forward-scheduler.ts` — 中核エンジン
 - `scheduling-task.ts` / `scheduling-options.ts` / `scheduled-result.ts` — 入出力VO
 - `steady-task-classifier.ts` — 定常タスク判定
+- `fixed-date-task-classifier.ts` — 実施日固定タスク判定
 - `topological-sort.ts` — トポロジカルソート
 - `working-calendar-walker.ts` — 稼働日探索・工数消化
 - `scheduling-precondition-service.ts` — 前提条件チェック
@@ -263,6 +280,7 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 | --- | --- |
 | トポロジカルソート | `src/__tests__/domains/task-scheduling/topological-sort.test.ts` |
 | 定常タスク判定 | `steady-task-classifier.test.ts` |
+| 実施日固定タスク判定 | `fixed-date-task-classifier.test.ts` |
 | 稼働日探索・消化 | `working-calendar-walker.test.ts` |
 | 中核エンジン（依存/定常/完了/進行中/基準日/上限/循環） | `forward-scheduler.test.ts` |
 | 前提条件 | `scheduling-precondition.service.test.ts` |

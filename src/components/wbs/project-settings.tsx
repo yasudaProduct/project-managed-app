@@ -76,6 +76,7 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
   const [costOverrunThresholdPct, setCostOverrunThresholdPct] =
     useState<number>(100);
   const [steadyKeywordsText, setSteadyKeywordsText] = useState<string>("");
+  const [fixedKeywordsText, setFixedKeywordsText] = useState<string>("");
   const [consumeSteadyTaskCapacity, setConsumeSteadyTaskCapacity] =
     useState<boolean>(false);
   const [steadyDailyHoursMode, setSteadyDailyHoursMode] =
@@ -121,6 +122,7 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         }
         const sched = await getSchedulingSettings(projectId);
         setSteadyKeywordsText(sched.steadyTaskKeywords.join("\n"));
+        setFixedKeywordsText(sched.fixedDateTaskKeywords.join("\n"));
         setConsumeSteadyTaskCapacity(sched.consumeSteadyTaskCapacity);
         setSteadyDailyHoursMode(sched.steadyDailyHoursMode);
         setSteadyTaskForecastMode(sched.steadyTaskForecastMode);
@@ -149,6 +151,7 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
     }
     return {
       steadyTaskKeywords: keywords,
+      fixedDateTaskKeywords: parseKeywords(fixedKeywordsText),
       consumeSteadyTaskCapacity,
       steadyDailyHoursMode,
       steadyFixedHoursByKeyword: fixedHours,
@@ -178,6 +181,12 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
   };
 
   const onSteadyKeywordsBlur = () => {
+    startTransition(async () => {
+      await updateSchedulingSettings(projectId, buildSchedulingSettings({}));
+    });
+  };
+
+  const onFixedKeywordsBlur = () => {
     startTransition(async () => {
       await updateSchedulingSettings(projectId, buildSchedulingSettings({}));
     });
@@ -767,7 +776,7 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
           <div>
             <Label className="text-base font-medium">スケジュール計算設定</Label>
             <div className="text-sm text-gray-500 mt-1">
-              スケジュールタブの前詰め計算における定常タスクの扱いを設定します。
+              スケジュールタブの前詰め計算における定常タスク・実施日固定タスクの扱いを設定します。
             </div>
           </div>
 
@@ -785,6 +794,25 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
               onBlur={onSteadyKeywordsBlur}
               rows={3}
               placeholder={"例: プロジェクト管理\n進捗管理"}
+              className="w-full border rounded px-2 py-1 text-sm"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fixedKeywords" className="text-sm font-medium">
+              実施日固定タスク判定キーワード
+            </Label>
+            <div className="text-xs text-gray-500">
+              本番導入・定例会など実施日が確定しているタスク名の語を指定します。一致したタスクは前詰めせず、入力済みの予定開始日・終了日をそのまま固定します（改行・カンマ区切り）。先行タスクが固定日を超える場合は警告します。
+            </div>
+            <textarea
+              id="fixedKeywords"
+              value={fixedKeywordsText}
+              onChange={(e) => setFixedKeywordsText(e.target.value)}
+              onBlur={onFixedKeywordsBlur}
+              rows={3}
+              placeholder={"例: 本番導入\nリリース\n定例会"}
               className="w-full border rounded px-2 py-1 text-sm"
               disabled={saving}
             />
