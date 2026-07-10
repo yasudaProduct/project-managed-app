@@ -19,6 +19,7 @@ const NOTE_LABELS: Record<ScheduledTaskNote, string> = {
   STEADY_FIXED_PERIOD: "定常",
   FIXED_DATE: "実施日固定",
   FIXED_DATE_CONFLICT: "実施日固定(前工程超過)",
+  BACKWARD_FROM_FIXED: "実施日固定(逆算)",
   NO_ASSIGNEE: "担当者未設定",
   NO_YOTEI_KOSU: "予定工数未設定",
   STEADY_NO_PERIOD: "定常(期間未設定)",

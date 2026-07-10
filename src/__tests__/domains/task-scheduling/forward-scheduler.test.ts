@@ -716,6 +716,296 @@ describe("forwardSchedule", () => {
     });
   });
 
+  describe("実施日固定タスクの先行タスク逆算(backward)", () => {
+    // 06-25 は木曜（06-15 月曜起点）
+    const DEPLOY = new Date(2026, 5, 25);
+    const fixedOpts = (over: Partial<SchedulingOptions> = {}) =>
+      baseOptions(MON, { fixedDateTaskKeywords: ["本番導入"], ...over });
+    const deployTask = (over: Partial<SchedulingTask> = {}) =>
+      task({
+        taskId: 99,
+        taskNo: "0099",
+        taskName: "本番導入",
+        assigneeId: 9,
+        yoteiStartDate: DEPLOY,
+        yoteiEndDate: DEPLOY,
+        yoteiKosu: 8,
+        ...over,
+      });
+    const cals = (...ids: number[]) =>
+      new Map(ids.map((id) => [id, weekday8()] as const));
+
+    test("先行タスクは固定開始日の直前営業日で終わるよう逆算配置される", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 }),
+          deployTask(),
+        ],
+        dependencies: [dep(1, 99, "FS")],
+        calendars: cals(1, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      const pred = result.find((r) => r.taskId === 1)!;
+      // 前詰め(06-15)ではなく固定日直前の 06-24(水) に逆算配置
+      expect(pred.scheduledStartDate).toEqual(new Date(2026, 5, 24));
+      expect(pred.scheduledEndDate).toEqual(new Date(2026, 5, 24));
+      expect(pred.note).toBe("BACKWARD_FROM_FIXED");
+      // 固定タスク自体は据え置き
+      const deploy = result.find((r) => r.taskId === 99)!;
+      expect(deploy.note).toBe("FIXED_DATE");
+      expect(deploy.scheduledStartDate).toEqual(DEPLOY);
+    });
+
+    test("複数日工数は固定日直前から後方へ積み上げる", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 24 }),
+          deployTask(),
+        ],
+        dependencies: [dep(1, 99, "FS")],
+        calendars: cals(1, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      const pred = result.find((r) => r.taskId === 1)!;
+      expect(pred.scheduledStartDate).toEqual(new Date(2026, 5, 22));
+      expect(pred.scheduledEndDate).toEqual(new Date(2026, 5, 24));
+    });
+
+    test("週末を跨いで逆算する", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 16 }),
+          // 固定日 06-22(月) → 先行の終了日は直前営業日 06-19(金)
+          deployTask({
+            yoteiStartDate: new Date(2026, 5, 22),
+            yoteiEndDate: new Date(2026, 5, 22),
+          }),
+        ],
+        dependencies: [dep(1, 99, "FS")],
+        calendars: cals(1, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      const pred = result.find((r) => r.taskId === 1)!;
+      expect(pred.scheduledStartDate).toEqual(new Date(2026, 5, 18));
+      expect(pred.scheduledEndDate).toEqual(new Date(2026, 5, 19));
+    });
+
+    test("先行チェーン全体が逆算される(A→B→固定)", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 }),
+          task({ taskId: 2, taskNo: "0002", assigneeId: 2, yoteiKosu: 8 }),
+          deployTask(),
+        ],
+        dependencies: [dep(1, 2, "FS"), dep(2, 99, "FS")],
+        calendars: cals(1, 2, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      const a = result.find((r) => r.taskId === 1)!;
+      const b = result.find((r) => r.taskId === 2)!;
+      expect(b.scheduledStartDate).toEqual(new Date(2026, 5, 24));
+      expect(b.scheduledEndDate).toEqual(new Date(2026, 5, 24));
+      expect(b.note).toBe("BACKWARD_FROM_FIXED");
+      // A は B の開始前日までに終わる
+      expect(a.scheduledStartDate).toEqual(new Date(2026, 5, 23));
+      expect(a.scheduledEndDate).toEqual(new Date(2026, 5, 23));
+      expect(a.note).toBe("BACKWARD_FROM_FIXED");
+    });
+
+    test("FS+lag: lag(カレンダー日)分さらに前倒しされる", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 }),
+          deployTask(),
+        ],
+        dependencies: [dep(1, 99, "FS", 2)],
+        calendars: cals(1, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      // 06-25 −1 −lag2 = 06-22(月)
+      const pred = result.find((r) => r.taskId === 1)!;
+      expect(pred.scheduledEndDate).toEqual(new Date(2026, 5, 22));
+    });
+
+    test("SS依存: 先行は固定開始日と同日に開始できる(並行作業)", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 16 }),
+          deployTask(),
+        ],
+        dependencies: [dep(1, 99, "SS")],
+        calendars: cals(1, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      const pred = result.find((r) => r.taskId === 1)!;
+      expect(pred.scheduledStartDate).toEqual(new Date(2026, 5, 25));
+      expect(pred.scheduledEndDate).toEqual(new Date(2026, 5, 26));
+      expect(pred.note).toBe("BACKWARD_FROM_FIXED");
+      expect(result.find((r) => r.taskId === 99)!.note).toBe("FIXED_DATE");
+    });
+
+    test("同一担当者の逆算タスク同士は稼働を分け合う", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 }),
+          task({ taskId: 2, taskNo: "0002", assigneeId: 1, yoteiKosu: 8 }),
+          deployTask(),
+        ],
+        dependencies: [dep(1, 99, "FS"), dep(2, 99, "FS")],
+        calendars: cals(1, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      // 双方の締切は 06-24。後に処理される方が 06-23 へ退避し二重予約しない
+      const days = [1, 2]
+        .map((id) => result.find((r) => r.taskId === id)!.scheduledStartDate!.getTime())
+        .sort();
+      expect(days).toEqual([
+        new Date(2026, 5, 23).getTime(),
+        new Date(2026, 5, 24).getTime(),
+      ]);
+    });
+
+    test("チェーン外の通常タスクは基準日から前詰めのまま(空いた前方稼働を使える)", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 }),
+          task({ taskId: 2, taskNo: "0002", assigneeId: 1, yoteiKosu: 8 }),
+          deployTask(),
+        ],
+        dependencies: [dep(1, 99, "FS")],
+        calendars: cals(1, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      // チェーンの t1 は 06-24 へ逆算、非チェーンの t2 は基準日 06-15 から
+      expect(result.find((r) => r.taskId === 1)!.scheduledStartDate).toEqual(
+        new Date(2026, 5, 24)
+      );
+      expect(result.find((r) => r.taskId === 2)!.scheduledStartDate).toEqual(
+        new Date(2026, 5, 15)
+      );
+    });
+
+    test("逆算タスクの後続(通常タスク)は逆算結果を尊重して前詰めされる", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 }),
+          task({ taskId: 2, taskNo: "0002", assigneeId: 2, yoteiKosu: 8 }),
+          deployTask(),
+        ],
+        dependencies: [dep(1, 99, "FS"), dep(1, 2, "FS")],
+        calendars: cals(1, 2, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      // t1 = 06-24(逆算) → t2 は翌営業日 06-25 から
+      expect(result.find((r) => r.taskId === 2)!.scheduledStartDate).toEqual(
+        new Date(2026, 5, 25)
+      );
+    });
+
+    test("固定タスクに挟まれたタスクも後方の固定日から逆算される", () => {
+      const result = forwardSchedule({
+        tasks: [
+          deployTask({
+            taskId: 98,
+            taskNo: "0098",
+            assigneeId: 8,
+            yoteiStartDate: new Date(2026, 5, 22),
+            yoteiEndDate: new Date(2026, 5, 22),
+          }),
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 }),
+          deployTask(),
+        ],
+        dependencies: [dep(98, 1, "FS"), dep(1, 99, "FS")],
+        calendars: cals(1, 8, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      const mid = result.find((r) => r.taskId === 1)!;
+      expect(mid.scheduledStartDate).toEqual(new Date(2026, 5, 24));
+      expect(mid.note).toBe("BACKWARD_FROM_FIXED");
+      expect(result.find((r) => r.taskId === 98)!.note).toBe("FIXED_DATE");
+      expect(result.find((r) => r.taskId === 99)!.note).toBe("FIXED_DATE");
+    });
+
+    test("進行中タスクは残工数で逆算される", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({
+            taskId: 1,
+            taskNo: "0001",
+            assigneeId: 1,
+            status: "IN_PROGRESS",
+            yoteiKosu: 24,
+            jissekiKosu: 16,
+          }),
+          deployTask(),
+        ],
+        dependencies: [dep(1, 99, "FS")],
+        calendars: cals(1, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      const pred = result.find((r) => r.taskId === 1)!;
+      // 残工数8h → 06-24 の1日で収まる
+      expect(pred.scheduledStartDate).toEqual(new Date(2026, 5, 24));
+      expect(pred.scheduledEndDate).toEqual(new Date(2026, 5, 24));
+      expect(pred.scheduledManHours).toBe(8);
+      expect(pred.note).toBe("BACKWARD_FROM_FIXED");
+    });
+
+    test("基準日までに収まらない先行は前詰めへフォールバックしFIXED_DATE_CONFLICT", () => {
+      const result = forwardSchedule({
+        tasks: [
+          // 80h は 06-15〜06-24 の稼働(64h)に収まらない
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 80 }),
+          deployTask(),
+        ],
+        dependencies: [dep(1, 99, "FS")],
+        calendars: cals(1, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      const pred = result.find((r) => r.taskId === 1)!;
+      // 従来どおり基準日から前詰めされ、固定日を超過する
+      expect(pred.scheduledStartDate).toEqual(new Date(2026, 5, 15));
+      expect(pred.scheduledEndDate).toEqual(new Date(2026, 5, 26));
+      expect(pred.note).toBe("NORMAL");
+      expect(result.find((r) => r.taskId === 99)!.note).toBe(
+        "FIXED_DATE_CONFLICT"
+      );
+    });
+
+    test("チェーン上流が間に合わない場合は競合が固定タスクまで伝播する", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 80 }),
+          task({ taskId: 2, taskNo: "0002", assigneeId: 2, yoteiKosu: 8 }),
+          deployTask(),
+        ],
+        dependencies: [dep(1, 2, "FS"), dep(2, 99, "FS")],
+        calendars: cals(1, 2, 9),
+        standardWorkingHours: 8,
+        options: fixedOpts(),
+      });
+      // t2 は 06-24 へ逆算済みだが、t1(前詰め 06-15..06-26)が間に合わない
+      const mid = result.find((r) => r.taskId === 2)!;
+      expect(mid.scheduledStartDate).toEqual(new Date(2026, 5, 24));
+      expect(mid.note).toBe("FIXED_DATE_CONFLICT");
+      expect(result.find((r) => r.taskId === 99)!.note).toBe(
+        "FIXED_DATE_CONFLICT"
+      );
+    });
+  });
+
   test("循環依存に含まれるタスクはskip(CYCLIC)し他は計算続行", () => {
     const result = forwardSchedule({
       tasks: [
