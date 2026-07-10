@@ -282,3 +282,44 @@ describe("SchedulingPreconditionService.checkFixedDateConflicts", () => {
     expect(w).toEqual([]);
   });
 });
+
+describe("SchedulingPreconditionService.checkFixedPeriodExceeded", () => {
+  const scheduled = (over: Partial<ScheduledTask>): ScheduledTask => ({
+    taskId: 0,
+    taskNo: "0000",
+    taskName: "task",
+    status: "NOT_STARTED",
+    isSteady: false,
+    fixed: false,
+    skipped: false,
+    note: "NORMAL",
+    predecessors: [],
+    ...over,
+  });
+
+  test("FIXED_PERIOD_EXCEEDEDのタスクを警告として抽出する", () => {
+    const w = SchedulingPreconditionService.checkFixedPeriodExceeded([
+      scheduled({ taskId: 1, taskNo: "0001", note: "FIXED_DATE" }),
+      scheduled({
+        taskId: 2,
+        taskNo: "0002",
+        taskName: "本番導入",
+        note: "FIXED_PERIOD_EXCEEDED",
+      }),
+    ]);
+    expect(w).toEqual([
+      expect.objectContaining({
+        kind: "FIXED_PERIOD_EXCEEDED",
+        taskNo: "0002",
+      }),
+    ]);
+  });
+
+  test("超過がなければ空配列", () => {
+    const w = SchedulingPreconditionService.checkFixedPeriodExceeded([
+      scheduled({ taskId: 1, taskNo: "0001", note: "FIXED_DATE" }),
+      scheduled({ taskId: 2, taskNo: "0002", note: "FIXED_DATE_CONFLICT" }),
+    ]);
+    expect(w).toEqual([]);
+  });
+});
