@@ -9,8 +9,6 @@ import type { scheduleTsvData } from "@/types/csv";
 import type { ScheduleEntry } from "@/types/schedule";
 import type { ActionResult } from "@/types/action-result";
 
-export type { ScheduleEntry };
-
 function getScheduleApplicationService(): IScheduleApplicationService {
     return container.get<IScheduleApplicationService>(SYMBOL.IScheduleApplicationService);
 }
