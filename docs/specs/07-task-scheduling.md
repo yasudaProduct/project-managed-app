@@ -136,8 +136,8 @@ UIの基準日が非稼働日（土日祝等）の場合でも、実際の各タ
 ### 7.2 フェーズB: 実施日固定・定常タスクの先置き
 前詰めしないタスクを、依存の先行として参照可能にするため YOTEI 期間のまま結果に**先置き**する。判定は**実施日固定を優先**し、その後に定常を判定する（両方のキーワードに一致する場合は固定扱い）。
 
-- **実施日固定タスク**（`isFixedDateTask`）: `scheduledStart = yoteiStart`, `scheduledEnd = yoteiEnd`, `note = FIXED_DATE`。工数0でも配置する。YOTEI 期間が無ければ `FIXED_NO_PERIOD` skip。担当者の稼働は消費しない（[§10](#10-既知の制約と今後の課題)）。
-- **定常タスク**（`isSteadyTask`）: YOTEI 期間のまま先置き。期間が無ければ `STEADY_NO_PERIOD` skip。
+- **実施日固定タスク**（`isFixedDateTask`）: `scheduledStart = yoteiStart`, `scheduledEnd = yoteiEnd`, `note = FIXED_DATE`。工数0でも配置する。YOTEI 期間が無ければ `FIXED_NO_PERIOD` skip。**通常タスクと同様に担当者の稼働を消費する**（一回性の確定作業のため。予定工数を固定期間内の稼働日へ按分し `consumed` へ加算。フラグ不要で常時消費）。同一担当者の通常タスクはこの占有を避けて前詰めされる。
+- **定常タスク**（`isSteadyTask`）: YOTEI 期間のまま先置き。期間が無ければ `STEADY_NO_PERIOD` skip。稼働消費は `consumeSteadyTaskCapacity`（既定 false）に従う。
 
 `consumeSteadyTaskCapacity = true` の場合、定常タスクが期間中の各稼働日に消費する工数を担当者ごとの消費マップ `consumed[assigneeId][YYYY-MM-DD]` に加算する。日次消費量は次で決まる:
 
@@ -239,7 +239,7 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 - **DB書き戻し非対応**: 計算結果はプレビュー＋TSVのみ。WBSへの反映は MySQL/Excel インポートが本流（[§1](#1-概要)）。
 - **FF/SF依存は近似**: 後続の所要日数を理想営業日数で近似するため、休暇・参画率が絡むと誤差が出る。終了日からの逆算（`consumeBackward`）による厳密化は局所改修で対応可能だが未実装。
 - **リソース制約の同時最適化は非対応**: 依存・担当者稼働・定常消費を満たす厳密な最適解（リソース制約付きスケジューリング）は対象外。前詰めヒューリスティックによる試算である。
-- **実施日固定タスクの判定はキーワード方式**: 固定対象はタスク名の部分一致（`fixedDateTaskKeywords`）で判定する。命名に依存するため、1タスク単位の厳密な指定が必要な場合は将来的にタスク単位のフラグ（例: `WbsTask.scheduleFixed`）への拡張が想定される。また固定タスクは担当者の稼働を消費しない（同一担当者の通常タスクは固定タスクの占有を考慮せず前詰めされる）。
+- **実施日固定タスクの判定はキーワード方式**: 固定対象はタスク名の部分一致（`fixedDateTaskKeywords`）で判定する。命名に依存するため、1タスク単位の厳密な指定が必要な場合は将来的にタスク単位のフラグ（例: `WbsTask.scheduleFixed`）への拡張が想定される。なお固定タスクは通常タスク同様に担当者の稼働を消費する（同一担当者の通常タスクは固定タスクの占有を避けて前詰めされる）。工数の期間内配分は按分（`予定工数 ÷ 固定期間内の稼働日数`）で近似する。
 - **タイムゾーン前提**: エンジンの日付キーは**サーバーのローカル日付**（`toDateKey`）で、入力の日付（プロジェクト開始日・CUSTOM基準日等）は UTC 深夜の `Date` を想定する。サーバーTZが UTC（推奨）または UTC+側（JST等）なら日付は一致するが、UTC−側のTZでは1日ずれる。実行環境の TZ は UTC 固定を推奨（CLAUDE.md の日付ポリシー参照）。
 - **全日休暇キーワードのハードコード**: 個人予定を全日休暇とみなすタイトル（「休暇」「有給」等）は `AssigneeWorkingCalendar` にハードコードされており、設定化は未対応。
 

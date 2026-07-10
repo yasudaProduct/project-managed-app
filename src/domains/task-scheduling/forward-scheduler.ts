@@ -26,7 +26,32 @@ export interface ForwardSchedulerInput {
   options: SchedulingOptions;
 }
 
-const STEADY_MAX_DAYS = 366 * 5;
+const MAX_PERIOD_DAYS = 366 * 5;
+
+/**
+ * タスクの日次消費量を期間内の各稼働日に加算し、担当者の消費マップへ反映する。
+ * 前詰めしないタスク（実施日固定・定常）が担当者の稼働を占有していることを、
+ * 後続の通常タスクの前詰めへ反映するために使う。
+ */
+function consumePeriodCapacity(
+  periodStart: Date,
+  periodEnd: Date,
+  dailyHours: number,
+  cal: WorkingCalendar,
+  consumed: Map<string, number>
+): void {
+  if (dailyHours <= 0) return;
+  let cur = new Date(periodStart);
+  let iter = 0;
+  while (cur.getTime() <= periodEnd.getTime() && iter < MAX_PERIOD_DAYS) {
+    if (cal.getAvailableHours(cur) > 0) {
+      const key = toDateKey(cur);
+      consumed.set(key, (consumed.get(key) ?? 0) + dailyHours);
+    }
+    cur = addCalendarDays(cur, 1);
+    iter++;
+  }
+}
 
 /**
  * 依存関係・担当者稼働・定常タスク・ステータスを考慮した前詰めスケジューリング。
@@ -131,6 +156,29 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       scheduledEndDate: t.yoteiEndDate,
       scheduledManHours: t.yoteiKosu ?? 0,
     });
+
+    // 固定タスクは一回性の確定作業であり、通常タスク同様に担当者の稼働を消費する。
+    // 予定工数を固定期間内の稼働日へ按分し、同一担当者の通常タスクが固定タスクの
+    // 占有時間を避けて前詰めされるようにする。
+    if (t.assigneeId != null) {
+      const cal = calendars.get(t.assigneeId);
+      if (cal) {
+        const workingDays = countWorkingDays(
+          t.yoteiStartDate,
+          t.yoteiEndDate,
+          cal
+        );
+        const dailyHours =
+          workingDays > 0 ? (t.yoteiKosu ?? 0) / workingDays : 0;
+        consumePeriodCapacity(
+          t.yoteiStartDate,
+          t.yoteiEndDate,
+          dailyHours,
+          cal,
+          consumedOf(t.assigneeId)
+        );
+      }
+    }
   }
 
   // ---- フェーズB: 定常タスク先置き（前詰めしない） ----
@@ -158,23 +206,13 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
     if (options.consumeSteadyTaskCapacity && t.assigneeId != null) {
       const cal = calendars.get(t.assigneeId);
       if (cal) {
-        const dailyHours = computeSteadyDailyHours(t, cal, options);
-        if (dailyHours > 0) {
-          const m = consumedOf(t.assigneeId);
-          let cur = new Date(t.yoteiStartDate);
-          let iter = 0;
-          while (
-            cur.getTime() <= t.yoteiEndDate.getTime() &&
-            iter < STEADY_MAX_DAYS
-          ) {
-            if (cal.getAvailableHours(cur) > 0) {
-              const key = toDateKey(cur);
-              m.set(key, (m.get(key) ?? 0) + dailyHours);
-            }
-            cur = addCalendarDays(cur, 1);
-            iter++;
-          }
-        }
+        consumePeriodCapacity(
+          t.yoteiStartDate,
+          t.yoteiEndDate,
+          computeSteadyDailyHours(t, cal, options),
+          cal,
+          consumedOf(t.assigneeId)
+        );
       }
     }
   }
