@@ -261,20 +261,14 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
 
     // 依存制約による最早開始下限
     let startLB = baselineDate;
-    for (const p of predecessorsOf.get(taskId) ?? []) {
-      const pr = result.get(p.taskId);
-      if (!pr || pr.skipped || !pr.scheduledStartDate || !pr.scheduledEndDate) {
-        continue;
-      }
-      const impl = impliedStart(
-        p.type,
-        p.lag,
-        pr.scheduledStartDate,
-        pr.scheduledEndDate,
-        estimatedDurationDays(t, standardWorkingHours)
-      );
-      if (impl.getTime() > startLB.getTime()) startLB = impl;
-    }
+    const predLB = predecessorLowerBound(
+      taskId,
+      t,
+      predecessorsOf,
+      result,
+      standardWorkingHours
+    );
+    if (predLB && predLB.getTime() > startLB.getTime()) startLB = predLB;
     // 同一担当者の稼働列制約
     const freeFrom = assigneeFreeFrom.get(assigneeId);
     if (freeFrom && freeFrom.getTime() > startLB.getTime()) startLB = freeFrom;
@@ -316,22 +310,15 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
     if (r.note !== "FIXED_DATE" || !r.scheduledStartDate) continue;
     const t = taskById.get(taskId);
     if (!t) continue;
-    for (const p of predecessorsOf.get(taskId) ?? []) {
-      const pr = result.get(p.taskId);
-      if (!pr || pr.skipped || !pr.scheduledStartDate || !pr.scheduledEndDate) {
-        continue;
-      }
-      const impl = impliedStart(
-        p.type,
-        p.lag,
-        pr.scheduledStartDate,
-        pr.scheduledEndDate,
-        estimatedDurationDays(t, standardWorkingHours)
-      );
-      if (impl.getTime() > r.scheduledStartDate.getTime()) {
-        conflictIds.push(taskId);
-        break;
-      }
+    const predLB = predecessorLowerBound(
+      taskId,
+      t,
+      predecessorsOf,
+      result,
+      standardWorkingHours
+    );
+    if (predLB && predLB.getTime() > r.scheduledStartDate.getTime()) {
+      conflictIds.push(taskId);
     }
   }
   for (const taskId of conflictIds) {
@@ -372,7 +359,7 @@ function computeSteadyDailyHours(
   return (t.yoteiKosu ?? 0) / workingDays;
 }
 
-/** 後続タスクの仮の所要営業日数（FF/SF の開始下限近似に使用） */
+/** タスクの仮の所要営業日数（FF/SF の開始下限近似、固定タスクの先行超過判定に使用） */
 function estimatedDurationDays(
   t: SchedulingTask,
   standardWorkingHours: number
@@ -380,6 +367,36 @@ function estimatedDurationDays(
   const kosu = t.yoteiKosu ?? 0;
   if (kosu <= 0 || standardWorkingHours <= 0) return 1;
   return Math.max(1, Math.ceil(kosu / standardWorkingHours));
+}
+
+/**
+ * 先行タスクの確定結果から taskId の最早開始下限を求める（未確定の先行は無視）。
+ * 先行が無い、または全先行が未確定なら undefined。
+ * フェーズC（通常タスクの開始下限）とフェーズD（固定タスクの先行超過検出）で共用する。
+ */
+function predecessorLowerBound(
+  taskId: number,
+  t: SchedulingTask,
+  predecessorsOf: Map<number, ScheduledPredecessor[]>,
+  result: Map<number, ScheduledTask>,
+  standardWorkingHours: number
+): Date | undefined {
+  let lb: Date | undefined;
+  for (const p of predecessorsOf.get(taskId) ?? []) {
+    const pr = result.get(p.taskId);
+    if (!pr || pr.skipped || !pr.scheduledStartDate || !pr.scheduledEndDate) {
+      continue;
+    }
+    const impl = impliedStart(
+      p.type,
+      p.lag,
+      pr.scheduledStartDate,
+      pr.scheduledEndDate,
+      estimatedDurationDays(t, standardWorkingHours)
+    );
+    if (!lb || impl.getTime() > lb.getTime()) lb = impl;
+  }
+  return lb;
 }
 
 /**

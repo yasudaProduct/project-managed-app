@@ -776,7 +776,7 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
           <div>
             <Label className="text-base font-medium">スケジュール計算設定</Label>
             <div className="text-sm text-gray-500 mt-1">
-              スケジュールタブの前詰め計算における定常タスクの扱いを設定します。
+              スケジュールタブの前詰め計算における定常タスク・実施日固定タスクの扱いを設定します。
             </div>
           </div>
 
