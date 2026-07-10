@@ -12,7 +12,6 @@ import {
   type WorkingCalendar,
   nextAvailableDay,
   consumeUntilDone,
-  consumeBackward,
   countWorkingDays,
   addCalendarDays,
   toDateKey,
@@ -28,21 +27,6 @@ export interface ForwardSchedulerInput {
 }
 
 const MAX_PERIOD_DAYS = 366 * 5;
-
-/** 後続タスクへの依存参照（predecessorsOf の逆引き） */
-interface SuccessorRef {
-  taskId: number;
-  type: DependencyType;
-  lag: number;
-}
-
-/** このスケジュールで消化すべき工数（進行中は残工数、それ以外は予定工数） */
-function remainingHours(t: SchedulingTask): number {
-  if (t.status === "IN_PROGRESS") {
-    return Math.max(0, (t.yoteiKosu ?? 0) - (t.jissekiKosu ?? 0));
-  }
-  return t.yoteiKosu ?? 0;
-}
 
 /**
  * タスクの日次消費量を期間内の各稼働日に加算し、担当者の消費マップへ反映する。
@@ -81,14 +65,10 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
   for (const t of tasks) taskById.set(t.taskId, t);
 
   const predecessorsOf = new Map<number, ScheduledPredecessor[]>();
-  const successorsOf = new Map<number, SuccessorRef[]>();
   for (const d of dependencies) {
     const list = predecessorsOf.get(d.successorTaskId) ?? [];
     list.push({ taskId: d.predecessorTaskId, type: d.type, lag: d.lag });
     predecessorsOf.set(d.successorTaskId, list);
-    const succs = successorsOf.get(d.predecessorTaskId) ?? [];
-    succs.push({ taskId: d.successorTaskId, type: d.type, lag: d.lag });
-    successorsOf.set(d.predecessorTaskId, succs);
   }
 
   const result = new Map<number, ScheduledTask>();
@@ -155,9 +135,11 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
     }
   }
 
-  // ---- フェーズA2: 実施日固定タスクを予定期間で固定（前詰めしない） ----
+  // ---- フェーズA2: 実施日固定タスクを開始日固定・終了日算出で配置（前詰めしない） ----
   // 本番導入・定例会など実施日が確定しているタスクは、前詰めの対象から外し
-  // 入力済みのYOTEI期間をそのまま採用する。定常判定より優先する。
+  // 入力済みの予定開始日をそのまま採用する（非稼働日でも動かさない）。定常判定より優先する。
+  // 終了日は予定工数を開始日以降の稼働可能時間で消化して算出し、算出終了日が
+  // 入力された終了日を超える場合は FIXED_PERIOD_EXCEEDED として警告する（日付は算出値のまま）。
   for (const t of tasks) {
     if (result.has(t.taskId)) continue;
     if (!isFixedDateTask(t.taskName, fixedDateTaskKeywords)) continue;
@@ -169,36 +151,42 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       });
       continue;
     }
-    result.set(t.taskId, {
-      ...baseResult(t),
-      note: "FIXED_DATE",
-      scheduledStartDate: t.yoteiStartDate,
-      scheduledEndDate: t.yoteiEndDate,
-      scheduledManHours: t.yoteiKosu ?? 0,
-    });
+    const kosu = t.yoteiKosu ?? 0;
+    const cal = t.assigneeId != null ? calendars.get(t.assigneeId) : undefined;
+    if (kosu <= 0 || !cal) {
+      // 工数が無い（マイルストーン等）またはカレンダー未登録なら終了日を算出できない
+      // ため、入力された期間をそのまま採用する
+      result.set(t.taskId, {
+        ...baseResult(t),
+        note: "FIXED_DATE",
+        scheduledStartDate: t.yoteiStartDate,
+        scheduledEndDate: t.yoteiEndDate,
+        scheduledManHours: kosu,
+      });
+      continue;
+    }
 
     // 固定タスクは一回性の確定作業であり、通常タスク同様に担当者の稼働を消費する。
-    // 予定工数を固定期間内の稼働日へ按分し、同一担当者の通常タスクが固定タスクの
-    // 占有時間を避けて前詰めされるようにする。
-    if (t.assigneeId != null) {
-      const cal = calendars.get(t.assigneeId);
-      if (cal) {
-        const workingDays = countWorkingDays(
-          t.yoteiStartDate,
-          t.yoteiEndDate,
-          cal
-        );
-        const dailyHours =
-          workingDays > 0 ? (t.yoteiKosu ?? 0) / workingDays : 0;
-        consumePeriodCapacity(
-          t.yoteiStartDate,
-          t.yoteiEndDate,
-          dailyHours,
-          cal,
-          consumedOf(t.assigneeId)
-        );
-      }
-    }
+    // consumeUntilDone が消化分を consumed に記録するため、同一担当者の通常タスクは
+    // 固定タスクの占有時間を避けて前詰めされる。
+    const { endDate, overflow } = consumeUntilDone(
+      t.yoteiStartDate,
+      kosu,
+      cal,
+      consumedOf(t.assigneeId!)
+    );
+    const exceeded = endDate.getTime() > t.yoteiEndDate.getTime();
+    result.set(t.taskId, {
+      ...baseResult(t),
+      note: overflow
+        ? "SCHEDULE_OVERFLOW"
+        : exceeded
+          ? "FIXED_PERIOD_EXCEEDED"
+          : "FIXED_DATE",
+      scheduledStartDate: t.yoteiStartDate,
+      scheduledEndDate: endDate,
+      scheduledManHours: kosu,
+    });
   }
 
   // ---- フェーズB: 定常タスク先置き（前詰めしない） ----
@@ -237,73 +225,6 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
     }
   }
 
-  // ---- フェーズB2: 実施日固定タスクの先行チェーンを固定日から逆算配置 ----
-  // 固定タスクの先行チェーン（未確定の通常タスク）を、後続の確定日程から導いた
-  // 最遅終了日を締切として後方から工数消費し、固定日に間に合う最遅日程で配置する。
-  // 基準日より前に食い込む（＝物理的に間に合わない）タスクは逆算せず、
-  // 従来どおりフェーズCで前詰めし、フェーズDで FIXED_DATE_CONFLICT として検出する。
-  const backwardChainIds = new Set<number>();
-  {
-    const queue: number[] = [];
-    for (const [taskId, r] of result) {
-      if (r.note === "FIXED_DATE") queue.push(taskId);
-    }
-    while (queue.length > 0) {
-      const id = queue.pop()!;
-      for (const p of predecessorsOf.get(id) ?? []) {
-        if (backwardChainIds.has(p.taskId)) continue;
-        // 確定済み（完了/固定/定常/skip）のタスクで遡上を止める
-        if (result.has(p.taskId) || !taskById.has(p.taskId)) continue;
-        backwardChainIds.add(p.taskId);
-        queue.push(p.taskId);
-      }
-    }
-  }
-  const chainEdges: TopoEdge[] = dependencies
-    .filter(
-      (d) =>
-        backwardChainIds.has(d.predecessorTaskId) &&
-        backwardChainIds.has(d.successorTaskId)
-    )
-    .map((d) => ({ from: d.predecessorTaskId, to: d.successorTaskId }));
-  const chainTopo = topologicalSort([...backwardChainIds], chainEdges);
-  // 逆トポロジカル順（後続→先行）に締切を伝播させる。循環はフェーズCでCYCLIC扱い
-  for (const taskId of [...chainTopo.ordered].reverse()) {
-    const t = taskById.get(taskId)!;
-    const cal = t.assigneeId != null ? calendars.get(t.assigneeId) : undefined;
-    if (!cal) continue; // カレンダー未登録はフェーズCで NO_ASSIGNEE skip
-
-    const deadline = successorUpperBound(
-      taskId,
-      t,
-      successorsOf,
-      result,
-      standardWorkingHours
-    );
-    if (!deadline) continue; // 締切を導けない場合は前詰めへ
-
-    const cons = consumedOf(t.assigneeId!);
-    const placed = consumeBackward(
-      deadline,
-      remainingHours(t),
-      cal,
-      cons,
-      baselineDate
-    );
-    if (!placed) continue; // 基準日までに収まらない → 前詰めフォールバック
-
-    for (const [key, hours] of placed.delta) {
-      cons.set(key, (cons.get(key) ?? 0) + hours);
-    }
-    result.set(taskId, {
-      ...baseResult(t),
-      note: "BACKWARD_FROM_FIXED",
-      scheduledStartDate: placed.startDate,
-      scheduledEndDate: placed.endDate,
-      scheduledManHours: remainingHours(t),
-    });
-  }
-
   // ---- フェーズC: 通常タスクをトポロジカル順に前詰め ----
   const normalIds = tasks
     .filter((t) => !result.has(t.taskId))
@@ -337,9 +258,14 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       continue;
     }
 
-    const remaining = remainingHours(t);
-    const note: ScheduledTask["note"] =
-      t.status === "IN_PROGRESS" ? "IN_PROGRESS_REMAINING" : "NORMAL";
+    let remaining: number;
+    let note: ScheduledTask["note"] = "NORMAL";
+    if (t.status === "IN_PROGRESS") {
+      remaining = Math.max(0, (t.yoteiKosu ?? 0) - (t.jissekiKosu ?? 0));
+      note = "IN_PROGRESS_REMAINING";
+    } else {
+      remaining = t.yoteiKosu ?? 0;
+    }
 
     // 依存制約による最早開始下限
     let startLB = baselineDate;
@@ -384,15 +310,14 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
     assigneeFreeFrom.set(assigneeId, endDate);
   }
 
-  // ---- フェーズD: 実施日固定・逆算タスクの先行超過を検出 ----
-  // 先行タスクの算出結果が固定/逆算配置の開始日より後ろへずれ込む場合、前工程が
-  // 固定日に間に合わない競合として note を FIXED_DATE_CONFLICT に更新する
-  // （日付は変更しない）。競合は依存の下流にある固定・逆算タスクへも伝播させ、
-  // 固定日に間に合わないリスクの連鎖を明示する。
+  // ---- フェーズD: 実施日固定タスクの先行超過を検出 ----
+  // 先行タスクの算出結果が固定開始日より後ろへずれ込む場合、前工程が固定日に
+  // 間に合わない競合として note を FIXED_DATE_CONFLICT に更新する（日付はそのまま）。
+  // 期間超過(FIXED_PERIOD_EXCEEDED)と競合が重なる場合はリスケ判断上より重要な競合を優先する。
   const conflictIds: number[] = [];
   for (const [taskId, r] of result) {
     if (
-      (r.note !== "FIXED_DATE" && r.note !== "BACKWARD_FROM_FIXED") ||
+      (r.note !== "FIXED_DATE" && r.note !== "FIXED_PERIOD_EXCEEDED") ||
       !r.scheduledStartDate
     ) {
       continue;
@@ -410,23 +335,7 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       conflictIds.push(taskId);
     }
   }
-  const conflictSet = new Set(conflictIds);
-  {
-    const queue = [...conflictIds];
-    while (queue.length > 0) {
-      const id = queue.pop()!;
-      for (const s of successorsOf.get(id) ?? []) {
-        if (conflictSet.has(s.taskId)) continue;
-        const sr = result.get(s.taskId);
-        if (!sr) continue;
-        if (sr.note === "FIXED_DATE" || sr.note === "BACKWARD_FROM_FIXED") {
-          conflictSet.add(s.taskId);
-          queue.push(s.taskId);
-        }
-      }
-    }
-  }
-  for (const taskId of conflictSet) {
+  for (const taskId of conflictIds) {
     const r = result.get(taskId)!;
     result.set(taskId, { ...r, note: "FIXED_DATE_CONFLICT" });
   }
@@ -502,61 +411,6 @@ function predecessorLowerBound(
     if (!lb || impl.getTime() > lb.getTime()) lb = impl;
   }
   return lb;
-}
-
-/**
- * 後続タスクの確定結果から taskId の最遅終了日（締切）を求める（未確定の後続は無視）。
- * 後続が無い、または全後続が未確定なら undefined。
- * フェーズB2（固定タスクの先行チェーン逆算）で使用する。
- */
-function successorUpperBound(
-  taskId: number,
-  t: SchedulingTask,
-  successorsOf: Map<number, SuccessorRef[]>,
-  result: Map<number, ScheduledTask>,
-  standardWorkingHours: number
-): Date | undefined {
-  let ub: Date | undefined;
-  for (const s of successorsOf.get(taskId) ?? []) {
-    const sr = result.get(s.taskId);
-    if (!sr || sr.skipped || !sr.scheduledStartDate || !sr.scheduledEndDate) {
-      continue;
-    }
-    const impl = impliedLatestEnd(
-      s.type,
-      s.lag,
-      sr.scheduledStartDate,
-      sr.scheduledEndDate,
-      estimatedDurationDays(t, standardWorkingHours)
-    );
-    if (!ub || impl.getTime() < ub.getTime()) ub = impl;
-  }
-  return ub;
-}
-
-/**
- * 依存種別と lag(カレンダー日)から先行タスクの最遅終了日を求める（impliedStart の逆）。
- * FS/FF は厳密、SS/SF は開始日制約のため先行の仮 duration を用いた近似。
- */
-function impliedLatestEnd(
-  type: DependencyType,
-  lag: number,
-  succStart: Date,
-  succEnd: Date,
-  durationDays: number
-): Date {
-  switch (type) {
-    case "FS":
-      return addCalendarDays(succStart, -(1 + lag));
-    case "SS":
-      return addCalendarDays(succStart, -lag + durationDays - 1);
-    case "FF":
-      return addCalendarDays(succEnd, -lag);
-    case "SF":
-      return addCalendarDays(succEnd, -lag + durationDays - 1);
-    default:
-      return addCalendarDays(succStart, -(1 + lag));
-  }
 }
 
 /**

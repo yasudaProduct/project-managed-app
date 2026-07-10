@@ -145,6 +145,11 @@ export class SchedulingApplicationService
       ...SchedulingPreconditionService.checkFixedDateConflicts(scheduledTasks)
     );
 
+    // 実施日固定タスクの期間超過（予定工数が入力期間に収まらない）を警告
+    warnings.push(
+      ...SchedulingPreconditionService.checkFixedPeriodExceeded(scheduledTasks)
+    );
+
     // 計算結果がプロジェクト終了日に収まらないタスクを警告（リスケ判断の主要シグナル）
     if (project.endDate) {
       warnings.push(

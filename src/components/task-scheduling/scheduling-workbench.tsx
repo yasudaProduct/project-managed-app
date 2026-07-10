@@ -58,6 +58,7 @@ const WARNING_LABELS: Record<string, string> = {
   STEADY_NO_PERIOD: "定常タスク期間未設定",
   FIXED_NO_PERIOD: "実施日固定タスク期間未設定",
   FIXED_DATE_CONFLICT: "実施日固定タスク前工程超過",
+  FIXED_PERIOD_EXCEEDED: "実施日固定タスク期間超過",
   ON_HOLD: "保留タスク",
   COMPLETED_NO_PERIOD: "完了タスク日程なし",
   EXCEEDS_PROJECT_END: "プロジェクト終了日超過",

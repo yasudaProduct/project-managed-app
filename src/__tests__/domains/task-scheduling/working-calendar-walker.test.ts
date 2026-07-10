@@ -2,7 +2,6 @@ import {
   nextAvailableDay,
   nextBusinessDay,
   consumeUntilDone,
-  consumeBackward,
   countWorkingDays,
   type WorkingCalendar,
 } from "@/domains/task-scheduling/working-calendar-walker";
@@ -94,73 +93,6 @@ describe("working-calendar-walker", () => {
       expect(r.endDate).toEqual(new Date(2026, 5, 16));
       expect(consumed.get("2026-06-15")).toBe(8);
       expect(consumed.get("2026-06-16")).toBe(2);
-    });
-  });
-
-  describe("consumeBackward", () => {
-    const floor = new Date(2026, 5, 15); // 月曜(基準日)
-
-    test("1日で終わる: 締切日が開始日=終了日になる", () => {
-      const r = consumeBackward(new Date(2026, 5, 24), 8, weekday8, undefined, floor)!;
-      expect(r).not.toBeNull();
-      expect(r.startDate).toEqual(new Date(2026, 5, 24));
-      expect(r.endDate).toEqual(new Date(2026, 5, 24));
-      expect(r.delta.get("2026-06-24")).toBe(8);
-    });
-
-    test("複数日工数は締切日から後方へ積む", () => {
-      const r = consumeBackward(new Date(2026, 5, 24), 24, weekday8, undefined, floor)!;
-      expect(r).not.toBeNull();
-      expect(r.startDate).toEqual(new Date(2026, 5, 22));
-      expect(r.endDate).toEqual(new Date(2026, 5, 24));
-    });
-
-    test("締切が非稼働日なら直前の稼働日が終了日になり、週末を跨いで遡る", () => {
-      // 06-21 は日曜 → 終了日は 06-19(金)。16h は 06-18(木)〜06-19(金)
-      const r = consumeBackward(new Date(2026, 5, 21), 16, weekday8, undefined, floor)!;
-      expect(r).not.toBeNull();
-      expect(r.startDate).toEqual(new Date(2026, 5, 18));
-      expect(r.endDate).toEqual(new Date(2026, 5, 19));
-    });
-
-    test("consumedで満杯の日はスキップし、consumed自体は変更しない", () => {
-      const consumed = new Map([["2026-06-24", 8]]);
-      const r = consumeBackward(new Date(2026, 5, 24), 8, weekday8, consumed, floor)!;
-      expect(r).not.toBeNull();
-      expect(r.startDate).toEqual(new Date(2026, 5, 23));
-      expect(r.endDate).toEqual(new Date(2026, 5, 23));
-      expect(r.delta.get("2026-06-23")).toBe(8);
-      expect(consumed.get("2026-06-24")).toBe(8); // 変更なし
-      expect(consumed.has("2026-06-23")).toBe(false); // deltaに分離
-    });
-
-    test("部分消費の日は残余だけ使って後方へ続く", () => {
-      const consumed = new Map([["2026-06-24", 6]]);
-      const r = consumeBackward(new Date(2026, 5, 24), 8, weekday8, consumed, floor)!;
-      expect(r).not.toBeNull();
-      expect(r.startDate).toEqual(new Date(2026, 5, 23));
-      expect(r.endDate).toEqual(new Date(2026, 5, 24));
-      expect(r.delta.get("2026-06-24")).toBe(2);
-      expect(r.delta.get("2026-06-23")).toBe(6);
-    });
-
-    test("floor(基準日)までに収まらなければnull", () => {
-      // 06-15(月)〜06-16(火) の16hしか無いのに24h → 配置不可
-      const r = consumeBackward(new Date(2026, 5, 16), 24, weekday8, undefined, floor);
-      expect(r).toBeNull();
-    });
-
-    test("締切がfloorより前ならnull", () => {
-      const r = consumeBackward(new Date(2026, 5, 14), 8, weekday8, undefined, floor);
-      expect(r).toBeNull();
-    });
-
-    test("工数0は締切以前の直近稼働日に配置し、稼働は消費しない", () => {
-      const r = consumeBackward(new Date(2026, 5, 21), 0, weekday8, undefined, floor)!;
-      expect(r).not.toBeNull();
-      expect(r.startDate).toEqual(new Date(2026, 5, 19));
-      expect(r.endDate).toEqual(new Date(2026, 5, 19));
-      expect(r.delta.size).toBe(0);
     });
   });
 
