@@ -1067,13 +1067,13 @@ export function getMockData(): MockData[] {
         };
     };
 
-    // ganttv3 検証用データ
+    // gantt 検証用データ
     // - フェーズ色（フェーズ順に決定的に着色）
     // - 依存関係（FS/SS/FF/SF・ラグ）→ 依存矢印・クリティカルパス
     // - 各種ステータス（未着手/進行中/完了/保留）
     // - マイルストーン（ダイヤ表示）
     // - 期間: 2026-06-01 ~ 2026-08-31（today=2026-06-14 が期間内なので本日線も確認可能）
-    const mockDataGanttV3 = (projectId: string, wbsId: number, multiId: number): MockData => {
+    const mockDataGantt = (projectId: string, wbsId: number, multiId: number): MockData => {
         const wbsAssigneeId = wbsId * multiId;
         const wbsPhaseId = wbsId * multiId;
         const wbsTaskId = wbsId * multiId;
@@ -1098,10 +1098,10 @@ export function getMockData(): MockData[] {
         return {
             project: {
                 id: projectId,
-                name: "ガントチャート検証(ganttv3)",
+                name: "ガントチャート検証",
                 status: "ACTIVE",
                 description:
-                    "ganttv3 の表示確認用。フェーズ色・依存関係(FS/SS/FF/SF+ラグ)・クリティカルパス・各種ステータス・マイルストーンを含む",
+                    "gantt の表示確認用。フェーズ色・依存関係(FS/SS/FF/SF+ラグ)・クリティカルパス・各種ステータス・マイルストーンを含む",
                 startDate: projectStart,
                 endDate: projectEnd,
             },
@@ -1338,7 +1338,7 @@ export function getMockData(): MockData[] {
         // mockDataImportValidation("test-project-5", 5, 100),
         mockDataWbsSummary("test-project-6", 6, 100),
         mockDataEvmPrediction("evm-prediction-test", 7, 1000),
-        mockDataGanttV3("ganttv3-test", 8, 2000),
+        mockDataGantt("gantt-test", 8, 2000),
     ]
 }
 // export const mockDataLarge = {

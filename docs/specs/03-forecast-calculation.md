@@ -235,7 +235,7 @@ ACTUAL_PACE  : (48/8) × 20  = 120h                （日次ペース 48/8  = 6h
 PLANNED_PACE : 48 + (20-8) × (100/20) = 48+60 = 108h（日次ペース 5h/日）
 ```
 
-**見通しバーの終了日**（ganttV3）: 定常タスクは残見通し（`見通し − 実績`）を上表の**日次消費ペース**で消化して終了日を求める（通常タスクの「標準稼働時間/日」ではなく）。`ACTUAL_PACE`/`PLANNED_PACE` では残見通し ÷ 日次ペース = 残り稼働日数（= 総 − 経過）となり、バーは概ね予定終了日付近に着地する。詳細は [07 §11](./07-task-scheduling.md) 及び `ForecastDateCalculationService`（`hoursPerDay` オプション）を参照。
+**見通しバーの終了日**（gantt）: 定常タスクは残見通し（`見通し − 実績`）を上表の**日次消費ペース**で消化して終了日を求める（通常タスクの「標準稼働時間/日」ではなく）。`ACTUAL_PACE`/`PLANNED_PACE` では残見通し ÷ 日次ペース = 残り稼働日数（= 総 − 経過）となり、バーは概ね予定終了日付近に着地する。詳細は [07 §11](./07-task-scheduling.md) 及び `ForecastDateCalculationService`（`hoursPerDay` オプション）を参照。
 
 ---
 

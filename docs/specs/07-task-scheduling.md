@@ -54,7 +54,7 @@
             ├─ forwardSchedule                       （中核エンジン）
             └─ WorkloadCalculationService.calculateDailyAllocationsFromSchedule（負荷按分）
        ↓ returns プレーンDTO（日付はISO8601文字列）
-  ├─ SchedulingGanttPreview      （ganttv3 の GanttChart を editMode=false で再利用）
+  ├─ SchedulingGanttPreview      （gantt の GanttChart を editMode=false で再利用）
   ├─ AssigneeGanttChart          （previewWorkloads props で負荷表示）
   └─ TSVダウンロード
 ```
@@ -81,7 +81,7 @@
 | `consumeSteadyTaskCapacity` | `boolean` | `false` | 定常タスクが担当者の稼働を消費するか |
 | `steadyDailyHoursMode` | `'PRORATE' \| 'FIXED'` | `'PRORATE'` | 定常タスクの日次消費量の決定方式 |
 | `steadyFixedHoursByKeyword` | `Record<string, number>?` | なし | FIXED時のキーワード別日次固定時間(h/日) |
-| `steadyTaskForecastMode` | `'PLANNED' \| 'ACTUAL_PACE' \| 'PLANNED_PACE'` | `'PLANNED'` | 定常タスクの**見通し工数**算出方式（月別集計・ganttV3の見通しで使用。前詰め計算には影響しない）。詳細は [03: 見通し工数計算 §4.7](./03-forecast-calculation.md) |
+| `steadyTaskForecastMode` | `'PLANNED' \| 'ACTUAL_PACE' \| 'PLANNED_PACE'` | `'PLANNED'` | 定常タスクの**見通し工数**算出方式（月別集計・ganttの見通しで使用。前詰め計算には影響しない）。詳細は [03: 見通し工数計算 §4.7](./03-forecast-calculation.md) |
 
 - 永続化された Json は `parseSchedulingSettings()` で正規化される（数値以外の固定値は除外、不正な mode は `PRORATE` にフォールバック）。
 - 編集UIは WBS管理画面「設定」タブ（`src/components/wbs/project-settings.tsx`）。FIXED選択時のみキーワード別の固定時間入力欄が表示され、**現在のキーワードに存在するキーのみ**保存される（キーワード削除で固定値も連動して落ちる）。空欄のキーワードは按分（PRORATE）にフォールバックする。
@@ -214,7 +214,7 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 | `tsv` | TSV文字列（サーバー生成） |
 
 ### 9.1 ガントプレビュー
-`scheduledToGanttTasks` / `scheduledToGanttPhases`（`adapters/scheduled-to-gantt.ts`）で ganttv3 の `Task[]` / `GanttPhase[]` に変換し、`GanttChart` を `editMode=false` で表示する。**日付未確定/skipタスクは除外**（タイムライン境界の NaN を防ぐため）。読み取り専用なのでDB書き戻しは構造的に発生しない。
+`scheduledToGanttTasks` / `scheduledToGanttPhases`（`adapters/scheduled-to-gantt.ts`）で gantt の `Task[]` / `GanttPhase[]` に変換し、`GanttChart` を `editMode=false` で表示する。**日付未確定/skipタスクは除外**（タイムライン境界の NaN を防ぐため）。読み取り専用なのでDB書き戻しは構造的に発生しない。
 
 ### 9.2 担当者別負荷
 計算結果を `WorkloadCalculationService.calculateDailyAllocationsFromSchedule` に流し、`AssigneeGanttChart` に `previewWorkloads` props として渡す（サーバー取得をスキップして計算結果を表示）。過負荷・参画率超過のセル色分けは既存ロジックを踏襲。
@@ -225,7 +225,7 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 ### 9.4 手動調整
 自動計算結果を起点にユーザーが画面上で最終調整するモード。ガントのツールバー「編集モード」で開始する。
 
-- **編集手段**: バーのドラッグ（移動／両端リサイズ）と、バークリックで開くインライン編集パネル（予定開始日・終了日・工数・担当者）。ganttv3 の既存編集UI（制御コンポーネント）をそのまま利用しており、**ganttv3 本体は無修正**。
+- **編集手段**: バーのドラッグ（移動／両端リサイズ）と、バークリックで開くインライン編集パネル（予定開始日・終了日・工数・担当者）。gantt の既存編集UI（制御コンポーネント）をそのまま利用しており、**gantt 本体は無修正**。
 - **状態管理**: 編集は `onTaskUpdate` → `applyGanttTaskToScheduled`（`adapters/scheduled-to-gantt.ts`）で `ScheduledTaskDto[]` のクライアント状態へ非破壊反映されるだけで、**DBへの書き込みは一切発生しない**（一時テーブルも不使用）。
 - **負荷・TSV・警告への反映**: 編集からデバウンス（500ms）後に読み取り専用の Server Action `recalculateSchedulePreview` → `recalculatePreview`（アプリケーション層）を呼び、担当者別負荷（`AssigneeGanttChart` の `previewWorkloads`）・TSV・`EXCEEDS_PROJECT_END` 警告を再計算して差し替える。前詰め（`forwardSchedule`）は再実行しない。
 - **対象外**: 完了（実績固定, `fixed`）タスクは調整不可（トーストで通知）。

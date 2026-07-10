@@ -37,7 +37,7 @@ import type {
   ScheduledTaskDto,
 } from "@/applications/task-scheduling/ischeduling-application-service";
 import type { BaselineMode } from "@/types/scheduling-settings";
-import type { Task as GanttTask } from "@/components/ganttv3/gantt";
+import type { Task as GanttTask } from "@/components/gantt/gantt";
 import {
   scheduledToGanttTasks,
   scheduledToGanttPhases,

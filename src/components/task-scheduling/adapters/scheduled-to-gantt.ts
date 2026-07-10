@@ -1,6 +1,6 @@
 import type { ScheduledTaskDto } from "@/applications/task-scheduling/ischeduling-application-service";
-import type { Task as GanttTask, GanttPhase } from "@/components/ganttv3/gantt";
-import { phaseColor } from "@/components/ganttv3/utils/phase-colors";
+import type { Task as GanttTask, GanttPhase } from "@/components/gantt/gantt";
+import { phaseColor } from "@/components/gantt/utils/phase-colors";
 
 /** phaseId → 出現順インデックス（色割当に使用） */
 function buildPhaseOrder(dtos: ScheduledTaskDto[]): Map<number, number> {
@@ -15,7 +15,7 @@ function buildPhaseOrder(dtos: ScheduledTaskDto[]): Map<number, number> {
 }
 
 /**
- * スケジューリング結果(DTO)を ganttv3 の Task[] に変換する。
+ * スケジューリング結果(DTO)を gantt の Task[] に変換する。
  * 日付未確定/skipタスクは timelineBounds の NaN を避けるため除外する。
  */
 export function scheduledToGanttTasks(dtos: ScheduledTaskDto[]): GanttTask[] {
@@ -49,7 +49,7 @@ export function scheduledToGanttTasks(dtos: ScheduledTaskDto[]): GanttTask[] {
 }
 
 /**
- * ganttv3 上での編集（日付ドラッグ・インライン編集）を ScheduledTaskDto へ逆反映する。
+ * gantt 上での編集（日付ドラッグ・インライン編集）を ScheduledTaskDto へ逆反映する。
  * 対象は dbId(=taskId) が一致するDTOのみ。非破壊で新しい配列を返す。
  */
 export function applyGanttTaskToScheduled(
@@ -90,7 +90,7 @@ export function scheduledToAssigneeOptions(
   return options;
 }
 
-/** スケジューリング結果から ganttv3 のフェーズ(カテゴリ)一覧を生成する */
+/** スケジューリング結果から gantt のフェーズ(カテゴリ)一覧を生成する */
 export function scheduledToGanttPhases(dtos: ScheduledTaskDto[]): GanttPhase[] {
   const order = buildPhaseOrder(dtos);
   const phases: GanttPhase[] = [];

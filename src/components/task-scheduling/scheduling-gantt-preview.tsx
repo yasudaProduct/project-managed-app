@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GanttChart } from "@/components/ganttv3/gantt-chart";
+import { GanttChart } from "@/components/gantt/gantt-chart";
 import type {
   Task as GanttTask,
   GanttPhase,
   GanttStyle,
   TimelineScale,
-} from "@/components/ganttv3/gantt";
-import type { AssigneeOption } from "@/components/ganttv3/inline-task-edit-panel";
+} from "@/components/gantt/gantt";
+import type { AssigneeOption } from "@/components/gantt/inline-task-edit-panel";
 import {
   Select,
   SelectContent,
@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// 読み取り専用プレビュー用のスタイル（GanttV3Client の defaultGanttStyle を踏襲）
+// 読み取り専用プレビュー用のスタイル（GanttClient の defaultGanttStyle を踏襲）
 const previewStyle: GanttStyle = {
   theme: "modern",
   showGrid: true,
@@ -63,7 +63,7 @@ interface SchedulingGanttPreviewProps {
 }
 
 /**
- * スケジューリング結果を ganttv3 の GanttChart で表示するラッパ。
+ * スケジューリング結果を gantt の GanttChart で表示するラッパ。
  * 既定は読み取り専用。編集系props（onEnterEditMode等）を渡すと手動調整モードが
  * 有効になるが、編集は onTaskUpdate で親のクライアント状態に反映されるだけで、
  * DB への書き戻しは構造的に発生しない。

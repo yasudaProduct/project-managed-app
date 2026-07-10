@@ -120,7 +120,7 @@ interface TaskModalProps {
   /**
    * 指定時、新規作成（task未指定）の送信で createTask を直接呼ばず、
    * 入力内容をこのコールバックへ渡すだけにする（DBへの反映は呼び出し側に委ねる）。
-   * ganttv3 の編集モードでタスクをドラフト追加する際に使用する。
+   * gantt の編集モードでタスクをドラフト追加する際に使用する。
    */
   onCreateDraft?: (values: TaskFormValues) => void;
 }

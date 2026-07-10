@@ -5,7 +5,7 @@ import {
   scheduledToAssigneeOptions,
 } from "@/components/task-scheduling/adapters/scheduled-to-gantt";
 import type { ScheduledTaskDto } from "@/applications/task-scheduling/ischeduling-application-service";
-import type { Task as GanttTask } from "@/components/ganttv3/gantt";
+import type { Task as GanttTask } from "@/components/gantt/gantt";
 
 const dto = (over: Partial<ScheduledTaskDto>): ScheduledTaskDto => ({
   taskId: 1,
