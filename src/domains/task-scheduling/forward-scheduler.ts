@@ -6,6 +6,7 @@ import type {
   DependencyType,
 } from "@/domains/task-dependency/task-dependency";
 import { isSteadyTask } from "./steady-task-classifier";
+import { isFixedDateTask } from "./fixed-date-task-classifier";
 import { topologicalSort, type TopoEdge } from "./topological-sort";
 import {
   type WorkingCalendar,
@@ -33,7 +34,7 @@ const STEADY_MAX_DAYS = 366 * 5;
 export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
   const { tasks, dependencies, calendars, standardWorkingHours, options } =
     input;
-  const { baselineDate, steadyTaskKeywords } = options;
+  const { baselineDate, steadyTaskKeywords, fixedDateTaskKeywords } = options;
 
   const taskById = new Map<number, SchedulingTask>();
   for (const t of tasks) taskById.set(t.taskId, t);
@@ -85,6 +86,7 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       continue;
     }
     const steady = isSteadyTask(t.taskName, steadyTaskKeywords);
+    const fixedDate = isFixedDateTask(t.taskName, fixedDateTaskKeywords);
     if (t.status === "COMPLETED") {
       result.set(t.taskId, {
         ...baseResult(t),
@@ -97,7 +99,8 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       });
       continue;
     }
-    if (!steady && (t.yoteiKosu == null || t.yoteiKosu <= 0)) {
+    // 定常・実施日固定タスクはマイルストーン的に工数0でも配置するため対象外
+    if (!steady && !fixedDate && (t.yoteiKosu == null || t.yoteiKosu <= 0)) {
       result.set(t.taskId, {
         ...baseResult(t),
         skipped: true,
@@ -105,6 +108,29 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       });
       continue;
     }
+  }
+
+  // ---- フェーズA2: 実施日固定タスクを予定期間で固定（前詰めしない） ----
+  // 本番導入・定例会など実施日が確定しているタスクは、前詰めの対象から外し
+  // 入力済みのYOTEI期間をそのまま採用する。定常判定より優先する。
+  for (const t of tasks) {
+    if (result.has(t.taskId)) continue;
+    if (!isFixedDateTask(t.taskName, fixedDateTaskKeywords)) continue;
+    if (!t.yoteiStartDate || !t.yoteiEndDate) {
+      result.set(t.taskId, {
+        ...baseResult(t),
+        skipped: true,
+        note: "FIXED_NO_PERIOD",
+      });
+      continue;
+    }
+    result.set(t.taskId, {
+      ...baseResult(t),
+      note: "FIXED_DATE",
+      scheduledStartDate: t.yoteiStartDate,
+      scheduledEndDate: t.yoteiEndDate,
+      scheduledManHours: t.yoteiKosu ?? 0,
+    });
   }
 
   // ---- フェーズB: 定常タスク先置き（前詰めしない） ----
@@ -242,6 +268,37 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       scheduledManHours: remaining,
     });
     assigneeFreeFrom.set(assigneeId, endDate);
+  }
+
+  // ---- フェーズD: 実施日固定タスクの先行超過を検出 ----
+  // 先行タスクの算出結果が固定開始日より後ろへずれ込む場合、前工程が固定日に
+  // 間に合わない競合として note を FIXED_DATE_CONFLICT に更新する（日付は固定のまま）。
+  const conflictIds: number[] = [];
+  for (const [taskId, r] of result) {
+    if (r.note !== "FIXED_DATE" || !r.scheduledStartDate) continue;
+    const t = taskById.get(taskId);
+    if (!t) continue;
+    for (const p of predecessorsOf.get(taskId) ?? []) {
+      const pr = result.get(p.taskId);
+      if (!pr || pr.skipped || !pr.scheduledStartDate || !pr.scheduledEndDate) {
+        continue;
+      }
+      const impl = impliedStart(
+        p.type,
+        p.lag,
+        pr.scheduledStartDate,
+        pr.scheduledEndDate,
+        estimatedDurationDays(t, standardWorkingHours)
+      );
+      if (impl.getTime() > r.scheduledStartDate.getTime()) {
+        conflictIds.push(taskId);
+        break;
+      }
+    }
+  }
+  for (const taskId of conflictIds) {
+    const r = result.get(taskId)!;
+    result.set(taskId, { ...r, note: "FIXED_DATE_CONFLICT" });
   }
 
   // 元のtask順をベースに、開始日→taskNoでソートして返す

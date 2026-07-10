@@ -17,9 +17,12 @@ const NOTE_LABELS: Record<ScheduledTaskNote, string> = {
   COMPLETED_FIXED: "完了(実績固定)",
   IN_PROGRESS_REMAINING: "進行中(残工数)",
   STEADY_FIXED_PERIOD: "定常",
+  FIXED_DATE: "実施日固定",
+  FIXED_DATE_CONFLICT: "実施日固定(前工程超過)",
   NO_ASSIGNEE: "担当者未設定",
   NO_YOTEI_KOSU: "予定工数未設定",
   STEADY_NO_PERIOD: "定常(期間未設定)",
+  FIXED_NO_PERIOD: "実施日固定(期間未設定)",
   CYCLIC: "循環依存",
   SCHEDULE_OVERFLOW: "計算上限超過",
 };

@@ -121,7 +121,8 @@ export class SchedulingApplicationService
     const warnings = SchedulingPreconditionService.check(
       schedulingTasks,
       dependencies,
-      schedulingSettings.steadyTaskKeywords
+      schedulingSettings.steadyTaskKeywords,
+      schedulingSettings.fixedDateTaskKeywords
     );
 
     const scheduledTasks = forwardSchedule({
@@ -133,10 +134,16 @@ export class SchedulingApplicationService
         baselineDate,
         consumeSteadyTaskCapacity: schedulingSettings.consumeSteadyTaskCapacity,
         steadyTaskKeywords: schedulingSettings.steadyTaskKeywords,
+        fixedDateTaskKeywords: schedulingSettings.fixedDateTaskKeywords,
         steadyDailyHoursMode: schedulingSettings.steadyDailyHoursMode,
         steadyFixedHoursByKeyword: schedulingSettings.steadyFixedHoursByKeyword,
       },
     });
+
+    // 実施日固定タスクの先行超過（前工程が固定日に間に合わない）を警告
+    warnings.push(
+      ...SchedulingPreconditionService.checkFixedDateConflicts(scheduledTasks)
+    );
 
     // 計算結果がプロジェクト終了日に収まらないタスクを警告（リスケ判断の主要シグナル）
     if (project.endDate) {

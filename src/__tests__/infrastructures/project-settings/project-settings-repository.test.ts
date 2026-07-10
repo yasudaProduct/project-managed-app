@@ -153,6 +153,7 @@ describe("ProjectSettingsRepository", () => {
 
       expect(result).toEqual({
         steadyTaskKeywords: ["定例"],
+        fixedDateTaskKeywords: [],
         consumeSteadyTaskCapacity: true,
         steadyDailyHoursMode: "FIXED",
         steadyTaskForecastMode: "PLANNED",
@@ -166,6 +167,7 @@ describe("ProjectSettingsRepository", () => {
 
       expect(result).toEqual({
         steadyTaskKeywords: [],
+        fixedDateTaskKeywords: [],
         consumeSteadyTaskCapacity: false,
         steadyDailyHoursMode: "PRORATE",
         steadyTaskForecastMode: "PLANNED",
@@ -179,6 +181,7 @@ describe("ProjectSettingsRepository", () => {
 
       const settings = {
         steadyTaskKeywords: ["定例"],
+        fixedDateTaskKeywords: ["本番導入"],
         consumeSteadyTaskCapacity: true,
         steadyDailyHoursMode: "FIXED" as const,
         steadyTaskForecastMode: "PLANNED" as const,

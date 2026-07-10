@@ -3,6 +3,7 @@ import type { ScheduledTask } from "./scheduled-result";
 import type { TaskDependency } from "@/domains/task-dependency/task-dependency";
 import { TaskDependencyValidator } from "@/domains/task-dependency/task-dependency-validator";
 import { isSteadyTask } from "./steady-task-classifier";
+import { isFixedDateTask } from "./fixed-date-task-classifier";
 import { toDateKey } from "./working-calendar-walker";
 
 export type PreconditionWarningKind =
@@ -10,6 +11,8 @@ export type PreconditionWarningKind =
   | "NO_YOTEI_KOSU"
   | "CYCLIC_DEPENDENCY"
   | "STEADY_NO_PERIOD"
+  | "FIXED_NO_PERIOD"
+  | "FIXED_DATE_CONFLICT"
   | "ON_HOLD"
   | "COMPLETED_NO_PERIOD"
   | "EXCEEDS_PROJECT_END";
@@ -32,12 +35,14 @@ export class SchedulingPreconditionService {
   static check(
     tasks: SchedulingTask[],
     dependencies: TaskDependency[],
-    steadyTaskKeywords: string[]
+    steadyTaskKeywords: string[],
+    fixedDateTaskKeywords: string[] = []
   ): PreconditionWarning[] {
     const warnings: PreconditionWarning[] = [];
 
     for (const t of tasks) {
       const steady = isSteadyTask(t.taskName, steadyTaskKeywords);
+      const fixedDate = isFixedDateTask(t.taskName, fixedDateTaskKeywords);
 
       if (t.assigneeId == null) {
         warnings.push({
@@ -49,7 +54,7 @@ export class SchedulingPreconditionService {
         });
       }
 
-      if (!steady && (t.yoteiKosu == null || t.yoteiKosu <= 0)) {
+      if (!steady && !fixedDate && (t.yoteiKosu == null || t.yoteiKosu <= 0)) {
         warnings.push({
           kind: "NO_YOTEI_KOSU",
           taskId: t.taskId,
@@ -66,6 +71,17 @@ export class SchedulingPreconditionService {
           taskNo: t.taskNo,
           taskName: t.taskName,
           detail: "定常タスクに期間(予定開始日・終了日)が設定されていません",
+        });
+      }
+
+      if (fixedDate && (!t.yoteiStartDate || !t.yoteiEndDate)) {
+        warnings.push({
+          kind: "FIXED_NO_PERIOD",
+          taskId: t.taskId,
+          taskNo: t.taskNo,
+          taskName: t.taskName,
+          detail:
+            "実施日固定タスクに実施日(予定開始日・終了日)が設定されていません",
         });
       }
 
@@ -136,6 +152,31 @@ export class SchedulingPreconditionService {
           detail: `予定終了日(${endKey})がプロジェクト終了日(${projectEndKey})を超えています`,
         });
       }
+    }
+
+    return warnings;
+  }
+
+  /**
+   * 計算後の検証: 実施日固定タスクのうち、先行タスクの算出結果が固定日に
+   * 間に合わない（FIXED_DATE_CONFLICT）ものを警告として抽出する。
+   * 競合判定自体は forwardSchedule が行い、ここでは note を警告へ変換する。
+   */
+  static checkFixedDateConflicts(
+    scheduled: ScheduledTask[]
+  ): PreconditionWarning[] {
+    const warnings: PreconditionWarning[] = [];
+
+    for (const t of scheduled) {
+      if (t.note !== "FIXED_DATE_CONFLICT") continue;
+      warnings.push({
+        kind: "FIXED_DATE_CONFLICT",
+        taskId: t.taskId,
+        taskNo: t.taskNo,
+        taskName: t.taskName,
+        detail:
+          "先行タスクの算出終了日が実施日(固定)を超えています。前工程が固定日に間に合いません",
+      });
     }
 
     return warnings;

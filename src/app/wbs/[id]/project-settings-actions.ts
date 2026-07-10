@@ -121,6 +121,7 @@ export async function getSchedulingSettings(
 
 const schedulingSettingsSchema = z.object({
     steadyTaskKeywords: z.array(z.string()),
+    fixedDateTaskKeywords: z.array(z.string()),
     consumeSteadyTaskCapacity: z.boolean(),
     steadyDailyHoursMode: z.enum(["PRORATE", "FIXED"]),
     steadyFixedHoursByKeyword: z.record(z.number()).optional(),
