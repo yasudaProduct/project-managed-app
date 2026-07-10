@@ -3,7 +3,7 @@ import { FormControl } from "./ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "./ui/calendar";
-import { formatDateToLocalString } from "@/components/ganttv2/gantt-utils";
+import { formatDate } from "@/utils/date-util";
 import { Input } from "./ui/input";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
@@ -128,7 +128,7 @@ export function DatePicker({ field }: DatePickerProp) {
                   : undefined
               }
               onSelect={(date) => {
-                field.onChange(date ? formatDateToLocalString(date) : "");
+                field.onChange(date ? formatDate(date, "YYYY/MM/DD") : "");
                 setIsOpen(false);
               }}
               initialFocus

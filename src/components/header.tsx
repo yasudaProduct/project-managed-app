@@ -102,7 +102,6 @@ export function Header() {
     if (pathname.startsWith("/schedule")) return "スケジュール";
 
     if (pathname.includes("/dashboard")) return "ダッシュボード";
-    if (pathname.includes("/ganttv2")) return "ガントチャート";
     if (pathname.includes("/milestone")) return "マイルストーン管理";
     if (pathname.includes("/wbs/")) return "タスク";
 

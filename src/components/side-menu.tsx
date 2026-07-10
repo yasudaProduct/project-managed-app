@@ -141,13 +141,6 @@ export function SideMenu() {
                   タスク管理
                 </Link>
                 <Link
-                  href={`/projects/${projectId}/ganttv2`}
-                  className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
-                >
-                  <Trello className="h-4 w-4" />
-                  ガントチャートv2
-                </Link>
-                <Link
                   href={`/projects/${projectId}/ganttv3`}
                   className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
                 >

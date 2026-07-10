@@ -42,7 +42,6 @@ export async function createMilestone(
   }
 
   revalidatePath(`/wbs/${data.wbsId}`);
-  revalidatePath(`/wbs/${data.wbsId}/ganttv2`);
 
   return { success: true, data: { id: result.id } };
 }
@@ -72,7 +71,6 @@ export async function updateMilestone(
   }
 
   revalidatePath(`/wbs/${data.wbsId}`);
-  revalidatePath(`/wbs/${data.wbsId}/ganttv2`);
 
   return { success: true, data: { id: result.id } };
 }
@@ -90,7 +88,6 @@ export async function deleteMilestone(
   }
 
   revalidatePath(`/wbs/${wbsId}`);
-  revalidatePath(`/wbs/${wbsId}/ganttv2`);
 
   return { success: true, data: undefined };
 }

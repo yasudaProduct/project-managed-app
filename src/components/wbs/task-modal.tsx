@@ -50,7 +50,6 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
-import { formatDateToLocalString } from "../ganttv2/gantt-utils";
 import { formatDate } from "@/utils/date-util";
 
 const formSchema = z
@@ -159,10 +158,10 @@ export function TaskModal({
           name: task.name,
           assigneeId: task.assigneeId?.toString() || "",
           yoteiStartDate: task.yoteiStart
-            ? formatDateToLocalString(task.yoteiStart)
+            ? formatDate(task.yoteiStart, "YYYY/MM/DD")
             : "",
           yoteiEndDate: task.yoteiEnd
-            ? formatDateToLocalString(task.yoteiEnd)
+            ? formatDate(task.yoteiEnd, "YYYY/MM/DD")
             : "",
           yoteiKosu: task.yoteiKosu || 0,
           status: task.status,
