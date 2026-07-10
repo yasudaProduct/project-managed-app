@@ -103,61 +103,6 @@ export function consumeUntilDone(
   return { endDate: lastWorked, overflow: remaining > HOURS_EPSILON };
 }
 
-/**
- * deadline から後方へ工数を消化し、開始日・終了日を求める（実施日固定タスクの
- * 先行チェーン逆算用）。終了日は deadline 以前で実効稼働が正の最遅日。
- * 消化分は consumed へ直接書かず delta に分離して返す（配置不可時に消費を
- * 残さないため、呼び出し側が確定時にマージする）。
- * @returns 配置結果。floor（基準日）より前に食い込む場合は null（配置不可）
- */
-export function consumeBackward(
-  deadline: Date,
-  hours: number,
-  cal: WorkingCalendar,
-  consumed: Map<string, number> | undefined,
-  floor: Date
-): { startDate: Date; endDate: Date; delta: Map<string, number> } | null {
-  const delta = new Map<string, number>();
-  let cur = new Date(deadline);
-  let iter = 0;
-  while (
-    cur.getTime() >= floor.getTime() &&
-    effectiveHours(cur, cal, consumed) <= 0 &&
-    iter < MAX_ITERATION_DAYS
-  ) {
-    cur = addCalendarDays(cur, -1);
-    iter++;
-  }
-  if (cur.getTime() < floor.getTime() || iter >= MAX_ITERATION_DAYS) {
-    return null;
-  }
-  const endDate = new Date(cur);
-  if (hours <= HOURS_EPSILON) {
-    return { startDate: endDate, endDate, delta };
-  }
-  let remaining = hours;
-  let startDate = new Date(cur);
-  while (
-    remaining > HOURS_EPSILON &&
-    cur.getTime() >= floor.getTime() &&
-    iter < MAX_ITERATION_DAYS
-  ) {
-    const avail = effectiveHours(cur, cal, consumed);
-    if (avail > 0) {
-      const use = Math.min(avail, remaining);
-      remaining -= use;
-      delta.set(toDateKey(cur), use);
-      startDate = new Date(cur);
-    }
-    if (remaining > HOURS_EPSILON) {
-      cur = addCalendarDays(cur, -1);
-    }
-    iter++;
-  }
-  if (remaining > HOURS_EPSILON) return null;
-  return { startDate, endDate, delta };
-}
-
 /** start〜end（両端含む）の稼働日数を数える */
 export function countWorkingDays(
   start: Date,
