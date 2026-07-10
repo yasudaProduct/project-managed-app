@@ -85,6 +85,45 @@ describe("SchedulingPreconditionService.check", () => {
     expect(w).toEqual([]);
   });
 
+  test("実施日固定タスクの期間未設定を検出(FIXED_NO_PERIOD)", () => {
+    const w = SchedulingPreconditionService.check(
+      [
+        task({
+          taskId: 1,
+          taskNo: "0001",
+          taskName: "本番導入",
+          yoteiStartDate: undefined,
+          yoteiEndDate: undefined,
+        }),
+      ],
+      [],
+      [],
+      ["本番導入"]
+    );
+    expect(w).toEqual([
+      expect.objectContaining({ kind: "FIXED_NO_PERIOD", taskNo: "0001" }),
+    ]);
+  });
+
+  test("実施日固定タスクは予定工数未設定でもNO_YOTEI_KOSUにしない", () => {
+    const w = SchedulingPreconditionService.check(
+      [
+        task({
+          taskId: 1,
+          taskNo: "0001",
+          taskName: "本番導入",
+          yoteiKosu: 0,
+          yoteiStartDate: new Date(2026, 5, 25),
+          yoteiEndDate: new Date(2026, 5, 25),
+        }),
+      ],
+      [],
+      [],
+      ["本番導入"]
+    );
+    expect(w).toEqual([]);
+  });
+
   test("保留(ON_HOLD)タスクを検出（前詰め対象である旨の注意喚起）", () => {
     const w = SchedulingPreconditionService.check(
       [task({ taskId: 1, taskNo: "0001", status: "ON_HOLD" })],
@@ -203,6 +242,43 @@ describe("SchedulingPreconditionService.checkProjectEnd", () => {
       ],
       projectEnd
     );
+    expect(w).toEqual([]);
+  });
+});
+
+describe("SchedulingPreconditionService.checkFixedDateConflicts", () => {
+  const scheduled = (over: Partial<ScheduledTask>): ScheduledTask => ({
+    taskId: 0,
+    taskNo: "0000",
+    taskName: "task",
+    status: "NOT_STARTED",
+    isSteady: false,
+    fixed: false,
+    skipped: false,
+    note: "NORMAL",
+    predecessors: [],
+    ...over,
+  });
+
+  test("FIXED_DATE_CONFLICTのタスクを警告として抽出する", () => {
+    const w = SchedulingPreconditionService.checkFixedDateConflicts([
+      scheduled({ taskId: 1, taskNo: "0001", note: "FIXED_DATE" }),
+      scheduled({
+        taskId: 2,
+        taskNo: "0002",
+        taskName: "本番導入",
+        note: "FIXED_DATE_CONFLICT",
+      }),
+    ]);
+    expect(w).toEqual([
+      expect.objectContaining({ kind: "FIXED_DATE_CONFLICT", taskNo: "0002" }),
+    ]);
+  });
+
+  test("競合がなければ空配列", () => {
+    const w = SchedulingPreconditionService.checkFixedDateConflicts([
+      scheduled({ taskId: 1, taskNo: "0001", note: "FIXED_DATE" }),
+    ]);
     expect(w).toEqual([]);
   });
 });
