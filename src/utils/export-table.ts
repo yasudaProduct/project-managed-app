@@ -13,7 +13,7 @@ interface ExportOptions {
  * @param headers ヘッダー
  * @param rows データ
  */
-function copyToClipboard(
+export function copyToClipboard(
   headers: string[],
   rows: (string | number | undefined | null)[][],
 ): void {
@@ -45,7 +45,7 @@ function copyToClipboard(
  * @param rows データ
  * @param options オプション
  */
-function exportTableData(
+export function exportTableData(
   headers: string[],
   rows: (string | number | undefined | null)[][],
   options: ExportOptions

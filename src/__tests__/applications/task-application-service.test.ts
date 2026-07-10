@@ -1,9 +1,10 @@
 // filepath: /Users/yuta/Develop/project-managed-app/src/__tests__/applications/task-application-service.test.ts
-import { ITaskRepository } from "@/applications/task/itask-repository";
+import { ITaskRepository, ManualSnapshotContext } from "@/applications/task/itask-repository";
+import { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-repository";
 import { TaskApplicationService } from "@/applications/task/task-application-service";
 import { Task } from "@/domains/task/task";
 import { TaskNo } from "@/domains/task/value-object/task-id";
-import { TaskStatus } from "@/domains/task/value-object/project-status";
+import { TaskStatus } from "@/domains/task/value-object/task-status";
 import { ITaskFactory } from "@/domains/task/interfaces/task-factory";
 import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
@@ -20,6 +21,7 @@ jest.mock("@/domains/task/interfaces/task-factory");
 describe('TaskApplicationService', () => {
   let taskRepository: jest.Mocked<ITaskRepository>;
   let taskFactory: jest.Mocked<ITaskFactory>;
+  let wbsAssigneeRepository: jest.Mocked<IWbsAssigneeRepository>;
   let taskApplicationService: TaskApplicationService;
   const startDate = new Date('2025-05-01');
   const endDate = new Date('2025-05-31');
@@ -33,13 +35,18 @@ describe('TaskApplicationService', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
-    };
+      findLatestSnapshotActuals: jest.fn().mockResolvedValue(null),
+    } as unknown as jest.Mocked<ITaskRepository>;
 
     taskFactory = {
       createTaskId: jest.fn(),
     };
 
-    taskApplicationService = new TaskApplicationService(taskRepository, taskFactory);
+    wbsAssigneeRepository = {
+      findByWbsId: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<IWbsAssigneeRepository>;
+
+    taskApplicationService = new TaskApplicationService(taskRepository, taskFactory, wbsAssigneeRepository);
   });
 
   describe('getTaskById', () => {
@@ -199,7 +206,6 @@ describe('TaskApplicationService', () => {
 
       // テスト対象メソッド実行
       const result = await taskApplicationService.createTask({
-        id: 'D1-0001',
         name: '新規タスク',
         wbsId: wbsId,
         phaseId: 1,
@@ -207,7 +213,7 @@ describe('TaskApplicationService', () => {
         yoteiEndDate,
         yoteiKosu: 10,
         assigneeId: 1,
-        status: new TaskStatus({ status: 'NOT_STARTED' }),
+        status: 'NOT_STARTED',
       });
 
       // 検証
@@ -315,6 +321,170 @@ describe('TaskApplicationService', () => {
       expect(taskRepository.update).not.toHaveBeenCalled();
       expect(result.success).toBe(false);
       expect(result.error).toBe('タスクが見つかりません');
+    });
+
+    it('progressRate を指定するとタスクの進捗率が更新されること', async () => {
+      const existingTask = Task.create({
+        taskNo: TaskNo.reconstruct('D1-0001'),
+        wbsId,
+        name: 'タスク',
+        phaseId: 1,
+        assigneeId: 1,
+        status: new TaskStatus({ status: 'IN_PROGRESS' }),
+        periods: [],
+        progressRate: 10,
+      });
+      Object.defineProperty(existingTask, 'id', { value: 1 });
+      taskRepository.findById.mockResolvedValue(existingTask);
+      taskRepository.update.mockImplementation((_, task) => Promise.resolve(task));
+
+      const result = await taskApplicationService.updateTask({
+        wbsId,
+        updateTask: {
+          id: 1,
+          name: 'タスク',
+          status: 'IN_PROGRESS',
+          assigneeId: 1,
+          phaseId: 1,
+          progressRate: 60,
+        },
+      });
+
+      expect(result.success).toBe(true);
+      const updatedTask = taskRepository.update.mock.calls[0][1];
+      expect(updatedTask.progressRate).toBe(60);
+    });
+
+    it('progressRate 未指定なら既存の進捗率を維持すること', async () => {
+      const existingTask = Task.create({
+        taskNo: TaskNo.reconstruct('D1-0001'),
+        wbsId,
+        name: 'タスク',
+        phaseId: 1,
+        assigneeId: 1,
+        status: new TaskStatus({ status: 'IN_PROGRESS' }),
+        periods: [],
+        progressRate: 45,
+      });
+      Object.defineProperty(existingTask, 'id', { value: 1 });
+      taskRepository.findById.mockResolvedValue(existingTask);
+      taskRepository.update.mockImplementation((_, task) => Promise.resolve(task));
+
+      await taskApplicationService.updateTask({
+        wbsId,
+        updateTask: {
+          id: 1,
+          name: 'タスク',
+          status: 'IN_PROGRESS',
+          assigneeId: 1,
+          phaseId: 1,
+        },
+      });
+
+      const updatedTask = taskRepository.update.mock.calls[0][1];
+      expect(updatedTask.progressRate).toBe(45);
+    });
+
+    it('更新時に進捗スナップショット（手動記録）が同時に渡されること', async () => {
+      const existingTask = Task.create({
+        taskNo: TaskNo.reconstruct('D1-0001'),
+        wbsId,
+        name: 'タスク',
+        phaseId: 1,
+        assigneeId: 7,
+        status: new TaskStatus({ status: 'IN_PROGRESS' }),
+        periods: [
+          Period.create({
+            startDate,
+            endDate,
+            type: new PeriodType({ type: 'YOTEI' }),
+            manHours: [
+              ManHour.create({ kosu: 20, type: new ManHourType({ type: 'NORMAL' }) }),
+            ],
+          }),
+        ],
+        progressRate: 10,
+      });
+      Object.defineProperty(existingTask, 'id', { value: 1 });
+      taskRepository.findById.mockResolvedValue(existingTask);
+      taskRepository.update.mockImplementation((_, task) => Promise.resolve(task));
+      (wbsAssigneeRepository.findByWbsId as jest.Mock).mockResolvedValue([
+        { id: 7, userName: '田中', getCostPerHour: () => 4000 },
+      ]);
+      (taskRepository.findLatestSnapshotActuals as jest.Mock).mockResolvedValue({
+        actualStart: new Date('2025-05-02'),
+        actualEnd: null,
+      });
+
+      await taskApplicationService.updateTask({
+        wbsId,
+        updateTask: {
+          id: 1,
+          name: 'タスク',
+          status: 'IN_PROGRESS',
+          assigneeId: 7,
+          phaseId: 1,
+          progressRate: 60,
+        },
+      });
+
+      const snapshot = taskRepository.update.mock.calls[0][2] as ManualSnapshotContext;
+      expect(snapshot).toBeDefined();
+      expect(snapshot.wbsId).toBe(wbsId);
+      expect(snapshot.snapshotAt).toBeInstanceOf(Date);
+      expect(snapshot.input).toEqual(
+        expect.objectContaining({
+          taskId: 1,
+          taskNo: 'D1-0001',
+          progressRate: 60,
+          status: 'IN_PROGRESS',
+          plannedManHours: 20,
+          costPerHour: 4000, // 担当者単価を引き当て
+          actualStart: new Date('2025-05-02'), // 直近スナップショットから実績日を引き継ぐ
+          actualEnd: null,
+          isRemoved: false,
+        }),
+      );
+    });
+  });
+
+  describe('deleteTask', () => {
+    it('削除時に tombstone スナップショットが渡されること', async () => {
+      const existingTask = Task.create({
+        taskNo: TaskNo.reconstruct('D1-0001'),
+        wbsId,
+        name: '削除対象',
+        phaseId: 1,
+        assigneeId: 1,
+        status: new TaskStatus({ status: 'IN_PROGRESS' }),
+        periods: [],
+      });
+      Object.defineProperty(existingTask, 'id', { value: 9 });
+      taskRepository.findById.mockResolvedValue(existingTask);
+      taskRepository.delete.mockResolvedValue(undefined);
+
+      const result = await taskApplicationService.deleteTask(9);
+
+      expect(result.success).toBe(true);
+      const [deletedId, tombstone] = taskRepository.delete.mock.calls[0] as [number, ManualSnapshotContext];
+      expect(deletedId).toBe(9);
+      expect(tombstone.wbsId).toBe(wbsId);
+      expect(tombstone.input).toEqual(
+        expect.objectContaining({
+          taskId: 9,
+          taskNo: 'D1-0001',
+          isRemoved: true,
+        }),
+      );
+    });
+
+    it('削除対象が存在しない場合はエラーを返し delete を呼ばないこと', async () => {
+      taskRepository.findById.mockResolvedValue(null);
+
+      const result = await taskApplicationService.deleteTask(999);
+
+      expect(result.success).toBe(false);
+      expect(taskRepository.delete).not.toHaveBeenCalled();
     });
   });
 });

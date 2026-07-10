@@ -160,6 +160,8 @@ model WbsTask {
   assigneeId       Int?
   status           TaskStatus       @default(NOT_STARTED)
   progressRate     Decimal?         @default(0) // 進捗率（0-100）
+  isDeleted        Boolean          @default(false) // 論理削除フラグ（同期で消失したタスクのtombstone化）
+  deletedAt        DateTime?        @db.Timestamptz // 論理削除日時（UTC）
   wbs              Wbs              @relation(fields: [wbsId], references: [id])
   phase            WbsPhase?        @relation(fields: [phaseId], references: [id])
   assignee         WbsAssignee?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
@@ -172,6 +174,7 @@ model WbsTask {
   successors       TaskDependency[] @relation("SuccessorTask")
 
   @@unique(fields: [taskNo,wbsId])
+  @@index([wbsId, isDeleted])
   @@map("wbs_task")
 }
 
@@ -399,16 +402,31 @@ enum EvmForecastMethod {
   PLANNED   // EAC = AC + (BAC - EV)：残作業は計画通りのコストで完了
 }
 
+enum EvmBufferCostMethod {
+  AVERAGE_RATE // WBS担当者の平均単価でバッファ工数を金額換算
+  DEFAULT_RATE // デフォルト単価（5,000円/h）で金額換算
+  EXCLUDE      // 金額モードのBACにバッファを含めない
+}
+
+enum EvmPvDistribution {
+  CALENDAR      // 暦日按分（従来動作）
+  BUSINESS_DAYS // 営業日按分（土日・祝日・会社休日を除外）
+}
+
 model ProjectSettings {
   projectId                 String                     @id
   roundToQuarter            Boolean                    @default(false)
   progressMeasurementMethod ProgressMeasurementMethod  @default(SELF_REPORTED)
   forecastCalculationMethod ForecastCalculationMethod  @default(REALISTIC)
   evmForecastMethod         EvmForecastMethod          @default(CPI_ONLY)  // EVM予測計算方式
+  evmBufferCostMethod       EvmBufferCostMethod        @default(AVERAGE_RATE) // バッファの金額換算方式
+  evmPvDistribution         EvmPvDistribution          @default(CALENDAR)     // PV按分方式（暦日/営業日）
+  evmHealthyThresholdPct    Int                        @default(90)   // ヘルス判定healthyしきい値(%)
+  evmWarningThresholdPct    Int                        @default(80)   // ヘルス判定warningしきい値(%)
   deadlineAlertDays         Int                        @default(1)    // 期限間近アラートの日数
   costOverrunThresholdPct   Int                        @default(100)  // 工数超過アラートの閾値(%)
   evmExcludeSettings        Json                       @default("{}") // EVM除外設定 (enabled, task_names 等)
-  qualityThresholds         Json?                                      // 品質指標の閾値設定
+  schedulingSettings        Json                       @default("{}") // スケジュール計算設定 (steadyTaskKeywords, consumeSteadyTaskCapacity, steadyDailyHoursMode 等)
   createdAt                 DateTime                   @default(now()) @db.Timestamptz
   updatedAt                 DateTime                   @updatedAt @db.Timestamptz
 
@@ -422,6 +440,8 @@ model TaskDependency {
   predecessorTaskId Int
   successorTaskId   Int
   wbsId             Int
+  type              String   @default("FS")
+  lag               Int      @default(0)
   createdAt         DateTime @default(now()) @db.Timestamptz
   updatedAt         DateTime @updatedAt @db.Timestamptz
   
@@ -446,6 +466,7 @@ model SyncLog {
   errorDetails  Json?
   createdAt     DateTime  @default(now()) @db.Timestamptz
   updatedAt     DateTime  @updatedAt @db.Timestamptz
+  snapshots     TaskProgressSnapshot[]
 
   @@index([projectId, syncedAt])
   @@map("sync_logs")
@@ -455,6 +476,35 @@ enum SyncStatus {
   SUCCESS
   FAILED
   PARTIAL
+}
+
+// 同期実行時点のタスク進捗・工数・単価・期間を時点データ・自己完結で記録する履歴
+model TaskProgressSnapshot {
+  id              Int        @id @default(autoincrement())
+  taskId          Int
+  wbsId           Int
+  taskNo          String
+  snapshotAt      DateTime   @db.Timestamptz // 記録時刻（同期実行 or 手動編集。UTC）
+  progressRate    Decimal? // SELF_REPORTED用
+  status          TaskStatus
+  plannedManHours Decimal // YOTEI NORMAL（無ければKIJUN）
+  baseManHours    Decimal // KIJUN NORMAL
+  costPerHour     Decimal // 当時の単価（自己完結）
+  plannedStart    DateTime?  @db.Date
+  plannedEnd      DateTime?  @db.Date
+  baseStart       DateTime?  @db.Date
+  baseEnd         DateTime?  @db.Date
+  actualStart     DateTime?  @db.Date // Excel JISSEKI（自己申告実績）
+  actualEnd       DateTime?  @db.Date
+  isRemoved       Boolean    @default(false) // soft-delete連動のtombstone
+  syncLogId       Int? // null = 手動編集（ガント等のタスク更新）による記録
+  syncLog         SyncLog?   @relation(fields: [syncLogId], references: [id])
+  createdAt       DateTime   @default(now()) @db.Timestamptz
+
+  @@index([taskId, snapshotAt])
+  @@index([wbsId, snapshotAt])
+  @@index([syncLogId])
+  @@map("task_progress_snapshot")
 }
 
 model CompanyHoliday {
@@ -537,104 +587,6 @@ model ImportJobProgress {
   @@map("import_job_progress")
 }
 
-// =====================================================
-// 定量品質管理機能
-// =====================================================
-
-// 評価対象（WBSタスクと論理結合。FKは貼らず洗い替えインポートから保護）
-model QualityReviewTarget {
-  id            Int                    @id @default(autoincrement())
-  wbsId         Int
-  taskNo        String
-  name          String
-  documentType  QualityDocumentType    @default(OTHER)
-  reviewType    QualityReviewType      @default(PEER)
-  isActive      Boolean                @default(true)
-  createdAt     DateTime               @default(now()) @db.Timestamptz
-  updatedAt     DateTime               @updatedAt @db.Timestamptz
-  reviewers     QualityReviewer[]
-  sizeMetrics   QualitySizeMetric[]
-  findings      QualityFinding[]
-
-  @@unique([wbsId, taskNo])
-  @@index([wbsId, isActive])
-  @@map("quality_review_target")
-}
-
-// レビュー担当者（1評価対象に複数人対応）
-model QualityReviewer {
-  id              Int                  @id @default(autoincrement())
-  targetId        Int
-  reviewerUserId  String
-  reviewTaskNo    String
-  createdAt       DateTime             @default(now()) @db.Timestamptz
-  updatedAt       DateTime             @updatedAt @db.Timestamptz
-  target          QualityReviewTarget  @relation(fields: [targetId], references: [id], onDelete: Cascade)
-
-  @@unique([targetId, reviewTaskNo])
-  @@index([reviewerUserId])
-  @@map("quality_reviewer")
-}
-
-// 規模データ（MAN_HOURは都度集計するため保存しない）
-model QualitySizeMetric {
-  id          Int                  @id @default(autoincrement())
-  targetId    Int
-  unit        QualitySizeUnit
-  value       Decimal              @db.Decimal(12, 2)
-  measuredAt  DateTime             @db.Date
-  note        String?
-  createdAt   DateTime             @default(now()) @db.Timestamptz
-  updatedAt   DateTime             @updatedAt @db.Timestamptz
-  target      QualityReviewTarget  @relation(fields: [targetId], references: [id], onDelete: Cascade)
-
-  @@unique([targetId, unit])
-  @@index([measuredAt])
-  @@map("quality_size_metric")
-}
-
-// 指摘データ
-model QualityFinding {
-  id          Int                  @id @default(autoincrement())
-  targetId    Int
-  severity    QualitySeverity      @default(MINOR)
-  category    String?
-  description String?
-  foundAt     DateTime             @db.Date
-  createdAt   DateTime             @default(now()) @db.Timestamptz
-  updatedAt   DateTime             @updatedAt @db.Timestamptz
-  target      QualityReviewTarget  @relation(fields: [targetId], references: [id], onDelete: Cascade)
-
-  @@index([targetId, foundAt])
-  @@index([severity])
-  @@map("quality_finding")
-}
-
-enum QualityDocumentType {
-  DESIGN
-  CODE
-  TEST
-  OTHER
-}
-
-enum QualityReviewType {
-  PEER
-  FORMAL
-  INSPECTION
-  OTHER
-}
-
-enum QualitySizeUnit {
-  PAGE
-  LINES_OF_CODE
-  TEST_CASE
-}
-
-enum QualitySeverity {
-  MAJOR
-  MINOR
-  INFO
-}
 
 // システム全体設定（シングルトン）
 model SystemSettings {

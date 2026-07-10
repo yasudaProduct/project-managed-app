@@ -1,9 +1,13 @@
-export enum NotificationPriority {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  URGENT = 'URGENT',
-}
+import type { NotificationPriority as NotificationPriorityType } from '@/types/notification';
+
+export type NotificationPriority = NotificationPriorityType;
+
+export const NotificationPriority = {
+  LOW: 'LOW',
+  MEDIUM: 'MEDIUM',
+  HIGH: 'HIGH',
+  URGENT: 'URGENT',
+} as const satisfies Record<string, NotificationPriorityType>;
 
 export class NotificationPriorityVO {
   private constructor(private readonly value: NotificationPriority) {}

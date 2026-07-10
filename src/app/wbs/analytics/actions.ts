@@ -2,19 +2,19 @@
 
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
-import { WbsAnalyticsHandler, CoefficientQuery, ProportionQuery } from '@/applications/wbs/query/wbs-analytics-handler';
+import type { IWbsAnalyticsApplicationService, CoefficientQuery, ProportionQuery } from '@/applications/wbs/wbs-analytics-application-service';
 import { IPhaseApplicationService } from '@/applications/phase/phase-application-service';
 import { IWbsApplicationService } from '@/applications/wbs/wbs-application-service';
 import { IWbsTagApplicationService } from '@/applications/wbs/wbs-tag-application-service';
 
 export async function getCoefficients(query: CoefficientQuery) {
-    const handler = container.get<WbsAnalyticsHandler>(SYMBOL.WbsAnalyticsHandler);
-    return await handler.getCoefficients(query);
+    const service = container.get<IWbsAnalyticsApplicationService>(SYMBOL.IWbsAnalyticsApplicationService);
+    return await service.getCoefficients(query);
 }
 
 export async function getProportions(query: ProportionQuery) {
-    const handler = container.get<WbsAnalyticsHandler>(SYMBOL.WbsAnalyticsHandler);
-    return await handler.getProportions(query);
+    const service = container.get<IWbsAnalyticsApplicationService>(SYMBOL.IWbsAnalyticsApplicationService);
+    return await service.getProportions(query);
 }
 
 export async function getPhaseTemplates() {

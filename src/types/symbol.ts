@@ -4,20 +4,17 @@ export const SYMBOL = {
     IUserApplicationService: Symbol.for('IUserApplicationService'),
     IWbsApplicationService: Symbol.for('IWbsApplicationService'),
     ITaskApplicationService: Symbol.for('ITaskApplicationService'),
-    IScheduleGenerateService: Symbol.for('IScheduleGenerateService'),
     IAssigneeGanttService: Symbol.for('IAssigneeGanttService'),
     IDashboardApplicationService: Symbol.for('IDashboardApplicationService'),
     IPhaseApplicationService: Symbol.for('IPhaseApplicationService'),
     IMilestoneApplicationService: Symbol.for('IMilestoneApplicationService'),
-
-    // ドメインサービス
-    GetOperationPossible: Symbol.for('GetOperationPossible'),
-    ScheduleGenerate: Symbol.for('ScheduleGenerate'),
+    IScheduleApplicationService: Symbol.for('IScheduleApplicationService'),
 
     // リポジトリ
     IProjectRepository: Symbol.for('IProjectRepository'),
     IWbsRepository: Symbol.for('IWbsRepository'),
     IWbsAssigneeRepository: Symbol.for('IWbsAssigneeRepository'),
+    IWbsBufferRepository: Symbol.for('IWbsBufferRepository'),
     IPhaseRepository: Symbol.for('IPhaseRepository'),
     ITaskRepository: Symbol.for('ITaskRepository'),
     IDashboardQueryRepository: Symbol.for('IDashboardQueryRepository'),
@@ -28,6 +25,7 @@ export const SYMBOL = {
     IQueryBus: Symbol.for('IQueryBus'),
     GetDashboardStatsHandler: Symbol.for('GetDashboardStatsHandler'),
     GetWbsSummaryHandler: Symbol.for('GetWbsSummaryHandler'),
+    GetWbsTaskSummaryHandler: Symbol.for('GetWbsTaskSummaryHandler'),
     IWbsQueryRepository: Symbol.for('IWbsQueryRepository'),
 
     // Auth
@@ -53,7 +51,6 @@ export const SYMBOL = {
     TaskMappingService: Symbol.for('TaskMappingService'),
 
     // WBS Sync
-    IWbsSyncService: Symbol.for('IWbsSyncService'),
     IExcelWbsRepository: Symbol.for('IExcelWbsRepository'),
     ISyncLogRepository: Symbol.for('ISyncLogRepository'),
     IWbsSyncApplicationService: Symbol.for('IWbsSyncApplicationService'),
@@ -62,13 +59,12 @@ export const SYMBOL = {
 
     // Calendar
     ICompanyHolidayRepository: Symbol.for('ICompanyHolidayRepository'),
+    ICompanyHolidayApplicationService: Symbol.for('ICompanyHolidayApplicationService'),
     IUserScheduleRepository: Symbol.for('IUserScheduleRepository'),
 
     // EVM
-    IEvmRepository: Symbol.for('IEvmRepository'),
-    IEvmApplicationService: Symbol.for('IEvmApplicationService'),
     IWbsEvmRepository: Symbol.for('IWbsEvmRepository'),
-    EvmService: Symbol.for('EvmService'),
+    IEvmService: Symbol.for('IEvmService'),
 
     // Import Job
     IImportJobRepository: Symbol.for('IImportJobRepository'),
@@ -77,14 +73,23 @@ export const SYMBOL = {
     // Notification
     INotificationService: Symbol.for('INotificationService'),
     INotificationRepository: Symbol.for('INotificationRepository'),
+    IPushNotificationService: Symbol.for('IPushNotificationService'),
+    NotificationEventDetector: Symbol.for('NotificationEventDetector'),
 
     // Task Scheduling
-    ITaskSchedulingApplicationService: Symbol.for('ITaskSchedulingApplicationService'),
-    TaskSchedulingService: Symbol.for('TaskSchedulingService'),
+    ISchedulingApplicationService: Symbol.for('ISchedulingApplicationService'),
+    ISchedulingSettingsRepository: Symbol.for('ISchedulingSettingsRepository'),
 
     // System Settings
     ISystemSettingsRepository: Symbol.for('ISystemSettingsRepository'),
     ISystemSettingsApplicationService: Symbol.for('ISystemSettingsApplicationService'),
+
+    // Project Settings
+    IProjectSettingsRepository: Symbol.for('IProjectSettingsRepository'),
+    IProjectSettingsApplicationService: Symbol.for('IProjectSettingsApplicationService'),
+
+    // Forecast
+    IForecastApplicationService: Symbol.for('IForecastApplicationService'),
 
     // WBS Tags
     IWbsTagRepository: Symbol.for('IWbsTagRepository'),
@@ -92,17 +97,8 @@ export const SYMBOL = {
 
     // WBS Analytics
     IWbsCrossQueryRepository: Symbol.for('IWbsCrossQueryRepository'),
-    WbsAnalyticsHandler: Symbol.for('WbsAnalyticsHandler'),
+    IWbsAnalyticsApplicationService: Symbol.for('IWbsAnalyticsApplicationService'),
 
-    // 定量品質管理
-    IQualityApplicationService: Symbol.for('IQualityApplicationService'),
-    IQualityReviewTargetRepository: Symbol.for('IQualityReviewTargetRepository'),
-    IQualityReviewerRepository: Symbol.for('IQualityReviewerRepository'),
-    IQualitySizeMetricRepository: Symbol.for('IQualitySizeMetricRepository'),
-    IQualityFindingRepository: Symbol.for('IQualityFindingRepository'),
-    IQualityMetricsReadRepository: Symbol.for('IQualityMetricsReadRepository'),
-    IQualityTaskRepository: Symbol.for('IQualityTaskRepository'),
-    SyncQualityTargetsService: Symbol.for('SyncQualityTargetsService'),
 
     // Infrastructure
     PrismaClient: Symbol.for('PrismaClient'),

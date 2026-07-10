@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import type { EvmMetricsData } from "@/app/actions/evm/evm-actions";
+import type { EvmMetricsData } from "@/applications/evm/evm-dashboard-dto";
 import {
   LineChart,
   Line,
@@ -30,17 +30,14 @@ type EvmChartProps = {
 export function EvmChart({ data, calculationMode }: EvmChartProps) {
   const [showPvBase, setShowPvBase] = useState(true);
 
-  // データをチャート用に変換
+  // データをチャート用に変換（X軸は時間軸＝エポックms）
   const chartData = data.map((metrics, index) => {
     const nextMetrics = data[index + 1];
     // 次のデータが予測値の場合、現在のデータ（実績）を予測線の開始点としても使用する
     const isLastActual = !metrics.isPredicted && nextMetrics?.isPredicted;
 
     return {
-      date: new Date(metrics.date).toLocaleDateString("ja-JP", {
-        month: "short",
-        day: "numeric",
-      }),
+      ts: new Date(metrics.date).getTime(),
       PV_BASE: metrics.pv_base,
       PV: metrics.pv,
       // 実績データ（予測データの場合はnull）
@@ -52,14 +49,17 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
     };
   });
 
-  // 現在日付のラベル（X軸のフォーマットと合わせる）
-  const todayLabel = new Date().toLocaleDateString("ja-JP", {
-    month: "short",
-    day: "numeric",
-  });
+  const formatTick = (ts: number): string =>
+    new Date(ts).toLocaleDateString("ja-JP", {
+      month: "short",
+      day: "numeric",
+    });
 
-  // PVの最大値
-  const maxPv = Math.max(...data.map((metrics) => metrics.pv));
+  const formatTooltipLabel = (ts: number): string =>
+    new Date(ts).toLocaleDateString("ja-JP");
+
+  // BAC（完了時予算）。時系列途中でタスク追加等によりBACが変わるため、最新時点の値を使う
+  const bacValue = data.length > 0 ? data[data.length - 1].bac : 0;
 
   /**
    * 値を計算モードに応じてフォーマット
@@ -91,21 +91,37 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
         <ResponsiveContainer width="100%" height={600}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
+            {/* 時間軸（数値）。カテゴリ軸だと今日線が刻みと一致した時しか描画されず、
+                年跨ぎで同一ラベルが衝突するため、エポックmsの数値軸にする */}
+            <XAxis
+              dataKey="ts"
+              type="number"
+              scale="time"
+              domain={["dataMin", "dataMax"]}
+              tickFormatter={formatTick}
+            />
             <YAxis tickFormatter={(value) => formatValue(value)} />
             <Tooltip
               formatter={(value: number) => formatValue(value)}
+              labelFormatter={(ts) => formatTooltipLabel(Number(ts))}
               labelStyle={{ color: "#000" }}
             />
             <Legend />
             <ReferenceLine
-              x={todayLabel}
+              x={Date.now()}
               stroke="#ef4444"
               strokeDasharray="4 4"
+              label={{
+                value: "今日",
+                position: "top",
+                fill: "#ef4444",
+                fontSize: 12,
+              }}
             />
             <ReferenceLine
-              y={maxPv}
+              y={bacValue}
               stroke="red"
+              ifOverflow="extendDomain"
               label={{
                 value: "BAC",
                 position: "top",

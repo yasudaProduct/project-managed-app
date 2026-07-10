@@ -3,7 +3,7 @@ import { IWbsEvmRepository } from '@/applications/evm/iwbs-evm-repository';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { EvmMetrics } from '@/domains/evm/evm-metrics';
 import { WbsEvmData } from '@/applications/evm/iwbs-evm-repository';
-import { TaskStatus } from '@prisma/client';
+import { TaskStatus } from '@/types/wbs';
 
 describe('EvmService', () => {
   let evmService: EvmService;
@@ -14,8 +14,13 @@ describe('EvmService', () => {
       getWbsEvmData: jest.fn(),
       getTasksEvmData: jest.fn(),
       getActualCostByDate: jest.fn(),
+      getActualCostByTask: jest.fn().mockResolvedValue(new Map()),
       getBuffers: jest.fn(),
       getProjectSettings: jest.fn(),
+      getProgressSnapshots: jest.fn().mockResolvedValue([]),
+      getEditableProgressSnapshots: jest.fn().mockResolvedValue([]),
+      updateProgressSnapshot: jest.fn().mockResolvedValue(undefined),
+      getCompanyHolidays: jest.fn().mockResolvedValue([]),
     } as jest.Mocked<IWbsEvmRepository>;
 
     evmService = new EvmService(mockRepository);
@@ -86,6 +91,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 300,
+        totalBaseManHours: 300,
         tasks,
         buffers: [],
         settings: null,
@@ -143,6 +149,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -195,6 +202,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 200,
+        totalBaseManHours: 200,
         tasks,
         buffers: [],
         settings: null,
@@ -243,6 +251,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 300,
+        totalBaseManHours: 300,
         tasks,
         buffers: [],
         settings: null,
@@ -280,6 +289,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: {
@@ -314,6 +324,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: {
@@ -351,6 +362,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [
           { bufferHours: 20 },
@@ -384,6 +396,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [
           { bufferHours: 20 },
@@ -398,9 +411,9 @@ describe('EvmService', () => {
 
       const result = await evmService.calculateCurrentEvmMetrics(1, evaluationDate, 'cost');
 
-      // BAC: (100 * 5000) + 20 = 500,020
-      // Note: バッファは工数として加算され、金額換算されない
-      expect(result.bac).toBe(500020);
+      // BAC: (100 * 5000) + (20h × デフォルト単価5,000) = 600,000
+      // バッファは単価換算して加算する（設定なし時はAVERAGE_RATE→平均単価不明→デフォルト単価）
+      expect(result.bac).toBe(600000);
     });
 
     it('タスクが空の場合、すべての値が0になる', async () => {
@@ -408,6 +421,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 0,
+        totalBaseManHours: 0,
         tasks: [],
         buffers: [],
         settings: null,
@@ -436,8 +450,9 @@ describe('EvmService', () => {
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
@@ -446,6 +461,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -472,8 +488,9 @@ describe('EvmService', () => {
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-01-31'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
@@ -482,6 +499,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -494,10 +512,12 @@ describe('EvmService', () => {
 
       const result = await evmService.getEvmTimeSeries(1, startDate, endDate, 'weekly', 'hours');
 
-      expect(result).toHaveLength(3); // 1/1, 1/8, 1/15
+      // 週次刻み + 終端補正（endDate=1/20 が最終点として含まれる）
+      expect(result).toHaveLength(4); // 1/1, 1/8, 1/15, 1/20
       expect(result[0].date).toEqual(new Date('2025-01-01'));
       expect(result[1].date).toEqual(new Date('2025-01-08'));
       expect(result[2].date).toEqual(new Date('2025-01-15'));
+      expect(result[3].date).toEqual(new Date('2025-01-20'));
     });
 
     it('月次の時系列データを生成する', async () => {
@@ -508,8 +528,9 @@ describe('EvmService', () => {
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-12-31'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
@@ -518,6 +539,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -530,10 +552,12 @@ describe('EvmService', () => {
 
       const result = await evmService.getEvmTimeSeries(1, startDate, endDate, 'monthly', 'hours');
 
-      expect(result).toHaveLength(3); // 1/1, 2/1, 3/1
+      // 月次刻み + 終端補正（endDate=3/15 が最終点として含まれる）
+      expect(result).toHaveLength(4); // 1/1, 2/1, 3/1, 3/15
       expect(result[0].date).toEqual(new Date('2025-01-01'));
       expect(result[1].date).toEqual(new Date('2025-02-01'));
       expect(result[2].date).toEqual(new Date('2025-03-01'));
+      expect(result[3].date).toEqual(new Date('2025-03-15'));
     });
 
     it('進捗率測定方法を指定できる', async () => {
@@ -544,8 +568,9 @@ describe('EvmService', () => {
         new TaskEvmData(
           1, 'T001', 'Task1',
           new Date('2025-01-01'), new Date('2025-01-10'),
+          new Date('2025-01-01'), new Date('2025-12-31'),
           null, null,
-          100, 0,
+          100, 100, 0,
           'IN_PROGRESS', 50,
           5000, null
         ),
@@ -554,6 +579,7 @@ describe('EvmService', () => {
       const wbsData: WbsEvmData = {
         wbsId: 1,
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -631,6 +657,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 1000,
+        totalBaseManHours: 1000,
         tasks,
         buffers: [],
         settings: null,
@@ -673,6 +700,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 1000,
+        totalBaseManHours: 1000,
         tasks,
         buffers: [],
         settings: null,
@@ -708,6 +736,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -754,6 +783,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 300,
+        totalBaseManHours: 300,
         tasks,
         buffers: [],
         settings: null,
@@ -785,6 +815,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -924,6 +955,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: BAC,
+        totalBaseManHours: BAC,
         tasks,
         buffers: [],
         settings: null,
@@ -1037,7 +1069,7 @@ describe('EvmService', () => {
         ];
         const wbsData: WbsEvmData = {
           wbsId: 1, projectId: 'proj-1', projectName: 'Test',
-          totalPlannedManHours: BAC, tasks, buffers: [], settings: null,
+          totalPlannedManHours: BAC, totalBaseManHours: BAC, tasks, buffers: [], settings: null,
         };
         mockRepository.getWbsEvmData.mockResolvedValue(wbsData);
         mockRepository.getActualCostByDate.mockResolvedValue(new Map([['2025-03-07', 100]]));
@@ -1185,6 +1217,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'テストプロジェクト',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: {
@@ -1225,6 +1258,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'テストプロジェクト',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -1247,7 +1281,7 @@ describe('EvmService', () => {
       );
 
       // ETCは(BAC-EV)/CPIで計算される
-      if (result.cpi > 0) {
+      if (result.cpi !== null && result.cpi > 0) {
         expect(result.etc).toBeCloseTo((result.bac - result.ev) / result.cpi, 1);
       }
       expect(result.eac).toBeCloseTo(result.ac + result.etc, 1);
@@ -1260,7 +1294,7 @@ describe('EvmService', () => {
         1, new Date('2025-01-15'), 'hours'
       );
 
-      if (result.cpi > 0 && result.spi > 0) {
+      if (result.cpi !== null && result.cpi > 0 && result.spi !== null && result.spi > 0) {
         expect(result.etc).toBeCloseTo(
           (result.bac - result.ev) / (result.cpi * result.spi), 1
         );
@@ -1324,6 +1358,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -1362,6 +1397,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -1400,6 +1436,7 @@ describe('EvmService', () => {
         projectId: 'proj-1',
         projectName: 'Test',
         totalPlannedManHours: 100,
+        totalBaseManHours: 100,
         tasks,
         buffers: [],
         settings: null,
@@ -1430,6 +1467,54 @@ describe('EvmService', () => {
       expect(result[1].ac).toBe(30);
       // 1/3: AC = 10 + 20 + 30 = 60（累積）
       expect(result[2].ac).toBe(60);
+    });
+  });
+
+  describe('updateProgressSnapshot（進捗スナップショット訂正）', () => {
+    it('正常系: progressRate/status をリポジトリへそのまま委譲する', async () => {
+      await evmService.updateProgressSnapshot(10, 50, 'IN_PROGRESS');
+
+      expect(mockRepository.updateProgressSnapshot).toHaveBeenCalledWith(
+        10,
+        50,
+        'IN_PROGRESS'
+      );
+    });
+
+    it('正常系: progressRate=null（クリア）を許容する', async () => {
+      await evmService.updateProgressSnapshot(10, null, 'NOT_STARTED');
+
+      expect(mockRepository.updateProgressSnapshot).toHaveBeenCalledWith(
+        10,
+        null,
+        'NOT_STARTED'
+      );
+    });
+
+    it('境界値: 0 と 100 は許容する', async () => {
+      await evmService.updateProgressSnapshot(1, 0, 'NOT_STARTED');
+      await evmService.updateProgressSnapshot(2, 100, 'COMPLETED');
+
+      expect(mockRepository.updateProgressSnapshot).toHaveBeenCalledTimes(2);
+    });
+
+    it('範囲外（負の値）は例外を投げ、リポジトリを呼ばない', async () => {
+      await expect(
+        evmService.updateProgressSnapshot(10, -1, 'IN_PROGRESS')
+      ).rejects.toThrow();
+      expect(mockRepository.updateProgressSnapshot).not.toHaveBeenCalled();
+    });
+
+    it('範囲外（100超）は例外を投げ、リポジトリを呼ばない', async () => {
+      await expect(
+        evmService.updateProgressSnapshot(10, 101, 'IN_PROGRESS')
+      ).rejects.toThrow();
+      expect(mockRepository.updateProgressSnapshot).not.toHaveBeenCalled();
+    });
+
+    it('getEditableProgressSnapshots はリポジトリへ委譲する', async () => {
+      await evmService.getEditableProgressSnapshots(123);
+      expect(mockRepository.getEditableProgressSnapshots).toHaveBeenCalledWith(123);
     });
   });
 

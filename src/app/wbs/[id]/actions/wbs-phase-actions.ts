@@ -1,56 +1,62 @@
 "use server"
 
-import { WbsPhase } from '@/types/wbs'
-import prisma from '@/lib/prisma/prisma'
+import { z } from "zod"
+import { container } from "@/lib/inversify.config"
+import { SYMBOL } from "@/types/symbol"
+import type { IPhaseApplicationService, WbsPhaseType } from "@/applications/phase/phase-application-service"
+import type { ActionResult } from "@/types/action-result"
 
-export async function getWbsPhases(wbsId: number) {
-    const phases = await prisma.wbsPhase.findMany({
-        where: {
-            wbsId: Number(wbsId),
-        },
-        select: {
-            id: true,
-            name: true,
-            code: true,
-            seq: true,
-            wbsId: true,
-        },
-        orderBy: {
-            seq: "asc",
-        },
-    })
-
-    return phases
+function getPhaseApplicationService(): IPhaseApplicationService {
+    return container.get<IPhaseApplicationService>(SYMBOL.IPhaseApplicationService)
 }
 
-export async function createWbsPhase(wbsId: number, phaseData: { name: string; code: string; seq: number }): Promise<{ success: boolean; phase?: WbsPhase; error?: string }> {
+const updateWbsPhaseSchema = z.object({
+    name: z.string().min(1).optional(),
+    code: z.string().min(1).optional(),
+    seq: z.number().optional(),
+})
 
-    const cheackPhase = await prisma.wbsPhase.findFirst({ where: { name: phaseData.name } });
-    if (cheackPhase) {
-        return { success: false, error: "同じ工程がすでに存在します。" };
+/**
+ * WBSに紐づくフェーズ一覧を取得する
+ */
+export async function getWbsPhases(wbsId: number): Promise<WbsPhaseType[]> {
+    return getPhaseApplicationService().getPhasesByWbsId(Number(wbsId))
+}
+
+/**
+ * WBSフェーズを更新する
+ */
+export async function updateWbsPhase(
+    id: number,
+    wbsId: number,
+    phaseData: { name?: string; code?: string; seq?: number }
+): Promise<ActionResult<{ id: number }>> {
+    const parsed = updateWbsPhaseSchema.safeParse(phaseData)
+    if (!parsed.success) {
+        return { success: false, error: "入力値が不正です。" }
     }
 
-    const newPhase = await prisma.wbsPhase.create({
-        data: {
-            wbsId,
-            name: phaseData.name,
-            code: phaseData.code,
-            seq: phaseData.seq,
-        },
+    const result = await getPhaseApplicationService().updateWbsPhase({
+        id,
+        wbsId,
+        ...parsed.data,
     })
-    return { success: true, phase: newPhase }
+    if (!result.success || !result.phase) {
+        return { success: false, error: result.error ?? "フェーズの更新に失敗しました。" }
+    }
+
+    return { success: true, data: { id: result.phase.id } }
 }
 
-export async function updateWbsPhase(id: number, phaseData: { name?: string; code?: string; seq?: number }): Promise<{ success: boolean; phase?: WbsPhase; error?: string }> {
-    const updatedPhase = await prisma.wbsPhase.update({
-        where: { id },
-        data: phaseData,
-    })
-    return { success: true, phase: updatedPhase }
-}
-
-export async function deleteWbsPhase(id: number): Promise<{ success: boolean; error?: string }> {
+/**
+ * WBSフェーズを削除する
+ */
+export async function deleteWbsPhase(id: number): Promise<ActionResult<void>> {
     //TODO フェーズが担当しているタスクはフェーズIDをnullにする
-    await prisma.wbsPhase.delete({ where: { id } });
-    return { success: true }
+    const result = await getPhaseApplicationService().deleteWbsPhase(id)
+    if (!result.success) {
+        return { success: false, error: result.error ?? "フェーズの削除に失敗しました。" }
+    }
+
+    return { success: true, data: undefined }
 }

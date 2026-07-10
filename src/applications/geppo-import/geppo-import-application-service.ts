@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify'
 import { SYMBOL } from '@/types/symbol'
-import { WorkRecord } from '@/domains/work-records/work-recoed'
+import { WorkRecord } from '@/domains/work-record/work-record'
 import {
   GeppoImportOptions,
   GeppoImportResult,
@@ -9,12 +9,29 @@ import {
   GeppoImportError,
   ProjectMappingValidation
 } from '@/domains/geppo-import/geppo-import-result'
-import type { IGeppoRepository } from '@/applications/geppo/repositories/igeppo.repository'
+import type { IGeppoRepository } from '@/applications/geppo/repositories/igeppo-repository'
 import type { IWorkRecordApplicationService } from '@/applications/work-record/work-record-application-service'
-import { ProjectMappingService } from '@/infrastructures/geppo-import/project-mapping.service'
-import { UserMappingService } from '@/infrastructures/geppo-import/user-mapping.service'
-import { TaskMappingService, TaskMappingEntry, buildTaskMapKey } from '@/infrastructures/geppo-import/task-mapping.service'
+import type { IProjectMappingService } from '@/applications/geppo-import/iproject-mapping-service'
+import type { IUserMappingService } from '@/applications/geppo-import/iuser-mapping-service'
+import type { ITaskMappingService, TaskMappingEntry } from '@/applications/geppo-import/itask-mapping-service'
+import { buildTaskMapKey } from '@/applications/geppo-import/itask-mapping-service'
 import { Geppo, GeppoSearchFilters } from '@/domains/geppo/types'
+import { utcDateFromYmd } from '@/utils/date-util'
+
+/**
+ * GeppoのYYYYMM＋日から作業実績日（WorkRecord.date）用のDateを生成する。
+ *
+ * WorkRecord.date は Prisma の `@db.Date`（TZなしの暦日）に保存され、Prisma は
+ * Date の **UTC** の暦日を書き込む。`new Date(year, month, day)` はローカルTZの
+ * 0時を表すため、UTC+9(JST)等の環境で生成すると前日（例: 9/3→9/2）として
+ * 保存され、ガントチャート上の実績日が1日ずれる原因になる。
+ * 日付ポリシー（保存は常にUTC）に従い、`Date.UTC` でUTC 0時として構築する。
+ */
+export function createUtcDateFromYearMonthDay(yyyymm: string, day: number): Date {
+  const year = parseInt(yyyymm.substring(0, 4))
+  const month = parseInt(yyyymm.substring(4, 6)) - 1 // Dateは0ベース
+  return new Date(Date.UTC(year, month, day))
+}
 
 export interface IGeppoImportApplicationService {
   validateImportData(options: GeppoImportOptions): Promise<GeppoImportValidation>
@@ -26,9 +43,9 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
   constructor(
     @inject(SYMBOL.IGeppoRepository) private geppoRepository: IGeppoRepository,
     @inject(SYMBOL.IWorkRecordApplicationService) private workRecordService: IWorkRecordApplicationService,
-    @inject(SYMBOL.ProjectMappingService) private projectMappingService: ProjectMappingService,
-    @inject(SYMBOL.UserMappingService) private userMappingService: UserMappingService,
-    @inject(SYMBOL.TaskMappingService) private taskMappingService: TaskMappingService
+    @inject(SYMBOL.ProjectMappingService) private projectMappingService: IProjectMappingService,
+    @inject(SYMBOL.UserMappingService) private userMappingService: IUserMappingService,
+    @inject(SYMBOL.TaskMappingService) private taskMappingService: ITaskMappingService
   ) { }
 
   async validateImportData(options: GeppoImportOptions): Promise<GeppoImportValidation> {
@@ -181,9 +198,10 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
 
         if (userIds.length > 0 && wbsIds.length > 0) {
           if (options.targetMonth) {
-            // 特定月の場合は月単位で削除
-            const monthStart = new Date(`${options.targetMonth}-01`)
-            const monthEnd = new Date(`${options.targetMonth}-31`)
+            // 特定月の場合は月単位で削除（月末はUTCで算出。"-31"連結は6月等でInvalid Dateになるため不可）
+            const [ty, tm] = options.targetMonth.split('-').map((v) => parseInt(v, 10))
+            const monthStart = utcDateFromYmd(ty, tm, 1)
+            const monthEnd = new Date(Date.UTC(ty, tm, 0)) // 当月末日（翌月0日）
             deletedCount = await this.workRecordService.deleteByUserAndDateRange(userIds, monthStart, monthEnd, wbsIds)
           } else {
             // 全期間の場合は、インポートされたデータの日付範囲で削除
@@ -253,13 +271,13 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
     const filters: GeppoSearchFilters = {}
 
     if (targetMonth) {
-      // 特定の月が指定されている場合
-      filters.dateFrom = new Date(`${targetMonth}-01`)
-      filters.dateTo = new Date(`${targetMonth}-31`)
+      // 特定の月が指定されている場合（月末はUTCで算出。"-31"連結は6月等でInvalid Dateになる）
+      const [ty, tm] = targetMonth.split('-').map((v) => parseInt(v, 10))
+      filters.dateFrom = utcDateFromYmd(ty, tm, 1)
+      filters.dateTo = new Date(Date.UTC(ty, tm, 0)) // 当月末日（翌月0日）
     }
     // targetMonthが指定されていない場合は、全期間を対象とする（フィルタなし）
 
-    console.log(targetMonth)
 
     const result = await this.geppoRepository.searchWorkEntries(filters, { page: 1, limit: 10000 })
     return result.geppos
@@ -334,14 +352,13 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
 
   /**
    * YYYYMMと日付からDateオブジェクトを作成
-   * @param yyyymm 
-   * @param day 
-   * @returns 
+   * @param yyyymm
+   * @param day
+   * @returns
    */
   private createDateFromYearMonthDay(yyyymm: string, day: number): Date {
-    const year = parseInt(yyyymm.substring(0, 4))
-    const month = parseInt(yyyymm.substring(4, 6)) - 1 // Dateは0ベース
-    return new Date(year, month, day)
+    // 保存はUTC前提（ローカルTZ解釈だとサーバーTZ次第で日付が1日ずれる）
+    return createUtcDateFromYearMonthDay(yyyymm, day)
   }
 
   private convertWorkRecordsToImportRecords(workRecords: WorkRecord[]): GeppoImportRecord[] {

@@ -2,20 +2,20 @@
 // 以下のテストはWbsSyncServiceの実装変更に伴い、コメントアウトされています。
 
 // import { WbsSyncService } from '@/domains/sync/WbsSyncService';
-// import { ExcelWbs, SyncChanges, SyncError, SyncErrorType } from '@/domains/sync/ExcelWbs';
+// import { ExcelWbs, SyncChanges, SyncError, SyncErrorType } from '@/domains/sync/excel-wbs';
 // import { Phase } from '@/domains/phase/phase';
 // import { PhaseCode } from '@/domains/phase/phase-code';
-// import { IExcelWbsRepository } from '@/applications/excel-sync/IExcelWbsRepository';
-// import { ISyncLogRepository } from '@/applications/excel-sync/ISyncLogRepository';
+// import { IExcelWbsRepository } from '@/applications/wbs-sync/iexcel-wbs-repository';
+// import { ISyncLogRepository } from '@/applications/wbs-sync/isync-log-repository';
 // import { IPhaseRepository } from '@/applications/task/iphase-repository';
-// import { IUserRepository } from '@/applications/user/iuser-repositroy';
+// import { IUserRepository } from '@/applications/user/iuser-repository';
 // import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 // import { User } from '@/domains/user/user';
 // import { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 // import { ITaskRepository } from '@/applications/task/itask-repository';
 // import { Task } from '@/domains/task/task';
 // import { TaskNo } from '@/domains/task/value-object/task-id';
-// import { TaskStatus } from '@/domains/task/value-object/project-status';
+// import { TaskStatus } from '@/domains/task/value-object/task-status';
 
 describe('WbsSyncService', () => {
   describe('placeholder', () => {

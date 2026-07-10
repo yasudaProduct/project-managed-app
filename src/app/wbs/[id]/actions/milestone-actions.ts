@@ -1,8 +1,15 @@
 "use server";
 
-import prisma from "@/lib/prisma/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { container } from "@/lib/inversify.config";
+import { SYMBOL } from "@/types/symbol";
+import type { IMilestoneApplicationService } from "@/applications/milestone/milestone-application-service";
+import type { ActionResult } from "@/types/action-result";
+
+function getMilestoneApplicationService(): IMilestoneApplicationService {
+    return container.get<IMilestoneApplicationService>(SYMBOL.IMilestoneApplicationService);
+}
 
 // マイルストーンの作成・編集用のスキーマ
 const milestoneSchema = z.object({
@@ -14,56 +21,30 @@ const milestoneSchema = z.object({
 
 export type MilestoneFormData = z.infer<typeof milestoneSchema>;
 
-export interface ActionResult {
-  success: boolean;
-  error?: string;
-  milestone?: {
-    id: number;
-    name: string;
-    date: Date;
-    wbsId: number;
-  };
-}
-
 /**
  * マイルストーンを作成する
  */
 export async function createMilestone(
   data: Omit<MilestoneFormData, "id">
-): Promise<ActionResult> {
-  try {
-    const validatedData = milestoneSchema.omit({ id: true }).parse(data);
-
-    const milestone = await prisma.milestone.create({
-      data: {
-        name: validatedData.name,
-        date: validatedData.date,
-        wbsId: validatedData.wbsId,
-      },
-    });
-
-    revalidatePath(`/wbs/${data.wbsId}`);
-    revalidatePath(`/wbs/${data.wbsId}/ganttv2`);
-
-    return {
-      success: true,
-      milestone,
-    };
-  } catch (error) {
-    console.error("Failed to create milestone:", error);
-
-    if (error instanceof z.ZodError) {
-      return {
-        success: false,
-        error: error.errors.map(e => e.message).join(", "),
-      };
-    }
-
-    return {
-      success: false,
-      error: "マイルストーンの作成に失敗しました",
-    };
+): Promise<ActionResult<{ id: number }>> {
+  const parsed = milestoneSchema.omit({ id: true }).safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors.map(e => e.message).join(", ") };
   }
+
+  const result = await getMilestoneApplicationService().createMilestone({
+    wbsId: parsed.data.wbsId,
+    name: parsed.data.name,
+    date: parsed.data.date,
+  });
+  if (!result.success || result.id === undefined) {
+    return { success: false, error: result.error ?? "マイルストーンの作成に失敗しました" };
+  }
+
+  revalidatePath(`/wbs/${data.wbsId}`);
+  revalidatePath(`/wbs/${data.wbsId}/ganttv2`);
+
+  return { success: true, data: { id: result.id } };
 }
 
 /**
@@ -71,47 +52,29 @@ export async function createMilestone(
  */
 export async function updateMilestone(
   data: MilestoneFormData
-): Promise<ActionResult> {
-  try {
-    const validatedData = milestoneSchema.parse(data);
-
-    if (!validatedData.id) {
-      return {
-        success: false,
-        error: "マイルストーンIDが必要です",
-      };
-    }
-
-    const milestone = await prisma.milestone.update({
-      where: { id: validatedData.id },
-      data: {
-        name: validatedData.name,
-        date: validatedData.date,
-      },
-    });
-
-    revalidatePath(`/wbs/${data.wbsId}`);
-    revalidatePath(`/wbs/${data.wbsId}/ganttv2`);
-
-    return {
-      success: true,
-      milestone,
-    };
-  } catch (error) {
-    console.error("Failed to update milestone:", error);
-
-    if (error instanceof z.ZodError) {
-      return {
-        success: false,
-        error: error.errors.map(e => e.message).join(", "),
-      };
-    }
-
-    return {
-      success: false,
-      error: "マイルストーンの更新に失敗しました",
-    };
+): Promise<ActionResult<{ id: number }>> {
+  const parsed = milestoneSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors.map(e => e.message).join(", ") };
   }
+
+  if (!parsed.data.id) {
+    return { success: false, error: "マイルストーンIDが必要です" };
+  }
+
+  const result = await getMilestoneApplicationService().updateMilestone({
+    id: parsed.data.id,
+    name: parsed.data.name,
+    date: parsed.data.date,
+  });
+  if (!result.success || result.id === undefined) {
+    return { success: false, error: result.error ?? "マイルストーンの更新に失敗しました" };
+  }
+
+  revalidatePath(`/wbs/${data.wbsId}`);
+  revalidatePath(`/wbs/${data.wbsId}/ganttv2`);
+
+  return { success: true, data: { id: result.id } };
 }
 
 /**
@@ -120,26 +83,16 @@ export async function updateMilestone(
 export async function deleteMilestone(
   id: number,
   wbsId: number
-): Promise<ActionResult> {
-  try {
-    await prisma.milestone.delete({
-      where: { id },
-    });
-
-    revalidatePath(`/wbs/${wbsId}`);
-    revalidatePath(`/wbs/${wbsId}/ganttv2`);
-
-    return {
-      success: true,
-    };
-  } catch (error) {
-    console.error("Failed to delete milestone:", error);
-
-    return {
-      success: false,
-      error: "マイルストーンの削除に失敗しました",
-    };
+): Promise<ActionResult<void>> {
+  const result = await getMilestoneApplicationService().deleteMilestone(id);
+  if (!result.success) {
+    return { success: false, error: result.error ?? "マイルストーンの削除に失敗しました" };
   }
+
+  revalidatePath(`/wbs/${wbsId}`);
+  revalidatePath(`/wbs/${wbsId}/ganttv2`);
+
+  return { success: true, data: undefined };
 }
 
 /**
@@ -147,12 +100,7 @@ export async function deleteMilestone(
  */
 export async function getMilestones(wbsId: number) {
   try {
-    const milestones = await prisma.milestone.findMany({
-      where: { wbsId },
-      orderBy: { date: "asc" },
-    });
-
-    return milestones;
+    return await getMilestoneApplicationService().getMilestones(wbsId);
   } catch (error) {
     console.error("Failed to fetch milestones:", error);
     return [];

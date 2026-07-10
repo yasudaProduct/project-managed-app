@@ -31,6 +31,10 @@ export const getTaskStatusName = (status: TaskStatus) => {
       return "進行中";
     case "COMPLETED":
       return "完了";
+    case "ON_HOLD":
+      return "保留";
+    default:
+      return "不明";
   }
 };
 

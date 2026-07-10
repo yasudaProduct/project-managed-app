@@ -1,5 +1,5 @@
-import { WbsDataMapper } from '@/domains/sync/WbsDataMapper';
-import { ExcelWbs } from '@/domains/sync/ExcelWbs';
+import { WbsDataMapper } from '@/domains/sync/wbs-data-mapper';
+import { ExcelWbs } from '@/domains/sync/excel-wbs';
 
 function createExcelWbs(overrides?: Partial<ExcelWbs>): ExcelWbs {
   return {
@@ -92,6 +92,21 @@ describe('WbsDataMapper', () => {
     it('ACTIVITY + TASK が name に設定される', () => {
       const result = WbsDataMapper.toAppWbs(createExcelWbs({ ACTIVITY: '基本設計', TASK: '画面設計' }));
       expect(result.task.name).toBe('基本設計画面設計');
+    });
+
+    it('ACTIVITY が null の場合、TASK のみが name になる（"null" が混入しない）', () => {
+      const result = WbsDataMapper.toAppWbs(createExcelWbs({ ACTIVITY: null, TASK: '画面設計' }));
+      expect(result.task.name).toBe('画面設計');
+    });
+
+    it('TASK が null の場合、ACTIVITY のみが name になる（"null" が混入しない）', () => {
+      const result = WbsDataMapper.toAppWbs(createExcelWbs({ ACTIVITY: '基本設計', TASK: null }));
+      expect(result.task.name).toBe('基本設計');
+    });
+
+    it('ACTIVITY と TASK が両方 null の場合、name は undefined（"nullnull" にならない）', () => {
+      const result = WbsDataMapper.toAppWbs(createExcelWbs({ ACTIVITY: null, TASK: null }));
+      expect(result.task.name).toBeUndefined();
     });
 
     it('WBS_ID が taskNo に設定される', () => {

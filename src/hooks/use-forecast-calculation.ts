@@ -2,10 +2,10 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { calculateTasksForecast } from '@/app/wbs/[id]/actions/forecast-actions';
-import {
+import type {
   ForecastCalculationOptions,
   ForecastCalculationResult
-} from '@/domains/forecast/forecast-calculation.service';
+} from '@/types/forecast-calculation';
 
 /**
  * 見通し工数計算フック

@@ -3,8 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, AlertTriangle } from "lucide-react";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatDate as formatDateUtil } from "@/utils/date-util";
 import Link from "next/link";
 
 interface UpcomingDeadlinesProps {
@@ -14,7 +13,7 @@ interface UpcomingDeadlinesProps {
 
 export default function UpcomingDeadlines({ upcomingDeadlines, overdueProjects }: UpcomingDeadlinesProps) {
     const formatDate = (date: Date) => {
-        return format(new Date(date), "yyyy年MM月dd日", { locale: ja });
+        return formatDateUtil(new Date(date), "YYYY年MM月DD日");
     };
 
 

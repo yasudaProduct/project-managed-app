@@ -43,8 +43,11 @@ export function WbsTagInput({ wbsId }: WbsTagInputProps) {
 
         setIsLoading(true);
         try {
-            const newTag = await addWbsTag(wbsId, trimmed);
-            setTags((prev) => [...prev, newTag]);
+            const result = await addWbsTag(wbsId, trimmed);
+            if (!result.success) {
+                return;
+            }
+            setTags((prev) => [...prev, result.data]);
             if (!suggestions.includes(trimmed)) {
                 setSuggestions((prev) => [...prev, trimmed].sort());
             }

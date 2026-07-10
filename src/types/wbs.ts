@@ -1,10 +1,22 @@
 export type TaskStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "ON_HOLD"
 
+export const TASK_STATUSES: TaskStatus[] = ["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "ON_HOLD"]
+
 export type ProjectStatus = "INACTIVE" | "ACTIVE" | "DONE" | "CANCELLED" | "PENDING"
 
 export type PeriodType = "KIJUN" | "YOTEI"
 
 export type KosuType = "NORMAL" | "RISK"
+
+export type BufferType = "RISK" | "OTHER"
+
+export type WbsBuffer = {
+  id: number
+  wbsId: number
+  name: string
+  buffer: number
+  bufferType: BufferType
+}
 
 export type WbsPhase = {
   id: number
@@ -40,6 +52,7 @@ export type WbsTask = {
   jissekiStart?: Date
   jissekiEnd?: Date
   jissekiKosu?: number
+  progressRate?: number
   createdAt?: Date
   updatedAt?: Date
 }

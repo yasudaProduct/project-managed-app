@@ -1,15 +1,15 @@
 import { injectable, inject } from 'inversify'
-import type { IGeppoRepository } from './repositories/igeppo.repository'
+import type { IGeppoRepository } from './repositories/igeppo-repository'
 import type { IProjectRepository } from '../projects/iproject-repository'
 import type {
   GeppoSearchFilters,
   GeppoPaginationOptions,
   GeppoSearchResult,
-} from '@/domains/geppo/types'
+} from '@/types/geppo'
 import { SYMBOL } from '@/types/symbol'
 import { Project } from '@/types/project'
 import { User } from '@/types/user'
-import type { IUserRepository } from '../user/iuser-repositroy'
+import type { IUserRepository } from '../user/iuser-repository'
 
 export interface IGeppoApplicationService {
   /**

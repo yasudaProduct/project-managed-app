@@ -1,8 +1,14 @@
+import type { DependencyType } from '@/types/task-dependency';
+
+export type { DependencyType };
+
 export class TaskDependency {
     public readonly id?: number;
     public readonly predecessorTaskId: number;
     public readonly successorTaskId: number;
     public readonly wbsId: number;
+    public readonly type: DependencyType;
+    public readonly lag: number;
     public readonly createdAt?: Date;
     public readonly updatedAt?: Date;
 
@@ -11,6 +17,8 @@ export class TaskDependency {
         predecessorTaskId: number;
         successorTaskId: number;
         wbsId: number;
+        type?: DependencyType;
+        lag?: number;
         createdAt?: Date;
         updatedAt?: Date;
     }) {
@@ -18,6 +26,8 @@ export class TaskDependency {
         this.predecessorTaskId = args.predecessorTaskId;
         this.successorTaskId = args.successorTaskId;
         this.wbsId = args.wbsId;
+        this.type = args.type ?? "FS";
+        this.lag = args.lag ?? 0;
         this.createdAt = args.createdAt;
         this.updatedAt = args.updatedAt;
     }
@@ -26,6 +36,8 @@ export class TaskDependency {
         predecessorTaskId: number;
         successorTaskId: number;
         wbsId: number;
+        type?: DependencyType;
+        lag?: number;
     }): TaskDependency {
         // 基本的なバリデーション
         if (args.predecessorTaskId === args.successorTaskId) {
@@ -48,6 +60,8 @@ export class TaskDependency {
         predecessorTaskId: number;
         successorTaskId: number;
         wbsId: number;
+        type?: DependencyType;
+        lag?: number;
         createdAt: Date;
         updatedAt: Date;
     }): TaskDependency {

@@ -1,7 +1,7 @@
-import { WorkloadWarningService } from '@/domains/assignee-workload/workload-warning.service';
+import { WorkloadWarningService } from '@/domains/assignee-workload/workload-warning-service';
 import { Task } from '@/domains/task/task';
 import { TaskNo } from '@/domains/task/value-object/task-id';
-import { TaskStatus } from '@/domains/task/value-object/project-status';
+import { TaskStatus } from '@/domains/task/value-object/task-status';
 import { Period } from '@/domains/task/period';
 import { PeriodType } from '@/domains/task/value-object/period-type';
 import { ManHour } from '@/domains/task/man-hour';

@@ -50,8 +50,10 @@ function handleUserCreated(e: UserCreatedEvent) {}
 
 #### ファイル/ディレクトリ
 
-- TypeScript: kebab-case.ts
-- Reactコンポーネント: PascalCase.tsx（コンポーネント名と一致）
+- TypeScript: kebab-case.ts（種別サフィックスもハイフン区切り: `xxx-repository.ts`, `xxx-application-service.ts`。ドット区切り `xxx.service.ts` や PascalCase ファイルは新規では使わない）
+- Reactコンポーネント: kebab-case.tsx（例: `task-modal.tsx`）。コンポーネント名自体は PascalCase（`TaskModal`）。shadcn/ui（`src/components/ui/`）の慣例と現行コードの大勢（146 対 15）に合わせる
+- リポジトリインターフェース: `i<name>-repository.ts`（例: `iproject-repository.ts`）
+- React hooks: `use-<name>.ts`（例: `use-toast.ts`）
 - テスト: *.test.ts または*.spec.ts（プロジェクトで統一）
 - 型のみ: *.types.ts
 - ユーティリティ: *.utils.ts
@@ -244,3 +246,71 @@ function handleUserCreated(e: UserCreatedEvent) {}
 - Zodを使用してスキーマ定義とバリデーションを行う。
 
 ### Server Action
+
+#### 配置と命名
+
+- ページ/機能と同じルートセグメント配下に配置する（コロケーション）。
+  - アクションが少ない場合: `app/<feature>/actions.ts`（複数形で統一。`action.ts` は使わない）
+  - アクションが多い場合: `app/<feature>/actions/<topic>-actions.ts`
+- 横断的な置き場 `src/app/actions/` は新規には使わない（既存は各機能セグメントへ移行対象）。
+- 関数名は動詞始まりの camelCase（`createProject`, `getWbsSummary`）。
+
+#### 実装ルール
+
+- ファイル先頭に `"use server"` を宣言する。
+- **入力は必ず Zod でバリデーションする**。クライアント側のフォームバリデーションは UX 目的であり、境界防御は Server Action 側の責務（TypeScript の型注釈はランタイムでは何も守らない）。
+- データアクセスは必ず Application Service 経由（`container.get<IXxxApplicationService>(SYMBOL.IXxxApplicationService)`）。**Server Action 内での Prisma の直接使用は禁止**（docs/04 参照）。
+- 変更系は成功時に `revalidatePath` / `revalidateTag` を呼ぶ。
+- 変更系の戻り値は共通型 `ActionResult<T>` に統一する（エラーメッセージのキーは `error`。`message` は使わない）。
+
+```typescript
+// src/types/action-result.ts（共通型）
+export type ActionResult<T = void> =
+  | { success: true; data: T }
+  | { success: false; error: string };
+```
+
+実装例:
+
+```typescript
+"use server";
+
+import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import { container } from "@/lib/inversify.config";
+import { SYMBOL } from "@/types/symbol";
+import type { ActionResult } from "@/types/action-result";
+
+const createProjectSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  startDate: z.string().datetime(), // ISO 8601 (UTC)
+  endDate: z.string().datetime(),
+});
+
+export async function createProject(
+  input: z.infer<typeof createProjectSchema>
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = createProjectSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "入力値が不正です" };
+  }
+
+  const service = container.get<IProjectApplicationService>(
+    SYMBOL.IProjectApplicationService
+  );
+  const result = await service.createProject(parsed.data);
+  if (!result.success) {
+    return { success: false, error: result.error ?? "登録に失敗しました" };
+  }
+
+  revalidatePath("/projects");
+  return { success: true, data: { id: result.id! } };
+}
+```
+
+- 取得系（読み取り専用）アクションはページ（Server Component）から直接 `await` してよく、対象が存在しない場合は `null` を返す（呼び出し側で `notFound()`）。この場合も データアクセスは Application 層経由とする。
+
+#### データ取得・更新手段の使い分け
+
+Server Action / API Route / TanStack Query の使い分けは `docs/08-implementation-guidelines.md` を参照。原則: UI からの通常の CRUD は Server Action、API Route は SSE・cron・外部システム連携のみ。

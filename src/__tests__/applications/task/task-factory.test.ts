@@ -5,7 +5,7 @@ import { TaskNo } from "@/domains/task/value-object/task-id";
 import { Task } from "@/domains/task/task";
 import { Phase } from "@/domains/phase/phase";
 import { PhaseCode } from "@/domains/phase/phase-code";
-import { TaskStatus } from "@/domains/task/value-object/project-status";
+import { TaskStatus } from "@/domains/task/value-object/task-status";
 
 // モッククラス
 class MockTaskRepository implements ITaskRepository {
@@ -60,6 +60,52 @@ class MockPhaseRepository implements IPhaseRepository {
     // wbsIdは使用しないが、インターフェースを満たすために引数として受け取る
     void wbsId;
     return this.phases;
+  }
+
+  async findPhasesUsedInWbs(wbsId: number): Promise<Phase[]> {
+    void wbsId;
+    return this.phases;
+  }
+
+  async findAllTemplates(): Promise<Phase[]> {
+    return this.phases;
+  }
+
+  async findTemplateById(id: number): Promise<Phase | null> {
+    return this.phases.find(phase => phase.id === id) || null;
+  }
+
+  async createTemplate(phase: Phase): Promise<Phase> {
+    this.phases.push(phase);
+    return phase;
+  }
+
+  async updateTemplate(phase: Phase): Promise<Phase> {
+    const index = this.phases.findIndex(p => p.id === phase.id);
+    if (index !== -1) this.phases[index] = phase;
+    return phase;
+  }
+
+  async deleteTemplate(id: number): Promise<void> {
+    this.phases = this.phases.filter(phase => phase.id !== id);
+  }
+
+  async create(wbsId: number, phase: Phase): Promise<Phase> {
+    void wbsId;
+    this.phases.push(phase);
+    return phase;
+  }
+
+  async update(wbsId: number, id: string, phase: Phase): Promise<Phase> {
+    void wbsId;
+    void id;
+    const index = this.phases.findIndex(p => p.id === phase.id);
+    if (index !== -1) this.phases[index] = phase;
+    return phase;
+  }
+
+  async delete(id: string): Promise<void> {
+    this.phases = this.phases.filter(phase => String(phase.id) !== id);
   }
 }
 

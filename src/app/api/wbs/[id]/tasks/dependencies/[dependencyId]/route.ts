@@ -1,7 +1,8 @@
 import { container } from "@/lib/inversify.config";
-import { TaskDependencyService } from "@/applications/task-dependency/task-dependency.service";
+import type { ITaskDependencyService } from "@/applications/task-dependency/task-dependency-service";
 import { SYMBOL } from "@/types/symbol";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { createApiResponse, createApiError } from "@/lib/api-response";
 
 export async function DELETE(
     _request: NextRequest,
@@ -11,32 +12,28 @@ export async function DELETE(
         const resolvedParams = await params;
         const dependencyId = parseInt(resolvedParams.dependencyId);
         if (isNaN(dependencyId)) {
-            return NextResponse.json(
-                { error: "無効な依存関係IDです" },
-                { status: 400 }
-            );
+            return createApiError("無効な依存関係IDです", 400);
+        }
+        const wbsId = parseInt(resolvedParams.id);
+        if (isNaN(wbsId)) {
+            return createApiError("無効なWBSIDです", 400);
         }
 
-        const taskDependencyService = container.get<TaskDependencyService>(
+        const taskDependencyService = container.get<ITaskDependencyService>(
             SYMBOL.ITaskDependencyService
         );
 
-        await taskDependencyService.deleteDependency(dependencyId);
+        // 別WBSの依存IDを渡して越境削除されないよう wbsId でスコープ検証する
+        await taskDependencyService.deleteDependency(dependencyId, wbsId);
 
-        return NextResponse.json({ success: true });
+        return createApiResponse(null);
     } catch (error) {
         console.error("Error deleting task dependency:", error);
-        
+
         if (error instanceof Error) {
-            return NextResponse.json(
-                { error: error.message },
-                { status: 400 }
-            );
+            return createApiError(error.message, 400);
         }
 
-        return NextResponse.json(
-            { error: "依存関係の削除に失敗しました" },
-            { status: 500 }
-        );
+        return createApiError("依存関係の削除に失敗しました", 500);
     }
 }

@@ -3,7 +3,7 @@ export class Milestone {
     public readonly name: string;
     public readonly date: Date;
 
-    constructor(args: {
+    private constructor(args: {
         id: number;
         name: string;
         date: Date;
@@ -21,7 +21,7 @@ export class Milestone {
         return new Milestone(args);
     }
 
-    public static rebuild(args: {
+    public static createFromDb(args: {
         id: number;
         name: string;
         date: Date;

@@ -1,6 +1,6 @@
 import { injectable } from "inversify";
 import prisma from "@/lib/prisma/prisma";
-import { IWbsQueryRepository, WbsTaskData, PhaseData, TaskActualMonthly } from "@/applications/wbs/query/wbs-query-repository";
+import { IWbsQueryRepository, WbsTaskData, PhaseData, TaskActualMonthly } from "@/applications/wbs/query/iwbs-query-repository";
 
 @injectable()
 export class WbsQueryRepository implements IWbsQueryRepository {
@@ -89,6 +89,7 @@ export class WbsQueryRepository implements IWbsQueryRepository {
         ) AS tk_yotei ON TRUE
       WHERE
         t."wbsId" = ${Number(wbsId)}
+        AND t."isDeleted" = false
       ORDER BY
         p."seq" ASC,
         t."taskNo" ASC;
@@ -124,6 +125,7 @@ export class WbsQueryRepository implements IWbsQueryRepository {
       JOIN "wbs_task" t ON wr."taskId" = t.id
       JOIN "users" u    ON wr."userId" = u.id
       WHERE t."wbsId" = ${Number(wbsId)}
+        AND t."isDeleted" = false
         AND wr."taskId" IS NOT NULL
       GROUP BY wr."taskId", wr."userId", u."displayName", TO_CHAR(wr.date, 'YYYY/MM')
     `;
@@ -135,6 +137,12 @@ export class WbsQueryRepository implements IWbsQueryRepository {
       yearMonth: r.yearMonth,
       hoursWorked: Number(r.hoursWorked),
     }));
+  }
+
+  async getUnlinkedWorkRecordsCount(wbsId: number): Promise<number> {
+    return prisma.workRecord.count({
+      where: { taskId: null, wbsId },
+    });
   }
 
   async getPhases(wbsId: number): Promise<PhaseData[]> {

@@ -2,7 +2,7 @@
 import { TaskRepository } from "@/infrastructures/task-repository";
 import { Task } from "@/domains/task/task";
 import { TaskNo } from "@/domains/task/value-object/task-id";
-import { TaskStatus } from "@/domains/task/value-object/project-status";
+import { TaskStatus } from "@/domains/task/value-object/task-status";
 import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";
@@ -15,6 +15,7 @@ jest.mock('@/lib/prisma/prisma', () => ({
   default: {
     wbsTask: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -23,6 +24,7 @@ jest.mock('@/lib/prisma/prisma', () => ({
     taskPeriod: {
       create: jest.fn(),
       upsert: jest.fn(),
+      deleteMany: jest.fn(),
     },
     taskKosu: {
       create: jest.fn(),
@@ -31,6 +33,7 @@ jest.mock('@/lib/prisma/prisma', () => ({
     workRecord: {
       findMany: jest.fn(),
     },
+    $transaction: jest.fn(),
   },
 }));
 
@@ -56,6 +59,10 @@ describe('TaskRepository', () => {
   beforeEach(() => {
     taskRepository = new TaskRepository();
     jest.clearAllMocks();
+    // $transaction はコールバックに同一の prismaMock を tx として渡して実行する
+    (prismaMock.$transaction as jest.Mock).mockImplementation(
+      (cb: (tx: typeof prismaMock) => unknown) => cb(prismaMock)
+    );
   });
 
   describe('findById', () => {
@@ -105,14 +112,14 @@ describe('TaskRepository', () => {
         updatedAt: new Date()
       };
 
-      (prismaMock.wbsTask.findUnique as jest.Mock).mockResolvedValue(mockTaskData);
+      (prismaMock.wbsTask.findFirst as jest.Mock).mockResolvedValue(mockTaskData);
 
       // メソッド実行
       const task = await taskRepository.findById(taskId);
 
-      // 検証
-      expect(prismaMock.wbsTask.findUnique).toHaveBeenCalledWith({
-        where: { id: taskId },
+      // 検証（論理削除を除外するため findFirst + isDeleted:false）
+      expect(prismaMock.wbsTask.findFirst).toHaveBeenCalledWith({
+        where: { id: taskId, isDeleted: false },
         include: {
           assignee: {
             include: {
@@ -143,12 +150,12 @@ describe('TaskRepository', () => {
     });
 
     it('存在しないIDの場合はnullを返すこと', async () => {
-      (prismaMock.wbsTask.findUnique as jest.Mock).mockResolvedValue(null);
+      (prismaMock.wbsTask.findFirst as jest.Mock).mockResolvedValue(null);
 
       const task = await taskRepository.findById(taskId);
 
-      expect(prismaMock.wbsTask.findUnique).toHaveBeenCalledWith({
-        where: { id: wbsId },
+      expect(prismaMock.wbsTask.findFirst).toHaveBeenCalledWith({
+        where: { id: taskId, isDeleted: false },
         include: expect.anything()
       });
       expect(task).toBeNull();
@@ -270,7 +277,7 @@ describe('TaskRepository', () => {
 
       // 検証
       expect(prismaMock.wbsTask.findMany).toHaveBeenCalledWith({
-        where: { wbsId },
+        where: { wbsId, isDeleted: false },
         include: expect.anything()
       });
       expect(prismaMock.workRecord.findMany).toHaveBeenCalledWith({
@@ -439,25 +446,26 @@ describe('TaskRepository', () => {
         updatedAt: new Date()
       };
 
-      const mockUpsertedPeriod = {
-        id: 1,
+      const mockCreatedPeriod = {
+        id: 10,
         taskId: 1,
         startDate: new Date('2025-06-01'),
         endDate: new Date('2025-06-30'),
         type: 'YOTEI' as const
       };
 
-      const mockUpsertedKosu = {
-        id: 1,
-        periodId: 1,
+      const mockCreatedKosu = {
+        id: 10,
+        periodId: 10,
         wbsId: wbsId,
         kosu: 20,
         type: 'NORMAL' as const
       };
 
       (prismaMock.wbsTask.update as jest.Mock).mockResolvedValue(mockUpdatedTask);
-      (prismaMock.taskPeriod.upsert as jest.Mock).mockResolvedValue(mockUpsertedPeriod);
-      (prismaMock.taskKosu.upsert as jest.Mock).mockResolvedValue(mockUpsertedKosu);
+      (prismaMock.taskPeriod.deleteMany as jest.Mock).mockResolvedValue({ count: 1 });
+      (prismaMock.taskPeriod.create as jest.Mock).mockResolvedValue(mockCreatedPeriod);
+      (prismaMock.taskKosu.create as jest.Mock).mockResolvedValue(mockCreatedKosu);
 
       // メソッド実行
       const updatedTask = await taskRepository.update(wbsId, task);
@@ -472,29 +480,31 @@ describe('TaskRepository', () => {
           status: 'IN_PROGRESS',
         }
       });
-      expect(prismaMock.taskPeriod.upsert).toHaveBeenCalledWith({
-        where: { id: 1 },
-        update: {
-          startDate: new Date('2025-06-01'),
-          endDate: new Date('2025-06-30'),
-        },
-        create: {
+      // 期間・工数は upsert ではなく「全削除→再作成」で入れ替える
+      expect(prismaMock.taskPeriod.upsert).not.toHaveBeenCalled();
+      expect(prismaMock.taskKosu.upsert).not.toHaveBeenCalled();
+      expect(prismaMock.taskPeriod.deleteMany).toHaveBeenCalledWith({
+        where: { taskId: 1 },
+      });
+      expect(prismaMock.taskPeriod.create).toHaveBeenCalledWith({
+        data: {
           taskId: 1,
           startDate: new Date('2025-06-01'),
           endDate: new Date('2025-06-30'),
           type: 'YOTEI',
         }
       });
-      expect(prismaMock.taskKosu.upsert).toHaveBeenCalledWith({
-        where: { id: 1 },
-        update: { kosu: 20 },
-        create: {
-          periodId: 1,
+      expect(prismaMock.taskKosu.create).toHaveBeenCalledWith({
+        data: {
+          periodId: 10,
           wbsId: wbsId,
           kosu: 20,
           type: 'NORMAL',
         }
       });
+      // 期間・工数とも1回ずつのみ呼ばれる（重複作成しない）
+      expect(prismaMock.taskPeriod.create).toHaveBeenCalledTimes(1);
+      expect(prismaMock.taskKosu.create).toHaveBeenCalledTimes(1);
       expect(updatedTask.taskNo?.getValue()).toBe('D1-0001');
       expect(updatedTask.name).toBe('更新後タスク');
       expect(updatedTask.status.getStatus()).toBe('IN_PROGRESS');

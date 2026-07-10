@@ -10,14 +10,26 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import type { TaskEvmDataSerialized } from '@/app/actions/evm/evm-actions';
+import type { TaskEvmDataSerialized } from '@/applications/evm/evm-dashboard-dto';
+import {
+  PROGRESS_MEASUREMENT_METHOD_LABELS,
+  type ProgressMeasurementMethod,
+} from '@/types/progress-measurement';
 
 type TaskEvmTableProps = {
   tasks: TaskEvmDataSerialized[];
   calculationMode: 'hours' | 'cost';
+  progressMethod?: ProgressMeasurementMethod;
 };
 
-export function TaskEvmTable({ tasks, calculationMode }: TaskEvmTableProps) {
+export function TaskEvmTable({
+  tasks,
+  calculationMode,
+  progressMethod,
+}: TaskEvmTableProps) {
+  const methodLabel = progressMethod
+    ? PROGRESS_MEASUREMENT_METHOD_LABELS[progressMethod]
+    : undefined;
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'COMPLETED':
@@ -59,8 +71,12 @@ export function TaskEvmTable({ tasks, calculationMode }: TaskEvmTableProps) {
                 <TableHead>ステータス</TableHead>
                 <TableHead className="text-right">計画工数</TableHead>
                 <TableHead className="text-right">実績工数</TableHead>
-                <TableHead className="text-right">進捗率</TableHead>
-                <TableHead className="text-right">出来高</TableHead>
+                <TableHead className="text-right">
+                  進捗率{methodLabel ? `（${methodLabel}）` : ''}
+                </TableHead>
+                <TableHead className="text-right">
+                  出来高{methodLabel ? `（${methodLabel}）` : ''}
+                </TableHead>
                 {calculationMode === 'cost' && (
                   <TableHead className="text-right">単価</TableHead>
                 )}
@@ -91,13 +107,15 @@ export function TaskEvmTable({ tasks, calculationMode }: TaskEvmTableProps) {
                       {task.actualManHours.toFixed(1)}h
                     </TableCell>
                     <TableCell className="text-right">
-                      {task.progressRate}%
+                      <span title={`自己申告進捗率: ${task.progressRate}%`}>
+                        {Math.round(task.methodProgressRate)}%
+                      </span>
                     </TableCell>
                     <TableCell className="text-right font-semibold">
                       {formatValue(
                         calculationMode === 'cost'
-                          ? task.earnedValueCost
-                          : task.earnedValue
+                          ? task.methodEarnedValueCost
+                          : task.methodEarnedValue
                       )}
                     </TableCell>
                     {calculationMode === 'cost' && (

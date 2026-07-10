@@ -1,17 +1,20 @@
 import { SYMBOL } from "@/types/symbol";
 import { inject, injectable } from "inversify";
-import type { ITaskRepository } from "./itask-repository";
-import { WbsTask } from "@/types/wbs";
+import type { ITaskRepository, ManualSnapshotContext } from "./itask-repository";
+import { WbsTask, type TaskStatus } from "@/types/wbs";
 import { Task } from "@/domains/task/task";
-import { TaskStatus } from "@/domains/task/value-object/project-status";
+import { TaskStatus as TaskStatusVO } from "@/domains/task/value-object/task-status";
 import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";
 import { ManHourType } from "@/domains/task/value-object/man-hour-type";
 import type { ITaskFactory } from "@/domains/task/interfaces/task-factory";
+import { TaskProgressCalculator } from "@/domains/task/task-progress-calculator";
+import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
+import type { IWbsAssigneeRepository } from "@/applications/wbs/iwbs-assignee-repository";
+import { buildProgressSnapshotInput, DEFAULT_COST_PER_HOUR } from "./progress-snapshot-input-builder";
 
 export interface CreateTaskCommand {
-    id: string;  // IDを追加
     name: string;
     wbsId: number;
     phaseId: number;
@@ -31,6 +34,11 @@ export interface ITaskApplicationService {
     getTaskStatusCount(wbsId: number): Promise<{ todo: number; inProgress: number; completed: number }>;
     getTaskProgressByPhase(wbsId: number): Promise<Array<{ phase: string; total: number; todo: number; inProgress: number; completed: number }>>;
     getKosuSummary(wbsId: number): Promise<Record<string, { kijun: number; yotei: number; jisseki: number }>>;
+    calculateEffectiveProgress(
+        status: TaskStatus,
+        progressRate: number | null,
+        progressMethod: ProgressMeasurementMethod
+    ): number;
 }
 
 @injectable()
@@ -39,11 +47,11 @@ export class TaskApplicationService implements ITaskApplicationService {
     constructor(
         @inject(SYMBOL.ITaskRepository) private readonly taskRepository: ITaskRepository,
         @inject(SYMBOL.ITaskFactory) private readonly taskFactory: ITaskFactory,
+        @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: IWbsAssigneeRepository,
     ) {
     }
 
     public async getTaskById(id: number): Promise<WbsTask | null> {
-        console.log("getTaskById")
         const task = await this.taskRepository.findById(id);
         if (!task) return null;
         return {
@@ -106,13 +114,13 @@ export class TaskApplicationService implements ITaskApplicationService {
             jissekiStart: task.getJissekiStart(),
             jissekiEnd: task.getJissekiEnd(),
             jissekiKosu: task.getJissekiKosus(),
+            progressRate: task.progressRate,
             createdAt: task.createdAt,
             updatedAt: task.updatedAt,
         }));
     }
 
     public async createTask(command: CreateTaskCommand): Promise<{ success: boolean; id?: number; error?: string }> {
-        console.log("service: createTask")
         const { name, wbsId, phaseId, yoteiStartDate, yoteiEndDate, yoteiKosu, assigneeId, status } = command;
 
         const task = Task.create(
@@ -122,7 +130,7 @@ export class TaskApplicationService implements ITaskApplicationService {
                 name,
                 phaseId,
                 assigneeId,
-                status,
+                status: new TaskStatusVO({ status }),
                 periods: [
                     Period.create({
                         startDate: yoteiStartDate,
@@ -145,9 +153,6 @@ export class TaskApplicationService implements ITaskApplicationService {
     }
 
     public async updateTask(args: { wbsId: number, updateTask: WbsTask }): Promise<{ success: boolean; error?: string; id?: string }> {
-        console.log("service: updateTask")
-        console.log("service: updateTask:yoteiStart", args.updateTask.yoteiStart);
-        console.log("service: updateTask:yoteiEnd", args.updateTask.yoteiEnd);
         const { wbsId, updateTask } = args;
 
         const task: Task | null = await this.taskRepository.findById(updateTask.id);
@@ -166,15 +171,44 @@ export class TaskApplicationService implements ITaskApplicationService {
             name: updateTask.name,
             assigneeId: updateTask.assigneeId,
             phaseId: updateTask.phaseId,
-            status: new TaskStatus({ status: updateTask.status }),
+            status: new TaskStatusVO({ status: updateTask.status }),
         });
         // if (updateTask.kijunStart) task.updateKijun(updateTask.kijunStart, updateTask.kijunEnd ?? updateTask.kijunStart, updateTask.kijunKosu ?? 0);
         if (updateTask.yoteiStart) task.updateYotei({ startDate: updateTask.yoteiStart, endDate: updateTask.yoteiEnd ?? updateTask.yoteiStart, kosu: updateTask.yoteiKosu ?? 0 });
+        if (updateTask.progressRate !== undefined) task.updateProgressRate(updateTask.progressRate);
 
-        const result = await this.taskRepository.update(wbsId, task);
+        // 手動編集も進捗履歴（スナップショット）として記録し、EVMの過去チャートへ反映できるようにする
+        const snapshot = await this.buildManualSnapshot(wbsId, task);
+        const result = await this.taskRepository.update(wbsId, task, snapshot);
 
         return { success: true, id: result.taskNo!.getValue() };
 
+    }
+
+    /**
+     * 手動編集（ガント・タスクモーダル等）用の進捗スナップショット文脈を構築する。
+     * 実績日は直近スナップショットから引き継ぐ（手動編集では自己申告実績を持たないため）。
+     */
+    private async buildManualSnapshot(wbsId: number, task: Task): Promise<ManualSnapshotContext> {
+        const assignees = await this.wbsAssigneeRepository.findByWbsId(wbsId);
+        const costPerHour =
+            task.assigneeId !== undefined
+                ? (assignees.find(a => a.id === task.assigneeId)?.getCostPerHour() ?? DEFAULT_COST_PER_HOUR)
+                : DEFAULT_COST_PER_HOUR;
+        const actuals = task.id !== undefined
+            ? await this.taskRepository.findLatestSnapshotActuals(task.id)
+            : null;
+
+        return {
+            wbsId,
+            input: buildProgressSnapshotInput({
+                task,
+                costPerHour,
+                actualStart: actuals?.actualStart ?? null,
+                actualEnd: actuals?.actualEnd ?? null,
+            }),
+            snapshotAt: new Date(),
+        };
     }
 
     public async deleteTask(id: number): Promise<{ success: boolean; error?: string }> {
@@ -184,7 +218,29 @@ export class TaskApplicationService implements ITaskApplicationService {
                 return { success: false, error: "タスクが存在しません" };
             }
 
-            await this.taskRepository.delete(id);
+            // 削除も履歴に tombstone として残し、削除以降のEVM寄与を0にする
+            // （スナップショットはタスクへのFKを持たないため削除後も保持される）
+            const tombstone: ManualSnapshotContext = {
+                wbsId: task.wbsId,
+                input: {
+                    taskId: id,
+                    taskNo: task.taskNo.getValue(),
+                    progressRate: null,
+                    status: 'NOT_STARTED',
+                    plannedManHours: 0,
+                    baseManHours: 0,
+                    costPerHour: 0,
+                    plannedStart: null,
+                    plannedEnd: null,
+                    baseStart: null,
+                    baseEnd: null,
+                    actualStart: null,
+                    actualEnd: null,
+                    isRemoved: true,
+                },
+                snapshotAt: new Date(),
+            };
+            await this.taskRepository.delete(id, tombstone);
             return { success: true };
         } catch (error) {
             return { success: false, error: error instanceof Error ? error.message : "タスクの削除に失敗しました" };
@@ -290,5 +346,17 @@ export class TaskApplicationService implements ITaskApplicationService {
         });
 
         return phaseSummary;
+    }
+
+    public calculateEffectiveProgress(
+        status: TaskStatus,
+        progressRate: number | null,
+        progressMethod: ProgressMeasurementMethod
+    ): number {
+        return TaskProgressCalculator.calculateEffectiveProgress(
+            status,
+            progressRate,
+            progressMethod
+        );
     }
 }

@@ -99,7 +99,7 @@ ZERO_HUNDRED  : (100*20 + 100*30 +  0*40 + 0*10) / 100 = 50%
 
 ## 4. 見通し計算方式
 
-`ForecastCalculationService.calculateForecastHours` は、入力（`plannedHours`, `actualHours`, `effectiveProgressRate`）と選択された方式に基づき見通し工数を返す。
+`ForecastCalculationService` の内部メソッド `calculateForecastHours`（`private static`）は、入力（`plannedHours`, `actualHours`, `effectiveProgressRate`）と選択された方式に基づき見通し工数を返す。外部からは公開メソッド `calculateTaskForecast`（タスク単体）/ `calculateMultipleTasksForecast`（複数タスク）経由で呼び出される。
 
 ### 4.1 方式一覧
 
@@ -208,7 +208,34 @@ else:
 
 - **意味**: 実績が存在する場合、予定と実績の大きい方（＝最悪ケース）を見通しとする。
 - **特性**: 進捗率の精度に依存しないシンプルな方式。計画管理の初期段階や、進捗率の申告が信頼できない場合に有用。
-- 境界条件（`progressRate >= 100` や `progressRate <= 0`）の**前に**評価される。
+- **評価順序**: 実装上、`progressRate >= 100`（完了済み → `actualHours`）の共通条件は `plannedOrActual` の分岐よりも**先に**評価される。一方 `progressRate <= 0` の共通条件は `plannedOrActual` の分岐の**後**に評価されるため、`plannedOrActual` には適用されない（上記の実績有無による分岐がそのまま使われる）。
+
+### 4.7 定常タスクの見通し（進捗率非依存）
+
+**定常タスク**（プロジェクト管理・進捗管理など、期間中ずっと一定工数を消費し「完了」概念を持たないタスク。[07: タスクスケジューリング §2](./07-task-scheduling.md) の定義と同一で、`isSteadyTask` によりタスク名がキーワードに部分一致するもの）は、上記4方式の前提である「進捗率＝完了までの距離」が成り立たない。そのため、`ForecastTaskInput.isSteady = true` のタスクは進捗率ベースの4方式を**適用せず**、稼働日数を基準にした専用方式（`SteadyTaskForecastService.calculateSteadyTaskForecast`）で算出する。
+
+方式はプロジェクト設定 `schedulingSettings.steadyTaskForecastMode` で選択する（既定 `PLANNED`）。稼働日数は会社カレンダー（土日祝・会社休日を除外）で数える。
+
+| モード | 見通し工数 | 日次消費ペース（見通しバー用） |
+|------|-----------|--------------------------|
+| `PLANNED`（予定ベース） | `max(予定, 実績)` | 予定 ÷ 総稼働日数 |
+| `ACTUAL_PACE`（実績ペース・保守的） | `(実績 ÷ 経過稼働日数) × 総稼働日数` | 実績 ÷ 経過稼働日数 |
+| `PLANNED_PACE`（予定ペース・楽観的） | `実績 + 残り稼働日数 × (予定 ÷ 総稼働日数)` | 予定 ÷ 総稼働日数 |
+
+- **総稼働日数** = 予定期間 `[yoteiStart, yoteiEnd]` の稼働日数。**経過稼働日数** = `yoteiStart` 〜 `min(今日, yoteiEnd)` の稼働日数（`[0, 総稼働日数]` にクランプ）。
+- **フォールバック**: 実績なし・経過0日・期間なし（総稼働日数0）等、算出に必要な情報が欠ける場合は `PLANNED`（`max(予定, 実績)`）に落とす。開始日基準の月別集計モード（`START_DATE_BASED`）は月別稼働日数を持たないため、定常タスクは常に `PLANNED` 相当で算出する。
+- **不変条件**: いずれの方式でも `見通し ≥ 実績` を満たす（`ACTUAL_PACE`/`PLANNED_PACE` は経過 ≤ 総 により保証、`PLANNED` は `max` により保証）。
+- **完了扱いの共通条件**: `isSteady` の分岐は `progressRate >= 100`（→ `actualHours`）の共通条件よりも**後**に評価される。よって完了済み（進捗100%）の定常タスクは実績工数を返す。
+
+**計算例（予定100h・総稼働20日・経過8日・実績48h）:**
+
+```
+PLANNED      : max(100, 48) = 100h                （日次ペース 100/20 = 5h/日）
+ACTUAL_PACE  : (48/8) × 20  = 120h                （日次ペース 48/8  = 6h/日）
+PLANNED_PACE : 48 + (20-8) × (100/20) = 48+60 = 108h（日次ペース 5h/日）
+```
+
+**見通しバーの終了日**（ganttV3）: 定常タスクは残見通し（`見通し − 実績`）を上表の**日次消費ペース**で消化して終了日を求める（通常タスクの「標準稼働時間/日」ではなく）。`ACTUAL_PACE`/`PLANNED_PACE` では残見通し ÷ 日次ペース = 残り稼働日数（= 総 − 経過）となり、バーは概ね予定終了日付近に着地する。詳細は [07 §11](./07-task-scheduling.md) 及び `ForecastDateCalculationService`（`hoursPerDay` オプション）を参照。
 
 ---
 
@@ -394,9 +421,11 @@ allocations[0].allocatedForecastHours = 60h  ← 全量が1月に配分される
 
 | クラス/関数 | ファイル | 責務 |
 | --- | --- | --- |
-| `ForecastCalculationService` | `src/domains/forecast/forecast-calculation.service.ts` | 見通し工数の計算（4方式） |
+| `ForecastCalculationService` | `src/domains/forecast/forecast-calculation-service.ts` | 見通し工数の計算（通常4方式＋定常タスクの分岐） |
+| `calculateSteadyTaskForecast` | `src/domains/forecast/steady-task-forecast-service.ts` | 定常タスクの見通し工数・日次消費ペースの計算（3モード） |
 | `TaskProgressCalculator` | `src/domains/task/task-progress-calculator.ts` | 実効進捗率の計算・加重平均進捗率 |
 | `distributeForecastAcrossMonths` | `src/applications/wbs/query/monthly-forecast-distributor.ts` | 見通し工数の月別配分 |
+| `ForecastDateCalculationService` | `src/domains/forecast/forecast-date-calculation-service.ts` | 見通し終了日の算出（`hoursPerDay` で定常タスクの日次ペースに対応） |
 
 ---
 

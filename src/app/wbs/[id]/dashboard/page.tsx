@@ -12,7 +12,7 @@ import { Assignee } from "@/types/wbs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { getProjectStatusName } from "@/utils/utils";
-import prisma from "@/lib/prisma/prisma";
+import { getProjectById } from "@/app/projects/actions";
 import {
   CalendarCheck,
   CirclePlus,
@@ -47,9 +47,7 @@ export default async function DashboardPage({
     notFound();
   }
 
-  const project = await prisma.projects.findUnique({
-    where: { id: wbs.projectId },
-  });
+  const project = await getProjectById(wbs.projectId);
   if (!project) {
     notFound();
   }

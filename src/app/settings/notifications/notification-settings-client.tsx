@@ -2,8 +2,8 @@
 
 import React from "react";
 import { Bell, Smartphone, TestTube, RotateCcw } from "lucide-react";
-import { useNotificationPreferences } from "@/hooks/useNotificationPreferences";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useNotificationPreferences } from "@/hooks/use-notification-preferences";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { Button } from "@/components/ui/button";
 import {
   Card,

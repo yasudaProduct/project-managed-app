@@ -29,9 +29,25 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { WorkloadData } from "@/applications/assignee-gantt/workload-data";
+
+type AssigneeWarningItem = {
+  taskId: number;
+  taskNo: string;
+  taskName: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  periodStart?: string;
+  periodEnd?: string;
+  reason: "NO_WORKING_DAYS";
+};
 
 interface AssigneeGanttChartProps {
   wbsId: number;
+  /** 指定時はサーバー取得せず、この計算結果プレビューを表示する */
+  previewWorkloads?: WorkloadData[];
+  previewWarnings?: AssigneeWarningItem[];
+  previewBaseDate?: Date;
 }
 
 type ViewMode = "week" | "month";
@@ -86,11 +102,60 @@ interface AssigneeWorkload {
   assigneeRate: number;
 }
 
+/** サーバーの WorkloadData(ISO文字列等) を画面用 AssigneeWorkload(date:Date) に変換する */
+function convertWorkloadData(data: WorkloadData[]): AssigneeWorkload[] {
+  return data.map((workloadData) => {
+    const dailyAllocations: DailyWorkAllocation[] =
+      workloadData.dailyAllocations.map((daily) => {
+        const taskAllocations: TaskAllocation[] = daily.taskAllocations.map(
+          (task) => ({
+            taskId: task.taskId,
+            taskName: task.taskName,
+            allocatedHours: task.allocatedHours,
+            totalHours: task.totalHours,
+            periodStart: task.periodStart,
+            periodEnd: task.periodEnd,
+          })
+        );
+        return {
+          date: new Date(daily.date),
+          availableHours: daily.availableHours,
+          taskAllocations,
+          allocatedHours: daily.allocatedHours,
+          isOverloaded: daily.isOverloaded,
+          utilizationRate: daily.utilizationRate,
+          overloadedHours: daily.overloadedHours,
+          isWeekend: !!daily.isWeekend,
+          isCompanyHoliday: !!daily.isCompanyHoliday,
+          userSchedules: daily.userSchedules || [],
+          isOverloadedByStandard: daily.isOverloadedByStandard,
+          overloadedByStandardHours: daily.overloadedByStandardHours,
+          rateAllowedHours: daily.rateAllowedHours,
+          isOverRateCapacity: daily.isOverRateCapacity,
+          overRateHours: daily.overRateHours,
+        };
+      });
+    const overloadedDays = dailyAllocations.filter((d) => d.isOverloaded);
+    return {
+      assigneeId: workloadData.assigneeId,
+      assigneeName: workloadData.assigneeName,
+      dailyAllocations,
+      overloadedDays,
+      assigneeRate: workloadData.assigneeRate,
+    };
+  });
+}
+
 /**
  * 担当者別ガントチャート
  * @returns
  */
-export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
+export function AssigneeGanttChart({
+  wbsId,
+  previewWorkloads,
+  previewWarnings,
+  previewBaseDate,
+}: AssigneeGanttChartProps) {
   const [workloads, setWorkloads] = useState<AssigneeWorkload[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +174,7 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
     }[]
   >([]);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(previewBaseDate ?? new Date());
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedAssignee, setSelectedAssignee] =
     useState<AssigneeWorkload | null>(null);
@@ -219,52 +284,7 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
       const data = result.data;
       const warn = result.warnings || [];
 
-      // サーバー計算済み値を利用しつつ、日付だけDateに変換
-      const workloadObjects: AssigneeWorkload[] = data.map((workloadData) => {
-        const dailyAllocations: DailyWorkAllocation[] =
-          workloadData.dailyAllocations.map((daily) => {
-            const taskAllocations: TaskAllocation[] = daily.taskAllocations.map(
-              (task) => ({
-                taskId: task.taskId,
-                taskName: task.taskName,
-                allocatedHours: task.allocatedHours,
-                totalHours: task.totalHours,
-                periodStart: task.periodStart,
-                periodEnd: task.periodEnd,
-              })
-            );
-
-            return {
-              date: new Date(daily.date),
-              availableHours: daily.availableHours,
-              taskAllocations,
-              allocatedHours: daily.allocatedHours,
-              isOverloaded: daily.isOverloaded,
-              utilizationRate: daily.utilizationRate,
-              overloadedHours: daily.overloadedHours,
-              isWeekend: !!daily.isWeekend,
-              isCompanyHoliday: !!daily.isCompanyHoliday,
-              userSchedules: daily.userSchedules || [],
-              isOverloadedByStandard: daily.isOverloadedByStandard,
-              overloadedByStandardHours: daily.overloadedByStandardHours,
-              rateAllowedHours: daily.rateAllowedHours,
-              isOverRateCapacity: daily.isOverRateCapacity,
-              overRateHours: daily.overRateHours,
-            };
-          });
-
-        const overloadedDays = dailyAllocations.filter((d) => d.isOverloaded);
-
-        return {
-          assigneeId: workloadData.assigneeId,
-          assigneeName: workloadData.assigneeName,
-          dailyAllocations,
-          overloadedDays,
-          assigneeRate: workloadData.assigneeRate,
-        };
-      });
-
-      setWorkloads(workloadObjects);
+      setWorkloads(convertWorkloadData(data));
       setWarnings(warn);
     } catch (err) {
       setError(
@@ -278,8 +298,15 @@ export function AssigneeGanttChart({ wbsId }: AssigneeGanttChartProps) {
   }, [wbsId, viewMode, currentDate]);
 
   useEffect(() => {
-    fetchWorkloads();
-  }, [fetchWorkloads]);
+    if (previewWorkloads) {
+      // プレビュー: サーバー取得せず計算結果を表示
+      setWorkloads(convertWorkloadData(previewWorkloads));
+      setWarnings(previewWarnings ?? []);
+      setLoading(false);
+    } else {
+      fetchWorkloads();
+    }
+  }, [previewWorkloads, previewWarnings, fetchWorkloads]);
 
   // ナビゲーション
   const navigatePrevious = () => {

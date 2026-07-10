@@ -93,6 +93,8 @@ erDiagram
   Int assigneeId FK "nullable"
   TaskStatus status
   Decimal progressRate "nullable"
+  Boolean isDeleted
+  DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -199,10 +201,14 @@ erDiagram
   ProgressMeasurementMethod progressMeasurementMethod
   ForecastCalculationMethod forecastCalculationMethod
   EvmForecastMethod evmForecastMethod
+  EvmBufferCostMethod evmBufferCostMethod
+  EvmPvDistribution evmPvDistribution
+  Int evmHealthyThresholdPct
+  Int evmWarningThresholdPct
   Int deadlineAlertDays
   Int costOverrunThresholdPct
   Json evmExcludeSettings
-  Json qualityThresholds "nullable"
+  Json schedulingSettings
   DateTime createdAt
   DateTime updatedAt
 }
@@ -211,6 +217,8 @@ erDiagram
   Int predecessorTaskId FK
   Int successorTaskId FK
   Int wbsId FK
+  String type
+  Int lag
   DateTime createdAt
   DateTime updatedAt
 }
@@ -226,6 +234,27 @@ erDiagram
   Json errorDetails "nullable"
   DateTime createdAt
   DateTime updatedAt
+}
+"task_progress_snapshot" {
+  Int id PK
+  Int taskId
+  Int wbsId
+  String taskNo
+  DateTime snapshotAt
+  Decimal progressRate "nullable"
+  TaskStatus status
+  Decimal plannedManHours
+  Decimal baseManHours
+  Decimal costPerHour
+  DateTime plannedStart "nullable"
+  DateTime plannedEnd "nullable"
+  DateTime baseStart "nullable"
+  DateTime baseEnd "nullable"
+  DateTime actualStart "nullable"
+  DateTime actualEnd "nullable"
+  Boolean isRemoved
+  Int syncLogId FK "nullable"
+  DateTime createdAt
 }
 "company_holidays" {
   Int id PK
@@ -263,45 +292,6 @@ erDiagram
   String level
   DateTime recordedAt
 }
-"quality_review_target" {
-  Int id PK
-  Int wbsId
-  String taskNo
-  String name
-  QualityDocumentType documentType
-  QualityReviewType reviewType
-  Boolean isActive
-  DateTime createdAt
-  DateTime updatedAt
-}
-"quality_reviewer" {
-  Int id PK
-  Int targetId FK
-  String reviewerUserId
-  String reviewTaskNo
-  DateTime createdAt
-  DateTime updatedAt
-}
-"quality_size_metric" {
-  Int id PK
-  Int targetId FK
-  QualitySizeUnit unit
-  Decimal value
-  DateTime measuredAt
-  String note "nullable"
-  DateTime createdAt
-  DateTime updatedAt
-}
-"quality_finding" {
-  Int id PK
-  Int targetId FK
-  QualitySeverity severity
-  String category "nullable"
-  String description "nullable"
-  DateTime foundAt
-  DateTime createdAt
-  DateTime updatedAt
-}
 "system_settings" {
   Int id PK
   Float standardWorkingHours
@@ -337,12 +327,10 @@ erDiagram
 "task_dependencies" }o--|| "wbs_task" : predecessorTask
 "task_dependencies" }o--|| "wbs_task" : successorTask
 "task_dependencies" }o--|| "wbs" : wbs
+"task_progress_snapshot" }o--o| "sync_logs" : syncLog
 "import_jobs" }o--o| "users" : user
 "import_jobs" }o--o| "wbs" : wbs
 "import_job_progress" }o--|| "import_jobs" : job
-"quality_reviewer" }o--|| "quality_review_target" : target
-"quality_size_metric" }o--|| "quality_review_target" : target
-"quality_finding" }o--|| "quality_review_target" : target
 ```
 
 ### `projects`
@@ -452,6 +440,8 @@ erDiagram
   - `assigneeId`: 
   - `status`: 
   - `progressRate`: 
+  - `isDeleted`: 
+  - `deletedAt`: 
   - `createdAt`: 
   - `updatedAt`: 
 
@@ -578,10 +568,14 @@ erDiagram
   - `progressMeasurementMethod`: 
   - `forecastCalculationMethod`: 
   - `evmForecastMethod`: 
+  - `evmBufferCostMethod`: 
+  - `evmPvDistribution`: 
+  - `evmHealthyThresholdPct`: 
+  - `evmWarningThresholdPct`: 
   - `deadlineAlertDays`: 
   - `costOverrunThresholdPct`: 
   - `evmExcludeSettings`: 
-  - `qualityThresholds`: 
+  - `schedulingSettings`: 
   - `createdAt`: 
   - `updatedAt`: 
 
@@ -592,6 +586,8 @@ erDiagram
   - `predecessorTaskId`: 
   - `successorTaskId`: 
   - `wbsId`: 
+  - `type`: 
+  - `lag`: 
   - `createdAt`: 
   - `updatedAt`: 
 
@@ -609,6 +605,29 @@ erDiagram
   - `errorDetails`: 
   - `createdAt`: 
   - `updatedAt`: 
+
+### `task_progress_snapshot`
+
+**Properties**
+  - `id`: 
+  - `taskId`: 
+  - `wbsId`: 
+  - `taskNo`: 
+  - `snapshotAt`: 
+  - `progressRate`: 
+  - `status`: 
+  - `plannedManHours`: 
+  - `baseManHours`: 
+  - `costPerHour`: 
+  - `plannedStart`: 
+  - `plannedEnd`: 
+  - `baseStart`: 
+  - `baseEnd`: 
+  - `actualStart`: 
+  - `actualEnd`: 
+  - `isRemoved`: 
+  - `syncLogId`: 
+  - `createdAt`: 
 
 ### `company_holidays`
 
@@ -651,53 +670,6 @@ erDiagram
   - `detail`: 
   - `level`: 
   - `recordedAt`: 
-
-### `quality_review_target`
-
-**Properties**
-  - `id`: 
-  - `wbsId`: 
-  - `taskNo`: 
-  - `name`: 
-  - `documentType`: 
-  - `reviewType`: 
-  - `isActive`: 
-  - `createdAt`: 
-  - `updatedAt`: 
-
-### `quality_reviewer`
-
-**Properties**
-  - `id`: 
-  - `targetId`: 
-  - `reviewerUserId`: 
-  - `reviewTaskNo`: 
-  - `createdAt`: 
-  - `updatedAt`: 
-
-### `quality_size_metric`
-
-**Properties**
-  - `id`: 
-  - `targetId`: 
-  - `unit`: 
-  - `value`: 
-  - `measuredAt`: 
-  - `note`: 
-  - `createdAt`: 
-  - `updatedAt`: 
-
-### `quality_finding`
-
-**Properties**
-  - `id`: 
-  - `targetId`: 
-  - `severity`: 
-  - `category`: 
-  - `description`: 
-  - `foundAt`: 
-  - `createdAt`: 
-  - `updatedAt`: 
 
 ### `system_settings`
 

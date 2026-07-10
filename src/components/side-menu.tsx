@@ -10,7 +10,6 @@ import {
   Trello,
   Users,
   CalendarCheck,
-  TrendingUp,
   RefreshCcw,
   Settings,
 } from "lucide-react";
@@ -113,13 +112,6 @@ export function SideMenu() {
               会社休日管理
             </Link>
             <Link
-              href="/evm"
-              className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
-            >
-              <TrendingUp className="h-4 w-4" />
-              EVM
-            </Link>
-            <Link
               href="/import-jobs"
               className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
             >
@@ -141,13 +133,6 @@ export function SideMenu() {
                   <h3 className="text-lg font-semibold">プロジェクト管理</h3>
                   <p className="text-sm text-muted-foreground">プロジェクト管理</p>
                 </div>
-                <Link
-                  href={`/projects/${projectId}/dashboard`}
-                  className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
-                >
-                  <Trello className="h-4 w-4" />
-                  ダッシュボード
-                </Link>
                 <Link
                   href={`/projects/${projectId}`}
                   className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"

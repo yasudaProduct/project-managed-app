@@ -1,7 +1,8 @@
-import { ProgressMeasurementMethod } from '@prisma/client';
+import type { ProgressMeasurementMethod } from '@/types/progress-measurement';
 import type { EvmForecastMethod } from '@/types/evm-forecast-method';
+import type { EvmCalculationMode } from '@/types/evm';
 
-export type EvmCalculationMode = 'hours' | 'cost';
+export type { EvmCalculationMode };
 
 type EvmMetricsArgs = {
   pv_base: number;
@@ -14,7 +15,11 @@ type EvmMetricsArgs = {
   progressMethod?: ProgressMeasurementMethod;
   isPredicted?: boolean;
   forecastMethod?: EvmForecastMethod;
+  healthyThreshold?: number;
+  warningThreshold?: number;
 };
+
+export type EvmHealthStatus = 'healthy' | 'warning' | 'critical' | 'no_data';
 
 export class EvmMetrics {
   public readonly pv_base: number; // 基準計画価値
@@ -27,6 +32,8 @@ export class EvmMetrics {
   public readonly progressMethod: ProgressMeasurementMethod;
   public readonly isPredicted: boolean;
   public readonly forecastMethod: EvmForecastMethod;
+  public readonly healthyThreshold: number;
+  public readonly warningThreshold: number;
 
   constructor(args: EvmMetricsArgs) {
     this.pv_base = args.pv_base;
@@ -39,6 +46,8 @@ export class EvmMetrics {
     this.progressMethod = args.progressMethod ?? 'SELF_REPORTED';
     this.isPredicted = args.isPredicted ?? false;
     this.forecastMethod = args.forecastMethod ?? 'CPI_ONLY';
+    this.healthyThreshold = args.healthyThreshold ?? 0.9;
+    this.warningThreshold = args.warningThreshold ?? 0.8;
   }
 
   public static create(args: EvmMetricsArgs): EvmMetrics {
@@ -56,13 +65,15 @@ export class EvmMetrics {
   }
 
   // Schedule Performance Index (スケジュール効率指標)
-  get spi(): number {
-    return this.pv === 0 ? 0 : this.ev / this.pv;
+  // PV未発生（計画期間前）は「進捗ゼロ」ではなく未定義としてnullを返す
+  get spi(): number | null {
+    return this.pv === 0 ? null : this.ev / this.pv;
   }
 
   // Cost Performance Index (コスト効率指標)
-  get cpi(): number {
-    return this.ac === 0 ? 0 : this.ev / this.ac;
+  // AC未発生（実績未投入）は未定義としてnullを返す
+  get cpi(): number | null {
+    return this.ac === 0 ? null : this.ev / this.ac;
   }
 
   // Estimate At Completion (完了時総コスト予測)
@@ -74,17 +85,23 @@ export class EvmMetrics {
   }
 
   // Estimate To Complete (完了までの残コスト予測)
+  // 未定義（null）の効率指標は「計画通り＝係数1」とみなす。CPI=0（実コスト発生済みで出来高ゼロ）は
+  // 効率が算出不能のため従来通り0を返す（ゼロ除算回避）。
   get etc(): number {
+    // EV > BAC（予定工数が基準を超えて増えた場合等）でも残作業は負にならないため0を下限とする
+    const remaining = Math.max(0, this.bac - this.ev);
     switch (this.forecastMethod) {
       case 'CPI_SPI': {
-        const cpiSpi = this.cpi * this.spi;
-        return cpiSpi === 0 ? 0 : (this.bac - this.ev) / cpiSpi;
+        const cpiSpi = (this.cpi ?? 1) * (this.spi ?? 1);
+        return cpiSpi === 0 ? 0 : remaining / cpiSpi;
       }
       case 'PLANNED':
-        return this.bac - this.ev;
+        return remaining;
       case 'CPI_ONLY':
-      default:
-        return this.cpi === 0 ? 0 : (this.bac - this.ev) / this.cpi;
+      default: {
+        if (this.cpi === null) return remaining;
+        return this.cpi === 0 ? 0 : remaining / this.cpi;
+      }
     }
   }
 
@@ -100,9 +117,14 @@ export class EvmMetrics {
   }
 
   // プロジェクトの健全性を判定
-  get healthStatus(): 'healthy' | 'warning' | 'critical' {
-    if (this.cpi >= 0.9 && this.spi >= 0.9) return 'healthy';
-    if (this.cpi >= 0.8 && this.spi >= 0.8) return 'warning';
+  // 両指標が未定義（開始前・実績未投入）ならno_data。片方のみ未定義なら残る指標だけで判定する。
+  get healthStatus(): EvmHealthStatus {
+    const indicators = [this.cpi, this.spi].filter(
+      (v): v is number => v !== null
+    );
+    if (indicators.length === 0) return 'no_data';
+    if (indicators.every((v) => v >= this.healthyThreshold)) return 'healthy';
+    if (indicators.every((v) => v >= this.warningThreshold)) return 'warning';
     return 'critical';
   }
 

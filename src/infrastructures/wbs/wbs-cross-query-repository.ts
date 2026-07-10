@@ -28,7 +28,7 @@ export class WbsCrossQueryRepository implements IWbsCrossQueryRepository {
                 COUNT(DISTINCT wp."wbsId") AS wbs_count
             FROM wbs_phase wp
             LEFT JOIN phase_template pt ON pt.id = wp."templateId"
-            JOIN wbs_task wt ON wt."phaseId" = wp.id
+            JOIN wbs_task wt ON wt."phaseId" = wp.id AND wt."isDeleted" = false
             LEFT JOIN LATERAL (
                 SELECT SUM(tk.kosu) AS kosu
                 FROM task_period tp

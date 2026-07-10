@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { createImportJob } from "@/app/import-jobs/actions";
 
 type Props = {
   open: boolean;
@@ -76,27 +77,22 @@ export default function GeppoImportModal({
         options: {},
       };
 
-      const res = await fetch(`/api/import-jobs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const result = await createImportJob(requestBody);
+      if (result.success) {
         const monthDescription =
           selectedMonth === "ALL" ? "月報(全期間)" : `月報(${selectedMonth})`;
         toast({
           title: "ジョブ作成",
           description: `${monthDescription}のジョブを作成しました。`,
         });
-        onCreated?.(data.id);
+        onCreated?.(result.data.id);
         onRefresh?.();
         onOpenChange(false);
         setSelectedMonth("ALL");
       } else {
         toast({
           title: "エラー",
-          description: await res.text(),
+          description: result.error,
           variant: "destructive",
         });
       }

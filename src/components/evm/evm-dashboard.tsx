@@ -14,16 +14,16 @@ import { EvmChart } from "./evm-chart";
 import { EvmMetricsCard } from "./evm-metrics-card";
 import { TaskEvmTable } from "./task-evm-table";
 import { EvmTimeSeriesTable } from "./evm-timeseries-table";
-import {
-  getCurrentEvmMetrics,
-  getEvmTimeSeries,
-  getTaskEvmDetails,
-  getEvmDateRange,
-  type EvmMetricsData,
-  type TaskEvmDataSerialized,
-  type EvmDateRangeData,
-} from "@/app/actions/evm/evm-actions";
-import { Loader2, TrendingUp, DollarSign, Info } from "lucide-react";
+import { EvmBreakdownTable } from "./evm-breakdown-table";
+import { getEvmDashboardData } from "@/app/wbs/[id]/actions/evm-actions";
+import type {
+  EvmMetricsData,
+  TaskEvmDataSerialized,
+  ScheduleForecastData,
+  EvmBreakdownRow,
+} from "@/applications/evm/evm-dashboard-dto";
+import { exportTableData } from "@/utils/export-table";
+import { Loader2, TrendingUp, DollarSign, Info, Download } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -49,6 +49,12 @@ export function EvmDashboard({
   );
   const [timeSeriesData, setTimeSeriesData] = useState<EvmMetricsData[]>([]);
   const [taskDetails, setTaskDetails] = useState<TaskEvmDataSerialized[]>([]);
+  const [scheduleForecast, setScheduleForecast] =
+    useState<ScheduleForecastData | null>(null);
+  const [phaseBreakdown, setPhaseBreakdown] = useState<EvmBreakdownRow[]>([]);
+  const [assigneeBreakdown, setAssigneeBreakdown] = useState<EvmBreakdownRow[]>(
+    []
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,108 +94,33 @@ export function EvmDashboard({
   ]);
 
   /**
-   * 期間モードに基づいて開始日と終了日を計算
-   */
-  const calculateDateRange = (
-    mode: typeof periodMode,
-    range: EvmDateRangeData | null
-  ): { startDate: Date; endDate: Date } => {
-    const now = new Date();
-
-    switch (mode) {
-      case "project":
-        // プロジェクト全体期間（タスクの最小開始日〜最大終了日）
-        if (range?.recommendedStartDate && range?.recommendedEndDate) {
-          return {
-            startDate: new Date(range.recommendedStartDate),
-            endDate: new Date(range.recommendedEndDate),
-          };
-        }
-        // フォールバック: 過去3ヶ月〜現在
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-        return { startDate: threeMonthsAgo, endDate: now };
-
-      case "recent3months":
-        const recent3Months = new Date();
-        recent3Months.setMonth(recent3Months.getMonth() - 3);
-        return { startDate: recent3Months, endDate: now };
-
-      case "recent1month":
-        const recent1Month = new Date();
-        recent1Month.setMonth(recent1Month.getMonth() - 1);
-        return { startDate: recent1Month, endDate: now };
-
-      case "custom":
-        // カスタム期間（今後実装）
-        return { startDate: now, endDate: now };
-
-      default:
-        return { startDate: now, endDate: now };
-    }
-  };
-
-  /**
    * EVMデータを読み込む
+   * 現在メトリクス・時系列・タスク別詳細・日付範囲を1リクエストでまとめて取得する。
    */
   const loadEvmData = async (): Promise<void> => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // 日付範囲情報を取得
-      const rangeResult = await getEvmDateRange({ wbsId });
-
-      // 現在のメトリクスを取得
-      const metricsResult = await getCurrentEvmMetrics({
+      const result = await getEvmDashboardData({
         wbsId,
         calculationMode,
         progressMethod,
-      });
-
-      if (!metricsResult.success || !metricsResult.data) {
-        throw new Error(
-          metricsResult.error ?? "メトリクスのロードに失敗しました"
-        );
-      }
-
-      setCurrentMetrics(metricsResult.data);
-
-      // 期間を計算
-      const { startDate, endDate } = calculateDateRange(
-        periodMode,
-        rangeResult.data ?? null
-      );
-
-      // 時系列データを取得
-      // TODO: このアクションが遅いのでパフォーマンス改善を検討
-      const timeSeriesResult = await getEvmTimeSeries({
-        wbsId,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
         interval,
-        calculationMode,
-        progressMethod,
+        periodMode,
         showPrediction,
       });
 
-      if (!timeSeriesResult.success || !timeSeriesResult.data) {
-        throw new Error(
-          timeSeriesResult.error ?? "時系列データをロードできませんでした"
-        );
+      if (!result.success || !result.data) {
+        throw new Error(result.error ?? "EVMデータのロードに失敗しました");
       }
 
-      setTimeSeriesData(timeSeriesResult.data);
-
-      // タスク別データを取得
-      const taskResult = await getTaskEvmDetails({ wbsId });
-
-      if (!taskResult.success || !taskResult.data) {
-        throw new Error(
-          taskResult.error ?? "タスクの詳細をロードできませんでした"
-        );
-      }
-      setTaskDetails(taskResult.data);
+      setCurrentMetrics(result.data.currentMetrics);
+      setTimeSeriesData(result.data.timeSeries);
+      setTaskDetails(result.data.taskDetails);
+      setScheduleForecast(result.data.scheduleForecast ?? null);
+      setPhaseBreakdown(result.data.phaseBreakdown ?? []);
+      setAssigneeBreakdown(result.data.assigneeBreakdown ?? []);
     } catch (err) {
       console.error("Failed to load EVM data:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -226,6 +157,79 @@ export function EvmDashboard({
       </Alert>
     );
   }
+
+  const formatCsvValue = (value: number): string =>
+    calculationMode === "cost" ? String(Math.round(value)) : value.toFixed(1);
+
+  const handleExportTimeSeries = () => {
+    exportTableData(
+      [
+        "評価日",
+        "PV_BASE",
+        "PV",
+        "EV",
+        "AC",
+        "BAC",
+        "SV",
+        "CV",
+        "SPI",
+        "CPI",
+        "完了率(%)",
+        "EAC",
+        "ETC",
+        "VAC",
+        "健全性",
+        "予測",
+      ],
+      timeSeriesData.map((m) => [
+        new Date(m.date).toLocaleDateString("ja-JP"),
+        formatCsvValue(m.pv_base),
+        formatCsvValue(m.pv),
+        formatCsvValue(m.ev),
+        formatCsvValue(m.ac),
+        formatCsvValue(m.bac),
+        formatCsvValue(m.sv),
+        formatCsvValue(m.cv),
+        m.spi !== null ? m.spi.toFixed(3) : "",
+        m.cpi !== null ? m.cpi.toFixed(3) : "",
+        m.completionRate.toFixed(1),
+        formatCsvValue(m.eac),
+        formatCsvValue(m.etc),
+        formatCsvValue(m.vac),
+        m.healthStatus,
+        m.isPredicted ? "予測" : "実績",
+      ]),
+      { filename: "evm-timeseries", format: "csv" }
+    );
+  };
+
+  const handleExportTaskDetails = () => {
+    exportTableData(
+      [
+        "タスクNo",
+        "タスク名",
+        "ステータス",
+        "計画工数(h)",
+        "実績工数(h)",
+        "進捗率(%)",
+        "出来高",
+        "単価",
+      ],
+      taskDetails.map((t) => [
+        t.taskNo,
+        t.taskName,
+        t.status,
+        t.plannedManHours.toFixed(1),
+        t.actualManHours.toFixed(1),
+        Math.round(t.methodProgressRate),
+        formatCsvValue(
+          calculationMode === "cost" ? t.methodEarnedValueCost : t.methodEarnedValue
+        ),
+        t.costPerHour,
+      ]),
+      { filename: "evm-tasks", format: "csv" }
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -327,6 +331,24 @@ export function EvmDashboard({
             </div>
 
             <div className="flex items-center gap-1.5 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleExportTimeSeries}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                時系列CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleExportTaskDetails}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                タスクCSV
+              </Button>
               <Switch
                 id="show-prediction"
                 checked={showPrediction}
@@ -375,6 +397,7 @@ export function EvmDashboard({
           <TabsTrigger value="chart">トレンドチャート</TabsTrigger>
           <TabsTrigger value="timeseries">時系列データ</TabsTrigger>
           <TabsTrigger value="tasks">タスク別詳細</TabsTrigger>
+          <TabsTrigger value="breakdown">内訳</TabsTrigger>
         </TabsList>
 
         <TabsContent value="chart">
@@ -389,12 +412,31 @@ export function EvmDashboard({
         </TabsContent>
 
         <TabsContent value="tasks">
-          <TaskEvmTable tasks={taskDetails} calculationMode={calculationMode} />
+          <TaskEvmTable
+            tasks={taskDetails}
+            calculationMode={calculationMode}
+            progressMethod={progressMethod}
+          />
+        </TabsContent>
+
+        <TabsContent value="breakdown" className="space-y-4">
+          <EvmBreakdownTable
+            title="フェーズ別内訳"
+            rows={phaseBreakdown}
+            calculationMode={calculationMode}
+            note="現在時点のライブタスクによる集計です。BACにバッファは含まれません。「未紐付け・削除済み」はタスクに紐付かない実績と削除済みタスクの実績です。"
+          />
+          <EvmBreakdownTable
+            title="担当者別内訳"
+            rows={assigneeBreakdown}
+            calculationMode={calculationMode}
+            note="担当者軸はタスクの現担当者です（作業実績の記録者ではありません）。BACにバッファは含まれません。"
+          />
         </TabsContent>
       </Tabs>
 
       {/* メトリクスカード */}
-      <EvmMetricsCard metrics={currentMetrics} />
+      <EvmMetricsCard metrics={currentMetrics} scheduleForecast={scheduleForecast} />
     </div>
   );
 }

@@ -1,15 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { container } from '@/lib/inversify.config'
 import { SYMBOL } from '@/types/symbol'
-import { IImportJobApplicationService } from '@/applications/import-job/import-job-application.service'
-import type { ImportJobType } from '@/domains/import-job/import-job-enums'
+import { IImportJobApplicationService } from '@/applications/import-job/import-job-application-service'
+import type { ImportJobType } from '@/types/import-job'
 import type { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
+import { createApiResponse, createApiError, createImportResponse, validateRequiredFields } from '@/lib/api-response'
 
-/**
- * インポートジョブを取得
- * @param request 
- * @returns 
- */
+function formatJob(job: Awaited<ReturnType<IImportJobApplicationService['getJob']>>, wbsMap: Map<number, string>) {
+  if (!job) return null
+  return {
+    id: job.id,
+    type: job.type,
+    status: job.status,
+    progress: job.progress,
+    totalRecords: job.totalRecords,
+    processedRecords: job.processedRecords,
+    successCount: job.successCount,
+    errorCount: job.errorCount,
+    createdAt: job.createdAt.toISOString(),
+    startedAt: job.startedAt?.toISOString(),
+    completedAt: job.completedAt?.toISOString(),
+    targetMonth: job.targetMonth,
+    wbsId: job.wbsId,
+    wbsName: job.type === 'WBS'
+      ? (job.wbsId ? (wbsMap.get(job.wbsId) ?? null) : null)
+      : (job.targetProjectIds && job.targetProjectIds.length > 0
+        ? job.targetProjectIds.join(',')
+        : null),
+    errorDetails: job.errorDetails,
+    result: job.result,
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -31,7 +53,6 @@ export async function GET(request: NextRequest) {
         : await importJobService.getAllJobs()
     }
 
-    // WBS名を取得
     const wbsService = container.get<IWbsApplicationService>(SYMBOL.IWbsApplicationService)
     const wbsIdSet = new Set<number>()
     for (const job of jobs) {
@@ -53,79 +74,43 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(jobs.map(job => ({
-      id: job.id,
-      type: job.type,
-      status: job.status,
-      progress: job.progress,
-      totalRecords: job.totalRecords,
-      processedRecords: job.processedRecords,
-      successCount: job.successCount,
-      errorCount: job.errorCount,
-      createdAt: job.createdAt.toISOString(),
-      startedAt: job.startedAt?.toISOString(),
-      completedAt: job.completedAt?.toISOString(),
-      targetMonth: job.targetMonth,
-      wbsId: job.wbsId,
-      wbsName: job.type === 'WBS'
-        ? (job.wbsId ? (wbsMap.get(job.wbsId) ?? null) : null)
-        : (job.targetProjectIds && job.targetProjectIds.length > 0
-          ? job.targetProjectIds.join(',')
-          : null),
-      errorDetails: job.errorDetails,
-      result: job.result,
-    })))
+    return createApiResponse(jobs.map(job => formatJob(job, wbsMap)))
   } catch (error) {
     console.error(error)
-    return NextResponse.json(
-      { error: 'インポートジョブの取得に失敗しました' },
-      { status: 500 }
-    )
+    return createApiError('インポートジョブの取得に失敗しました', 500)
   }
 }
 
-/**
- * インポートジョブを作成
- * @param request 
- * @returns 
- */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { type, ...options } = body
 
-    if (!type) {
-      return NextResponse.json(
-        { error: 'Type is required' },
-        { status: 400 }
-      )
+    const requiredError = validateRequiredFields(body, ['type'])
+    if (requiredError) {
+      return createApiError('Type is required', 400)
+    }
+
+    if (type !== 'WBS' && type !== 'GEPPO') {
+      return createApiError('Invalid type', 400)
     }
 
     const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
 
-    // 入力検証
-    if (type !== 'WBS' && type !== 'GEPPO') {
-      return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
-    }
-
-    // インポートジョブを作成
     const job = await importJobService.createJob({
       type: type as ImportJobType,
       createdBy: undefined,
       ...options
     })
 
-    return NextResponse.json({
+    return createImportResponse({
       id: job.id,
       type: job.type,
       status: job.status,
       createdAt: job.createdAt.toISOString(),
-    }, { status: 201 })
+    }, undefined, 201)
   } catch (error) {
     console.error('Failed to create import job:', error)
-    return NextResponse.json(
-      { error: 'Failed to create import job' },
-      { status: 500 }
-    )
+    return createApiError('Failed to create import job', 500)
   }
 }

@@ -6,7 +6,7 @@ import { getWbsById } from "@/app/wbs/[id]/actions/wbs-actions";
 import { Loader2, ArrowLeft, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { TaskSchedulingPage } from "@/components/task-scheduling/task-scheduling-page";
+import { SchedulingWorkbench } from "@/components/task-scheduling/scheduling-workbench";
 
 export default async function TaskSchedulingPageWrapper({
   params,
@@ -53,7 +53,7 @@ export default async function TaskSchedulingPageWrapper({
           </div>
         }
       >
-        <TaskSchedulingPage wbsId={idNum} />
+        <SchedulingWorkbench wbsId={idNum} />
       </Suspense>
     </div>
   );

@@ -3,9 +3,13 @@
  * EVM指標のEAC/ETC/VACをどの方式で算出するかを定義
  */
 
-import type { EvmForecastMethod as PrismaEvmForecastMethod } from '@prisma/client';
+/**
+ * Prisma の EvmForecastMethod enum と値を一致させた独立 union 型。
+ * Prisma enum との相互変換は Infrastructure 層でのみ行う。
+ */
+export type EvmForecastMethod = 'CPI_ONLY' | 'CPI_SPI' | 'PLANNED';
 
-export type EvmForecastMethod = PrismaEvmForecastMethod;
+export const EVM_FORECAST_METHODS: EvmForecastMethod[] = ['CPI_ONLY', 'CPI_SPI', 'PLANNED'];
 
 /**
  * EVM予測計算方式のラベル

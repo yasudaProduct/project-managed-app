@@ -1,6 +1,7 @@
 import { WbsTask, Milestone } from "@/types/wbs";
 import { Project } from "@/types/project";
 import { getTaskStatusName } from "@/utils/utils";
+import { formatDate } from "@/utils/date-util";
 
 export interface DateRange {
   start: Date;
@@ -308,10 +309,7 @@ export function groupTasks(
  * タイムゾーンの影響を受けない日付文字列を生成
  */
 export function formatDateToLocalString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}/${month}/${day}`;
+  return formatDate(date, 'YYYY/MM/DD');
 }
 
 /**

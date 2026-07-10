@@ -1,13 +1,13 @@
 import { Assignee } from "./assignee";
 import { Phase } from "../phase/phase";
-import { TaskStatus } from "./value-object/project-status";
+import { TaskStatus } from "./value-object/task-status";
 import { Period } from "./period";
 import { TaskStatus as TaskStatusType } from "@/types/wbs";
 import { ManHour } from "./man-hour";
 import { ManHourType } from "./value-object/man-hour-type";
 import { PeriodType } from "./value-object/period-type";
 import { TaskNo } from "./value-object/task-id";
-import { WorkRecord } from "../work-records/work-recoed";
+import { WorkRecord } from "../work-record/work-record";
 
 export class Task {
     public id?: number;
@@ -100,18 +100,20 @@ export class Task {
             throw new Error("タスクステータスは必須です");
         }
 
-        if (!args.assigneeId) {
-            throw new Error("担当者は必須です");
-        }
-
-        if (!args.phaseId) {
-            throw new Error("フェーズは必須です");
-        }
+        // 担当者・フェーズは未割当を許容する（DBは nullable、UIも「未割当」を正式サポート）。
+        // 以前は必須検証で throw していたが、未割当タスクの日付編集が保存できない不具合の原因だった。
 
         this.name = args.name;
         this.assigneeId = args.assigneeId;
         this.status = args.status;
         this.phaseId = args.phaseId;
+    }
+
+    public updateProgressRate(progressRate: number) {
+        if (!Number.isFinite(progressRate) || progressRate < 0 || progressRate > 100) {
+            throw new Error("進捗率は0〜100の範囲で指定してください");
+        }
+        this.progressRate = progressRate;
     }
 
     public updateYotei(args: { startDate: Date; endDate: Date; kosu: number }) {

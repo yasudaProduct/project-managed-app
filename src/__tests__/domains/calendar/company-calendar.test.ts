@@ -114,4 +114,45 @@ describe('CompanyCalendar', () => {
       expect(calendar.getStandardWorkingHours()).toBe(7.5);
     });
   });
+
+  describe('countWorkingDays', () => {
+    const calendar = new CompanyCalendar(7.5);
+
+    it('平日のみの範囲（両端含む）の稼働日数を数える', () => {
+      // 2026-07-06(月)〜2026-07-10(金) = 5営業日
+      expect(
+        calendar.countWorkingDays(new Date(2026, 6, 6), new Date(2026, 6, 10))
+      ).toBe(5);
+    });
+
+    it('土日を除外して数える', () => {
+      // 2026-07-06(月)〜2026-07-12(日) = 平日5日
+      expect(
+        calendar.countWorkingDays(new Date(2026, 6, 6), new Date(2026, 6, 12))
+      ).toBe(5);
+    });
+
+    it('祝日を除外して数える', () => {
+      // 2026-07-20 は海の日(月)。2026-07-20〜2026-07-24 = 火〜金の4営業日
+      expect(
+        calendar.countWorkingDays(new Date(2026, 6, 20), new Date(2026, 6, 24))
+      ).toBe(4);
+    });
+
+    it('同一日（営業日）は1、休日は0', () => {
+      expect(
+        calendar.countWorkingDays(new Date(2026, 6, 8), new Date(2026, 6, 8))
+      ).toBe(1);
+      // 2026-07-11 は土曜日
+      expect(
+        calendar.countWorkingDays(new Date(2026, 6, 11), new Date(2026, 6, 11))
+      ).toBe(0);
+    });
+
+    it('end < start の場合は0を返す', () => {
+      expect(
+        calendar.countWorkingDays(new Date(2026, 6, 10), new Date(2026, 6, 6))
+      ).toBe(0);
+    });
+  });
 });

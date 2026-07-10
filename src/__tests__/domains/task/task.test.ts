@@ -1,6 +1,6 @@
 import { Task } from "@/domains/task/task";
 import { TaskNo } from "@/domains/task/value-object/task-id";
-import { TaskStatus } from "@/domains/task/value-object/project-status";
+import { TaskStatus } from "@/domains/task/value-object/task-status";
 import { Phase } from "@/domains/phase/phase";
 import { PhaseCode } from "@/domains/phase/phase-code";
 import { Assignee } from "@/domains/task/assignee";
@@ -8,7 +8,7 @@ import { Period } from "@/domains/task/period";
 import { PeriodType } from "@/domains/task/value-object/period-type";
 import { ManHour } from "@/domains/task/man-hour";
 import { ManHourType } from "@/domains/task/value-object/man-hour-type";
-import { WorkRecord } from "@/domains/work-records/work-recoed";
+import { WorkRecord } from "@/domains/work-record/work-record";
 
 describe('Task', () => {
   const taskNo = TaskNo.reconstruct('D1-0001');
@@ -404,26 +404,48 @@ describe('Task', () => {
         }).toThrow('タスクステータスは必須です');
       });
 
-      it('担当者が空の場合、エラーを返すこと', () => {
-        expect(() => {
-          task.update({
-            name: '更新後タスク',
-            status: new TaskStatus({ status: 'NOT_STARTED' }),
-            assigneeId: undefined,
-            phaseId: 1,
-          });
-        }).toThrow('担当者は必須です');
+      it('進捗率を更新できること', () => {
+        task.updateProgressRate(75);
+        expect(task.progressRate).toBe(75);
       });
 
-      it('フェーズが空の場合、エラーを返すこと', () => {
-        expect(() => {
-          task.update({
-            name: '更新後タスク',
-            status: new TaskStatus({ status: 'NOT_STARTED' }),
-            assigneeId: 1,
-            phaseId: undefined,
-          });
-        }).toThrow('フェーズは必須です');
+      it('進捗率の境界値（0と100）を受け付けること', () => {
+        task.updateProgressRate(0);
+        expect(task.progressRate).toBe(0);
+        task.updateProgressRate(100);
+        expect(task.progressRate).toBe(100);
+      });
+
+      it('進捗率が範囲外の場合、エラーを返すこと', () => {
+        expect(() => task.updateProgressRate(-1)).toThrow('進捗率は0〜100の範囲で指定してください');
+        expect(() => task.updateProgressRate(101)).toThrow('進捗率は0〜100の範囲で指定してください');
+        expect(() => task.updateProgressRate(NaN)).toThrow('進捗率は0〜100の範囲で指定してください');
+      });
+
+      it('担当者が未設定でも更新できること（未割当を許容）', () => {
+        task.update({
+          name: '更新後タスク',
+          status: new TaskStatus({ status: 'NOT_STARTED' }),
+          assigneeId: undefined,
+          phaseId: 1,
+        });
+
+        expect(task.name).toBe('更新後タスク');
+        expect(task.assigneeId).toBeUndefined();
+        expect(task.phaseId).toBe(1);
+      });
+
+      it('フェーズが未設定でも更新できること（未割当を許容）', () => {
+        task.update({
+          name: '更新後タスク',
+          status: new TaskStatus({ status: 'NOT_STARTED' }),
+          assigneeId: 1,
+          phaseId: undefined,
+        });
+
+        expect(task.name).toBe('更新後タスク');
+        expect(task.assigneeId).toBe(1);
+        expect(task.phaseId).toBeUndefined();
       });
     });
 

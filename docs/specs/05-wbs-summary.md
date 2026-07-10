@@ -428,12 +428,116 @@ grandTotal: taskCount=3, plannedHours=50, actualHours=20
 
 ---
 
+## 13. 処理フロー（WbsSummaryResult の取得）
+
+`GetWbsSummaryHandler.execute()` は、複数のリポジトリからデータを取得し、ドメインサービスで計算したうえで `WbsSummaryResult` を組み立てる。
+処理は大きく **①データ取得 → ②工程別/担当者別集計 → ③設定取得 → ④月別集計（計算モード分岐）→ ⑤結果組み立て** の5段で構成される。
+
+### 13.1 全体フロー（データソースと使用モデル）
+
+```mermaid
+flowchart TD
+    Q["GetWbsSummaryQuery<br/>(projectId, wbsId, calculationMode)"] --> H["GetWbsSummaryHandler.execute()"]
+
+    subgraph DS["① データ取得（リポジトリ経由）"]
+        direction TB
+        H --> R1["wbsQueryRepository.getWbsTasks(wbsId)"]
+        H --> R2["wbsQueryRepository.getPhases(wbsId)"]
+        H --> R3["wbsQueryRepository.getTaskActualHoursByMonth(wbsId)"]
+        H --> R4["wbsAssigneeRepository.findByWbsId(wbsId)"]
+
+        R1 -->|"raw SQL"| T1[("wbs_task / work_records(集約)<br/>wbs_phase / wbs_assignee / users<br/>task_period / task_kosu")]
+        R2 -->|"prisma.wbsPhase"| T2[("wbs_phase")]
+        R3 -->|"raw SQL"| T3[("work_records × wbs_task × users<br/>(taskId,userId,YYYY/MM で集約)")]
+        R4 --> T4[("wbs_assignee / users")]
+
+        T1 --> M1["WbsTaskData[]"]
+        T2 --> M2["PhaseData[]"]
+        T3 --> M3["TaskActualMonthly[]"]
+        M3 --> M3b["buildTaskActualsMap()<br/>→ Map&lt;taskId, TaskActualMonthly[]&gt;"]
+        T4 --> M4["WbsAssignee[]"]
+    end
+
+    subgraph AGG["② 工程別 / 担当者別集計（単純集計）"]
+        direction TB
+        M1 & M2 --> P1["calculatePhaseSummary()<br/>yoteiKosu / jissekiKosu を工程ごとに合算"]
+        P1 --> PS["phaseSummaries (seq順)"]
+        PS --> PT["calculateTotal() → phaseTotal"]
+
+        M1 & M4 --> A1["calculateAssigneeSummary()<br/>yoteiKosu / jissekiKosu を担当者ごとに合算"]
+        A1 --> AS["assigneeSummaries (seq順)"]
+        AS --> AT["calculateTotal() → assigneeTotal"]
+    end
+
+    subgraph CFG["③ プロジェクト設定取得"]
+        H --> S1["prisma.projectSettings.findUnique(projectId)"]
+        S1 --> S2["roundToQuarter / progressMeasurementMethod<br/>forecastCalculationMethod → forecastMethodOption"]
+    end
+
+    subgraph MON["④ 月別集計（calculationMode で分岐）"]
+        direction TB
+        MODE{"query.calculationMode"}
+        M1 & M2 & M3b & M4 & S2 --> MODE
+        MODE -->|BUSINESS_DAY_ALLOCATION| BDA["calculateMonthlySummariesWithBusinessDayAllocation()"]
+        MODE -->|START_DATE_BASED| SDB["calculateMonthlySummariesWithStartDateBased()"]
+        MODE -->|それ以外| ERR["throw Error('不明な計算モード')"]
+        BDA --> MR["{ assignee, phase }"]
+        SDB --> MR
+    end
+
+    MR --> MAS["monthlyAssigneeSummary"]
+    MR --> MPS["monthlyPhaseSummary"]
+
+    PT & AT & PS & AS & MAS & MPS --> RESULT["WbsSummaryResult を返却"]
+```
+
+### 13.2 月別集計の内部フロー（計算モード別）
+
+各タスクをループし、予定（按分 or 開始月計上）・実績（work_records）・見通し（forecast）を月へ振り分けて 2 つのアキュムレータへ蓄積する。
+
+```mermaid
+flowchart TD
+    subgraph BDA["BUSINESS_DAY_ALLOCATION（営業日按分）"]
+        direction TB
+        B0["systemSettingsRepository.get()<br/>companyHolidayRepository.findAll()"] --> B1["CompanyCalendar 生成"]
+        B1 --> B2["WorkingHoursAllocationService 生成"]
+        B2 --> BLOOP{"タスクごとにループ"}
+        BLOOP -->|yoteiStart あり| B3["userScheduleRepository.findByUserIdAndDateRange()"]
+        B3 --> B4["allocateTaskWithDetails()<br/>(+ roundToQuarter時 AllocationQuantizer 0.25)"]
+        B4 --> B5["MonthlyTaskAllocation<br/>= 月別 plannedHours / baselineHours"]
+        BLOOP --> B6["ForecastCalculationService.calculateTaskForecast()"]
+        B5 & B6 --> B7["distributeForecastAcrossMonths()<br/>= 月別 forecastHours"]
+    end
+
+    subgraph SDB["START_DATE_BASED（開始日基準）"]
+        direction TB
+        SLOOP{"タスクごとにループ"} -->|yoteiStart あり| S3["yoteiStart の月キー(YYYY/MM)を生成<br/>yoteiKosu 全量を当該月へ計上"]
+        SLOOP --> S4["ForecastCalculationService.calculateTaskForecast()"]
+        S3 & S4 --> S5["distributeForecastAcrossMonths()"]
+    end
+
+    B7 --> ACC["予定=タスク担当者行 / 実績=work_records 実作業者行<br/>へ振り分け（月×担当者・月×工程）"]
+    S5 --> ACC
+    ACC --> ACC1["MonthlySummaryAccumulator.addTaskAllocation()"]
+    ACC --> ACC2["MonthlyPhaseSummaryAccumulator.addTaskAllocation()"]
+    ACC1 --> GT["getTotals() → MonthlyAssigneeSummary"]
+    ACC2 --> GT2["getTotals() → MonthlyPhaseSummary"]
+```
+
+> **ポイント**
+> - **予定（plannedHours）** は `WbsTaskData`（`task_kosu` の YOTEI/NORMAL）由来で **タスク担当者** 行に計上する（[section 6.1](#61-予定plannedhours)）。
+> - **実績（actualHours）** は `TaskActualMonthly`（`work_records`）由来で **実作業者・実作業月** に計上する（[section 6.2](#62-実績actualhours)）。両者は別データソースである点に注意。
+> - **見通し（forecastHours）** は `ForecastCalculationService` が算出し `distributeForecastAcrossMonths` で月別配分する（[section 6.3](#63-見通しforecasthours)）。
+> - **基準（baselineHours）** は `kijunKosu`（`task_kosu` の KIJUN/NORMAL）由来。
+
+---
+
 ## 付録: 関連クラス一覧
 
 | クラス | ファイル | 責務 |
 | --- | --- | --- |
-| `GetWbsSummaryQuery` | `src/applications/wbs/query/get-wbs-summary.query.ts` | 集計クエリの入力パラメータ |
-| `WbsSummaryQueryHandler` | `src/applications/wbs/query/get-wbs-summary.handler.ts` | サマリー集計のオーケストレーション |
+| `GetWbsSummaryQuery` | `src/applications/wbs/query/get-wbs-summary-query.ts` | 集計クエリの入力パラメータ |
+| `GetWbsSummaryHandler` | `src/applications/wbs/query/get-wbs-summary-handler.ts` | サマリー集計のオーケストレーション |
 | `MonthlySummaryAccumulator` | `src/applications/wbs/query/monthly-summary-accumulator.ts` | 担当者×月集計 |
 | `MonthlyPhaseSummaryAccumulator` | `src/applications/wbs/query/monthly-phase-summary-accumulator.ts` | フェーズ×月集計 |
 

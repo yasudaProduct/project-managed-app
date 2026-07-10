@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Folder } from "lucide-react";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatDate as formatDateUtil } from "@/utils/date-util";
 import Link from "next/link";
 
 interface ActiveProjectsListProps {
@@ -25,7 +24,7 @@ interface ActiveProjectsListProps {
 
 export default function ActiveProjectsList({ activeProjectsList }: ActiveProjectsListProps) {
     const formatDate = (date: Date) => {
-        return format(new Date(date), "yyyy年MM月dd日", { locale: ja });
+        return formatDateUtil(new Date(date), "YYYY年MM月DD日");
     };
 
     const getRemainingDays = (endDate: Date) => {

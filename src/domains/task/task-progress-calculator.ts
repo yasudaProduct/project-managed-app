@@ -8,8 +8,9 @@
  */
 
 import { ProgressMeasurementMethod } from '@/types/progress-measurement';
+import type { TaskStatus } from '@/types/wbs';
 
-export type TaskStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'ON_HOLD' | 'COMPLETED';
+export type { TaskStatus };
 
 /**
  * タスク進捗率計算サービス

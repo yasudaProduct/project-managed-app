@@ -6,6 +6,7 @@ import { CompanyHolidayRepository } from '@/infrastructures/calendar/company-hol
 import { UserScheduleRepository } from '@/infrastructures/calendar/user-schedule-repository';
 import { WbsAssigneeRepository } from '@/infrastructures/wbs-assignee-repository';
 import { SystemSettingsRepository } from '@/infrastructures/system-settings/system-settings-repository';
+import { ProjectSettingsRepository } from '@/infrastructures/project-settings/project-settings-repository';
 import prisma from '@/lib/prisma/prisma';
 import type { PrismaClient } from '@prisma/client';
 import { cleanupTestData, seedTestProject, testIds } from '../../helpers';
@@ -173,6 +174,7 @@ describe('GetWbsSummaryHandler Integration Tests', () => {
       new UserScheduleRepository(prisma as unknown as PrismaClient),
       new WbsAssigneeRepository(),
       new SystemSettingsRepository(),
+      new ProjectSettingsRepository(prisma as unknown as PrismaClient),
     );
 
     // 基本データ（プロジェクト、WBS、フェーズ1）

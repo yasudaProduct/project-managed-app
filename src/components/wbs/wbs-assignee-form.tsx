@@ -110,7 +110,7 @@ export function WbsAssigneeForm({ wbsId, assignee }: WbsAssigneeFormProps) {
       } else {
         toast({
           title: "エラー",
-          description: result.message,
+          description: result.error,
           variant: "destructive",
         });
       }

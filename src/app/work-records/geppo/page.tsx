@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { Project } from "@/types/project";
 import { User } from "@/types/user";
-import { Geppo } from "@/domains/geppo/types";
+import { Geppo } from "@/types/geppo";
 import { MonthPicker } from "@/components/month-picker";
 import { useSearchParams } from "next/navigation";
 

@@ -3,7 +3,7 @@
 import { container } from '@/lib/inversify.config'
 import { SYMBOL } from '@/types/symbol'
 import type { IGeppoApplicationService } from '@/applications/geppo/geppo-application-service'
-import type { GeppoSearchFilters, GeppoPaginationOptions } from '@/domains/geppo/types'
+import type { GeppoSearchFilters, GeppoPaginationOptions } from '@/types/geppo'
 
 /**
  * データベース接続状態を確認

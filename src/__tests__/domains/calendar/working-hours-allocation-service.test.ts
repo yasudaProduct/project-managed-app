@@ -1,4 +1,4 @@
-import { WorkingHoursAllocationService, TaskForAllocation } from '@/domains/calendar/working-hours-allocation.service';
+import { WorkingHoursAllocationService, TaskForAllocation } from '@/domains/calendar/working-hours-allocation-service';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';

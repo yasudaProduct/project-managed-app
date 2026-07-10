@@ -1,13 +1,13 @@
 import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
-import { IAssigneeGanttService } from '@/applications/assignee-gantt/iassignee-gantt.service';
+import { IAssigneeGanttService } from '@/applications/assignee-gantt/iassignee-gantt-service';
 import { ITaskRepository } from '@/applications/task/itask-repository';
 import { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { TaskNo } from '@/domains/task/value-object/task-id';
-import { TaskStatus } from '@/domains/task/value-object/project-status';
+import { TaskStatus } from '@/domains/task/value-object/task-status';
 import { Period } from '@/domains/task/period';
 import { CompanyHoliday } from '@/domains/calendar/company-calendar';
 import { PeriodType } from '@/domains/task/value-object/period-type';

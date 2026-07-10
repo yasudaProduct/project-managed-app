@@ -91,6 +91,32 @@ describe('date-util', () => {
             });
         });
 
+        describe('YYYY/MM/DD(曜)形式', () => {
+            it('日付をYYYY/MM/DD(曜)形式に変換する', () => {
+                const result = formatDate(testDateUTC, 'YYYY/MM/DD(曜)');
+                expect(result).toBe('2025/09/01(月)');
+            });
+
+            it('月日が1桁でも0パディングする', () => {
+                const date = new Date('2025-01-05T12:00:00Z');
+                const result = formatDate(date, 'YYYY/MM/DD(曜)');
+                expect(result).toBe('2025/01/05(日)');
+            });
+        });
+
+        describe('YYYY年MM月DD日形式', () => {
+            it('日付をYYYY年MM月DD日形式（0埋め）に変換する', () => {
+                const result = formatDate(testDateUTC, 'YYYY年MM月DD日');
+                expect(result).toBe('2025年09月01日');
+            });
+
+            it('月日が1桁の場合は0パディングする', () => {
+                const date = new Date('2025-01-05T12:00:00Z');
+                const result = formatDate(date, 'YYYY年MM月DD日');
+                expect(result).toBe('2025年01月05日');
+            });
+        });
+
         describe('入力値の型変換', () => {
             it('Dateオブジェクトを受け付ける', () => {
                 const date = new Date('2025-09-01T12:00:00Z');

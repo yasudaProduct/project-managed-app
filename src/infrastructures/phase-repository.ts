@@ -9,7 +9,6 @@ import type { WbsPhase as PhaseDbType } from "@prisma/client";
 export class PhaseRepository implements IPhaseRepository {
 
     async findById(id: number): Promise<Phase | null> {
-        console.log("repository: findById")
         const phaseDb = await prisma.wbsPhase.findUnique({
             where: { id: id },
         });
@@ -25,7 +24,6 @@ export class PhaseRepository implements IPhaseRepository {
     }
 
     async findAll(): Promise<Phase[]> {
-        console.log("repository: findAll")
         const phasesDb = await prisma.wbsPhase.findMany({
             orderBy: { seq: 'asc' },
         });
@@ -40,7 +38,6 @@ export class PhaseRepository implements IPhaseRepository {
     }
 
     async findAllTemplates(): Promise<Phase[]> {
-        console.log("repository: findAllTemplates")
         const phasesDb = await prisma.phaseTemplate.findMany({
             orderBy: { seq: 'asc' },
         });
@@ -53,8 +50,21 @@ export class PhaseRepository implements IPhaseRepository {
         }));
     }
 
+    async findTemplateById(id: number): Promise<Phase | null> {
+        const phaseDb = await prisma.phaseTemplate.findUnique({
+            where: { id },
+        });
+
+        if (!phaseDb) return null;
+        return Phase.createFromDb({
+            id: phaseDb.id,
+            name: phaseDb.name,
+            code: new PhaseCode(phaseDb.code),
+            seq: phaseDb.seq,
+        });
+    }
+
     async findByWbsId(wbsId: number): Promise<Phase[]> {
-        console.log("repository: findByWbsId")
         const phasesDb = await prisma.wbsPhase.findMany({
             where: {
                 wbsId: wbsId
@@ -68,7 +78,8 @@ export class PhaseRepository implements IPhaseRepository {
                 where: {
                     phaseId: {
                         in: phases.map(phase => phase.id)
-                    }
+                    },
+                    isDeleted: false,
                 },
             });
 
@@ -130,7 +141,6 @@ export class PhaseRepository implements IPhaseRepository {
     }
 
     async createTemplate(phase: Phase): Promise<Phase> {
-        console.log("repository: createTemplate")
         const phaseDb = await prisma.phaseTemplate.create({
             data: {
                 name: phase.name,
@@ -147,7 +157,6 @@ export class PhaseRepository implements IPhaseRepository {
     }
 
     async updateTemplate(phase: Phase): Promise<Phase> {
-        console.log("repository: updateTemplate")
         const phaseDb = await prisma.phaseTemplate.update({
             where: { id: phase.id },
             data: {
@@ -164,8 +173,13 @@ export class PhaseRepository implements IPhaseRepository {
         });
     }
 
+    async deleteTemplate(id: number): Promise<void> {
+        await prisma.phaseTemplate.delete({
+            where: { id },
+        });
+    }
+
     async create(wbsId: number, phase: Phase): Promise<Phase> {
-        console.log("repository: create phase for wbs")
         const phaseDb = await prisma.wbsPhase.create({
             data: {
                 wbsId: wbsId,
@@ -185,7 +199,6 @@ export class PhaseRepository implements IPhaseRepository {
     }
 
     async update(wbsId: number, id: string, phase: Phase): Promise<Phase> {
-        console.log("repository: update phase")
         const phaseDb = await prisma.wbsPhase.update({
             where: { id: parseInt(id) },
             data: {
@@ -205,7 +218,6 @@ export class PhaseRepository implements IPhaseRepository {
     }
 
     async delete(id: string): Promise<void> {
-        console.log("repository: delete phase")
         await prisma.wbsPhase.delete({
             where: { id: parseInt(id) },
         });

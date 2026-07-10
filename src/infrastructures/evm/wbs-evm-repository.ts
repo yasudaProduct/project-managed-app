@@ -6,11 +6,14 @@ import {
   WbsEvmData,
   BufferData,
   ProjectSettingsData,
+  TaskProgressSnapshotRecord,
+  EditableProgressSnapshot,
 } from '@/applications/evm/iwbs-evm-repository';
-import type { IWbsQueryRepository } from '@/applications/wbs/query/wbs-query-repository';
+import type { IWbsQueryRepository } from '@/applications/wbs/query/iwbs-query-repository';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { EvmCalculationMode } from '@/domains/evm/evm-metrics';
-import { TaskStatus } from '@prisma/client';
+import { DEFAULT_COST_PER_HOUR } from '@/domains/evm/evm-constants';
+import { TaskStatus } from '@/types/wbs';
 
 @injectable()
 export class WbsEvmRepository implements IWbsEvmRepository {
@@ -38,13 +41,20 @@ export class WbsEvmRepository implements IWbsEvmRepository {
 
     // TaskEvmDataに変換
     const tasks = wbsTasksData.map((task) => {
-      const baseManHours = task.kijunKosu ?? 0;
+      // 基準（KIJUN）未設定タスク（画面からの作成等）は予定をベースラインとして扱う。
+      // 基準0のままだとBAC・PV_BASEから漏れ、EV > BACとなってEAC/VAC/完了率が破綻するため。
+      const baseManHours = task.kijunKosu ?? task.yoteiKosu ?? 0;
       const plannedManHours = task.yoteiKosu ?? task.kijunKosu ?? 0;
       const actualManHours = task.jissekiKosu ?? 0;
 
+      const plannedStartDate = task.yoteiStart ?? task.kijunStart ?? new Date();
+      const plannedEndDate = task.yoteiEnd ?? task.kijunEnd ?? new Date();
+      const baseStartDate = task.kijunStart ?? plannedStartDate;
+      const baseEndDate = task.kijunEnd ?? plannedEndDate;
+
       // WbsAssigneeからcostPerHourを取得
       // task.assignee.idはユーザーIDなので、WbsAssigneeから検索
-      let costPerHour = 5000; // デフォルト値
+      let costPerHour = DEFAULT_COST_PER_HOUR;
       if (task.assignee?.id) {
         const wbsAssignee = wbs.assignees.find(
           (a) => a.assigneeId === task.assignee?.id
@@ -58,10 +68,10 @@ export class WbsEvmRepository implements IWbsEvmRepository {
         Number(task.id),
         task.no, // taskNo
         task.name, // taskName
-        task.kijunStart!,
-        task.kijunEnd!,
-        task.yoteiStart ?? task.kijunStart ?? new Date(),
-        task.yoteiEnd ?? task.kijunEnd ?? new Date(),
+        baseStartDate,
+        baseEndDate,
+        plannedStartDate,
+        plannedEndDate,
         task.jissekiStart ?? null,
         task.jissekiEnd ?? null,
         baseManHours,
@@ -70,7 +80,14 @@ export class WbsEvmRepository implements IWbsEvmRepository {
         task.status as TaskStatus,
         task.progressRate ?? 0,
         costPerHour,
-        task.progressRate // 自己申告進捗率
+        task.progressRate, // 自己申告進捗率
+        {
+          // 内訳集計用（フェーズ別・担当者別）。追加クエリ不要（getWbsTasksで取得済み）
+          phaseId: task.phase?.id ?? null,
+          phaseName: task.phase?.name ?? null,
+          assigneeId: task.assignee?.id ?? null,
+          assigneeName: task.assignee?.displayName ?? null,
+        }
       );
     });
 
@@ -85,14 +102,28 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       0
     );
 
+    const totalBaseManHours = tasks.reduce(
+      (sum, task) => sum + task.baseManHours,
+      0
+    );
+
+    // バッファ金額換算用のWBS平均単価（担当者未登録時はnull）
+    const averageCostPerHour =
+      wbs.assignees.length > 0
+        ? wbs.assignees.reduce((sum, a) => sum + a.costPerHour, 0) /
+          wbs.assignees.length
+        : null;
+
     return {
       wbsId: wbs.id,
       projectId: wbs.projectId,
       projectName: wbs.project.name,
       totalPlannedManHours,
+      totalBaseManHours,
       tasks,
       buffers,
       settings,
+      averageCostPerHour,
     };
   }
 
@@ -121,7 +152,20 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       progressMeasurementMethod: settings.progressMeasurementMethod,
       forecastCalculationMethod: settings.forecastCalculationMethod,
       evmForecastMethod: settings.evmForecastMethod,
+      evmBufferCostMethod: settings.evmBufferCostMethod,
+      evmPvDistribution: settings.evmPvDistribution,
+      evmHealthyThresholdPct: settings.evmHealthyThresholdPct,
+      evmWarningThresholdPct: settings.evmWarningThresholdPct,
     };
+  }
+
+  async getCompanyHolidays(startDate: Date, endDate: Date): Promise<Date[]> {
+    const rows = await prisma.companyHoliday.findMany({
+      where: { date: { gte: startDate, lte: endDate } },
+      select: { date: true },
+      orderBy: { date: 'asc' },
+    });
+    return rows.map((r) => r.date);
   }
 
   async getTasksEvmData(wbsId: number): Promise<TaskEvmData[]> {
@@ -137,23 +181,29 @@ export class WbsEvmRepository implements IWbsEvmRepository {
   ): Promise<Map<string, number>> {
     const workRecords = await prisma.workRecord.findMany({
       where: {
-        task: {
-          wbsId: wbsId,
-        },
+        // AC（実績コスト）はworkRecordという不変事実の集計。タスクがsoft-delete
+        // されても実績は消えないため、isDeletedで絞らずWBS配下の実績を全て対象にする。
+        // タスクに紐付かない実績（Geppo未マッチ、全量置換同期によるtaskIdのSetNull後）も
+        // wbsId直接紐付けで拾い、ACから消えないようにする。
+        OR: [
+          { task: { wbsId } },
+          { wbsId },
+        ],
         date: {
           gte: startDate,
           lte: endDate,
         },
       },
-      include: {
-        task: {
-          include: {
-            assignee: true,
-          },
-        },
-      },
       orderBy: { date: 'asc' },
     });
+
+    // コスト単価は「実績を記録したユーザー」のWBS単価を使う（不変な実績コストの基準）。
+    // タスクの現担当者に依存させると、担当者変更/クリアで過去ACが遡及して変わるため。
+    let rateByUserId = new Map<string, number>();
+    if (calculationMode === 'cost') {
+      const assignees = await prisma.wbsAssignee.findMany({ where: { wbsId } });
+      rateByUserId = new Map(assignees.map((a) => [a.assigneeId, a.costPerHour]));
+    }
 
     const costMap = new Map<string, number>();
 
@@ -164,11 +214,44 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       // 計算モードに応じて工数または金額を加算
       const cost =
         calculationMode === 'cost'
-          ? Number(record.hours_worked) *
-          (record.task?.assignee?.costPerHour ?? 5000)
+          ? Number(record.hours_worked) * (rateByUserId.get(record.userId) ?? DEFAULT_COST_PER_HOUR)
           : Number(record.hours_worked);
 
       costMap.set(dateKey, currentCost + cost);
+    });
+
+    return costMap;
+  }
+
+  async getActualCostByTask(
+    wbsId: number,
+    endDate: Date,
+    calculationMode: EvmCalculationMode = 'hours'
+  ): Promise<Map<number | null, number>> {
+    const workRecords = await prisma.workRecord.findMany({
+      where: {
+        // getActualCostByDateと同一の対象範囲（タスク経由 OR wbsId直接紐付け）
+        OR: [{ task: { wbsId } }, { wbsId }],
+        date: { lte: endDate },
+      },
+    });
+
+    // コスト単価は記録者のWBS単価（getActualCostByDateと同一基準）
+    let rateByUserId = new Map<string, number>();
+    if (calculationMode === 'cost') {
+      const assignees = await prisma.wbsAssignee.findMany({ where: { wbsId } });
+      rateByUserId = new Map(assignees.map((a) => [a.assigneeId, a.costPerHour]));
+    }
+
+    const costMap = new Map<number | null, number>();
+    workRecords.forEach((record) => {
+      const key = record.taskId; // タスク未紐付け実績はnullキー
+      const cost =
+        calculationMode === 'cost'
+          ? Number(record.hours_worked) *
+            (rateByUserId.get(record.userId) ?? DEFAULT_COST_PER_HOUR)
+          : Number(record.hours_worked);
+      costMap.set(key, (costMap.get(key) ?? 0) + cost);
     });
 
     return costMap;
@@ -199,5 +282,73 @@ export class WbsEvmRepository implements IWbsEvmRepository {
     }
 
     return dates;
+  }
+
+  async getProgressSnapshots(
+    wbsId: number,
+    toDate: Date
+  ): Promise<TaskProgressSnapshotRecord[]> {
+    const rows = await prisma.taskProgressSnapshot.findMany({
+      where: { wbsId, snapshotAt: { lte: toDate } },
+      orderBy: [{ taskId: 'asc' }, { snapshotAt: 'asc' }],
+    });
+
+    return rows.map((r) => ({
+      taskId: r.taskId,
+      taskNo: r.taskNo,
+      snapshotAt: r.snapshotAt,
+      progressRate: r.progressRate !== null ? Number(r.progressRate) : null,
+      status: r.status,
+      plannedManHours: Number(r.plannedManHours),
+      baseManHours: Number(r.baseManHours),
+      costPerHour: Number(r.costPerHour),
+      plannedStart: r.plannedStart,
+      plannedEnd: r.plannedEnd,
+      baseStart: r.baseStart,
+      baseEnd: r.baseEnd,
+      actualStart: r.actualStart,
+      actualEnd: r.actualEnd,
+      isRemoved: r.isRemoved,
+    }));
+  }
+
+  async getEditableProgressSnapshots(
+    wbsId: number
+  ): Promise<EditableProgressSnapshot[]> {
+    // 編集対象は有効タスクのスナップショットのみ（tombstone は除外）。
+    const rows = await prisma.taskProgressSnapshot.findMany({
+      where: { wbsId, isRemoved: false },
+      orderBy: [{ taskNo: 'asc' }, { snapshotAt: 'asc' }],
+    });
+
+    // タスク名は WbsTask から taskId → name で解決（snapshot.taskId は wbsTask.id を参照）。
+    const tasks = await prisma.wbsTask.findMany({
+      where: { wbsId },
+      select: { id: true, name: true },
+    });
+    const nameByTaskId = new Map(tasks.map((t) => [t.id, t.name]));
+
+    return rows.map((r) => ({
+      id: r.id,
+      taskId: r.taskId,
+      taskNo: r.taskNo,
+      taskName: nameByTaskId.get(r.taskId) ?? r.taskNo,
+      snapshotAt: r.snapshotAt,
+      progressRate: r.progressRate !== null ? Number(r.progressRate) : null,
+      status: r.status,
+      syncLogId: r.syncLogId,
+    }));
+  }
+
+  async updateProgressSnapshot(
+    id: number,
+    progressRate: number | null,
+    status: TaskStatus
+  ): Promise<void> {
+    // 訂正対象は progressRate / status のみ。他カラム（工数・単価・日付・isRemoved）には触れない。
+    await prisma.taskProgressSnapshot.update({
+      where: { id },
+      data: { progressRate, status },
+    });
   }
 }

@@ -1,6 +1,6 @@
 import { injectable } from "inversify";
 import type { ITaskDependencyRepository } from "@/applications/task-dependency/itask-dependency-repository";
-import { TaskDependency } from "@/domains/task-dependency/task-dependency";
+import { TaskDependency, DependencyType } from "@/domains/task-dependency/task-dependency";
 import prisma from "@/lib/prisma/prisma";
 
 @injectable()
@@ -12,6 +12,8 @@ export class TaskDependencyRepository implements ITaskDependencyRepository {
                 predecessorTaskId: dependency.predecessorTaskId,
                 successorTaskId: dependency.successorTaskId,
                 wbsId: dependency.wbsId,
+                type: dependency.type,
+                lag: dependency.lag,
             },
         });
 
@@ -20,6 +22,8 @@ export class TaskDependencyRepository implements ITaskDependencyRepository {
             predecessorTaskId: created.predecessorTaskId,
             successorTaskId: created.successorTaskId,
             wbsId: created.wbsId,
+            type: created.type as DependencyType,
+            lag: created.lag,
             createdAt: created.createdAt,
             updatedAt: created.updatedAt,
         });
@@ -39,6 +43,8 @@ export class TaskDependencyRepository implements ITaskDependencyRepository {
             predecessorTaskId: dependency.predecessorTaskId,
             successorTaskId: dependency.successorTaskId,
             wbsId: dependency.wbsId,
+            type: dependency.type as DependencyType,
+            lag: dependency.lag,
             createdAt: dependency.createdAt,
             updatedAt: dependency.updatedAt,
         });
@@ -56,6 +62,8 @@ export class TaskDependencyRepository implements ITaskDependencyRepository {
                 predecessorTaskId: dep.predecessorTaskId,
                 successorTaskId: dep.successorTaskId,
                 wbsId: dep.wbsId,
+                type: dep.type as DependencyType,
+                lag: dep.lag,
                 createdAt: dep.createdAt,
                 updatedAt: dep.updatedAt,
             })
@@ -74,6 +82,8 @@ export class TaskDependencyRepository implements ITaskDependencyRepository {
                 predecessorTaskId: dep.predecessorTaskId,
                 successorTaskId: dep.successorTaskId,
                 wbsId: dep.wbsId,
+                type: dep.type as DependencyType,
+                lag: dep.lag,
                 createdAt: dep.createdAt,
                 updatedAt: dep.updatedAt,
             })
@@ -92,6 +102,8 @@ export class TaskDependencyRepository implements ITaskDependencyRepository {
                 predecessorTaskId: dep.predecessorTaskId,
                 successorTaskId: dep.successorTaskId,
                 wbsId: dep.wbsId,
+                type: dep.type as DependencyType,
+                lag: dep.lag,
                 createdAt: dep.createdAt,
                 updatedAt: dep.updatedAt,
             })

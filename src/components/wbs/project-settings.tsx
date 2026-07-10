@@ -10,7 +10,20 @@ import {
   getProjectSettings,
   updateProjectSettings,
   updateDashboardSettings,
+  updateEvmSettings,
+  getSchedulingSettings,
+  updateSchedulingSettings,
 } from "@/app/wbs/[id]/project-settings-actions";
+import type {
+  SchedulingSettings,
+  SteadyDailyHoursMode,
+  SteadyTaskForecastMode,
+} from "@/types/scheduling-settings";
+import {
+  STEADY_TASK_FORECAST_MODES,
+  STEADY_TASK_FORECAST_MODE_LABELS,
+  STEADY_TASK_FORECAST_MODE_DESCRIPTIONS,
+} from "@/types/scheduling-settings";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import {
   PROGRESS_MEASUREMENT_METHOD_LABELS,
@@ -21,6 +34,18 @@ import {
   FORECAST_CALCULATION_METHOD_LABELS,
   FORECAST_CALCULATION_METHOD_DESCRIPTIONS,
 } from "@/types/forecast-calculation-method";
+import type { EvmBufferCostMethod } from "@/types/evm-buffer-cost-method";
+import {
+  EVM_BUFFER_COST_METHODS,
+  EVM_BUFFER_COST_METHOD_LABELS,
+  EVM_BUFFER_COST_METHOD_DESCRIPTIONS,
+} from "@/types/evm-buffer-cost-method";
+import type { EvmPvDistribution } from "@/types/evm-pv-distribution";
+import {
+  EVM_PV_DISTRIBUTIONS,
+  EVM_PV_DISTRIBUTION_LABELS,
+  EVM_PV_DISTRIBUTION_DESCRIPTIONS,
+} from "@/types/evm-pv-distribution";
 import type { EvmForecastMethod } from "@/types/evm-forecast-method";
 import {
   EVM_FORECAST_METHOD_LABELS,
@@ -39,9 +64,28 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
     useState<ForecastCalculationMethod>("REALISTIC");
   const [evmForecastMethod, setEvmForecastMethod] =
     useState<EvmForecastMethod>("CPI_ONLY");
+  const [evmBufferCostMethod, setEvmBufferCostMethod] =
+    useState<EvmBufferCostMethod>("AVERAGE_RATE");
+  const [evmPvDistribution, setEvmPvDistribution] =
+    useState<EvmPvDistribution>("CALENDAR");
+  const [evmHealthyThresholdPct, setEvmHealthyThresholdPct] =
+    useState<number>(90);
+  const [evmWarningThresholdPct, setEvmWarningThresholdPct] =
+    useState<number>(80);
   const [deadlineAlertDays, setDeadlineAlertDays] = useState<number>(1);
   const [costOverrunThresholdPct, setCostOverrunThresholdPct] =
     useState<number>(100);
+  const [steadyKeywordsText, setSteadyKeywordsText] = useState<string>("");
+  const [fixedKeywordsText, setFixedKeywordsText] = useState<string>("");
+  const [consumeSteadyTaskCapacity, setConsumeSteadyTaskCapacity] =
+    useState<boolean>(false);
+  const [steadyDailyHoursMode, setSteadyDailyHoursMode] =
+    useState<SteadyDailyHoursMode>("PRORATE");
+  const [steadyTaskForecastMode, setSteadyTaskForecastMode] =
+    useState<SteadyTaskForecastMode>("PLANNED");
+  const [steadyFixedHours, setSteadyFixedHours] = useState<
+    Record<string, number>
+  >({});
   const [saving, startTransition] = useTransition();
 
   useEffect(() => {
@@ -58,15 +102,115 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         if ("evmForecastMethod" in data && data.evmForecastMethod) {
           setEvmForecastMethod(data.evmForecastMethod as EvmForecastMethod);
         }
+        if ("evmBufferCostMethod" in data && data.evmBufferCostMethod) {
+          setEvmBufferCostMethod(data.evmBufferCostMethod as EvmBufferCostMethod);
+        }
+        if ("evmPvDistribution" in data && data.evmPvDistribution) {
+          setEvmPvDistribution(data.evmPvDistribution as EvmPvDistribution);
+        }
+        if ("evmHealthyThresholdPct" in data) {
+          setEvmHealthyThresholdPct(data.evmHealthyThresholdPct as number);
+        }
+        if ("evmWarningThresholdPct" in data) {
+          setEvmWarningThresholdPct(data.evmWarningThresholdPct as number);
+        }
         if ("deadlineAlertDays" in data) {
           setDeadlineAlertDays(data.deadlineAlertDays as number);
         }
         if ("costOverrunThresholdPct" in data) {
           setCostOverrunThresholdPct(data.costOverrunThresholdPct as number);
         }
+        const sched = await getSchedulingSettings(projectId);
+        setSteadyKeywordsText(sched.steadyTaskKeywords.join("\n"));
+        setFixedKeywordsText(sched.fixedDateTaskKeywords.join("\n"));
+        setConsumeSteadyTaskCapacity(sched.consumeSteadyTaskCapacity);
+        setSteadyDailyHoursMode(sched.steadyDailyHoursMode);
+        setSteadyTaskForecastMode(sched.steadyTaskForecastMode);
+        setSteadyFixedHours(sched.steadyFixedHoursByKeyword ?? {});
       } catch {}
     })();
   }, [projectId]);
+
+  const parseKeywords = (text: string): string[] =>
+    text
+      .split(/[,\n]/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+  const buildSchedulingSettings = (
+    override: Partial<SchedulingSettings>
+  ): SchedulingSettings => {
+    const keywords = parseKeywords(steadyKeywordsText);
+    // 現在のキーワードに存在するキーのみ固定値を残す
+    const fixedHours: Record<string, number> = {};
+    for (const kw of keywords) {
+      const v = steadyFixedHours[kw];
+      if (typeof v === "number" && Number.isFinite(v)) {
+        fixedHours[kw] = v;
+      }
+    }
+    return {
+      steadyTaskKeywords: keywords,
+      fixedDateTaskKeywords: parseKeywords(fixedKeywordsText),
+      consumeSteadyTaskCapacity,
+      steadyDailyHoursMode,
+      steadyFixedHoursByKeyword: fixedHours,
+      steadyTaskForecastMode,
+      ...override,
+    };
+  };
+
+  const onConsumeSteadyToggle = (value: boolean) => {
+    setConsumeSteadyTaskCapacity(value);
+    startTransition(async () => {
+      await updateSchedulingSettings(
+        projectId,
+        buildSchedulingSettings({ consumeSteadyTaskCapacity: value })
+      );
+    });
+  };
+
+  const onSteadyModeChange = (value: SteadyDailyHoursMode) => {
+    setSteadyDailyHoursMode(value);
+    startTransition(async () => {
+      await updateSchedulingSettings(
+        projectId,
+        buildSchedulingSettings({ steadyDailyHoursMode: value })
+      );
+    });
+  };
+
+  const onSteadyKeywordsBlur = () => {
+    startTransition(async () => {
+      await updateSchedulingSettings(projectId, buildSchedulingSettings({}));
+    });
+  };
+
+  const onFixedKeywordsBlur = () => {
+    startTransition(async () => {
+      await updateSchedulingSettings(projectId, buildSchedulingSettings({}));
+    });
+  };
+
+  const onSteadyForecastModeChange = (value: SteadyTaskForecastMode) => {
+    setSteadyTaskForecastMode(value);
+    startTransition(async () => {
+      await updateSchedulingSettings(
+        projectId,
+        buildSchedulingSettings({ steadyTaskForecastMode: value })
+      );
+    });
+  };
+
+  const onSteadyFixedHourChange = (keyword: string, value: number) => {
+    setSteadyFixedHours((prev) => ({ ...prev, [keyword]: value }));
+  };
+
+  const onSteadyFixedHoursBlur = () => {
+    startTransition(async () => {
+      await updateSchedulingSettings(projectId, buildSchedulingSettings({}));
+    });
+  };
 
   const onToggle = (value: boolean) => {
     setRoundToQuarter(value);
@@ -117,6 +261,29 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         forecastCalculationMethod,
         value
       );
+    });
+  };
+
+  const onEvmBufferCostMethodChange = (value: EvmBufferCostMethod) => {
+    setEvmBufferCostMethod(value);
+    startTransition(async () => {
+      await updateEvmSettings(projectId, { evmBufferCostMethod: value });
+    });
+  };
+
+  const onEvmPvDistributionChange = (value: EvmPvDistribution) => {
+    setEvmPvDistribution(value);
+    startTransition(async () => {
+      await updateEvmSettings(projectId, { evmPvDistribution: value });
+    });
+  };
+
+  const onEvmThresholdsBlur = () => {
+    startTransition(async () => {
+      await updateEvmSettings(projectId, {
+        evmHealthyThresholdPct,
+        evmWarningThresholdPct,
+      });
     });
   };
 
@@ -350,6 +517,157 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
           </RadioGroup>
         </div>
 
+        {/* EVM詳細設定 */}
+        <div className="space-y-4 pt-4 border-t">
+          <div>
+            <Label className="text-base font-medium">EVM詳細設定</Label>
+            <div className="text-sm text-gray-500 mt-1">
+              EVMダッシュボードの計算・判定に関する詳細設定です。
+            </div>
+          </div>
+
+          {/* バッファ金額換算方式 */}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-medium">
+                バッファの金額換算方式
+              </Label>
+              <div className="text-xs text-gray-500 mt-0.5">
+                金額ベースのBAC計算でバッファ工数（時間）をどう金額換算するかを選択します。
+              </div>
+            </div>
+            <RadioGroup
+              value={evmBufferCostMethod}
+              onValueChange={(value) =>
+                onEvmBufferCostMethodChange(value as EvmBufferCostMethod)
+              }
+              name="evmBufferCostMethod"
+            >
+              {EVM_BUFFER_COST_METHODS.map((method) => (
+                <div key={method} className="flex items-start space-x-3">
+                  <RadioGroupItem
+                    value={method}
+                    id={`evm-buffer-cost-${method}`}
+                    disabled={saving}
+                  />
+                  <Label
+                    htmlFor={`evm-buffer-cost-${method}`}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {EVM_BUFFER_COST_METHOD_LABELS[method]}
+                      </span>
+                      <span className="text-xs text-gray-500 font-normal">
+                        {EVM_BUFFER_COST_METHOD_DESCRIPTIONS[method]}
+                      </span>
+                    </div>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* PV按分方式 */}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-medium">PV按分方式</Label>
+              <div className="text-xs text-gray-500 mt-0.5">
+                期間中の計画価値（PV）を暦日で按分するか、営業日で按分するかを選択します。
+              </div>
+            </div>
+            <RadioGroup
+              value={evmPvDistribution}
+              onValueChange={(value) =>
+                onEvmPvDistributionChange(value as EvmPvDistribution)
+              }
+              name="evmPvDistribution"
+            >
+              {EVM_PV_DISTRIBUTIONS.map((dist) => (
+                <div key={dist} className="flex items-start space-x-3">
+                  <RadioGroupItem
+                    value={dist}
+                    id={`evm-pv-dist-${dist}`}
+                    disabled={saving}
+                  />
+                  <Label
+                    htmlFor={`evm-pv-dist-${dist}`}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {EVM_PV_DISTRIBUTION_LABELS[dist]}
+                      </span>
+                      <span className="text-xs text-gray-500 font-normal">
+                        {EVM_PV_DISTRIBUTION_DESCRIPTIONS[dist]}
+                      </span>
+                    </div>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* ヘルス判定しきい値 */}
+          <div className="flex items-center justify-between">
+            <div>
+              <Label
+                htmlFor="evmHealthyThresholdPct"
+                className="text-sm font-medium"
+              >
+                健全判定しきい値（%）
+              </Label>
+              <div className="text-xs text-gray-500 mt-0.5">
+                SPI・CPIがこの値以上なら「健全」と判定します
+              </div>
+            </div>
+            <Input
+              id="evmHealthyThresholdPct"
+              type="number"
+              min={0}
+              max={200}
+              value={evmHealthyThresholdPct}
+              onChange={(e) => {
+                const value = parseInt(e.target.value, 10);
+                if (isNaN(value) || value < 0) return;
+                setEvmHealthyThresholdPct(value);
+              }}
+              onBlur={onEvmThresholdsBlur}
+              className="w-20 text-right"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label
+                htmlFor="evmWarningThresholdPct"
+                className="text-sm font-medium"
+              >
+                注意判定しきい値（%）
+              </Label>
+              <div className="text-xs text-gray-500 mt-0.5">
+                SPI・CPIがこの値以上なら「注意」、下回ると「危機的」と判定します
+              </div>
+            </div>
+            <Input
+              id="evmWarningThresholdPct"
+              type="number"
+              min={0}
+              max={200}
+              value={evmWarningThresholdPct}
+              onChange={(e) => {
+                const value = parseInt(e.target.value, 10);
+                if (isNaN(value) || value < 0) return;
+                setEvmWarningThresholdPct(value);
+              }}
+              onBlur={onEvmThresholdsBlur}
+              className="w-20 text-right"
+              disabled={saving}
+            />
+          </div>
+        </div>
+
         {/* 月跨ぎ按分の最小単位 */}
         <div className="flex items-center justify-between pt-4 border-t">
           <div>
@@ -450,6 +768,194 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
               className="w-20 text-right"
               disabled={saving}
             />
+          </div>
+        </div>
+
+        {/* スケジュール計算設定 */}
+        <div className="space-y-4 pt-4 border-t">
+          <div>
+            <Label className="text-base font-medium">スケジュール計算設定</Label>
+            <div className="text-sm text-gray-500 mt-1">
+              スケジュールタブの前詰め計算における定常タスク・実施日固定タスクの扱いを設定します。
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="steadyKeywords" className="text-sm font-medium">
+              定常タスク判定キーワード
+            </Label>
+            <div className="text-xs text-gray-500">
+              タスク名にこれらの語を含むタスクは「定常タスク」として前詰めせず、予定期間のまま扱います（改行・カンマ区切り）。
+            </div>
+            <textarea
+              id="steadyKeywords"
+              value={steadyKeywordsText}
+              onChange={(e) => setSteadyKeywordsText(e.target.value)}
+              onBlur={onSteadyKeywordsBlur}
+              rows={3}
+              placeholder={"例: プロジェクト管理\n進捗管理"}
+              className="w-full border rounded px-2 py-1 text-sm"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fixedKeywords" className="text-sm font-medium">
+              実施日固定タスク判定キーワード
+            </Label>
+            <div className="text-xs text-gray-500">
+              本番導入・定例会など実施日が確定しているタスク名の語を指定します。一致したタスクは前詰めせず、入力済みの予定開始日・終了日をそのまま固定します（改行・カンマ区切り）。先行タスクが固定日を超える場合は警告します。
+            </div>
+            <textarea
+              id="fixedKeywords"
+              value={fixedKeywordsText}
+              onChange={(e) => setFixedKeywordsText(e.target.value)}
+              onBlur={onFixedKeywordsBlur}
+              rows={3}
+              placeholder={"例: 本番導入\nリリース\n定例会"}
+              className="w-full border rounded px-2 py-1 text-sm"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="consumeSteady" className="text-sm font-medium">
+                定常タスクが稼働を消費する
+              </Label>
+              <div className="text-xs text-gray-500 mt-0.5">
+                オン: 定常タスクの工数が日々の稼働を消費し、通常タスクの前詰めが後ろ倒しになります
+              </div>
+            </div>
+            <Switch
+              id="consumeSteady"
+              checked={consumeSteadyTaskCapacity}
+              onCheckedChange={onConsumeSteadyToggle}
+              disabled={saving}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">定常タスクの日次消費量</Label>
+            <RadioGroup
+              value={steadyDailyHoursMode}
+              onValueChange={(v) =>
+                onSteadyModeChange(v as SteadyDailyHoursMode)
+              }
+              name="steadyDailyHoursMode"
+            >
+              <div className="flex items-start space-x-3">
+                <RadioGroupItem
+                  value="PRORATE"
+                  id="steady-prorate"
+                  disabled={saving}
+                />
+                <Label htmlFor="steady-prorate" className="cursor-pointer">
+                  <div className="flex flex-col">
+                    <span className="font-medium">予定工数を期間で按分</span>
+                    <span className="text-xs text-gray-500 font-normal">
+                      予定工数 ÷ 期間内の稼働日数
+                    </span>
+                  </div>
+                </Label>
+              </div>
+              <div className="flex items-start space-x-3">
+                <RadioGroupItem
+                  value="FIXED"
+                  id="steady-fixed"
+                  disabled={saving}
+                />
+                <Label htmlFor="steady-fixed" className="cursor-pointer">
+                  <div className="flex flex-col">
+                    <span className="font-medium">
+                      日次固定値（キーワード別・今後対応）
+                    </span>
+                    <span className="text-xs text-gray-500 font-normal">
+                      固定値が未設定の場合は按分にフォールバックします
+                    </span>
+                  </div>
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {steadyDailyHoursMode === "FIXED" && (
+              <div className="space-y-2 pl-6 pt-2">
+                <Label className="text-sm font-medium">
+                  キーワード別の日次固定時間 (h/日)
+                </Label>
+                {parseKeywords(steadyKeywordsText).length === 0 ? (
+                  <div className="text-xs text-gray-500">
+                    先に定常タスク判定キーワードを入力してください。
+                  </div>
+                ) : (
+                  parseKeywords(steadyKeywordsText).map((kw) => (
+                    <div
+                      key={kw}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <span className="text-sm">{kw}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.5}
+                        value={steadyFixedHours[kw] ?? ""}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          onSteadyFixedHourChange(kw, Number.isFinite(v) ? v : 0);
+                        }}
+                        onBlur={onSteadyFixedHoursBlur}
+                        placeholder="按分"
+                        className="w-24 text-right"
+                        disabled={saving}
+                      />
+                    </div>
+                  ))
+                )}
+                <div className="text-xs text-gray-500">
+                  空欄のキーワードは按分にフォールバックします。
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 定常タスクの見通し工数算出方式 */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">
+              定常タスクの見通し工数算出方式
+            </Label>
+            <div className="text-xs text-gray-500">
+              定常タスクは「完了」概念を持たないため、進捗率ベースの通常見通しではなく専用方式で算出します。月別集計・ガントの見通しに適用されます。
+            </div>
+            <RadioGroup
+              value={steadyTaskForecastMode}
+              onValueChange={(v) =>
+                onSteadyForecastModeChange(v as SteadyTaskForecastMode)
+              }
+              name="steadyTaskForecastMode"
+            >
+              {STEADY_TASK_FORECAST_MODES.map((mode) => (
+                <div key={mode} className="flex items-start space-x-3">
+                  <RadioGroupItem
+                    value={mode}
+                    id={`steady-forecast-${mode}`}
+                    disabled={saving}
+                  />
+                  <Label
+                    htmlFor={`steady-forecast-${mode}`}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {STEADY_TASK_FORECAST_MODE_LABELS[mode]}
+                      </span>
+                      <span className="text-xs text-gray-500 font-normal">
+                        {STEADY_TASK_FORECAST_MODE_DESCRIPTIONS[mode]}
+                      </span>
+                    </div>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
           </div>
         </div>
       </CardContent>
