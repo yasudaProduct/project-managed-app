@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import {
-  BarChart3,
   CalendarCheck,
   CirclePlus,
   History,
@@ -20,7 +19,6 @@ import { TaskModal } from "@/components/wbs/task-modal";
 import { ProjectSettings } from "@/components/wbs/project-settings";
 import { ProjectInfoCard } from "@/components/wbs/project-info-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import GanttV2Wrapper from "@/components/ganttv2/gantt-v2-wrapper";
 import MilestoneManagement from "@/components/milestone/milestone-management";
 import { WbsSummaryTables } from "@/components/wbs/wbs-summary-tables";
 import { AssigneeGanttChart } from "@/app/wbs/[id]/assignee-gantt/assignee-gantt-chart";
@@ -132,9 +130,6 @@ export function WbsManagementContent({
             <TabsTrigger value="list" className="flex items-center gap-2">
               <List className="h-4 w-4" />
             </TabsTrigger>
-            <TabsTrigger value="gantt" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-            </TabsTrigger>
             <TabsTrigger value="milestone" className="flex items-center gap-2">
               <CalendarCheck className="h-4 w-4" />
             </TabsTrigger>
@@ -182,20 +177,6 @@ export function WbsManagementContent({
           </TabsContent>
           <TabsContent value="list">
             <TaskTableViewPage wbsTasks={tasks} wbsId={wbsId} />
-          </TabsContent>
-          <TabsContent value="gantt">
-            <GanttV2Wrapper
-              tasks={tasks}
-              milestones={milestones}
-              wbsId={wbsId}
-              project={{
-                id: project.id,
-                name: project.name,
-                status: project.status,
-                startDate: project.startDate,
-                endDate: project.endDate,
-              }}
-            />
           </TabsContent>
           <TabsContent value="milestone">
             <MilestoneManagement wbsId={wbsId} initialMilestones={milestones} />
