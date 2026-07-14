@@ -33,6 +33,28 @@ export interface WorkloadData {
       totalHours: number;
       periodStart?: string;
       periodEnd?: string;
+      /** 他WBS合算時の所属プロジェクト表示用ラベル */
+      projectName?: string;
     }[];
   }[];
+}
+
+/** 実現不可能タスク警告のプレーンな転送オブジェクト */
+export interface AssigneeWarningData {
+  taskId: number;
+  taskNo: string;
+  taskName: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  periodStart?: string;
+  periodEnd?: string;
+  reason: 'NO_WORKING_DAYS';
+}
+
+/** 担当者ガント系 Server Action の共通レスポンス */
+export interface AssigneeGanttResponse {
+  success: boolean;
+  data?: WorkloadData[];
+  warnings?: AssigneeWarningData[];
+  error?: string;
 }
