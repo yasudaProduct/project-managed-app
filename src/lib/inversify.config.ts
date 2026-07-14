@@ -145,6 +145,12 @@ import type { IWbsCrossQueryRepository } from '@/applications/wbs/iwbs-cross-que
 import { WbsCrossQueryRepository } from '@/infrastructures/wbs/wbs-cross-query-repository';
 import { IWbsAnalyticsApplicationService, WbsAnalyticsApplicationService } from '@/applications/wbs/wbs-analytics-application-service';
 
+// Cross WBS Workload関連
+import type { ICrossWbsWorkloadService } from '@/applications/cross-wbs-workload/icross-wbs-workload-service';
+import { CrossWbsWorkloadService } from '@/applications/cross-wbs-workload/cross-wbs-workload-service';
+import type { ITargetWbsQueryRepository } from '@/applications/cross-wbs-workload/itarget-wbs-query-repository';
+import { TargetWbsQueryRepository } from '@/infrastructures/cross-wbs-workload/target-wbs-query-repository';
+
 
 
 const container: Container = new Container();
@@ -176,6 +182,7 @@ container.bind<IWbsAnalyticsApplicationService>(SYMBOL.IWbsAnalyticsApplicationS
 container.bind<IProjectSettingsApplicationService>(SYMBOL.IProjectSettingsApplicationService).to(ProjectSettingsApplicationService).inSingletonScope();
 container.bind<IForecastApplicationService>(SYMBOL.IForecastApplicationService).to(ForecastApplicationService).inSingletonScope();
 container.bind<ICompanyHolidayApplicationService>(SYMBOL.ICompanyHolidayApplicationService).to(CompanyHolidayApplicationService).inSingletonScope();
+container.bind<ICrossWbsWorkloadService>(SYMBOL.ICrossWbsWorkloadService).to(CrossWbsWorkloadService).inSingletonScope();
 
 // リポジトリ
 container.bind<IProjectRepository>(SYMBOL.IProjectRepository).to(ProjectRepository).inSingletonScope();
@@ -204,6 +211,7 @@ container.bind<ISchedulingSettingsRepository>(SYMBOL.ISchedulingSettingsReposito
 container.bind<IProjectSettingsRepository>(SYMBOL.IProjectSettingsRepository).to(ProjectSettingsRepository).inSingletonScope();
 container.bind<IWbsTagRepository>(SYMBOL.IWbsTagRepository).to(WbsTagRepository).inSingletonScope();
 container.bind<IWbsCrossQueryRepository>(SYMBOL.IWbsCrossQueryRepository).to(WbsCrossQueryRepository).inSingletonScope();
+container.bind<ITargetWbsQueryRepository>(SYMBOL.ITargetWbsQueryRepository).to(TargetWbsQueryRepository).inSingletonScope();
 
 
 // Geppo Import関連サービス
