@@ -9,6 +9,11 @@ export interface ScheduleCalculationParams {
   baselineMode: BaselineMode;
   /** baselineMode === "CUSTOM" のときの基準日（ISO8601, UTC） */
   baselineDateIso?: string;
+  /**
+   * 他WBS(未開始・進行中プロジェクトの最新WBS)の負荷を担当者の空き容量から
+   * 先行して差し引いた上で前詰めするか。省略時 true。
+   */
+  considerOtherWbsLoad?: boolean;
 }
 
 /** スケジューリング結果のプレーンな転送オブジェクト（日付は ISO8601 文字列） */
@@ -45,6 +50,8 @@ export interface SchedulePreviewRecalcParams {
   baselineDateIso: string;
   /** 手動調整後のスケジュール結果（画面上の編集を反映したDTO） */
   scheduledTasks: ScheduledTaskDto[];
+  /** 他WBSの負荷を負荷プレビューへ合算するか。省略時 true(計算時と同一の指定を渡す) */
+  considerOtherWbsLoad?: boolean;
 }
 
 /** 手動調整後スケジュールの再計算結果 */
