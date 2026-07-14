@@ -12,6 +12,9 @@ import { createDefaultSystemSettings } from "@/__tests__/helpers/system-settings
 import { DEFAULT_SCHEDULING_SETTINGS } from "@/types/scheduling-settings";
 import type { TaskStatus as TaskStatusType } from "@/types/wbs";
 import type { ScheduledTaskDto } from "@/applications/task-scheduling/ischeduling-application-service";
+import { DailyWorkAllocation } from "@/domains/assignee-workload/daily-work-allocation";
+import { TaskAllocation } from "@/domains/assignee-workload/task-allocation";
+import type { LabeledAllocationSet } from "@/domains/assignee-workload/workload-merge-service";
 
 const PROJECT_START = new Date(2026, 5, 15); // 月曜
 
@@ -70,6 +73,7 @@ describe("SchedulingApplicationService", () => {
   let holidayRepo: { findByDateRange: jest.Mock };
   let sysRepo: { get: jest.Mock };
   let schedSettingsRepo: { getByProjectId: jest.Mock };
+  let crossWbsService: { getExternalAllocationSets: jest.Mock };
   let service: SchedulingApplicationService;
 
   beforeEach(() => {
@@ -90,6 +94,9 @@ describe("SchedulingApplicationService", () => {
         .fn()
         .mockResolvedValue({ ...DEFAULT_SCHEDULING_SETTINGS }),
     };
+    crossWbsService = {
+      getExternalAllocationSets: jest.fn().mockResolvedValue(new Map()),
+    };
 
     service = new SchedulingApplicationService(
       wbsRepo as never,
@@ -100,7 +107,8 @@ describe("SchedulingApplicationService", () => {
       scheduleRepo as never,
       holidayRepo as never,
       sysRepo as never,
-      schedSettingsRepo as never
+      schedSettingsRepo as never,
+      crossWbsService as never
     );
   });
 
@@ -271,6 +279,105 @@ describe("SchedulingApplicationService", () => {
     expect(result.scheduledTasks[0].note).toBe("STEADY_FIXED_PERIOD");
   });
 
+  describe("他WBS負荷の考慮(considerOtherWbsLoad)", () => {
+    // userId → 1セット(他PJのある日の負荷)の外部配分マップを作る
+    const externalSets = (
+      userId: string,
+      date: Date,
+      hours: number,
+      projectName = "他PJ"
+    ): Map<string, LabeledAllocationSet[]> =>
+      new Map([
+        [
+          userId,
+          [
+            {
+              wbsId: 99,
+              projectId: "p2",
+              projectName,
+              dailyAllocations: [
+                DailyWorkAllocation.create({
+                  date,
+                  availableHours: 7.5,
+                  taskAllocations: [
+                    TaskAllocation.create({
+                      taskId: "900",
+                      taskName: "他PJタスク",
+                      allocatedHours: hours,
+                      totalHours: hours,
+                    }),
+                  ],
+                }),
+              ],
+            },
+          ],
+        ],
+      ]);
+
+    test("既定(省略=ON): 他WBS負荷が先行消費されタスクが後ろ倒しになる", async () => {
+      taskRepo.findActiveByWbsId.mockResolvedValue([
+        yoteiTask(1, "T-0001", 10, PROJECT_START, new Date(2026, 5, 16), 7.5),
+      ]);
+      assigneeRepo.findByWbsId.mockResolvedValue([
+        mockAssignee(10, "u1", "山田"),
+      ]);
+      // 基準日(06-15 月)を他PJが丸ごと占有
+      crossWbsService.getExternalAllocationSets.mockResolvedValue(
+        externalSets("u1", PROJECT_START, 7.5)
+      );
+
+      const result = await service.calculateSchedule(1, {
+        baselineMode: "PROJECT_START",
+      });
+
+      // 現プロジェクト除外・現WBS担当者のユーザーに限定して外部負荷を取得する
+      expect(crossWbsService.getExternalAllocationSets).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userIds: ["u1"],
+          excludeProjectId: "p1",
+        })
+      );
+
+      // 06-15 は外部負荷で満杯 → タスクは 06-16 開始
+      expect(result.scheduledTasks[0].scheduledStartDate).toBe(
+        new Date(2026, 5, 16).toISOString()
+      );
+
+      // プレビュー負荷は合算行(rate=1)で、外部配分がプロジェクト名付きで含まれる
+      const wl = result.workloads.find((w) => w.assigneeId === "u1")!;
+      expect(wl.assigneeRate).toBe(1);
+      const externalDay = wl.dailyAllocations.find((d) =>
+        d.date.startsWith("2026-06-15")
+      )!;
+      expect(externalDay.allocatedHours).toBeCloseTo(7.5, 5);
+      expect(externalDay.taskAllocations[0].projectName).toBe("他PJ");
+      const ownDay = wl.dailyAllocations.find((d) =>
+        d.date.startsWith("2026-06-16")
+      )!;
+      expect(ownDay.allocatedHours).toBeCloseTo(7.5, 5);
+      expect(ownDay.taskAllocations[0].projectName).toBeUndefined();
+    });
+
+    test("considerOtherWbsLoad: false は外部負荷を参照せず従来通り", async () => {
+      taskRepo.findActiveByWbsId.mockResolvedValue([
+        yoteiTask(1, "T-0001", 10, PROJECT_START, new Date(2026, 5, 16), 7.5),
+      ]);
+      assigneeRepo.findByWbsId.mockResolvedValue([
+        mockAssignee(10, "u1", "山田"),
+      ]);
+
+      const result = await service.calculateSchedule(1, {
+        baselineMode: "PROJECT_START",
+        considerOtherWbsLoad: false,
+      });
+
+      expect(crossWbsService.getExternalAllocationSets).not.toHaveBeenCalled();
+      expect(result.scheduledTasks[0].scheduledStartDate).toBe(
+        PROJECT_START.toISOString()
+      );
+    });
+  });
+
   describe("recalculatePreview（手動調整後の再計算）", () => {
     const editedDto = (over: Partial<ScheduledTaskDto>): ScheduledTaskDto => ({
       taskId: 1,
@@ -348,6 +455,82 @@ describe("SchedulingApplicationService", () => {
         scheduledTasks: [editedDto({})],
       });
       expect(res.warnings).toEqual([]);
+    });
+
+    test("既定(省略=ON): 外部負荷がプレビューへ合算される", async () => {
+      assigneeRepo.findByWbsId.mockResolvedValue([
+        mockAssignee(10, "u1", "山田"),
+      ]);
+      // 編集後タスクと同じ 06-17 に他PJ 2h
+      crossWbsService.getExternalAllocationSets.mockResolvedValue(
+        new Map([
+          [
+            "u1",
+            [
+              {
+                wbsId: 99,
+                projectId: "p2",
+                projectName: "他PJ",
+                dailyAllocations: [
+                  DailyWorkAllocation.create({
+                    date: new Date(2026, 5, 17),
+                    availableHours: 7.5,
+                    taskAllocations: [
+                      TaskAllocation.create({
+                        taskId: "900",
+                        taskName: "他PJタスク",
+                        allocatedHours: 2,
+                        totalHours: 2,
+                      }),
+                    ],
+                  }),
+                ],
+              },
+            ] as LabeledAllocationSet[],
+          ],
+        ])
+      );
+
+      const res = await service.recalculatePreview(1, {
+        baselineDateIso: PROJECT_START.toISOString(),
+        scheduledTasks: [editedDto({})],
+      });
+
+      expect(crossWbsService.getExternalAllocationSets).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userIds: ["u1"],
+          excludeProjectId: "p1",
+        })
+      );
+      const wl = res.workloads.find((w) => w.assigneeId === "u1")!;
+      expect(wl.assigneeRate).toBe(1);
+      const day = wl.dailyAllocations.find((d) =>
+        d.date.startsWith("2026-06-17")
+      )!;
+      // 編集後タスク6h + 他PJ 2h
+      expect(day.allocatedHours).toBeCloseTo(8, 5);
+      expect(
+        day.taskAllocations.some((t) => t.projectName === "他PJ")
+      ).toBe(true);
+    });
+
+    test("considerOtherWbsLoad: false は外部負荷を参照しない", async () => {
+      assigneeRepo.findByWbsId.mockResolvedValue([
+        mockAssignee(10, "u1", "山田"),
+      ]);
+
+      const res = await service.recalculatePreview(1, {
+        baselineDateIso: PROJECT_START.toISOString(),
+        scheduledTasks: [editedDto({})],
+        considerOtherWbsLoad: false,
+      });
+
+      expect(crossWbsService.getExternalAllocationSets).not.toHaveBeenCalled();
+      const wl = res.workloads.find((w) => w.assigneeId === "u1")!;
+      const day = wl.dailyAllocations.find((d) =>
+        d.date.startsWith("2026-06-17")
+      );
+      expect(day?.allocatedHours).toBe(6);
     });
   });
 });
