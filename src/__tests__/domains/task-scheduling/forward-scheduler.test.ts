@@ -1052,4 +1052,135 @@ describe("forwardSchedule", () => {
       new Date(2026, 5, 15)
     );
   });
+
+  describe("FF/SF依存", () => {
+    test("FF依存: 後続所要1日・lag0なら終了日が先行の終了日と一致するよう開始日が算出される", () => {
+      const result = forwardSchedule({
+        tasks: [
+          // 16h/8h = 2日 → 06-15,06-16 で終了 06-16(火)
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 16 }),
+          // 8h/8h = 所要1日
+          task({ taskId: 2, taskNo: "0002", assigneeId: 2, yoteiKosu: 8 }),
+        ],
+        dependencies: [dep(1, 2, "FF")],
+        calendars: new Map([
+          [1, weekday8()],
+          [2, weekday8()],
+        ]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      const succ = result.find((r) => r.taskId === 2)!;
+      // 先行終了 06-16 と同じ日に終わるよう 06-16 開始・06-16 終了
+      expect(succ.scheduledStartDate).toEqual(new Date(2026, 5, 16));
+      expect(succ.scheduledEndDate).toEqual(new Date(2026, 5, 16));
+    });
+
+    test("FF依存 + lag: 先行終了からlag(カレンダー日)分後ろ倒しで終了する", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 16 }),
+          task({ taskId: 2, taskNo: "0002", assigneeId: 2, yoteiKosu: 8 }),
+        ],
+        dependencies: [dep(1, 2, "FF", 2)],
+        calendars: new Map([
+          [1, weekday8()],
+          [2, weekday8()],
+        ]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      // 先行終了 06-16(火) + lag2 = 06-18(木)
+      const succ = result.find((r) => r.taskId === 2)!;
+      expect(succ.scheduledStartDate).toEqual(new Date(2026, 5, 18));
+      expect(succ.scheduledEndDate).toEqual(new Date(2026, 5, 18));
+    });
+
+    test("FF依存: 後続の所要日数(工数)が長いほど開始日は前倒しで算出され、終了日は先行終了日と一致する", () => {
+      const result = forwardSchedule({
+        tasks: [
+          // 32h/8h = 4日 → 06-15..06-18 で終了 06-18(木)
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 32 }),
+          // 24h/8h = 所要3日
+          task({ taskId: 2, taskNo: "0002", assigneeId: 2, yoteiKosu: 24 }),
+        ],
+        dependencies: [dep(1, 2, "FF")],
+        calendars: new Map([
+          [1, weekday8()],
+          [2, weekday8()],
+        ]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      const succ = result.find((r) => r.taskId === 2)!;
+      // 終了 06-18 から3日遡って 06-16(火) 開始
+      expect(succ.scheduledStartDate).toEqual(new Date(2026, 5, 16));
+      expect(succ.scheduledEndDate).toEqual(new Date(2026, 5, 18));
+    });
+
+    test("SF依存: 後続所要1日・lag0なら終了日が先行の開始日と一致するよう開始日が算出される", () => {
+      const result = forwardSchedule({
+        tasks: [
+          // 8h/8h = 06-15(月)のみで終了、開始=終了=06-15
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 }),
+          task({ taskId: 2, taskNo: "0002", assigneeId: 2, yoteiKosu: 8 }),
+        ],
+        dependencies: [dep(1, 2, "SF")],
+        calendars: new Map([
+          [1, weekday8()],
+          [2, weekday8()],
+        ]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      const succ = result.find((r) => r.taskId === 2)!;
+      // 先行開始 06-15 と同じ日に終わるよう 06-15 開始・06-15 終了
+      expect(succ.scheduledStartDate).toEqual(new Date(2026, 5, 15));
+      expect(succ.scheduledEndDate).toEqual(new Date(2026, 5, 15));
+    });
+
+    test("SF依存 + lag: 先行開始からlag(カレンダー日)分後ろ倒しで終了する", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 }),
+          task({ taskId: 2, taskNo: "0002", assigneeId: 2, yoteiKosu: 8 }),
+        ],
+        dependencies: [dep(1, 2, "SF", 3)],
+        calendars: new Map([
+          [1, weekday8()],
+          [2, weekday8()],
+        ]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      // 先行開始 06-15(月) + lag3 = 06-18(木)
+      const succ = result.find((r) => r.taskId === 2)!;
+      expect(succ.scheduledStartDate).toEqual(new Date(2026, 5, 18));
+      expect(succ.scheduledEndDate).toEqual(new Date(2026, 5, 18));
+    });
+
+    test("FF依存: 依存下限より同一担当者の稼働列制約(先に確定した無関係タスクの占有)が後ろにあればそちらが採用される", () => {
+      const result = forwardSchedule({
+        tasks: [
+          // 担当者2が先に処理する無関係タスク。24h/8h=3日 → 06-15..06-17 を占有
+          task({ taskId: 1, taskNo: "0001", assigneeId: 2, yoteiKosu: 24 }),
+          // FF依存の先行タスク(担当者1)。8h → 06-15開始・06-15終了
+          task({ taskId: 2, taskNo: "0002", assigneeId: 1, yoteiKosu: 8 }),
+          // FF後続(担当者2、所要1日)。依存下限だけなら06-15だが担当者2は06-17まで占有済み
+          task({ taskId: 3, taskNo: "0003", assigneeId: 2, yoteiKosu: 8 }),
+        ],
+        dependencies: [dep(2, 3, "FF")],
+        calendars: new Map([
+          [1, weekday8()],
+          [2, weekday8()],
+        ]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      // 依存下限(06-15)ではなく、担当者2の稼働占有(06-15..06-17)を避けた翌営業日06-18から
+      const succ = result.find((r) => r.taskId === 3)!;
+      expect(succ.scheduledStartDate).toEqual(new Date(2026, 5, 18));
+      expect(succ.scheduledEndDate).toEqual(new Date(2026, 5, 18));
+    });
+  });
 });
