@@ -8,6 +8,8 @@
 > **関連仕様書との位置づけ:**
 > - 本仕様書（01）: **「いつ・何時間稼働できるか」を計算する**（カレンダードメイン）
 > - [04: 月別工数按分](./04-monthly-allocation.md): **「その比率をタスク工数に適用・集計する」**（WBSドメイン）
+> - [08: 担当者別作業負荷ヒートマップ](./08-assignee-workload-heatmap.md): **「その比率を日別のタスク配分に適用し、担当者単位で可視化・複数WBS横断で合算する」**。単一WBSでの参画率キャップ（本仕様書§3 Step4）に加え、複数WBSを合算する画面ではこのキャップを外した基準（標準勤務時間−個人予定）を使う点に注意。
+> - [07: タスクスケジューリング](./07-task-scheduling.md): 前詰め計算で担当者の稼働可能時間を消費する。他WBSの負荷を考慮する場合は参画率を「取り分の予約」として扱う専用カレンダー（`ExternalLoadAwareCalendar`）を使う（[07仕様書 §7.8](./07-task-scheduling.md#78-他wbsの負荷を考慮した稼働可能時間の算出)）。
 
 対象となる工数は以下の3種類であり、それぞれ独立して月別按分が行われる。
 
@@ -448,4 +450,5 @@ totalAvailableHours = 72時間
 | --- | --- | --- |
 | 会社休日管理 | `src/app/company-holidays/page.tsx` | `CompanyHoliday` の登録・編集・削除。`isCompanyHoliday` の休日判定入力として使用される |
 | スケジュール | `src/app/schedule/page.tsx` | ユーザー個人スケジュールの登録・管理。`AssigneeWorkingCalendar` が参照し稼働可能時間を算出する |
-| 担当者別ガントチャート | `src/app/wbs/[id]/assignee-gantt/page.tsx` | 担当者の日別作業負荷を可視化。稼働可能時間に基づいて過負荷状態を表示する |
+| 担当者別ガントチャート | `src/app/wbs/[id]/assignee-gantt/page.tsx` | 担当者の日別作業負荷を可視化。稼働可能時間に基づいて過負荷状態を表示する。詳細は[08仕様書](./08-assignee-workload-heatmap.md) |
+| 担当者負荷（プロジェクト横断） | `src/app/assignee-gantt/page.tsx` | 未開始・進行中プロジェクトの最新WBSを横断し、参画率キャップを外した稼働可能時間（標準勤務時間−個人予定）でユーザー単位に合算表示。詳細は[08仕様書](./08-assignee-workload-heatmap.md#7-複数wbsの合算他wbs考慮) |
