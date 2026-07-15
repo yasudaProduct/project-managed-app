@@ -17,6 +17,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Play,
   Download,
@@ -83,6 +85,8 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
   const [baselineMode, setBaselineMode] =
     useState<BaselineMode>("PROJECT_START");
   const [customDate, setCustomDate] = useState("");
+  // 他WBS(未開始・進行中プロジェクトの最新WBS)の負荷を先行消費として考慮するか
+  const [considerOtherWbs, setConsiderOtherWbs] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ScheduleCalculationResult | null>(null);
 
@@ -122,6 +126,7 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
           baselineMode === "CUSTOM" && customDate
             ? dateInputToUtcIso(customDate)
             : undefined,
+        considerOtherWbsLoad: considerOtherWbs,
       });
       setResult(res);
     } catch (error) {
@@ -176,6 +181,7 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
         const res = await recalculateSchedulePreview(wbsId, {
           baselineDateIso: result.baselineDate,
           scheduledTasks: edited,
+          considerOtherWbsLoad: considerOtherWbs,
         });
         if (seq === recalcSeqRef.current) setOverlay(res);
       } catch (error) {
@@ -192,7 +198,7 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
       }
     }, RECALC_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [edited, result, wbsId]);
+  }, [edited, result, wbsId, considerOtherWbs]);
 
   const handleEnterAdjust = () => {
     snapshotRef.current = { edited, overlay, editedIds };
@@ -279,6 +285,19 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
             />
           </div>
         )}
+        <div className="flex items-center gap-2 h-9">
+          <Checkbox
+            id="consider-other-wbs"
+            checked={considerOtherWbs}
+            onCheckedChange={(checked) => setConsiderOtherWbs(checked === true)}
+          />
+          <Label
+            htmlFor="consider-other-wbs"
+            className="text-sm text-gray-600 whitespace-nowrap cursor-pointer"
+          >
+            他WBSの負荷を考慮
+          </Label>
+        </div>
         <Button
           onClick={handleCalculate}
           disabled={isLoading}
@@ -319,6 +338,9 @@ export function SchedulingWorkbench({ wbsId }: SchedulingWorkbenchProps) {
                   </li>
                   <li>
                     プロジェクト途中のリスケジュールにも使えます（基準日「今日」または「任意の日付」）。完了タスクは実績日程のまま固定され、未着手・進行中タスクのみ基準日以降に再配置されます。
+                  </li>
+                  <li>
+                    「他WBSの負荷を考慮」をONにすると、未開始・進行中プロジェクトの最新WBSで担当者に割り当てられているタスクの負荷を空き容量から先行して差し引いた上で前詰めします（既定ON）。担当者別負荷プレビューにも他プロジェクト分が合算表示されます。
                   </li>
                   <li>
                     計算結果は画面プレビューとTSV出力のみです。WBSのタスク日程に自動反映はされません。実際の予定に反映する場合はTSVをダウンロードし、MySQL/Excelインポート機能で取り込んでください。

@@ -20,7 +20,11 @@ import {
 export interface ForwardSchedulerInput {
   tasks: SchedulingTask[];
   dependencies: TaskDependency[];
-  /** assigneeId(wbs_assignee.id) → 稼働カレンダー */
+  /**
+   * assigneeId(wbs_assignee.id) → 稼働カレンダー。
+   * 他WBS負荷の考慮は ExternalLoadAwareCalendar をここへ渡すことで行う
+   * (available = min(標準×参画率, 物理残−外部負荷))。
+   */
   calendars: Map<number, WorkingCalendar>;
   standardWorkingHours: number;
   options: SchedulingOptions;

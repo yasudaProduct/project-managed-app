@@ -5,6 +5,7 @@ import {
   BarChart3,
   Calendar,
   FolderKanban,
+  Gauge,
   Home,
   Menu,
   Trello,
@@ -82,6 +83,13 @@ export function SideMenu() {
             >
               <BarChart3 className="h-4 w-4" />
               WBS分析
+            </Link>
+            <Link
+              href="/assignee-gantt"
+              className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
+              <Gauge className="h-4 w-4" />
+              担当者負荷
             </Link>
             <Link
               href="/work-records"

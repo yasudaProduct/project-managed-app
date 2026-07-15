@@ -13,6 +13,7 @@ interface TaskAllocationUI {
   taskId: string;
   taskName: string;
   allocatedHours: number;
+  projectName?: string;
 }
 
 interface DailyWorkAllocationUI {
@@ -178,7 +179,14 @@ export function GanttCell({
                 <div className="text-xs font-medium">タスク詳細:</div>
                 {allocation.taskAllocations.map((task, index) => (
                   <div key={index} className="text-xs">
-                    <div className="font-medium">{task.taskName}</div>
+                    <div className="font-medium">
+                      {task.taskName}
+                      {task.projectName && (
+                        <span className="ml-1 text-[10px] text-blue-300 font-normal">
+                          [{task.projectName}]
+                        </span>
+                      )}
+                    </div>
                     <div className="text-gray-500 ml-2">
                       {task.allocatedHours.toFixed(2)}h
                     </div>

@@ -89,6 +89,86 @@ export class TaskRepository implements ITaskRepository {
         return this.findAllInternal(wbsId, true);
     }
 
+    /**
+     * 複数WBSの有効タスクを一括取得する（横断負荷計算用途）。
+     * 負荷計算に不要な workRecords は読み込まない。
+     * periodOverlaps 指定時は YOTEI 期間が範囲と交差するタスクに絞る
+     * （交差タスクの期間・工数は全行保持されるため按分の重み計算は正確なまま）。
+     */
+    async findActiveByWbsIds(
+        wbsIds: number[],
+        options?: { periodOverlaps?: { start: Date; end: Date } }
+    ): Promise<Task[]> {
+        if (wbsIds.length === 0) return [];
+
+        const periodOverlaps = options?.periodOverlaps;
+        const tasksDb = await prisma.wbsTask.findMany({
+            where: {
+                wbsId: { in: wbsIds },
+                isDeleted: false,
+                ...(periodOverlaps
+                    ? {
+                        periods: {
+                            some: {
+                                type: 'YOTEI',
+                                startDate: { lte: periodOverlaps.end },
+                                endDate: { gte: periodOverlaps.start },
+                            },
+                        },
+                    }
+                    : {}),
+            },
+            include: {
+                assignee: {
+                    include: {
+                        assignee: true
+                    }
+                },
+                phase: true,
+                periods: {
+                    include: {
+                        kosus: true,
+                    },
+                },
+            },
+        });
+
+        return tasksDb.map(taskDb => Task.createFromDb({
+            id: taskDb.id,
+            taskNo: TaskNo.reconstruct(taskDb.taskNo),
+            name: taskDb.name,
+            wbsId: taskDb.wbsId,
+            assigneeId: taskDb.assigneeId ?? undefined,
+            assignee: taskDb.assignee ? Assignee.createFromDb({
+                id: taskDb.assignee.id,
+                name: taskDb.assignee.assignee.name,
+                displayName: taskDb.assignee.assignee.displayName,
+            }) : undefined,
+            phaseId: taskDb.phaseId ?? undefined,
+            phase: taskDb.phase ? Phase.createFromDb({
+                id: taskDb.phase.id,
+                name: taskDb.phase.name,
+                code: new PhaseCode(taskDb.phase.code),
+                seq: taskDb.phase.seq,
+            }) : undefined,
+            periods: taskDb.periods.map(period => Period.createFromDb({
+                id: period.id,
+                startDate: period.startDate,
+                endDate: period.endDate,
+                type: new PeriodType({ type: period.type }),
+                manHours: period.kosus.map(kosu => ManHour.createFromDb({
+                    id: kosu.id,
+                    kosu: Number(kosu.kosu),
+                    type: new ManHourType({ type: kosu.type }),
+                })),
+            })),
+            status: new TaskStatus({ status: taskDb.status }),
+            progressRate: taskDb.progressRate ? Number(taskDb.progressRate) : undefined,
+            createdAt: taskDb.createdAt,
+            updatedAt: taskDb.updatedAt,
+        }));
+    }
+
     async findAll(wbsId?: number): Promise<Task[]> {
         return this.findAllInternal(wbsId, false);
     }

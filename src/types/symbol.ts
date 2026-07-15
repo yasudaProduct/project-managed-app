@@ -99,6 +99,10 @@ export const SYMBOL = {
     IWbsCrossQueryRepository: Symbol.for('IWbsCrossQueryRepository'),
     IWbsAnalyticsApplicationService: Symbol.for('IWbsAnalyticsApplicationService'),
 
+    // Cross WBS Workload
+    ICrossWbsWorkloadService: Symbol.for('ICrossWbsWorkloadService'),
+    ITargetWbsQueryRepository: Symbol.for('ITargetWbsQueryRepository'),
+
 
     // Infrastructure
     PrismaClient: Symbol.for('PrismaClient'),
