@@ -124,32 +124,35 @@ describe('assignee-gantt-actions', () => {
       it('trueの場合、横断サービスで合算し警告は現WBSのみ取得する', async () => {
         // Arrange
         mockCrossWbsWorkloadService.getWbsWorkloadsWithExternal.mockResolvedValue([
-          createMockWorkload({
-            assigneeRate: 1,
-            dailyAllocations: [{
-              date: new Date('2024-01-15'),
-              availableHours: 7.5,
-              isWeekend: false,
-              isCompanyHoliday: false,
-              userSchedules: [],
-              taskAllocations: [
-                {
-                  taskId: 'task-1',
-                  taskName: '現WBSタスク',
-                  allocatedHours: 4.0,
-                  totalHours: 8.0,
-                },
-                {
-                  taskId: 'task-2',
-                  taskName: '他PJタスク',
-                  allocatedHours: 2.0,
-                  totalHours: 2.0,
-                  projectName: 'PJ-B',
-                },
-              ],
-              get allocatedHours() { return 6.0; }
-            }],
-          }),
+          {
+            workload: createMockWorkload({
+              assigneeRate: 1,
+              dailyAllocations: [{
+                date: new Date('2024-01-15'),
+                availableHours: 7.5,
+                isWeekend: false,
+                isCompanyHoliday: false,
+                userSchedules: [],
+                taskAllocations: [
+                  {
+                    taskId: 'task-1',
+                    taskName: '現WBSタスク',
+                    allocatedHours: 4.0,
+                    totalHours: 8.0,
+                  },
+                  {
+                    taskId: 'task-2',
+                    taskName: '他PJタスク',
+                    allocatedHours: 2.0,
+                    totalHours: 2.0,
+                    projectName: 'PJ-B',
+                  },
+                ],
+                get allocatedHours() { return 6.0; }
+              }],
+            }),
+            rateBasis: { rate: 0.5, standardWorkingHours: 7.5 },
+          },
         ]);
 
         // Act
@@ -172,10 +175,14 @@ describe('assignee-gantt-actions', () => {
           new Date('2024-01-17')
         );
 
-        // 合算行(rate=1)はレート超過判定が過負荷判定と一致する
+        // 合算行: 過負荷判定は合計(6h) vs 稼働可能時間(7.5h) → 適正
         const daily = result.data![0].dailyAllocations[0];
         expect(result.data![0].assigneeRate).toBe(1);
-        expect(daily.rateAllowedHours).toBe(daily.availableHours);
+        expect(daily.isOverloaded).toBe(false);
+        // Rバッジは現WBS分(ラベルなし4h) > 標準×現WBS参画率(7.5×0.5=3.75) で判定
+        expect(daily.rateAllowedHours).toBeCloseTo(3.75, 5);
+        expect(daily.isOverRateCapacity).toBe(true);
+        expect(daily.overRateHours).toBeCloseTo(0.25, 5);
         // projectNameラベルがDTOへ引き継がれる
         expect(daily.taskAllocations[1].projectName).toBe('PJ-B');
       });

@@ -260,7 +260,7 @@ describe('CrossWbsWorkloadService', () => {
         { wbsId: 22, wbsName: 'WBS-B', projectId: 'p2', projectName: 'PJ-B' },
       ]);
       mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([
-        createAssignee({ id: 100, wbsId: CURRENT_WBS_ID, userId: 'user-1', name: '山田太郎' }),
+        createAssignee({ id: 100, wbsId: CURRENT_WBS_ID, userId: 'user-1', name: '山田太郎', rate: 0.5 }),
         createAssignee({ id: 110, wbsId: CURRENT_WBS_ID, userId: 'user-3', name: '佐藤次郎' }),
       ]);
       mockTaskRepository.findByWbsId.mockResolvedValue([
@@ -280,19 +280,23 @@ describe('CrossWbsWorkloadService', () => {
 
       // 行は現WBSの担当者のみ(user-9は含まれない)
       expect(result).toHaveLength(2);
-      expect(result.map(w => w.assigneeId).sort()).toEqual(['user-1', 'user-3']);
+      expect(result.map(r => r.workload.assigneeId).sort()).toEqual(['user-1', 'user-3']);
 
-      const user1 = result.find(w => w.assigneeId === 'user-1')!;
+      const user1Row = result.find(r => r.workload.assigneeId === 'user-1')!;
+      const user1 = user1Row.workload;
       const user1Mon = dayOf(user1, MON);
       // 現WBS 5h + PJ-B 2h
       expect(user1Mon.allocatedHours).toBeCloseTo(7, 5);
       // 現WBS分はラベルなし・外部分はプロジェクト名ラベル付き
       expect(user1Mon.taskAllocations.map(t => t.projectName)).toEqual([undefined, 'PJ-B']);
       expect(user1.assigneeRate).toBe(1);
+      // Rバッジ(取り分超過)判定用に現WBSの参画率と標準勤務時間を返す
+      expect(user1Row.rateBasis).toEqual({ rate: 0.5, standardWorkingHours: 7.5 });
 
       // タスクを持たない現WBS担当者も行になる
-      const user3 = result.find(w => w.assigneeId === 'user-3')!;
-      expect(user3.dailyAllocations.every(d => d.allocatedHours === 0)).toBe(true);
+      const user3Row = result.find(r => r.workload.assigneeId === 'user-3')!;
+      expect(user3Row.workload.dailyAllocations.every(d => d.allocatedHours === 0)).toBe(true);
+      expect(user3Row.rateBasis).toEqual({ rate: 1, standardWorkingHours: 7.5 });
 
       // 外部タスクは現プロジェクトを除外した対象WBSのみから一括取得
       expect(mockTaskRepository.findActiveByWbsIds).toHaveBeenCalledTimes(1);
@@ -321,7 +325,7 @@ describe('CrossWbsWorkloadService', () => {
       const result = await service.getWbsWorkloadsWithExternal(CURRENT_WBS_ID, MON, FRI);
 
       expect(result).toHaveLength(1);
-      expect(dayOf(result[0], MON).allocatedHours).toBeCloseTo(5, 5);
+      expect(dayOf(result[0].workload, MON).allocatedHours).toBeCloseTo(5, 5);
       expect(mockTaskRepository.findActiveByWbsIds).not.toHaveBeenCalled();
     });
 
