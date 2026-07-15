@@ -52,13 +52,13 @@ const yoteiTask = (
     ],
   });
 
-const mockAssignee = (id: number, userId: string, name: string) =>
+const mockAssignee = (id: number, userId: string, name: string, rate = 1.0) =>
   WbsAssignee.createFromDb({
     id,
     wbsId: 1,
     userId,
     userName: name,
-    rate: 1.0,
+    rate,
     costPerHour: 5000,
     seq: id,
   });
@@ -356,6 +356,57 @@ describe("SchedulingApplicationService", () => {
       )!;
       expect(ownDay.allocatedHours).toBeCloseTo(7.5, 5);
       expect(ownDay.taskAllocations[0].projectName).toBeUndefined();
+    });
+
+    test("参画率0.5の担当者は外部負荷があっても取り分(標準×率)まで前詰めできる", async () => {
+      taskRepo.findActiveByWbsId.mockResolvedValue([
+        yoteiTask(1, "T-0001", 10, PROJECT_START, new Date(2026, 5, 16), 7.5),
+      ]);
+      assigneeRepo.findByWbsId.mockResolvedValue([
+        mockAssignee(10, "u1", "山田", 0.5), // 取り分3.75h/日
+      ]);
+      // 他PJが基準日(06-15)に3.75h → 参画率外の枠に収まるため取り分は削られない
+      crossWbsService.getExternalAllocationSets.mockResolvedValue(
+        externalSets("u1", PROJECT_START, 3.75)
+      );
+
+      const result = await service.calculateSchedule(1, {
+        baselineMode: "PROJECT_START",
+      });
+
+      // available = min(標準×率, 物理残−外部) = min(3.75, 7.5−3.75) = 3.75h/日
+      // → 7.5h は 06-15(3.75)+06-16(3.75) で消化(旧実装だと06-15が0になり06-16開始)
+      expect(result.scheduledTasks[0].scheduledStartDate).toBe(
+        PROJECT_START.toISOString()
+      );
+      expect(result.scheduledTasks[0].scheduledEndDate).toBe(
+        new Date(2026, 5, 16).toISOString()
+      );
+    });
+
+    test("外部負荷が物理残を圧迫する場合は残量までしか使えない", async () => {
+      taskRepo.findActiveByWbsId.mockResolvedValue([
+        yoteiTask(1, "T-0001", 10, PROJECT_START, new Date(2026, 5, 16), 2.5),
+      ]);
+      assigneeRepo.findByWbsId.mockResolvedValue([
+        mockAssignee(10, "u1", "山田", 0.5),
+      ]);
+      // 他PJが5h → 物理残2.5h(< 取り分3.75h)
+      crossWbsService.getExternalAllocationSets.mockResolvedValue(
+        externalSets("u1", PROJECT_START, 5)
+      );
+
+      const result = await service.calculateSchedule(1, {
+        baselineMode: "PROJECT_START",
+      });
+
+      // 06-15 の残量2.5hで2.5hのタスクがちょうど収まる
+      expect(result.scheduledTasks[0].scheduledStartDate).toBe(
+        PROJECT_START.toISOString()
+      );
+      expect(result.scheduledTasks[0].scheduledEndDate).toBe(
+        PROJECT_START.toISOString()
+      );
     });
 
     test("considerOtherWbsLoad: false は外部負荷を参照せず従来通り", async () => {
