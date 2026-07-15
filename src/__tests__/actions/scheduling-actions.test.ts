@@ -89,6 +89,22 @@ describe("scheduling-actions", () => {
         calculateSchedule(1, { baselineMode: "TODAY" })
       ).rejects.toThrow("WBSに紐づくプロジェクトが見つかりません");
     });
+
+    it("wbsIdが不正(0以下)な場合はサービスを呼ばずに入力エラーを投げる", async () => {
+      await expect(
+        calculateSchedule(0, { baselineMode: "TODAY" })
+      ).rejects.toThrow("スケジュール計算の入力値が不正です");
+      expect(mockService.calculateSchedule).not.toHaveBeenCalled();
+    });
+
+    it("baselineModeが不正な場合はサービスを呼ばずに入力エラーを投げる", async () => {
+      await expect(
+        calculateSchedule(1, {
+          baselineMode: "INVALID_MODE" as ScheduleCalculationParams["baselineMode"],
+        })
+      ).rejects.toThrow("スケジュール計算の入力値が不正です");
+      expect(mockService.calculateSchedule).not.toHaveBeenCalled();
+    });
   });
 
   describe("recalculateSchedulePreview", () => {
@@ -115,15 +131,35 @@ describe("scheduling-actions", () => {
 
     it("サービスがエラーを投げた場合はそのまま呼び出し元に伝播する", async () => {
       mockService.recalculatePreview.mockRejectedValue(
-        new Error("基準日が不正です")
+        new Error("WBSが見つかりません")
       );
 
+      await expect(
+        recalculateSchedulePreview(7, {
+          baselineDateIso: "2026-06-15T00:00:00.000Z",
+          scheduledTasks: [],
+        })
+      ).rejects.toThrow("WBSが見つかりません");
+    });
+
+    it("baselineDateIsoがISO8601形式でない場合はサービスを呼ばずに入力エラーを投げる", async () => {
       await expect(
         recalculateSchedulePreview(7, {
           baselineDateIso: "invalid",
           scheduledTasks: [],
         })
-      ).rejects.toThrow("基準日が不正です");
+      ).rejects.toThrow("再計算の入力値が不正です");
+      expect(mockService.recalculatePreview).not.toHaveBeenCalled();
+    });
+
+    it("wbsIdが不正(0以下)な場合はサービスを呼ばずに入力エラーを投げる", async () => {
+      await expect(
+        recalculateSchedulePreview(-1, {
+          baselineDateIso: "2026-06-15T00:00:00.000Z",
+          scheduledTasks: [],
+        })
+      ).rejects.toThrow("再計算の入力値が不正です");
+      expect(mockService.recalculatePreview).not.toHaveBeenCalled();
     });
   });
 });
