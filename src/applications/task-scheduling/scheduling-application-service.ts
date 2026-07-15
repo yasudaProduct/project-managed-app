@@ -27,6 +27,7 @@ import {
 } from "@/domains/calendar/assignee-working-calendar";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
 import { forwardSchedule } from "@/domains/task-scheduling/forward-scheduler";
+import { ExternalLoadAwareCalendar } from "@/domains/task-scheduling/external-load-aware-calendar";
 import {
   type WorkingCalendar,
   addCalendarDays,
@@ -110,18 +111,7 @@ export class SchedulingApplicationService
       companyHolidays
     );
 
-    // assigneeId(wbs_assignee.id) → 稼働カレンダー
-    const calendars = new Map<number, WorkingCalendar>();
-    for (const a of assignees) {
-      if (a.id == null) continue;
-      const schedules = userSchedules.filter((s) => s.userId === a.userId);
-      calendars.set(
-        a.id,
-        new AssigneeWorkingCalendar(a, companyCalendar, schedules)
-      );
-    }
-
-    // 他WBS(未開始・進行中プロジェクトの最新WBS)の負荷を先行消費として反映する
+    // 他WBS(未開始・進行中プロジェクトの最新WBS)の負荷を取得する
     const externalSetsByUser = await this.loadExternalSets(
       params.considerOtherWbsLoad ?? true,
       assignees,
@@ -129,10 +119,40 @@ export class SchedulingApplicationService
       rangeStart,
       rangeEnd
     );
-    const externalConsumed = this.buildExternalConsumed(
+    const externalDailyByAssignee = this.buildExternalDailyHours(
       assignees,
       externalSetsByUser
     );
+
+    // assigneeId(wbs_assignee.id) → 稼働カレンダー
+    // 外部負荷がある担当者は、参画率を「取り分の予約」として扱うカレンダーへ差し替える:
+    //   available = min(標準×参画率, (標準−個人予定) − 外部負荷)
+    // (参画率キャップ後から外部負荷を引くと、0.5/0.5掛け持ちの取り分が不当に0になるため)
+    const calendars = new Map<number, WorkingCalendar>();
+    for (const a of assignees) {
+      if (a.id == null) continue;
+      const schedules = userSchedules.filter((s) => s.userId === a.userId);
+      const externalDaily = externalDailyByAssignee.get(a.id);
+      if (!externalDaily || externalDaily.size === 0) {
+        calendars.set(
+          a.id,
+          new AssigneeWorkingCalendar(a, companyCalendar, schedules)
+        );
+        continue;
+      }
+      calendars.set(
+        a.id,
+        new ExternalLoadAwareCalendar({
+          physicalCalendar: new AssigneeWorkingCalendar(
+            WbsAssignee.create({ userId: a.userId, rate: 1 }),
+            companyCalendar,
+            schedules
+          ),
+          rateCapHours: systemSettings.standardWorkingHours * a.getRate(),
+          externalDailyHours: externalDaily,
+        })
+      );
+    }
 
     const schedulingTasks: SchedulingTask[] = tasks
       .filter((t) => t.id != null)
@@ -158,7 +178,6 @@ export class SchedulingApplicationService
         steadyDailyHoursMode: schedulingSettings.steadyDailyHoursMode,
         steadyFixedHoursByKeyword: schedulingSettings.steadyFixedHoursByKeyword,
       },
-      externalConsumed,
     });
 
     // 実施日固定タスクの先行超過（前工程が固定日に間に合わない）を警告
@@ -315,17 +334,16 @@ export class SchedulingApplicationService
   }
 
   /**
-   * 外部配分セットを forwardSchedule 用の事前消費マップ
-   * (wbs_assignee.id → dateKey → hours)へ変換する。
+   * 外部配分セットを担当者(wbs_assignee.id)別の日次負荷マップ(dateKey → hours)へ変換する。
    * 同一ユーザーが現WBSに複数行登録されている場合は各行が同じ外部負荷を持つ(稀なデータ形状として許容)。
    */
-  private buildExternalConsumed(
+  private buildExternalDailyHours(
     assignees: WbsAssignee[],
     externalSetsByUser: Map<string, LabeledAllocationSet[]>
-  ): Map<number, Map<string, number>> | undefined {
-    if (externalSetsByUser.size === 0) return undefined;
+  ): Map<number, Map<string, number>> {
+    const result = new Map<number, Map<string, number>>();
+    if (externalSetsByUser.size === 0) return result;
 
-    const consumed = new Map<number, Map<string, number>>();
     for (const assignee of assignees) {
       if (assignee.id == null) continue;
       const sets = externalSetsByUser.get(assignee.userId);
@@ -340,9 +358,9 @@ export class SchedulingApplicationService
           daily.set(key, (daily.get(key) ?? 0) + hours);
         }
       }
-      if (daily.size > 0) consumed.set(assignee.id, daily);
+      if (daily.size > 0) result.set(assignee.id, daily);
     }
-    return consumed.size > 0 ? consumed : undefined;
+    return result;
   }
 
   private buildWorkloads(

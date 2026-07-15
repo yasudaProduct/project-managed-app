@@ -20,16 +20,14 @@ import {
 export interface ForwardSchedulerInput {
   tasks: SchedulingTask[];
   dependencies: TaskDependency[];
-  /** assigneeId(wbs_assignee.id) → 稼働カレンダー */
+  /**
+   * assigneeId(wbs_assignee.id) → 稼働カレンダー。
+   * 他WBS負荷の考慮は ExternalLoadAwareCalendar をここへ渡すことで行う
+   * (available = min(標準×参画率, 物理残−外部負荷))。
+   */
   calendars: Map<number, WorkingCalendar>;
   standardWorkingHours: number;
   options: SchedulingOptions;
-  /**
-   * 他WBS等による事前消費 assigneeId(wbs_assignee.id) → (dateKey 'YYYY-MM-DD' → hours)。
-   * 内部でコピーするため呼び出し側のMapは変更されない。
-   * 定常タスクの先行消費と同様に、通常タスクは外部負荷の占有時間を避けて前詰めされる。
-   */
-  externalConsumed?: Map<number, Map<string, number>>;
 }
 
 const MAX_PERIOD_DAYS = 366 * 5;
@@ -97,12 +95,6 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
 
   // 担当者ごとの定常消費 consumed: assigneeId -> (dateKey -> hours)
   const consumed = new Map<number, Map<string, number>>();
-  // 他WBS等の外部消費を事前シード(呼び出し側のMapを汚さないようコピーする)
-  if (input.externalConsumed) {
-    for (const [assigneeId, dailyHours] of input.externalConsumed) {
-      consumed.set(assigneeId, new Map(dailyHours));
-    }
-  }
   const consumedOf = (assigneeId: number): Map<string, number> => {
     let m = consumed.get(assigneeId);
     if (!m) {

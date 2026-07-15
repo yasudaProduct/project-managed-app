@@ -970,47 +970,45 @@ describe("forwardSchedule", () => {
     });
   });
 
-  describe("外部消費(externalConsumed)", () => {
-    test("外部消費で満杯の日は避けて翌営業日から開始する", () => {
+  describe("外部負荷を考慮したカレンダー(ExternalLoadAwareCalendar連携)", () => {
+    // 他WBS負荷はカレンダー側(ExternalLoadAwareCalendar)で吸収する設計のため、
+    // ここではカレンダーが返す残量に従って前詰めされることのみ確認する。
+    const withExternal = (
+      base: WorkingCalendar,
+      externalByDateKey: Record<string, number>
+    ): WorkingCalendar => ({
+      getAvailableHours: (d: Date) => {
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const remaining = base.getAvailableHours(d) - (externalByDateKey[key] ?? 0);
+        return remaining > 0 ? remaining : 0;
+      },
+    });
+
+    test("外部負荷で満杯の日は避けて翌営業日から開始する", () => {
       const result = forwardSchedule({
         tasks: [task({ taskId: 1, taskNo: "0001", yoteiKosu: 8 })],
         dependencies: [],
-        calendars: new Map([[1, weekday8()]]),
+        calendars: new Map([[1, withExternal(weekday8(), { "2026-06-15": 8 })]]),
         standardWorkingHours: 8,
         options: baseOptions(MON),
-        externalConsumed: new Map([[1, new Map([["2026-06-15", 8]])]]),
       });
       expect(result[0].scheduledStartDate).toEqual(new Date(2026, 5, 16));
     });
 
-    test("外部消費が部分的なら同日の残り稼働から開始する", () => {
+    test("外部負荷が部分的なら同日の残り稼働から開始する", () => {
       const result = forwardSchedule({
         tasks: [task({ taskId: 1, taskNo: "0001", yoteiKosu: 8 })],
         dependencies: [],
-        calendars: new Map([[1, weekday8()]]),
+        calendars: new Map([[1, withExternal(weekday8(), { "2026-06-15": 4 })]]),
         standardWorkingHours: 8,
         options: baseOptions(MON),
-        externalConsumed: new Map([[1, new Map([["2026-06-15", 4]])]]),
       });
       // 06-15 の残り4h + 06-16 の4h
       expect(result[0].scheduledStartDate).toEqual(new Date(2026, 5, 15));
       expect(result[0].scheduledEndDate).toEqual(new Date(2026, 5, 16));
     });
 
-    test("別担当者の外部消費は影響しない", () => {
-      const result = forwardSchedule({
-        tasks: [task({ taskId: 1, taskNo: "0001", assigneeId: 1, yoteiKosu: 8 })],
-        dependencies: [],
-        calendars: new Map([[1, weekday8()]]),
-        standardWorkingHours: 8,
-        options: baseOptions(MON),
-        externalConsumed: new Map([[2, new Map([["2026-06-15", 8]])]]),
-      });
-      expect(result[0].scheduledStartDate).toEqual(new Date(2026, 5, 15));
-      expect(result[0].scheduledEndDate).toEqual(new Date(2026, 5, 15));
-    });
-
-    test("実施日固定タスクの終了日算出も外部消費を考慮する", () => {
+    test("実施日固定タスクの終了日算出も外部負荷を考慮する", () => {
       const result = forwardSchedule({
         tasks: [
           task({
@@ -1023,48 +1021,13 @@ describe("forwardSchedule", () => {
           }),
         ],
         dependencies: [],
-        calendars: new Map([[1, weekday8()]]),
+        calendars: new Map([[1, withExternal(weekday8(), { "2026-06-15": 4 })]]),
         standardWorkingHours: 8,
         options: baseOptions(MON, { fixedDateTaskKeywords: ["本番導入"] }),
-        externalConsumed: new Map([[1, new Map([["2026-06-15", 4]])]]),
       });
       // 06-15 は残り4hのみ → 8h は 06-15(4h)+06-16(4h) で終了 06-16(期間超過)
       expect(result[0].scheduledEndDate).toEqual(new Date(2026, 5, 16));
       expect(result[0].note).toBe("FIXED_PERIOD_EXCEEDED");
-    });
-
-    test("呼び出し側のexternalConsumedは変更されない", () => {
-      const inner = new Map([["2026-06-15", 4]]);
-      const external = new Map([[1, inner]]);
-      forwardSchedule({
-        tasks: [task({ taskId: 1, taskNo: "0001", yoteiKosu: 8 })],
-        dependencies: [],
-        calendars: new Map([[1, weekday8()]]),
-        standardWorkingHours: 8,
-        options: baseOptions(MON),
-        externalConsumed: external,
-      });
-      expect(inner.get("2026-06-15")).toBe(4);
-      expect(inner.size).toBe(1);
-    });
-
-    test("externalConsumed未指定は従来と同じ結果になる", () => {
-      const input = () => ({
-        tasks: [
-          task({ taskId: 1, taskNo: "0001", yoteiKosu: 8 }),
-          task({ taskId: 2, taskNo: "0002", yoteiKosu: 8 }),
-        ],
-        dependencies: [dep(1, 2, "FS")],
-        calendars: new Map([[1, weekday8()]]),
-        standardWorkingHours: 8,
-        options: baseOptions(MON),
-      });
-      const base = forwardSchedule(input());
-      const withUndefined = forwardSchedule({
-        ...input(),
-        externalConsumed: undefined,
-      });
-      expect(withUndefined).toEqual(base);
     });
   });
 
