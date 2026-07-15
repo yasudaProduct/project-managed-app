@@ -46,18 +46,21 @@ export async function getAssigneeWorkloads(
 
     // 他WBS考慮ON時は横断サービスで他プロジェクトの負荷を合算、OFF時は従来通り現WBSのみ。
     // 警告(実現不可能タスク)はどちらのモードでも現WBSのみを対象とする。
-    const [workloads, warnings] = await Promise.all([
-      parsed.data.includeOtherWbs
-        ? container
-          .get<ICrossWbsWorkloadService>(SYMBOL.ICrossWbsWorkloadService)
-          .getWbsWorkloadsWithExternal(parsed.data.wbsId, start, end)
-        : assigneeGanttService.getAssigneeWorkloads(parsed.data.wbsId, start, end),
-      assigneeGanttService.getAssigneeWarnings(parsed.data.wbsId, start, end)
-    ]);
+    // 合算行は現WBS参画率のrateBasisを添えてDTO化し、Rバッジを「取り分超過」判定にする。
+    const warningsPromise = assigneeGanttService.getAssigneeWarnings(parsed.data.wbsId, start, end);
+    const dataPromise = parsed.data.includeOtherWbs
+      ? container
+        .get<ICrossWbsWorkloadService>(SYMBOL.ICrossWbsWorkloadService)
+        .getWbsWorkloadsWithExternal(parsed.data.wbsId, start, end)
+        .then(merged => merged.map(({ workload, rateBasis }) => toWorkloadData(workload, { rateBasis })))
+      : assigneeGanttService
+        .getAssigneeWorkloads(parsed.data.wbsId, start, end)
+        .then(workloads => workloads.map(workload => toWorkloadData(workload)));
+    const [data, warnings] = await Promise.all([dataPromise, warningsPromise]);
 
     return {
       success: true,
-      data: workloads.map(toWorkloadData),
+      data,
       warnings: warnings.map(w => ({
         taskId: w.taskId,
         taskNo: w.taskNo,

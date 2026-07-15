@@ -39,6 +39,17 @@ export interface WorkloadData {
   }[];
 }
 
+/**
+ * レート超過(Rバッジ)判定の基準。
+ * 他WBS合算行で「現WBS分の配分 > 標準勤務時間×現WBS参画率(取り分)」の判定に使う。
+ */
+export interface RateBasis {
+  /** 現WBSでの参画率 */
+  rate: number;
+  /** 標準勤務時間 */
+  standardWorkingHours: number;
+}
+
 /** 実現不可能タスク警告のプレーンな転送オブジェクト */
 export interface AssigneeWarningData {
   taskId: number;

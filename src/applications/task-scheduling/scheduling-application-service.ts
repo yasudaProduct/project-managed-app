@@ -457,7 +457,14 @@ export class SchedulingApplicationService
             assigneeName: a.userName || a.userId,
             dailyAllocations: merged,
             assigneeRate: 1,
-          })
+          }),
+          {
+            // Rバッジは「現WBS分の配分 > 標準×現WBS参画率」で判定する
+            rateBasis: {
+              rate: a.getRate(),
+              standardWorkingHours: companyCalendar.getStandardWorkingHours(),
+            },
+          }
         )
       );
     }

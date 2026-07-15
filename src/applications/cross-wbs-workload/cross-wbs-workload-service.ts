@@ -1,6 +1,10 @@
 import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
-import type { ICrossWbsWorkloadService, ExternalWorkloadQuery } from './icross-wbs-workload-service';
+import type {
+  ICrossWbsWorkloadService,
+  ExternalWorkloadQuery,
+  MergedAssigneeWorkload,
+} from './icross-wbs-workload-service';
 import type { ITargetWbsQueryRepository, TargetWbsInfo } from './itarget-wbs-query-repository';
 import type { ITaskRepository } from '@/applications/task/itask-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
@@ -91,7 +95,11 @@ export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
     return workloads.sort((a, b) => a.assigneeName.localeCompare(b.assigneeName, 'ja'));
   }
 
-  async getWbsWorkloadsWithExternal(wbsId: number, startDate: Date, endDate: Date): Promise<AssigneeWorkload[]> {
+  async getWbsWorkloadsWithExternal(
+    wbsId: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<MergedAssigneeWorkload[]> {
     const wbs = await this.wbsRepository.findById(wbsId);
     if (!wbs) throw new Error('WBSが見つかりません');
 
@@ -152,12 +160,19 @@ export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
         startDate,
         endDate,
       });
-      return AssigneeWorkload.create({
-        assigneeId: assignee.userId,
-        assigneeName: assignee.userName || assignee.userId,
-        dailyAllocations: merged,
-        assigneeRate: 1,
-      });
+      return {
+        workload: AssigneeWorkload.create({
+          assigneeId: assignee.userId,
+          assigneeName: assignee.userName || assignee.userId,
+          dailyAllocations: merged,
+          assigneeRate: 1,
+        }),
+        // Rバッジ(取り分超過)は「現WBS分の配分 > 標準×現WBS参画率」で判定する
+        rateBasis: {
+          rate: assignee.getRate(),
+          standardWorkingHours: systemSettings.standardWorkingHours,
+        },
+      };
     });
   }
 

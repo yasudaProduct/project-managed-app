@@ -42,7 +42,7 @@ export async function getCrossProjectAssigneeWorkloads(
 
     return {
       success: true,
-      data: workloads.map(toWorkloadData),
+      data: workloads.map(workload => toWorkloadData(workload)),
       // 実現不可能タスク警告はWBS単位の概念のため横断ページでは扱わない
       warnings: []
     };
