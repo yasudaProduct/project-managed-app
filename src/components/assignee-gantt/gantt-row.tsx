@@ -8,6 +8,7 @@ interface TaskAllocationUI {
   taskId: string;
   taskName: string;
   allocatedHours: number;
+  projectName?: string;
 }
 
 interface DailyWorkAllocationUI {

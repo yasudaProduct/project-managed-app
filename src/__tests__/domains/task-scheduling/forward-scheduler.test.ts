@@ -970,6 +970,67 @@ describe("forwardSchedule", () => {
     });
   });
 
+  describe("外部負荷を考慮したカレンダー(ExternalLoadAwareCalendar連携)", () => {
+    // 他WBS負荷はカレンダー側(ExternalLoadAwareCalendar)で吸収する設計のため、
+    // ここではカレンダーが返す残量に従って前詰めされることのみ確認する。
+    const withExternal = (
+      base: WorkingCalendar,
+      externalByDateKey: Record<string, number>
+    ): WorkingCalendar => ({
+      getAvailableHours: (d: Date) => {
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const remaining = base.getAvailableHours(d) - (externalByDateKey[key] ?? 0);
+        return remaining > 0 ? remaining : 0;
+      },
+    });
+
+    test("外部負荷で満杯の日は避けて翌営業日から開始する", () => {
+      const result = forwardSchedule({
+        tasks: [task({ taskId: 1, taskNo: "0001", yoteiKosu: 8 })],
+        dependencies: [],
+        calendars: new Map([[1, withExternal(weekday8(), { "2026-06-15": 8 })]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      expect(result[0].scheduledStartDate).toEqual(new Date(2026, 5, 16));
+    });
+
+    test("外部負荷が部分的なら同日の残り稼働から開始する", () => {
+      const result = forwardSchedule({
+        tasks: [task({ taskId: 1, taskNo: "0001", yoteiKosu: 8 })],
+        dependencies: [],
+        calendars: new Map([[1, withExternal(weekday8(), { "2026-06-15": 4 })]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON),
+      });
+      // 06-15 の残り4h + 06-16 の4h
+      expect(result[0].scheduledStartDate).toEqual(new Date(2026, 5, 15));
+      expect(result[0].scheduledEndDate).toEqual(new Date(2026, 5, 16));
+    });
+
+    test("実施日固定タスクの終了日算出も外部負荷を考慮する", () => {
+      const result = forwardSchedule({
+        tasks: [
+          task({
+            taskId: 1,
+            taskNo: "0001",
+            taskName: "本番導入",
+            yoteiStartDate: MON,
+            yoteiEndDate: MON,
+            yoteiKosu: 8,
+          }),
+        ],
+        dependencies: [],
+        calendars: new Map([[1, withExternal(weekday8(), { "2026-06-15": 4 })]]),
+        standardWorkingHours: 8,
+        options: baseOptions(MON, { fixedDateTaskKeywords: ["本番導入"] }),
+      });
+      // 06-15 は残り4hのみ → 8h は 06-15(4h)+06-16(4h) で終了 06-16(期間超過)
+      expect(result[0].scheduledEndDate).toEqual(new Date(2026, 5, 16));
+      expect(result[0].note).toBe("FIXED_PERIOD_EXCEEDED");
+    });
+  });
+
   test("循環依存に含まれるタスクはskip(CYCLIC)し他は計算続行", () => {
     const result = forwardSchedule({
       tasks: [

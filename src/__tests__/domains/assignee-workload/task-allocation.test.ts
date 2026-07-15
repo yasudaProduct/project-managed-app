@@ -57,6 +57,46 @@ describe('TaskAllocation', () => {
     });
   });
 
+  describe('projectName', () => {
+    it('projectNameを指定して作成できる', () => {
+      const allocation = TaskAllocation.create({
+        taskId: 'task-1',
+        taskName: 'タスク',
+        allocatedHours: 2.0,
+        totalHours: 4.0,
+        projectName: 'プロジェクトA'
+      });
+
+      expect(allocation.projectName).toBe('プロジェクトA');
+    });
+
+    it('未指定の場合はundefinedになる', () => {
+      const allocation = TaskAllocation.create({
+        taskId: 'task-1',
+        taskName: 'タスク',
+        allocatedHours: 2.0,
+        totalHours: 4.0
+      });
+
+      expect(allocation.projectName).toBeUndefined();
+    });
+
+    it('addHoursでprojectNameが引き継がれる', () => {
+      const allocation = TaskAllocation.create({
+        taskId: 'task-1',
+        taskName: 'タスク',
+        allocatedHours: 2.0,
+        totalHours: 4.0,
+        projectName: 'プロジェクトA'
+      });
+
+      const added = allocation.addHours(1.0);
+
+      expect(added.allocatedHours).toBe(3.0);
+      expect(added.projectName).toBe('プロジェクトA');
+    });
+  });
+
   describe('equals', () => {
     it('同じタスクIDの場合はtrueを返す', () => {
       const allocation1 = TaskAllocation.create({

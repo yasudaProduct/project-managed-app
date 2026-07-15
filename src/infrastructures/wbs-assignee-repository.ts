@@ -51,6 +51,28 @@ export class WbsAssigneeRepository implements IWbsAssigneeRepository {
 
     }
 
+    async findByWbsIds(wbsIds: number[]): Promise<WbsAssignee[]> {
+        if (wbsIds.length === 0) return [];
+
+        const wbsAssigneeList = await prisma.wbsAssignee.findMany({
+            where: { wbsId: { in: wbsIds } },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                assignee: true,
+            },
+        });
+
+        return wbsAssigneeList.map(wbsAssignee => WbsAssignee.createFromDb({
+            id: wbsAssignee.id,
+            wbsId: wbsAssignee.wbsId,
+            userId: wbsAssignee.assignee.id,
+            rate: wbsAssignee.rate,
+            costPerHour: wbsAssignee.costPerHour,
+            userName: wbsAssignee.assignee.displayName,
+            seq: wbsAssignee.seq,
+        }));
+    }
+
     async findAll(): Promise<WbsAssignee[]> {
         const wbsAssigneeList = await prisma.wbsAssignee.findMany({
             orderBy: { createdAt: 'desc' },
