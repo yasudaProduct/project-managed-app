@@ -50,7 +50,6 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
-import { formatDateToLocalString } from "../ganttv2/gantt-utils";
 import { formatDate } from "@/utils/date-util";
 
 const formSchema = z
@@ -121,7 +120,7 @@ interface TaskModalProps {
   /**
    * 指定時、新規作成（task未指定）の送信で createTask を直接呼ばず、
    * 入力内容をこのコールバックへ渡すだけにする（DBへの反映は呼び出し側に委ねる）。
-   * ganttv3 の編集モードでタスクをドラフト追加する際に使用する。
+   * gantt の編集モードでタスクをドラフト追加する際に使用する。
    */
   onCreateDraft?: (values: TaskFormValues) => void;
 }
@@ -159,10 +158,10 @@ export function TaskModal({
           name: task.name,
           assigneeId: task.assigneeId?.toString() || "",
           yoteiStartDate: task.yoteiStart
-            ? formatDateToLocalString(task.yoteiStart)
+            ? formatDate(task.yoteiStart, "YYYY/MM/DD")
             : "",
           yoteiEndDate: task.yoteiEnd
-            ? formatDateToLocalString(task.yoteiEnd)
+            ? formatDate(task.yoteiEnd, "YYYY/MM/DD")
             : "",
           yoteiKosu: task.yoteiKosu || 0,
           status: task.status,

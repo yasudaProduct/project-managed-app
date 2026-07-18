@@ -27,9 +27,11 @@ import {
 } from "@/domains/calendar/assignee-working-calendar";
 import { WbsAssignee } from "@/domains/wbs/wbs-assignee";
 import { forwardSchedule } from "@/domains/task-scheduling/forward-scheduler";
+import { ExternalLoadAwareCalendar } from "@/domains/task-scheduling/external-load-aware-calendar";
 import {
   type WorkingCalendar,
   addCalendarDays,
+  toDateKey,
 } from "@/domains/task-scheduling/working-calendar-walker";
 import { SchedulingPreconditionService } from "@/domains/task-scheduling/scheduling-precondition-service";
 import type { ScheduledTask } from "@/domains/task-scheduling/scheduled-result";
@@ -38,17 +40,24 @@ import {
   WorkloadCalculationService,
   type ScheduleAllocationInput,
 } from "@/domains/assignee-workload/workload-calculation-service";
-import type { DailyWorkAllocation } from "@/domains/assignee-workload/daily-work-allocation";
+import {
+  WorkloadMergeService,
+  type LabeledAllocationSet,
+} from "@/domains/assignee-workload/workload-merge-service";
+import { AssigneeWorkload } from "@/domains/assignee-workload/assignee-workload";
 import { toSchedulingTask } from "./scheduling-task-mapper";
 import { resolveBaselineDate } from "./baseline-resolver";
 import { convertScheduledTasksToTsv } from "./tsv-converter";
 import type { WorkloadData } from "../assignee-gantt/workload-data";
+import { toWorkloadData } from "../assignee-gantt/workload-data-mapper";
+import type { ICrossWbsWorkloadService } from "../cross-wbs-workload/icross-wbs-workload-service";
 
 @injectable()
 export class SchedulingApplicationService
   implements ISchedulingApplicationService
 {
   private readonly workloadCalculationService = new WorkloadCalculationService();
+  private readonly workloadMergeService = new WorkloadMergeService();
 
   constructor(
     @inject(SYMBOL.IWbsRepository) private readonly wbsRepository: IWbsRepository,
@@ -59,7 +68,8 @@ export class SchedulingApplicationService
     @inject(SYMBOL.IUserScheduleRepository) private readonly userScheduleRepository: IUserScheduleRepository,
     @inject(SYMBOL.ICompanyHolidayRepository) private readonly companyHolidayRepository: ICompanyHolidayRepository,
     @inject(SYMBOL.ISystemSettingsRepository) private readonly systemSettingsRepository: ISystemSettingsRepository,
-    @inject(SYMBOL.ISchedulingSettingsRepository) private readonly schedulingSettingsRepository: ISchedulingSettingsRepository
+    @inject(SYMBOL.ISchedulingSettingsRepository) private readonly schedulingSettingsRepository: ISchedulingSettingsRepository,
+    @inject(SYMBOL.ICrossWbsWorkloadService) private readonly crossWbsWorkloadService: ICrossWbsWorkloadService
   ) {}
 
   async calculateSchedule(
@@ -93,24 +103,54 @@ export class SchedulingApplicationService
       this.systemSettingsRepository.get(),
     ]);
 
-    const { companyHolidays, userSchedules } = await this.loadCalendarInputs(
-      assignees,
-      baselineDate
-    );
+    const { companyHolidays, userSchedules, rangeStart, rangeEnd } =
+      await this.loadCalendarInputs(assignees, baselineDate);
 
     const companyCalendar = new CompanyCalendar(
       systemSettings.standardWorkingHours,
       companyHolidays
     );
 
+    // 他WBS(未開始・進行中プロジェクトの最新WBS)の負荷を取得する
+    const externalSetsByUser = await this.loadExternalSets(
+      params.considerOtherWbsLoad ?? true,
+      assignees,
+      wbs.projectId,
+      rangeStart,
+      rangeEnd
+    );
+    const externalDailyByAssignee = this.buildExternalDailyHours(
+      assignees,
+      externalSetsByUser
+    );
+
     // assigneeId(wbs_assignee.id) → 稼働カレンダー
+    // 外部負荷がある担当者は、参画率を「取り分の予約」として扱うカレンダーへ差し替える:
+    //   available = min(標準×参画率, (標準−個人予定) − 外部負荷)
+    // (参画率キャップ後から外部負荷を引くと、0.5/0.5掛け持ちの取り分が不当に0になるため)
     const calendars = new Map<number, WorkingCalendar>();
     for (const a of assignees) {
       if (a.id == null) continue;
       const schedules = userSchedules.filter((s) => s.userId === a.userId);
+      const externalDaily = externalDailyByAssignee.get(a.id);
+      if (!externalDaily || externalDaily.size === 0) {
+        calendars.set(
+          a.id,
+          new AssigneeWorkingCalendar(a, companyCalendar, schedules)
+        );
+        continue;
+      }
       calendars.set(
         a.id,
-        new AssigneeWorkingCalendar(a, companyCalendar, schedules)
+        new ExternalLoadAwareCalendar({
+          physicalCalendar: new AssigneeWorkingCalendar(
+            WbsAssignee.create({ userId: a.userId, rate: 1 }),
+            companyCalendar,
+            schedules
+          ),
+          rateCapHours: systemSettings.standardWorkingHours * a.getRate(),
+          externalDailyHours: externalDaily,
+        })
       );
     }
 
@@ -145,6 +185,11 @@ export class SchedulingApplicationService
       ...SchedulingPreconditionService.checkFixedDateConflicts(scheduledTasks)
     );
 
+    // 実施日固定タスクの期間超過（予定工数が入力期間に収まらない）を警告
+    warnings.push(
+      ...SchedulingPreconditionService.checkFixedPeriodExceeded(scheduledTasks)
+    );
+
     // 計算結果がプロジェクト終了日に収まらないタスクを警告（リスケ判断の主要シグナル）
     if (project.endDate) {
       warnings.push(
@@ -160,7 +205,8 @@ export class SchedulingApplicationService
       assignees,
       userSchedules,
       companyCalendar,
-      baselineDate
+      baselineDate,
+      externalSetsByUser
     );
 
     return {
@@ -200,14 +246,21 @@ export class SchedulingApplicationService
       this.systemSettingsRepository.get(),
     ]);
 
-    const { companyHolidays, userSchedules } = await this.loadCalendarInputs(
-      assignees,
-      baselineDate
-    );
+    const { companyHolidays, userSchedules, rangeStart, rangeEnd } =
+      await this.loadCalendarInputs(assignees, baselineDate);
 
     const companyCalendar = new CompanyCalendar(
       systemSettings.standardWorkingHours,
       companyHolidays
+    );
+
+    // 計算時と同じ条件で他WBS負荷を取得し直し、調整後プレビューにも合算する
+    const externalSetsByUser = await this.loadExternalSets(
+      params.considerOtherWbsLoad ?? true,
+      assignees,
+      wbs.projectId,
+      rangeStart,
+      rangeEnd
     );
 
     const workloads = this.buildWorkloads(
@@ -215,7 +268,8 @@ export class SchedulingApplicationService
       assignees,
       userSchedules,
       companyCalendar,
-      baselineDate
+      baselineDate,
+      externalSetsByUser
     );
 
     const warnings = project.endDate
@@ -239,6 +293,8 @@ export class SchedulingApplicationService
   ): Promise<{
     companyHolidays: CompanyHoliday[];
     userSchedules: UserSchedule[];
+    rangeStart: Date;
+    rangeEnd: Date;
   }> {
     const rangeStart = addCalendarDays(baselineDate, -366);
     const rangeEnd = addCalendarDays(baselineDate, 366 * 2);
@@ -252,7 +308,59 @@ export class SchedulingApplicationService
           )
         : Promise.resolve([] as UserSchedule[]),
     ]);
-    return { companyHolidays, userSchedules };
+    return { companyHolidays, userSchedules, rangeStart, rangeEnd };
+  }
+
+  /**
+   * 他WBS(未開始・進行中プロジェクトの最新WBS)のユーザー別配分セットを取得する。
+   * OFF・担当者なしの場合は空Mapを返す。現プロジェクトの全WBSは対象から除外する。
+   */
+  private async loadExternalSets(
+    considerOtherWbsLoad: boolean,
+    assignees: WbsAssignee[],
+    projectId: string,
+    rangeStart: Date,
+    rangeEnd: Date
+  ): Promise<Map<string, LabeledAllocationSet[]>> {
+    if (!considerOtherWbsLoad || assignees.length === 0) {
+      return new Map();
+    }
+    return this.crossWbsWorkloadService.getExternalAllocationSets({
+      startDate: rangeStart,
+      endDate: rangeEnd,
+      userIds: [...new Set(assignees.map((a) => a.userId))],
+      excludeProjectId: projectId,
+    });
+  }
+
+  /**
+   * 外部配分セットを担当者(wbs_assignee.id)別の日次負荷マップ(dateKey → hours)へ変換する。
+   * 同一ユーザーが現WBSに複数行登録されている場合は各行が同じ外部負荷を持つ(稀なデータ形状として許容)。
+   */
+  private buildExternalDailyHours(
+    assignees: WbsAssignee[],
+    externalSetsByUser: Map<string, LabeledAllocationSet[]>
+  ): Map<number, Map<string, number>> {
+    const result = new Map<number, Map<string, number>>();
+    if (externalSetsByUser.size === 0) return result;
+
+    for (const assignee of assignees) {
+      if (assignee.id == null) continue;
+      const sets = externalSetsByUser.get(assignee.userId);
+      if (!sets || sets.length === 0) continue;
+
+      const daily = new Map<string, number>();
+      for (const set of sets) {
+        for (const allocation of set.dailyAllocations) {
+          const hours = allocation.allocatedHours;
+          if (hours <= 0) continue;
+          const key = toDateKey(allocation.date);
+          daily.set(key, (daily.get(key) ?? 0) + hours);
+        }
+      }
+      if (daily.size > 0) result.set(assignee.id, daily);
+    }
+    return result;
   }
 
   private buildWorkloads(
@@ -260,7 +368,8 @@ export class SchedulingApplicationService
     assignees: WbsAssignee[],
     userSchedules: UserSchedule[],
     companyCalendar: CompanyCalendar,
-    baselineDate: Date
+    baselineDate: Date,
+    externalSetsByUser?: Map<string, LabeledAllocationSet[]>
   ): WorkloadData[] {
     // 負荷表示範囲: min(開始) 〜 max(終了)
     let minStart = baselineDate;
@@ -311,7 +420,53 @@ export class SchedulingApplicationService
           minStart,
           maxEnd
         );
-      result.push(toWorkloadData(a, daily));
+
+      const externalSets = externalSetsByUser?.get(a.userId) ?? [];
+      if (externalSets.length === 0) {
+        // 従来パス: 現WBSのみ(そのWBSの参画率を分母に使用)
+        result.push(
+          toWorkloadData(
+            AssigneeWorkload.create({
+              assigneeId: a.userId,
+              assigneeName: a.userName || a.userId,
+              dailyAllocations: daily,
+              assigneeRate: a.getRate(),
+            })
+          )
+        );
+        continue;
+      }
+
+      // 他WBS負荷を合算(分母は rate=1: 標準勤務時間−個人予定)
+      const merged = this.workloadMergeService.mergeDailyAllocations({
+        sets: [{ dailyAllocations: daily }, ...externalSets],
+        mergedCalendar: new AssigneeWorkingCalendar(
+          WbsAssignee.create({ userId: a.userId, rate: 1 }),
+          companyCalendar,
+          schedules
+        ),
+        companyCalendar,
+        userSchedules: schedules,
+        startDate: minStart,
+        endDate: maxEnd,
+      });
+      result.push(
+        toWorkloadData(
+          AssigneeWorkload.create({
+            assigneeId: a.userId,
+            assigneeName: a.userName || a.userId,
+            dailyAllocations: merged,
+            assigneeRate: 1,
+          }),
+          {
+            // Rバッジは「現WBS分の配分 > 標準×現WBS参画率」で判定する
+            rateBasis: {
+              rate: a.getRate(),
+              standardWorkingHours: companyCalendar.getStandardWorkingHours(),
+            },
+          }
+        )
+      );
     }
     return result;
   }
@@ -351,39 +506,3 @@ function toDto(st: ScheduledTask): ScheduledTaskDto {
   };
 }
 
-function toWorkloadData(
-  assignee: WbsAssignee,
-  daily: DailyWorkAllocation[]
-): WorkloadData {
-  const rate = assignee.getRate();
-  return {
-    assigneeId: assignee.userId,
-    assigneeName: assignee.userName || assignee.userId,
-    assigneeRate: rate,
-    dailyAllocations: daily.map((d) => ({
-      date: d.date.toISOString(),
-      availableHours: d.availableHours,
-      allocatedHours: d.allocatedHours,
-      isOverloaded: d.allocatedHours > d.availableHours,
-      utilizationRate:
-        d.availableHours > 0 ? d.allocatedHours / d.availableHours : 0,
-      overloadedHours: Math.max(0, d.allocatedHours - d.availableHours),
-      isOverloadedByStandard: d.allocatedHours > 7.5,
-      overloadedByStandardHours: Math.max(0, d.allocatedHours - 7.5),
-      rateAllowedHours: d.availableHours * rate,
-      isOverRateCapacity: d.allocatedHours > d.availableHours * rate,
-      overRateHours: Math.max(0, d.allocatedHours - d.availableHours * rate),
-      isWeekend: d.isWeekend,
-      isCompanyHoliday: d.isCompanyHoliday,
-      userSchedules: d.userSchedules,
-      taskAllocations: d.taskAllocations.map((t) => ({
-        taskId: t.taskId,
-        taskName: t.taskName,
-        allocatedHours: t.allocatedHours,
-        totalHours: t.totalHours,
-        periodStart: t.periodStart?.toISOString(),
-        periodEnd: t.periodEnd?.toISOString(),
-      })),
-    })),
-  };
-}

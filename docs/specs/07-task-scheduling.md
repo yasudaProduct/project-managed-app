@@ -10,6 +10,7 @@
 > **関連仕様書との位置づけ**
 > - [01: 営業日按分ロジック](./01-working-hours-allocation.md): 担当者の「いつ・何時間稼働できるか」（`AssigneeWorkingCalendar` / `CompanyCalendar`）を計算する。本機能はこれを稼働量の基盤として利用する。
 > - 本仕様書（07）: その稼働量と依存関係を踏まえ、**タスクの開始日・終了日を前詰めで決定する**。
+> - [08: 担当者別作業負荷ヒートマップ](./08-assignee-workload-heatmap.md): 日別配分の按分ロジック・複数WBS合算ロジック（`WorkloadCalculationService` / `WorkloadMergeService`）を定義する。本機能は「他WBSの負荷を考慮」オプション（[§7.4](#74-開始日の丸めと工数消化)）でこれらを利用し、負荷プレビュー（[§9.2](#92-担当者別負荷)）の表示にも共有する。
 
 利用画面: WBS管理画面の「スケジュール」タブ、および専用ページ `/wbs/[id]/task-scheduling`。
 
@@ -27,7 +28,7 @@
 プロジェクト管理など、期間中ずっと一定の工数を消費し続けるタスク。タスク名が設定キーワードに**部分一致**するもの。前詰めの対象外とし、既存の予定期間（YOTEI）をそのまま使う。
 
 ### 実施日固定タスク (Fixed-date Task)
-本番導入・定例会など**実施日が確定している**一回性のタスク。タスク名が設定キーワード（`fixedDateTaskKeywords`）に**部分一致**するもの。前詰めの対象外とし、入力済みの予定開始日・終了日（YOTEI）をそのまま採用する。定常タスクと似るが、①一回性のイベントで見通し工数の専用算出（定常）を伴わない、②定常判定より優先される、点が異なる。先行タスクの算出結果が固定日を超える場合は競合として警告する。
+本番導入・定例会など**実施日が確定している**一回性のタスク。タスク名が設定キーワード（`fixedDateTaskKeywords`）に**部分一致**するもの。前詰めの対象外とし、**開始日は入力済みの予定開始日（YOTEI）をそのまま採用**する（非稼働日でも動かさない）。**終了日は予定工数を開始日以降の稼働可能時間で消化して算出**し、算出終了日が入力された終了日を超える場合は期間超過として警告する。定常タスクと似るが、①一回性のイベントで見通し工数の専用算出（定常）を伴わない、②定常判定より優先される、点が異なる。先行タスクは基準日からの前詰めのまま（固定日直前へは引き寄せない。固定日まで空き期間ができてよい）で、先行タスクの算出結果が固定開始日を超える場合は競合として警告する。
 
 ### 依存関係 (Dependency)
 タスク間の前後制約。種別は FS / SS / FF / SF の4種、遅延 `lag`（カレンダー日）を持つ。詳細は [§7.3](#73-依存制約)。
@@ -54,7 +55,7 @@
             ├─ forwardSchedule                       （中核エンジン）
             └─ WorkloadCalculationService.calculateDailyAllocationsFromSchedule（負荷按分）
        ↓ returns プレーンDTO（日付はISO8601文字列）
-  ├─ SchedulingGanttPreview      （ganttv3 の GanttChart を editMode=false で再利用）
+  ├─ SchedulingGanttPreview      （gantt の GanttChart を editMode=false で再利用）
   ├─ AssigneeGanttChart          （previewWorkloads props で負荷表示）
   └─ TSVダウンロード
 ```
@@ -77,11 +78,11 @@
 | フィールド | 型 | 既定値 | 説明 |
 | --- | --- | --- | --- |
 | `steadyTaskKeywords` | `string[]` | `[]` | 定常タスク判定キーワード（タスク名の部分一致） |
-| `fixedDateTaskKeywords` | `string[]` | `[]` | 実施日固定タスク判定キーワード（タスク名の部分一致）。一致タスクは前詰めせずYOTEI期間で固定 |
+| `fixedDateTaskKeywords` | `string[]` | `[]` | 実施日固定タスク判定キーワード（タスク名の部分一致）。一致タスクは前詰めせず開始日を入力値で固定し、終了日は工数から算出 |
 | `consumeSteadyTaskCapacity` | `boolean` | `false` | 定常タスクが担当者の稼働を消費するか |
 | `steadyDailyHoursMode` | `'PRORATE' \| 'FIXED'` | `'PRORATE'` | 定常タスクの日次消費量の決定方式 |
 | `steadyFixedHoursByKeyword` | `Record<string, number>?` | なし | FIXED時のキーワード別日次固定時間(h/日) |
-| `steadyTaskForecastMode` | `'PLANNED' \| 'ACTUAL_PACE' \| 'PLANNED_PACE'` | `'PLANNED'` | 定常タスクの**見通し工数**算出方式（月別集計・ganttV3の見通しで使用。前詰め計算には影響しない）。詳細は [03: 見通し工数計算 §4.7](./03-forecast-calculation.md) |
+| `steadyTaskForecastMode` | `'PLANNED' \| 'ACTUAL_PACE' \| 'PLANNED_PACE'` | `'PLANNED'` | 定常タスクの**見通し工数**算出方式（月別集計・ganttの見通しで使用。前詰め計算には影響しない）。詳細は [03: 見通し工数計算 §4.7](./03-forecast-calculation.md) |
 
 - 永続化された Json は `parseSchedulingSettings()` で正規化される（数値以外の固定値は除外、不正な mode は `PRORATE` にフォールバック）。
 - 編集UIは WBS管理画面「設定」タブ（`src/components/wbs/project-settings.tsx`）。FIXED選択時のみキーワード別の固定時間入力欄が表示され、**現在のキーワードに存在するキーのみ**保存される（キーワード削除で固定値も連動して落ちる）。空欄のキーワードは按分（PRORATE）にフォールバックする。
@@ -100,6 +101,10 @@
 
 UIの基準日が非稼働日（土日祝等）の場合でも、実際の各タスク開始は担当者カレンダー上の翌営業日へ自動的に丸められる（[§7.4](#74-開始日の丸めと工数消化)）。
 
+### 5.1 他WBSの負荷を考慮 (considerOtherWbsLoad)
+
+基準日と同様、計算時のパラメータ（`ScheduleCalculationParams.considerOtherWbsLoad`, 既定 `true`）としてワークベンチのチェックボックスから指定する。プロジェクト単位の永続設定（`schedulingSettings`）ではない。詳細な計算方式は[§7.8](#78-他wbsの負荷を考慮した稼働可能時間の算出)を参照。
+
 ---
 
 ## 6. タスクのステータス別扱い
@@ -113,8 +118,9 @@ UIの基準日が非稼働日（土日祝等）の場合でも、実際の各タ
 | 完了 | `status = COMPLETED` | **実績日程で固定**（前詰めしない） | `COMPLETED_FIXED` | fixed |
 | 進行中 | `status = IN_PROGRESS` | **残工数**を基準日以降に前詰め | `IN_PROGRESS_REMAINING` | — |
 | 未着手 | `status = NOT_STARTED` 等 | フル工数を前詰め | `NORMAL` | — |
-| 実施日固定 | タスク名が `fixedDateTaskKeywords` に部分一致 | **前詰めせずYOTEI期間で固定**（工数0でも配置） | `FIXED_DATE` | — |
-| 実施日固定・先行超過 | 固定タスクの先行がその固定日を超える | 固定日は維持しつつ競合を通知 | `FIXED_DATE_CONFLICT` | — |
+| 実施日固定 | タスク名が `fixedDateTaskKeywords` に部分一致 | **前詰めせず開始日は入力値で固定、終了日は工数から算出**（工数0は入力期間のまま配置） | `FIXED_DATE` | — |
+| 実施日固定・期間超過 | 固定タスクの算出終了日が入力された終了日を超える | 日付は算出値のまま超過を通知 | `FIXED_PERIOD_EXCEEDED` | — |
+| 実施日固定・先行超過 | 固定タスクの先行がその固定開始日を超える | 固定開始日は維持しつつ競合を通知（期間超過と重なる場合は競合を優先） | `FIXED_DATE_CONFLICT` | — |
 | 実施日固定・期間なし | 固定だが YOTEI 期間が無い | 計算対象外 | `FIXED_NO_PERIOD` | skipped |
 | 定常 | タスク名がキーワードに部分一致 | **前詰めせずYOTEI期間のまま** | `STEADY_FIXED_PERIOD` | — |
 | 定常・期間なし | 定常だが YOTEI 期間が無い | 計算対象外 | `STEADY_NO_PERIOD` | skipped |
@@ -134,10 +140,12 @@ UIの基準日が非稼働日（土日祝等）の場合でも、実際の各タ
 全タスクを走査し、担当者未設定 → `NO_ASSIGNEE` skip、完了 → 実績で固定、**非定常かつ非固定**で工数未設定 → `NO_YOTEI_KOSU` skip、に振り分ける。定常・実施日固定タスクは工数0（マイルストーン）でも計算対象として残す。
 
 ### 7.2 フェーズB: 実施日固定・定常タスクの先置き
-前詰めしないタスクを、依存の先行として参照可能にするため YOTEI 期間のまま結果に**先置き**する。判定は**実施日固定を優先**し、その後に定常を判定する（両方のキーワードに一致する場合は固定扱い）。
+前詰めしないタスクを、依存の先行として参照可能にするため結果に**先置き**する。判定は**実施日固定を優先**し、その後に定常を判定する（両方のキーワードに一致する場合は固定扱い）。
 
-- **実施日固定タスク**（`isFixedDateTask`）: `scheduledStart = yoteiStart`, `scheduledEnd = yoteiEnd`, `note = FIXED_DATE`。工数0でも配置する。YOTEI 期間が無ければ `FIXED_NO_PERIOD` skip。**通常タスクと同様に担当者の稼働を消費する**（一回性の確定作業のため。予定工数を固定期間内の稼働日へ按分し `consumed` へ加算。フラグ不要で常時消費）。同一担当者の通常タスクはこの占有を避けて前詰めされる。
+- **実施日固定タスク**（`isFixedDateTask`）: `scheduledStart = yoteiStart`（**非稼働日でも入力のまま動かさない**）。`scheduledEnd` は**予定工数を開始日以降の実効稼働で消化して算出**する（`consumeUntilDone`。稼働率・休日・個人予定・同一担当者の既存占有を考慮するため、入力終了日より早くも遅くもなり得る）。算出終了日が入力された `yoteiEnd` を超える場合は `note = FIXED_PERIOD_EXCEEDED`、収まる場合は `FIXED_DATE`。YOTEI 期間が無ければ `FIXED_NO_PERIOD` skip。**工数0またはカレンダー未登録の場合は算出できないため入力期間をそのまま採用**する（マイルストーン等）。消化分は `consumed` に記録され、同一担当者の通常タスクはこの占有を避けて前詰めされる。
 - **定常タスク**（`isSteadyTask`）: YOTEI 期間のまま先置き。期間が無ければ `STEADY_NO_PERIOD` skip。稼働消費は `consumeSteadyTaskCapacity`（既定 false）に従う。
+
+固定タスクの先行タスクは基準日からの前詰めのまま（[§7.3](#73-依存制約)〜[§7.4](#74-開始日の丸めと工数消化)）であり、固定日直前へ引き寄せる逆算は行わない。早く終われば固定日までの空き期間はそのまま残る（リスケ時に他タスクを差し込む余地として見せる）。
 
 `consumeSteadyTaskCapacity = true` の場合、定常タスクが期間中の各稼働日に消費する工数を担当者ごとの消費マップ `consumed[assigneeId][YYYY-MM-DD]` に加算する。日次消費量は次で決まる:
 
@@ -177,7 +185,23 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 結果は `予定開始日 → タスクNo（数値昇順）` でソートする。日付未確定（skip）は末尾。
 
 ### 7.7 実施日固定タスクの競合検出（計算後）
-通常タスクの前詰め後、各実施日固定タスク（`FIXED_DATE`）について先行タスクの `impliedStart`（[§7.3](#73-依存制約)と同じ式）を求め、その最早開始下限が固定開始日を超える場合は `note` を `FIXED_DATE_CONFLICT` に更新する。**固定日そのものは変更しない**（前工程が固定日に間に合わないというリスケ判断シグナルとしてのみ扱う）。この結果は `SchedulingPreconditionService.checkFixedDateConflicts` により `FIXED_DATE_CONFLICT` 警告へ変換される。
+通常タスクの前詰め後、各実施日固定タスク（`FIXED_DATE` / `FIXED_PERIOD_EXCEEDED`）について先行タスクの `impliedStart`（[§7.3](#73-依存制約)と同じ式）を求め、その最早開始下限が固定開始日を超える場合は `note` を `FIXED_DATE_CONFLICT` に更新する。**固定開始日・算出終了日そのものは変更しない**（前工程が固定日に間に合わないというリスケ判断シグナルとしてのみ扱う）。期間超過（`FIXED_PERIOD_EXCEEDED`）と競合が重なる場合はリスケ判断上より重要な競合を優先する。これらの note は `SchedulingPreconditionService.checkFixedDateConflicts` / `checkFixedPeriodExceeded` により `FIXED_DATE_CONFLICT` / `FIXED_PERIOD_EXCEEDED` 警告へ変換される。
+
+### 7.8 他WBSの負荷を考慮した稼働可能時間の算出
+
+`considerOtherWbsLoad`（[§5.1](#51-他wbsの負荷を考慮-considerotherwbsload)）がONの場合、対象WBS（[08仕様書 §4](./08-assignee-workload-heatmap.md#4-対象wbsの決定)。未開始・進行中プロジェクトの最新WBS、**現プロジェクトは除外**）の担当者ごとの日別配分を `ICrossWbsWorkloadService.getExternalAllocationSets` で取得し、現WBSの担当者カレンダーを次のクラスへ差し替える。
+
+`ExternalLoadAwareCalendar`（`src/domains/task-scheduling/external-load-aware-calendar.ts`）は、担当者の参画率を「そのWBSに割ける取り分の予約」と解釈し、外部負荷は**まず取り分（参画率キャップ）外の時間から消費される**ものとして稼働可能時間を算出する。
+
+```
+available = max(0, min(標準勤務時間 × 参画率, (標準勤務時間 − 個人予定) − 他WBS負荷))
+```
+
+**採用理由**: 参画率キャップ後の枠から外部負荷を減算する方式（`min(物理残, 標準×率) − 外部負荷`）だと、例えば参画率0.5で2プロジェクトを掛け持ちする担当者は、他WBSが1日3.75h（自分の取り分ちょうど）埋まっているだけで自分の取り分が0になってしまう（キャップ後の3.75hから3.75hを引くため）。本方式では外部負荷を先に「取り分外」の時間（標準7.5h中、この担当者の取り分ではない残り3.75h）から吸収するため、参画率0.5の担当者同士が別WBSでそれぞれの取り分いっぱいに稼働していても、互いの前詰め計算には影響しない。参画率1.0の担当者はどちらの方式でも結果が一致する。
+
+外部負荷（`getExternalAllocationSets` が返す `LabeledAllocationSet[]`）は担当者(`wbs_assignee.id`)ごとに日別合計へ変換し（`buildExternalDailyHours`）、`ExternalLoadAwareCalendar` の `externalDailyHours` として渡す。取得範囲は[§7.4](#74-開始日の丸めと工数消化)の稼働カレンダー入力と同じ `[基準日−366日, 基準日+732日]`。
+
+負荷プレビュー（[§9.2](#92-担当者別負荷)）も同じ外部配分セットを使い、[08仕様書 §7](./08-assignee-workload-heatmap.md#7-複数wbsの合算他wbs考慮)の合算・ハイブリッドRバッジのロジックで表示する。
 
 ---
 
@@ -194,7 +218,8 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 | `CYCLIC_DEPENDENCY` | 依存に循環あり（`cycleTaskNos` に該当タスクNo） |
 | `ON_HOLD` | 保留タスクが含まれる（計算対象になる旨の注意喚起。挙動は未着手と同じ） |
 | `COMPLETED_NO_PERIOD` | 完了タスクに日程（実績・予定）が無い（日程未確定のまま固定され、後続の依存制約に反映されない） |
-| `FIXED_DATE_CONFLICT` | **計算後の検証**: 実施日固定タスクの先行がその固定日を超える（`checkFixedDateConflicts`。前工程が固定日に間に合わない） |
+| `FIXED_DATE_CONFLICT` | **計算後の検証**: 実施日固定タスクの先行がその固定開始日を超える（`checkFixedDateConflicts`。前工程が固定日に間に合わない） |
+| `FIXED_PERIOD_EXCEEDED` | **計算後の検証**: 実施日固定タスクの算出終了日が入力された終了日を超える（`checkFixedPeriodExceeded`。予定工数が入力期間に収まらない） |
 | `EXCEEDS_PROJECT_END` | **計算後の検証**: 算出した終了日がプロジェクト終了日を超過（`checkProjectEnd`、日単位比較。完了固定タスクの実績超過も含む） |
 
 循環検出は `TaskDependencyValidator.detectCycles`（Tarjanの強連結成分、サイズ2以上を循環とみなす）。
@@ -214,10 +239,12 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 | `tsv` | TSV文字列（サーバー生成） |
 
 ### 9.1 ガントプレビュー
-`scheduledToGanttTasks` / `scheduledToGanttPhases`（`adapters/scheduled-to-gantt.ts`）で ganttv3 の `Task[]` / `GanttPhase[]` に変換し、`GanttChart` を `editMode=false` で表示する。**日付未確定/skipタスクは除外**（タイムライン境界の NaN を防ぐため）。読み取り専用なのでDB書き戻しは構造的に発生しない。
+`scheduledToGanttTasks` / `scheduledToGanttPhases`（`adapters/scheduled-to-gantt.ts`）で gantt の `Task[]` / `GanttPhase[]` に変換し、`GanttChart` を `editMode=false` で表示する。**日付未確定/skipタスクは除外**（タイムライン境界の NaN を防ぐため）。読み取り専用なのでDB書き戻しは構造的に発生しない。
 
 ### 9.2 担当者別負荷
-計算結果を `WorkloadCalculationService.calculateDailyAllocationsFromSchedule` に流し、`AssigneeGanttChart` に `previewWorkloads` props として渡す（サーバー取得をスキップして計算結果を表示）。過負荷・参画率超過のセル色分けは既存ロジックを踏襲。
+計算結果を `WorkloadCalculationService.calculateDailyAllocationsFromSchedule` に流し、`AssigneeGanttChart` に `previewWorkloads` props として渡す（サーバー取得をスキップして計算結果を表示）。過負荷・参画率超過のセル色分けは[08仕様書](./08-assignee-workload-heatmap.md#6-派生指標ui表示用フラグ)のロジックを踏襲。
+
+`considerOtherWbsLoad` がONの場合（既定）、[§7.8](#78-他wbsの負荷を考慮した稼働可能時間の算出)で取得済みの外部配分セットを `WorkloadMergeService` で現WBS分の負荷へ合算する（分母は rate=1、Rバッジは現WBS参画率での取り分超過判定。[08仕様書 §7](./08-assignee-workload-heatmap.md#7-複数wbsの合算他wbs考慮)）。OFFの場合は従来通り現WBSの参画率カレンダーのみで按分する。`recalculatePreview`（手動調整後の再計算）も同じ `considerOtherWbsLoad` を受け取り、同条件で外部配分を再取得・合算する。
 
 ### 9.3 TSV
 `convertScheduledTasksToTsv`（`tsv-converter.ts`）が `タスクNo / タスク名 / 担当者 / フェーズ / ステータス / 定常 / 予定開始日 / 予定終了日 / 予定工数 / 備考` の列を生成。ダウンロードは Blob + BOM 付与方式。手動調整中は調整後の内容が出力される。
@@ -225,7 +252,7 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 ### 9.4 手動調整
 自動計算結果を起点にユーザーが画面上で最終調整するモード。ガントのツールバー「編集モード」で開始する。
 
-- **編集手段**: バーのドラッグ（移動／両端リサイズ）と、バークリックで開くインライン編集パネル（予定開始日・終了日・工数・担当者）。ganttv3 の既存編集UI（制御コンポーネント）をそのまま利用しており、**ganttv3 本体は無修正**。
+- **編集手段**: バーのドラッグ（移動／両端リサイズ）と、バークリックで開くインライン編集パネル（予定開始日・終了日・工数・担当者）。gantt の既存編集UI（制御コンポーネント）をそのまま利用しており、**gantt 本体は無修正**。
 - **状態管理**: 編集は `onTaskUpdate` → `applyGanttTaskToScheduled`（`adapters/scheduled-to-gantt.ts`）で `ScheduledTaskDto[]` のクライアント状態へ非破壊反映されるだけで、**DBへの書き込みは一切発生しない**（一時テーブルも不使用）。
 - **負荷・TSV・警告への反映**: 編集からデバウンス（500ms）後に読み取り専用の Server Action `recalculateSchedulePreview` → `recalculatePreview`（アプリケーション層）を呼び、担当者別負荷（`AssigneeGanttChart` の `previewWorkloads`）・TSV・`EXCEEDS_PROJECT_END` 警告を再計算して差し替える。前詰め（`forwardSchedule`）は再実行しない。
 - **対象外**: 完了（実績固定, `fixed`）タスクは調整不可（トーストで通知）。
@@ -237,11 +264,13 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 ## 10. 既知の制約と今後の課題
 
 - **DB書き戻し非対応**: 計算結果はプレビュー＋TSVのみ。WBSへの反映は MySQL/Excel インポートが本流（[§1](#1-概要)）。
-- **FF/SF依存は近似**: 後続の所要日数を理想営業日数で近似するため、休暇・参画率が絡むと誤差が出る。終了日からの逆算（`consumeBackward`）による厳密化は局所改修で対応可能だが未実装。
+- **FF/SF依存は近似**: 後続の所要日数を理想営業日数で近似するため、休暇・参画率が絡むと誤差が出る。終了日からの逆算による厳密化は局所改修で対応可能だが未実装。
 - **リソース制約の同時最適化は非対応**: 依存・担当者稼働・定常消費を満たす厳密な最適解（リソース制約付きスケジューリング）は対象外。前詰めヒューリスティックによる試算である。
-- **実施日固定タスクの判定はキーワード方式**: 固定対象はタスク名の部分一致（`fixedDateTaskKeywords`）で判定する。命名に依存するため、1タスク単位の厳密な指定が必要な場合は将来的にタスク単位のフラグ（例: `WbsTask.scheduleFixed`）への拡張が想定される。なお固定タスクは通常タスク同様に担当者の稼働を消費する（同一担当者の通常タスクは固定タスクの占有を避けて前詰めされる）。工数の期間内配分は按分（`予定工数 ÷ 固定期間内の稼働日数`）で近似する。
+- **実施日固定タスクの判定はキーワード方式**: 固定対象はタスク名の部分一致（`fixedDateTaskKeywords`）で判定する。命名に依存するため、1タスク単位の厳密な指定が必要な場合は将来的にタスク単位のフラグ（例: `WbsTask.scheduleFixed`）への拡張が想定される。なお固定タスクは通常タスク同様に担当者の稼働を消費する（開始日以降の実効稼働から `consumeUntilDone` で実消化。同一担当者の通常タスクは固定タスクの占有を避けて前詰めされる）。
+- **固定タスクの先行は前詰めのまま**: 固定タスクの先行タスクを固定日直前へ引き寄せる逆算（ALAP）配置は行わない。先行が早く終わった場合の固定日までの空き期間は仕様（リスケ判断の材料）として残す。
 - **タイムゾーン前提**: エンジンの日付キーは**サーバーのローカル日付**（`toDateKey`）で、入力の日付（プロジェクト開始日・CUSTOM基準日等）は UTC 深夜の `Date` を想定する。サーバーTZが UTC（推奨）または UTC+側（JST等）なら日付は一致するが、UTC−側のTZでは1日ずれる。実行環境の TZ は UTC 固定を推奨（CLAUDE.md の日付ポリシー参照）。
 - **全日休暇キーワードのハードコード**: 個人予定を全日休暇とみなすタイトル（「休暇」「有給」等）は `AssigneeWorkingCalendar` にハードコードされており、設定化は未対応。
+- **他WBS考慮は取得範囲内のみ**: `considerOtherWbsLoad` がONの場合の外部負荷取得範囲は `[基準日−366日, 基準日+732日]`（[§7.8](#78-他wbsの負荷を考慮した稼働可能時間の算出)）。対象WBSのタスクがこの範囲外に予定されている場合、その分の外部負荷は前詰め計算に反映されない。
 
 ---
 
@@ -255,14 +284,17 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 - `topological-sort.ts` — トポロジカルソート
 - `working-calendar-walker.ts` — 稼働日探索・工数消化
 - `scheduling-precondition-service.ts` — 前提条件チェック
+- `external-load-aware-calendar.ts` — 他WBS考慮の稼働カレンダー（[§7.8](#78-他wbsの負荷を考慮した稼働可能時間の算出)）
 - `src/domains/task-dependency/task-dependency-validator.ts` — `detectCycles`
+- `src/domains/assignee-workload/workload-merge-service.ts` — 負荷プレビューの合算（[08仕様書](./08-assignee-workload-heatmap.md)）
 
 ### アプリケーション (`src/applications/task-scheduling/`)
-- `scheduling-application-service.ts` — オーケストレーション
+- `scheduling-application-service.ts` — オーケストレーション（`ICrossWbsWorkloadService` を注入し他WBS考慮を実行）
 - `scheduling-task-mapper.ts` — `Task` → `SchedulingTask`
 - `baseline-resolver.ts` / `tsv-converter.ts`
 - `ischeduling-application-service.ts` / `ischeduling-settings-repository.ts`
 - `src/infrastructures/scheduling-settings-repository.ts`
+- `src/applications/cross-wbs-workload/cross-wbs-workload-service.ts` — 対象WBS解決・外部配分セット取得（[08仕様書](./08-assignee-workload-heatmap.md)）
 
 ### UI (`src/components/task-scheduling/`)
 - `scheduling-workbench.tsx` — メイン画面
@@ -270,7 +302,8 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 - `scheduling-actions.ts` — Server Action
 - `adapters/scheduled-to-gantt.ts` — 結果→ガント変換
 - `src/components/wbs/project-settings.tsx` — 設定UI
-- `src/app/wbs/[id]/assignee-gantt/assignee-gantt-chart.tsx` — 負荷表示（preview props対応）
+- `src/app/wbs/[id]/assignee-gantt/assignee-gantt-chart.tsx` — 負荷表示（preview props対応。他WBS考慮トグルは通常表示時のみ）
+- `src/components/assignee-gantt/workload-gantt-chart.tsx` — 負荷表示の汎用チャート本体（[08仕様書](./08-assignee-workload-heatmap.md)）
 
 ---
 
@@ -282,12 +315,13 @@ steadyDailyHoursMode = FIXED かつ steadyFixedHoursByKeyword に一致キーワ
 | 定常タスク判定 | `steady-task-classifier.test.ts` |
 | 実施日固定タスク判定 | `fixed-date-task-classifier.test.ts` |
 | 稼働日探索・消化 | `working-calendar-walker.test.ts` |
-| 中核エンジン（依存/定常/完了/進行中/基準日/上限/循環） | `forward-scheduler.test.ts` |
+| 中核エンジン（依存/定常/完了/進行中/基準日/上限/循環/他WBS負荷考慮カレンダー連携） | `forward-scheduler.test.ts` |
+| 他WBS考慮の稼働カレンダー（予約式） | `src/__tests__/domains/task-scheduling/external-load-aware-calendar.test.ts` |
 | 前提条件 | `scheduling-precondition.service.test.ts` |
 | 循環検出 | `src/__tests__/domains/task-dependency/task-dependency-validator.test.ts` |
 | 負荷按分（計算結果版） | `src/__tests__/domains/assignee-workload/workload-calculation-from-schedule.test.ts` |
 | 基準日解決 / TSV変換 | `baseline-resolver.test.ts` / `tsv-converter.test.ts` |
 | マッパー | `src/__tests__/applications/task-scheduling/scheduling-task-mapper.test.ts` |
-| アプリサービス（結合） | `scheduling-application.service.test.ts` |
+| アプリサービス（結合。他WBS考慮ON/OFF・取り分確保を含む） | `scheduling-application.service.test.ts` |
 | 設定の正規化 | `src/__tests__/types/scheduling-settings.test.ts` |
 | ガント変換アダプタ | `src/__tests__/components/task-scheduling/scheduled-to-gantt.test.ts` |

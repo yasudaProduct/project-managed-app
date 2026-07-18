@@ -20,7 +20,11 @@ import {
 export interface ForwardSchedulerInput {
   tasks: SchedulingTask[];
   dependencies: TaskDependency[];
-  /** assigneeId(wbs_assignee.id) → 稼働カレンダー */
+  /**
+   * assigneeId(wbs_assignee.id) → 稼働カレンダー。
+   * 他WBS負荷の考慮は ExternalLoadAwareCalendar をここへ渡すことで行う
+   * (available = min(標準×参画率, 物理残−外部負荷))。
+   */
   calendars: Map<number, WorkingCalendar>;
   standardWorkingHours: number;
   options: SchedulingOptions;
@@ -135,9 +139,11 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
     }
   }
 
-  // ---- フェーズA2: 実施日固定タスクを予定期間で固定（前詰めしない） ----
+  // ---- フェーズA2: 実施日固定タスクを開始日固定・終了日算出で配置（前詰めしない） ----
   // 本番導入・定例会など実施日が確定しているタスクは、前詰めの対象から外し
-  // 入力済みのYOTEI期間をそのまま採用する。定常判定より優先する。
+  // 入力済みの予定開始日をそのまま採用する（非稼働日でも動かさない）。定常判定より優先する。
+  // 終了日は予定工数を開始日以降の稼働可能時間で消化して算出し、算出終了日が
+  // 入力された終了日を超える場合は FIXED_PERIOD_EXCEEDED として警告する（日付は算出値のまま）。
   for (const t of tasks) {
     if (result.has(t.taskId)) continue;
     if (!isFixedDateTask(t.taskName, fixedDateTaskKeywords)) continue;
@@ -149,36 +155,42 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
       });
       continue;
     }
-    result.set(t.taskId, {
-      ...baseResult(t),
-      note: "FIXED_DATE",
-      scheduledStartDate: t.yoteiStartDate,
-      scheduledEndDate: t.yoteiEndDate,
-      scheduledManHours: t.yoteiKosu ?? 0,
-    });
+    const kosu = t.yoteiKosu ?? 0;
+    const cal = t.assigneeId != null ? calendars.get(t.assigneeId) : undefined;
+    if (kosu <= 0 || !cal) {
+      // 工数が無い（マイルストーン等）またはカレンダー未登録なら終了日を算出できない
+      // ため、入力された期間をそのまま採用する
+      result.set(t.taskId, {
+        ...baseResult(t),
+        note: "FIXED_DATE",
+        scheduledStartDate: t.yoteiStartDate,
+        scheduledEndDate: t.yoteiEndDate,
+        scheduledManHours: kosu,
+      });
+      continue;
+    }
 
     // 固定タスクは一回性の確定作業であり、通常タスク同様に担当者の稼働を消費する。
-    // 予定工数を固定期間内の稼働日へ按分し、同一担当者の通常タスクが固定タスクの
-    // 占有時間を避けて前詰めされるようにする。
-    if (t.assigneeId != null) {
-      const cal = calendars.get(t.assigneeId);
-      if (cal) {
-        const workingDays = countWorkingDays(
-          t.yoteiStartDate,
-          t.yoteiEndDate,
-          cal
-        );
-        const dailyHours =
-          workingDays > 0 ? (t.yoteiKosu ?? 0) / workingDays : 0;
-        consumePeriodCapacity(
-          t.yoteiStartDate,
-          t.yoteiEndDate,
-          dailyHours,
-          cal,
-          consumedOf(t.assigneeId)
-        );
-      }
-    }
+    // consumeUntilDone が消化分を consumed に記録するため、同一担当者の通常タスクは
+    // 固定タスクの占有時間を避けて前詰めされる。
+    const { endDate, overflow } = consumeUntilDone(
+      t.yoteiStartDate,
+      kosu,
+      cal,
+      consumedOf(t.assigneeId!)
+    );
+    const exceeded = endDate.getTime() > t.yoteiEndDate.getTime();
+    result.set(t.taskId, {
+      ...baseResult(t),
+      note: overflow
+        ? "SCHEDULE_OVERFLOW"
+        : exceeded
+          ? "FIXED_PERIOD_EXCEEDED"
+          : "FIXED_DATE",
+      scheduledStartDate: t.yoteiStartDate,
+      scheduledEndDate: endDate,
+      scheduledManHours: kosu,
+    });
   }
 
   // ---- フェーズB: 定常タスク先置き（前詰めしない） ----
@@ -304,10 +316,16 @@ export function forwardSchedule(input: ForwardSchedulerInput): ScheduledTask[] {
 
   // ---- フェーズD: 実施日固定タスクの先行超過を検出 ----
   // 先行タスクの算出結果が固定開始日より後ろへずれ込む場合、前工程が固定日に
-  // 間に合わない競合として note を FIXED_DATE_CONFLICT に更新する（日付は固定のまま）。
+  // 間に合わない競合として note を FIXED_DATE_CONFLICT に更新する（日付はそのまま）。
+  // 期間超過(FIXED_PERIOD_EXCEEDED)と競合が重なる場合はリスケ判断上より重要な競合を優先する。
   const conflictIds: number[] = [];
   for (const [taskId, r] of result) {
-    if (r.note !== "FIXED_DATE" || !r.scheduledStartDate) continue;
+    if (
+      (r.note !== "FIXED_DATE" && r.note !== "FIXED_PERIOD_EXCEEDED") ||
+      !r.scheduledStartDate
+    ) {
+      continue;
+    }
     const t = taskById.get(taskId);
     if (!t) continue;
     const predLB = predecessorLowerBound(

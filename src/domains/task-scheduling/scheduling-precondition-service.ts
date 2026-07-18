@@ -13,6 +13,7 @@ export type PreconditionWarningKind =
   | "STEADY_NO_PERIOD"
   | "FIXED_NO_PERIOD"
   | "FIXED_DATE_CONFLICT"
+  | "FIXED_PERIOD_EXCEEDED"
   | "ON_HOLD"
   | "COMPLETED_NO_PERIOD"
   | "EXCEEDS_PROJECT_END";
@@ -176,6 +177,31 @@ export class SchedulingPreconditionService {
         taskName: t.taskName,
         detail:
           "先行タスクの算出終了日が実施日(固定)を超えています。前工程が固定日に間に合いません",
+      });
+    }
+
+    return warnings;
+  }
+
+  /**
+   * 計算後の検証: 実施日固定タスクのうち、工数から算出した終了日が入力された
+   * 終了日を超えている（予定工数が入力期間に収まらない）ものを警告として抽出する。
+   * 超過判定自体は forwardSchedule が行い、ここでは note を警告へ変換する。
+   */
+  static checkFixedPeriodExceeded(
+    scheduled: ScheduledTask[]
+  ): PreconditionWarning[] {
+    const warnings: PreconditionWarning[] = [];
+
+    for (const t of scheduled) {
+      if (t.note !== "FIXED_PERIOD_EXCEEDED") continue;
+      warnings.push({
+        kind: "FIXED_PERIOD_EXCEEDED",
+        taskId: t.taskId,
+        taskNo: t.taskNo,
+        taskName: t.taskName,
+        detail:
+          "予定工数が実施日(固定)の期間に収まりません。算出した終了日が入力された終了日を超えています",
       });
     }
 

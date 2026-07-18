@@ -9,6 +9,7 @@ export type ScheduledTaskNote =
   | "STEADY_FIXED_PERIOD"
   | "FIXED_DATE"
   | "FIXED_DATE_CONFLICT"
+  | "FIXED_PERIOD_EXCEEDED"
   | "NO_ASSIGNEE"
   | "NO_YOTEI_KOSU"
   | "STEADY_NO_PERIOD"

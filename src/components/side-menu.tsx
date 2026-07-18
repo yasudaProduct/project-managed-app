@@ -5,6 +5,7 @@ import {
   BarChart3,
   Calendar,
   FolderKanban,
+  Gauge,
   Home,
   Menu,
   Trello,
@@ -84,6 +85,13 @@ export function SideMenu() {
               WBS分析
             </Link>
             <Link
+              href="/assignee-gantt"
+              className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
+              <Gauge className="h-4 w-4" />
+              担当者負荷
+            </Link>
+            <Link
               href="/work-records"
               className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
             >
@@ -141,18 +149,11 @@ export function SideMenu() {
                   タスク管理
                 </Link>
                 <Link
-                  href={`/projects/${projectId}/ganttv2`}
+                  href={`/projects/${projectId}/gantt`}
                   className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
                 >
                   <Trello className="h-4 w-4" />
-                  ガントチャートv2
-                </Link>
-                <Link
-                  href={`/projects/${projectId}/ganttv3`}
-                  className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
-                >
-                  <Trello className="h-4 w-4" />
-                  ガントチャートv3
+                  ガントチャート
                 </Link>
               </>
             )}
