@@ -15,6 +15,7 @@ import {
   GroupBy,
   TaskSortBy,
   DependencyType,
+  TaskBarVariant,
 } from "./gantt";
 import { groupTasksByType } from "./utils/groupTasks";
 import { resolveBarColor } from "./utils/phase-colors";
@@ -194,15 +195,23 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     const [rowScale, setRowScale] = useState(1);
     const chartContentRef = useRef<HTMLDivElement>(null);
 
-    // ホバー中のタスクとカーソル位置（ツールチップ表示用）
+    // ホバー中のタスクとカーソル位置・バー種別（ツールチップ表示用）
     const [hoveredTask, setHoveredTask] = useState<{
       task: Task;
       x: number;
       y: number;
+      variant: TaskBarVariant;
     } | null>(null);
-    const handleBarHover = useCallback((task: Task, e: React.MouseEvent) => {
-      setHoveredTask({ task, x: e.clientX, y: e.clientY });
-    }, []);
+    const handleBarHover = useCallback(
+      (
+        task: Task,
+        e: React.MouseEvent,
+        variant: TaskBarVariant = "planned",
+      ) => {
+        setHoveredTask({ task, x: e.clientX, y: e.clientY, variant });
+      },
+      [],
+    );
     const handleBarHoverEnd = useCallback(() => setHoveredTask(null), []);
 
     // バークリック（非編集モード）→ 詳細サイドバー。ツールチップは閉じる。
@@ -1186,6 +1195,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                 task={hoveredTask.task}
                 x={hoveredTask.x}
                 y={hoveredTask.y}
+                variant={hoveredTask.variant}
               />
             )}
 
@@ -1404,7 +1414,10 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                               <g
                                 key={`${row.id}-actual`}
                                 data-testid="gantt-actual-bar"
-                                style={{ pointerEvents: "none" }}
+                                onMouseEnter={(e) =>
+                                  handleBarHover(task, e, "actual")
+                                }
+                                onMouseLeave={handleBarHoverEnd}
                               >
                                 <rect
                                   x={actualX}
@@ -1424,7 +1437,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                     width={actualWidth}
                                     height={TASK_HEIGHT}
                                     name={task.name}
-                                    hours={task.duration}
+                                    hours={task.actualDuration}
                                   />
                                 )}
                               </g>
@@ -1456,7 +1469,10 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                               <g
                                 key={`${row.id}-forecast`}
                                 data-testid="gantt-forecast-bar"
-                                style={{ pointerEvents: "none" }}
+                                onMouseEnter={(e) =>
+                                  handleBarHover(task, e, "forecast")
+                                }
+                                onMouseLeave={handleBarHoverEnd}
                               >
                                 <rect
                                   x={forecastX}
@@ -1477,7 +1493,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                     width={forecastWidth}
                                     height={TASK_HEIGHT}
                                     name={task.name}
-                                    hours={task.duration}
+                                    hours={task.forecastDuration}
                                   />
                                 )}
                               </g>
