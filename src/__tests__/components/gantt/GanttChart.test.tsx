@@ -782,8 +782,53 @@ describe("GanttChart", () => {
       );
       // タスクリスト行(1) + 予定/実績/見通しの3バー = 計4箇所
       expect(screen.getAllByText(/タスクA/).length).toBeGreaterThanOrEqual(4);
-      // 予定/実績/見通しの3バーとも「名前 + 工数」を表示（duration=2）
-      expect(screen.getAllByText("タスクA (2h)").length).toBe(3);
+    });
+
+    it("実績・見通しバーは予定工数ではなく、それぞれ実績工数・見通し工数をラベルに表示する", () => {
+      const withActual = [
+        makeTask({
+          id: "1",
+          name: "タスクA",
+          category: "設計",
+          duration: 2,
+          startDate: new Date("2024-01-01T00:00:00.000Z"),
+          endDate: new Date("2024-01-03T00:00:00.000Z"),
+          actualStartDate: new Date("2024-01-02T00:00:00.000Z"),
+          actualEndDate: new Date("2024-01-04T00:00:00.000Z"),
+          actualDuration: 3,
+          forecastStartDate: new Date("2024-01-02T00:00:00.000Z"),
+          forecastEndDate: new Date("2024-01-08T00:00:00.000Z"),
+          forecastDuration: 5,
+        }),
+      ];
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={withActual}
+          style={makeStyle({
+            showDependencies: false,
+            showTodayLine: false,
+            labelPosition: "inside",
+            showActual: true,
+            showForecast: true,
+          })}
+        />,
+      );
+
+      const plannedBar = container.querySelector('[data-task-id="1"]')!;
+      expect(within(plannedBar).getByText("タスクA (2h)")).toBeInTheDocument();
+
+      const actualBar = container.querySelector(
+        '[data-testid="gantt-actual-bar"]',
+      )!;
+      expect(within(actualBar).getByText("タスクA (3h)")).toBeInTheDocument();
+
+      const forecastBar = container.querySelector(
+        '[data-testid="gantt-forecast-bar"]',
+      )!;
+      expect(
+        within(forecastBar).getByText("タスクA (5h)"),
+      ).toBeInTheDocument();
     });
   });
 
@@ -845,6 +890,75 @@ describe("GanttChart", () => {
       expect(
         screen.queryByTestId("gantt-task-tooltip"),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("実績・見通しバーのホバーでツールチップ", () => {
+    const taskWithActualForecast = [
+      makeTask({
+        id: "1",
+        name: "タスクA",
+        category: "設計",
+        duration: 2,
+        startDate: new Date("2024-01-01T00:00:00.000Z"),
+        endDate: new Date("2024-01-03T00:00:00.000Z"),
+        actualStartDate: new Date("2024-01-02T00:00:00.000Z"),
+        actualEndDate: new Date("2024-01-05T00:00:00.000Z"),
+        actualDuration: 4,
+        forecastStartDate: new Date("2024-01-02T00:00:00.000Z"),
+        forecastEndDate: new Date("2024-01-09T00:00:00.000Z"),
+        forecastDuration: 6,
+      }),
+    ];
+    const styleWithBoth = makeStyle({
+      showDependencies: false,
+      showTodayLine: false,
+      showActual: true,
+      showForecast: true,
+    });
+
+    it("実績バーのホバーで実績期間・実績工数を表示し、離脱で消える", () => {
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={taskWithActualForecast}
+          style={styleWithBoth}
+        />,
+      );
+      const bar = container.querySelector('[data-testid="gantt-actual-bar"]')!;
+      fireEvent.mouseEnter(bar);
+      const tip = screen.getByTestId("gantt-task-tooltip");
+      expect(within(tip).getByText(/タスクA/)).toBeInTheDocument();
+      expect(within(tip).getByText("実績")).toBeInTheDocument();
+      expect(
+        within(tip).getByText("2024/01/02 〜 2024/01/05"),
+      ).toBeInTheDocument();
+      expect(within(tip).getByText("4h")).toBeInTheDocument();
+
+      fireEvent.mouseLeave(bar);
+      expect(
+        screen.queryByTestId("gantt-task-tooltip"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("見通しバーのホバーで見通し期間・見通し工数を表示する", () => {
+      const { container } = render(
+        <GanttChart
+          {...defaultProps}
+          tasks={taskWithActualForecast}
+          style={styleWithBoth}
+        />,
+      );
+      const bar = container.querySelector(
+        '[data-testid="gantt-forecast-bar"]',
+      )!;
+      fireEvent.mouseEnter(bar);
+      const tip = screen.getByTestId("gantt-task-tooltip");
+      expect(within(tip).getByText("見通し")).toBeInTheDocument();
+      expect(
+        within(tip).getByText("2024/01/02 〜 2024/01/09"),
+      ).toBeInTheDocument();
+      expect(within(tip).getByText("6h")).toBeInTheDocument();
     });
   });
 
