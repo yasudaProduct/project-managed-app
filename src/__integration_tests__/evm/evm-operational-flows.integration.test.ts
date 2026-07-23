@@ -31,9 +31,9 @@ import { cleanupTestData, seedTestProject, testIds } from '../helpers';
  * MySQL 側（ExcelWbs / Geppo）はスタブにし、Postgres 側は実リポジトリ＋実DBで通す
  * （wbs-sync-application.integration.test.ts と同じ方針）。
  *
- * `it.failing` のテストは「あるべき挙動」を記述した既知バグの文書化。
- * 現行実装では失敗する（= failing 指定でスイートは緑）。バグ修正後に
- * failing を外すこと。
+ * フロー3末尾の3ケースは調査レポート（docs/reports/evm-operational-reliability-investigation.md
+ * バグ1〜3）で実証された既知バグのリグレッションテスト。当初は `it.failing` で
+ * バグを文書化し、修正済みのため現在は通常の `it` として「あるべき挙動」を検証する。
  */
 
 const localIds = {
@@ -585,10 +585,10 @@ describe('EVM 運用フロー結合テスト', () => {
     });
 
     // ------------------------------------------------------------------
-    // 以下は既知バグの文書化（あるべき挙動を記述。現行実装では失敗する）
+    // 以下は調査レポートのバグ1〜3のリグレッションテスト
     // ------------------------------------------------------------------
 
-    it.failing('【既知バグ】wbsId未設定の旧形式実績が残っていても、再取込でACが二重計上されない', async () => {
+    it('【バグ1修正】wbsId未設定の旧形式実績が残っていても、再取込でACが二重計上されない', async () => {
       // wbsId列追加(2026-05-26)以前の旧データや手動登録を模擬:
       // taskIdはあるが wbsId が null の実績
       await global.prisma.workRecord.create({
@@ -611,9 +611,8 @@ describe('EVM 運用フロー結合テスト', () => {
         dryRun: false,
       });
 
-      // あるべき姿: replaceで旧実績が置換され、6月のACは8hのまま。
-      // 現状: 削除条件が wbsId IN (...) のため wbsId=null の旧行を消せず、
-      //       AC集計は task.wbsId 経由で旧行も拾うため 16h に二重計上される。
+      // replaceの削除条件はAC集計と同じ「タスク経由 OR wbsId直付け」（work-record-repository）。
+      // wbsId=null の旧行も task.wbsId 経由で置換対象になり、6月のACは8hのまま。
       const acMap = await wbsEvmRepository.getActualCostByDate(
         testIds.wbsId,
         new Date('2025-06-01T00:00:00Z'),
@@ -624,7 +623,7 @@ describe('EVM 運用フロー結合テスト', () => {
       expect(junTaskAc).toBeCloseTo(8, 5);
     });
 
-    it.failing('【既知バグ】月の実績を全て0時間に訂正して再取込すると、旧実績が削除されACが0になる', async () => {
+    it('【バグ2修正】月の実績を全て0時間に訂正して再取込すると、旧実績が削除されACが0になる', async () => {
       // 9月: まず6hを取込
       geppoRows = [
         makeGeppoRow({ GEPPO_YYYYMM: '202509', WBS_NO: 'E3-0001', day01: 6 }),
@@ -639,15 +638,18 @@ describe('EVM 運用フロー結合テスト', () => {
       geppoRows = [
         makeGeppoRow({ GEPPO_YYYYMM: '202509', WBS_NO: 'E3-0001' /* 全日0 */ }),
       ];
-      await geppoImportService.executeImport({
+      const result = await geppoImportService.executeImport({
         targetMonth: '2025-09',
         updateMode: 'replace',
         dryRun: false,
       });
 
-      // あるべき姿: 0時間に訂正した月のACは0になる。
-      // 現状: 削除対象ユーザーは「>0hのWorkRecordを生成したユーザー」のみのため、
-      //       全日0のユーザーは削除対象から漏れ、旧6hが残り続ける。
+      // 削除対象ユーザーは「変換後WorkRecordを持つユーザー」ではなく
+      // 「対象geppo行のマッピング成功メンバー全員」のため、全日0時間に訂正した
+      // ユーザーの旧実績も削除され、当月ACは0になる。
+      expect(result.deletedCount).toBe(1); // 旧6hの行
+      expect(result.createdCount).toBe(0);
+
       const acMap = await wbsEvmRepository.getActualCostByDate(
         testIds.wbsId,
         new Date('2025-09-01T00:00:00Z'),
@@ -658,26 +660,30 @@ describe('EVM 運用フロー結合テスト', () => {
       expect(acSep).toBe(0);
     });
 
-    it.failing('【既知バグ】存在しない日（30日月のday31等）の実績が翌月へロールオーバーして累積しない', async () => {
+    it('【バグ3修正】存在しない日（30日月のday31等）の実績が翌月へロールオーバーして累積しない', async () => {
       // 11月(30日月)のday31に誤入力がある geppo 行
       geppoRows = [
         makeGeppoRow({ GEPPO_YYYYMM: '202511', WBS_NO: 'E3-0001', day31: 5 }),
       ];
-      await geppoImportService.executeImport({
+      const result1 = await geppoImportService.executeImport({
         targetMonth: '2025-11',
         updateMode: 'replace',
         dryRun: false,
       });
       // 再取込（運用ではよくある）
-      await geppoImportService.executeImport({
+      const result2 = await geppoImportService.executeImport({
         targetMonth: '2025-11',
         updateMode: 'replace',
         dryRun: false,
       });
 
-      // あるべき姿: 11月に存在しない日はスキップかエラーで、12月にレコードは生えない。
-      // 現状: Date.UTC(2025, 10, 31) → 2025-12-01 に繰り上がり、月範囲replaceの削除対象外のため
-      //       再取込のたびに 12/1 のレコードが1件ずつ増殖し、12月のACが増え続ける。
+      // 月の実日数を超える日はエラー計上でスキップされ（黙って捨てず取込結果で気づける）、
+      // Date.UTC の繰り上がりによる翌月1日のレコードは生えない。
+      expect(result1.errorCount).toBe(1);
+      expect(result1.createdCount).toBe(0);
+      expect(result2.errorCount).toBe(1);
+      expect(result2.createdCount).toBe(0);
+
       const rolled = await global.prisma.workRecord.findMany({
         where: {
           userId: localIds.user1Id,
