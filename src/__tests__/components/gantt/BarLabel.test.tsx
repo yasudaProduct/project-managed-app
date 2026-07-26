@@ -20,6 +20,11 @@ describe("BarLabel", () => {
     expect(screen.getByText("実装 (8h)")).toBeInTheDocument();
   });
 
+  it("hours は小数第1位に丸めて表示する（実績/見通し工数など）", () => {
+    renderInSvg(<BarLabel {...baseProps} name="実装" hours={12.34} />);
+    expect(screen.getByText("実装 (12.3h)")).toBeInTheDocument();
+  });
+
   it("progress 指定かつ十分な幅なら進捗率を表示する", () => {
     renderInSvg(<BarLabel {...baseProps} name="実装" progress={40} />);
     expect(screen.getByText("40%")).toBeInTheDocument();

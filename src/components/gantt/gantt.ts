@@ -62,6 +62,9 @@ export type TimelineScale = 'day' | 'week' | 'month' | 'quarter' | 'year';
 /** タスクバーの色分け方式（フェーズ別 or 予定/実績/見通し別） */
 export type GanttColorMode = 'phase' | 'planActualForecast';
 
+/** タスクバーの種別（予定/実績/見通し）。ホバー時のツールチップ表示切替に使う */
+export type TaskBarVariant = 'planned' | 'actual' | 'forecast';
+
 export interface GanttStyle {
   theme: 'modern' | 'classic';
   showGrid: boolean;

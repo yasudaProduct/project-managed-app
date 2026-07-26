@@ -112,14 +112,14 @@ export async function copyPhaseSummaryToClipboard(
     ...data.map(item => [
       item.phase,
       item.taskCount,
-      convertHours(item.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-      convertHours(item.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-      convertHours(item.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+      convertHours(item.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      convertHours(item.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      convertHours(item.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     ]),
     ['合計', total.taskCount,
-      convertHours(total.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-      convertHours(total.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-      convertHours(total.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+      convertHours(total.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      convertHours(total.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      convertHours(total.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     ]
   ];
 
@@ -184,14 +184,14 @@ export async function copyAssigneeSummaryToClipboard(
     ...data.map(item => [
       item.assignee,
       item.taskCount,
-      convertHours(item.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-      convertHours(item.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-      convertHours(item.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+      convertHours(item.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      convertHours(item.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      convertHours(item.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     ]),
     ['合計', total.taskCount,
-      convertHours(total.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-      convertHours(total.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-      convertHours(total.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+      convertHours(total.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      convertHours(total.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      convertHours(total.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     ]
   ];
 
@@ -276,7 +276,7 @@ export async function copyMonthlyAssigneeSummaryToClipboard(
 ): Promise<void> {
   const unitSuffix = getUnitSuffix(unit);
   const fmt = (v: number) =>
-    convertHours(v, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    convertHours(v, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const headers = [
     '担当者',
     ...data.months.flatMap(month => [
@@ -452,7 +452,7 @@ export async function copyMonthlyPhaseSummaryToClipboard(
 ): Promise<void> {
   const unitSuffix = getUnitSuffix(unit);
   const fmt = (v: number) =>
-    convertHours(v, unit).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    convertHours(v, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const headers = [
     '工程',
     ...data.months.flatMap(month => [

@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { formatHours } from "./utils/taskFormat";
 
 interface BarLabelProps {
   x: number;
@@ -37,7 +38,8 @@ export const BarLabel = memo(function BarLabel({
   if (width < MIN_LABEL_WIDTH) return null;
 
   const showProgress = progress != null && width >= MIN_PROGRESS_WIDTH;
-  const left = hours != null ? `${name} (${hours}h)` : name;
+  const hoursLabel = formatHours(hours);
+  const left = hoursLabel ? `${name} (${hoursLabel})` : name;
   // 行高に合わせて 9〜11px でフォントサイズを決める
   const fontSize = Math.min(11, Math.max(9, height - 5));
 
