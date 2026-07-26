@@ -54,7 +54,7 @@ describe('GeppoImportApplicationService', () => {
     geppoRows = []
 
     geppoRepository = {
-      searchWorkEntries: jest.fn(async () => ({
+      searchWorkEntries: jest.fn().mockImplementation(async () => ({
         geppos: geppoRows,
         total: geppoRows.length,
         page: 1,
@@ -63,53 +63,63 @@ describe('GeppoImportApplicationService', () => {
         hasNextPage: false,
         hasPreviousPage: false,
       })),
-      testConnection: jest.fn(async () => true),
+      testConnection: jest.fn().mockResolvedValue(true),
     }
 
     workRecordService = {
       getWorkRecords: jest.fn(),
-      bulkCreate: jest.fn(async () => undefined),
-      bulkUpsert: jest.fn(async () => ({ created: 0, updated: 0 })),
-      deleteByUserAndDateRange: jest.fn(async () => 0),
+      bulkCreate: jest.fn().mockResolvedValue(undefined),
+      bulkUpsert: jest.fn().mockResolvedValue({ created: 0, updated: 0 }),
+      deleteByUserAndDateRange: jest.fn().mockResolvedValue(0),
     }
 
     projectMappingService = {
       // wbs.name 完全一致マッピングのスタブ（PROJ-A → wbsId=10）
-      createProjectMap: jest.fn(async (ids: string[]) =>
-        new Map(ids.filter((id) => id === WBS_NAME).map((id) => [id, String(WBS_ID)]))
-      ),
-      filterGeppoByTargetProjects: jest.fn(async (records: Geppo[]) => records),
+      createProjectMap: jest
+        .fn()
+        .mockImplementation(async (ids: string[]) =>
+          new Map(
+            ids.filter((id) => id === WBS_NAME).map((id) => [id, String(WBS_ID)])
+          )
+        ),
+      filterGeppoByTargetProjects: jest
+        .fn()
+        .mockImplementation(async (records: Geppo[]) => records),
       getAvailableProjectsForImport: jest.fn(),
-      validateProjectMapping: jest.fn(async () => ({
+      validateProjectMapping: jest.fn().mockResolvedValue({
         totalProjects: 1,
         mappedCount: 1,
         unmappedCount: 0,
         mappedProjects: [WBS_NAME],
         unmappedProjects: [],
         mappingRate: 1,
-      })),
+      }),
     }
 
     userMappingService = {
-      createUserMap: jest.fn(async (memberIds: string[]) =>
-        new Map(memberIds.map((m) => [m, `user-${m}`]))
-      ),
-      validateUserMapping: jest.fn(async (memberIds: string[]) => ({
-        totalUsers: memberIds.length,
-        mappedUsers: memberIds.length,
-        unmappedUsers: [],
-        mappingRate: 1,
-      })),
+      createUserMap: jest
+        .fn()
+        .mockImplementation(async (memberIds: string[]) =>
+          new Map(memberIds.map((m) => [m, `user-${m}`]))
+        ),
+      validateUserMapping: jest
+        .fn()
+        .mockImplementation(async (memberIds: string[]) => ({
+          totalUsers: memberIds.length,
+          mappedUsers: memberIds.length,
+          unmappedUsers: [],
+          mappingRate: 1,
+        })),
     }
 
     taskMappingService = {
-      createTaskMap: jest.fn(async () => new Map<string, number>()),
-      validateTaskMapping: jest.fn(async () => ({
+      createTaskMap: jest.fn().mockResolvedValue(new Map<string, number>()),
+      validateTaskMapping: jest.fn().mockResolvedValue({
         totalTasks: 0,
         mappedTasks: 0,
         unmappedTasks: [],
         mappingRate: 1,
-      })),
+      }),
     }
 
     service = new GeppoImportApplicationService(

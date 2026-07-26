@@ -281,10 +281,12 @@ export class ImportJobApplicationService implements IImportJobApplicationService
       createdCount: result.createdCount,
       updatedCount: result.updatedCount,
       deletedCount: result.deletedCount,
+      skippedCount: result.skippedCount,
     })
 
+    // 削除件数まで出す（replaceの消えすぎ/消えなさすぎを運用者が検知できるようにする）
     await this.addProgress(jobId, {
-      message: `Geppoインポートが完了しました（成功: ${result.successCount}件、エラー: ${result.errorCount}件）`,
+      message: `Geppoインポートが完了しました（作成: ${result.createdCount}件、削除: ${result.deletedCount}件、成功: ${result.successCount}件、エラー: ${result.errorCount}件）`,
       level: 'info',
     })
 

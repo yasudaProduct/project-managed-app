@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import type { EvmMetricsData } from "@/applications/evm/evm-dashboard-dto";
+import { formatEvmValue } from "@/utils/evm-format";
 import { CheckCircle, AlertTriangle, AlertCircle, Minus } from "lucide-react";
 
 type EvmTimeSeriesTableProps = {
@@ -40,12 +41,8 @@ export function EvmTimeSeriesTable({
   const [selectedMetrics, setSelectedMetrics] =
     useState<EvmMetricsData | null>(null);
 
-  const formatValue = (value: number): string => {
-    if (calculationMode === "cost") {
-      return `¥${value.toLocaleString()}`;
-    }
-    return `${value.toFixed(1)}h`;
-  };
+  const formatValue = (value: number): string =>
+    formatEvmValue(value, calculationMode);
 
   const getHealthBadge = (
     status: "healthy" | "warning" | "critical" | "no_data"

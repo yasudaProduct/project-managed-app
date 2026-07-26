@@ -20,15 +20,48 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatEvmValue, evmIndexBarColorClass } from "@/utils/evm-format";
+import {
+  EVM_FORECAST_METHOD_LABELS,
+  EVM_FORECAST_METHOD_DESCRIPTIONS,
+} from "@/types/evm-forecast-method";
 
 type EvmMetricsCardProps = {
   metrics: EvmMetricsData;
   scheduleForecast?: ScheduleForecastData | null;
+  /**
+   * 実績(WorkRecord)が未取込のためEV/SPIが過小評価されている状態。
+   * ライブEVは実績開始日でゲートされるため、進捗率が入っていても実績が無いとEV=0になる。
+   */
+  actualsNotImported?: boolean;
 };
 
-export function EvmMetricsCard({ metrics, scheduleForecast }: EvmMetricsCardProps) {
+export function EvmMetricsCard({
+  metrics,
+  scheduleForecast,
+  actualsNotImported = false,
+}: EvmMetricsCardProps) {
   const formatForecastDate = (iso: string | null): string =>
     iso ? new Date(iso).toLocaleDateString("ja-JP") : "—";
+
+  /** 金額・工数の表示（内訳表・CSVと同一の丸め基準） */
+  const formatValue = (value: number): string =>
+    formatEvmValue(value, metrics.calculationMode);
+
+  /** SPI/CPIバーの色はヘルスバッジと同じプロジェクト設定しきい値に連動させる */
+  const thresholds = {
+    healthy: metrics.healthyThreshold,
+    warning: metrics.warningThreshold,
+  };
+
+  const forecastMethodLabel = EVM_FORECAST_METHOD_LABELS[metrics.forecastMethod];
+  const forecastMethodFormula =
+    EVM_FORECAST_METHOD_DESCRIPTIONS[metrics.forecastMethod];
+  // Radix Tooltip の内容は hover 前に描画されないため、指標の説明は aria-label にも持たせる
+  const eacDescription = `EAC（完了時総コスト）: プロジェクト完了時点の総コスト予測。${forecastMethodLabel}で算出`;
+  const etcDescription =
+    "ETC（残コスト）: EAC - AC。評価日以降、残作業に必要なコストの予測";
 
   const renderForecastCompletion = () => {
     if (!scheduleForecast) return null;
@@ -141,6 +174,19 @@ export function EvmMetricsCard({ metrics, scheduleForecast }: EvmMetricsCardProp
 
   return (
     <div className="space-y-4">
+      {/* 実績未取込の警告（ライブEVは実績開始日でゲートされるためEV/SPIが過小に出る） */}
+      {actualsNotImported && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <span className="font-semibold">実績未取込</span>
+            のためEV/SPIが過小に表示されています。進捗率は登録されていますが作業実績
+            (月報)が取り込まれていないため、出来高(EV)が0として計算されます。EVM確認前に
+            月報インポートを実行してください。
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* ヘルスステータス */}
       <Card>
         <CardHeader>
@@ -204,13 +250,10 @@ export function EvmMetricsCard({ metrics, scheduleForecast }: EvmMetricsCardProp
                 {metrics.spi !== null && (
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className={`h-2 rounded-full ${
-                        metrics.spi >= 1
-                          ? "bg-green-500"
-                          : metrics.spi >= 0.9
-                          ? "bg-yellow-500"
-                          : "bg-red-500"
-                      }`}
+                      className={`h-2 rounded-full ${evmIndexBarColorClass(
+                        metrics.spi,
+                        thresholds
+                      )}`}
                       style={{ width: `${Math.min(metrics.spi * 100, 100)}%` }}
                     />
                   </div>
@@ -245,13 +288,10 @@ export function EvmMetricsCard({ metrics, scheduleForecast }: EvmMetricsCardProp
                 {metrics.cpi !== null && (
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className={`h-2 rounded-full ${
-                        metrics.cpi >= 1
-                          ? "bg-green-500"
-                          : metrics.cpi >= 0.9
-                          ? "bg-yellow-500"
-                          : "bg-red-500"
-                      }`}
+                      className={`h-2 rounded-full ${evmIndexBarColorClass(
+                        metrics.cpi,
+                        thresholds
+                      )}`}
                       style={{ width: `${Math.min(metrics.cpi * 100, 100)}%` }}
                     />
                   </div>
@@ -283,9 +323,7 @@ export function EvmMetricsCard({ metrics, scheduleForecast }: EvmMetricsCardProp
                 <div className="flex items-center gap-2">
                   {getVarianceIcon(metrics.sv)}
                   <p className="text-xl font-semibold">
-                    {metrics.calculationMode === "hours"
-                      ? `${metrics.sv.toFixed(1)}h`
-                      : `¥${metrics.sv.toLocaleString()}`}
+                    {formatValue(metrics.sv)}
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground ">
@@ -317,9 +355,7 @@ export function EvmMetricsCard({ metrics, scheduleForecast }: EvmMetricsCardProp
                 <div className="flex items-center gap-2">
                   {getVarianceIcon(metrics.cv)}
                   <p className="text-xl font-semibold">
-                    {metrics.calculationMode === "hours"
-                      ? `${metrics.cv.toFixed(1)}h`
-                      : `¥${metrics.cv.toLocaleString()}`}
+                    {formatValue(metrics.cv)}
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -337,16 +373,20 @@ export function EvmMetricsCard({ metrics, scheduleForecast }: EvmMetricsCardProp
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        {<Info className="w-4 ml-2" />}
+                        <Info className="w-4 ml-2" aria-label={eacDescription} />
                       </TooltipTrigger>
-                      <TooltipContent className="max-w-sm"></TooltipContent>
+                      <TooltipContent className="max-w-sm">
+                        {forecastMethodLabel}: {forecastMethodFormula}
+                        <br />
+                        プロジェクト完了時点の総コスト予測です。
+                        <br />
+                        算出方式はプロジェクト設定またはダッシュボードの「予測方式」で切り替えます。
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </p>
                 <p className="text-xl font-semibold">
-                  {metrics.calculationMode === "hours"
-                    ? `${metrics.eac.toFixed(1)}h`
-                    : `¥${metrics.eac.toLocaleString()}`}
+                  {formatValue(metrics.eac)}
                 </p>
               </div>
               <div className="space-y-1">
@@ -355,16 +395,20 @@ export function EvmMetricsCard({ metrics, scheduleForecast }: EvmMetricsCardProp
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        {<Info className="w-4 ml-2" />}
+                        <Info className="w-4 ml-2" aria-label={etcDescription} />
                       </TooltipTrigger>
-                      <TooltipContent className="max-w-sm"></TooltipContent>
+                      <TooltipContent className="max-w-sm">
+                        ETC = EAC - AC
+                        <br />
+                        評価日以降、残作業に必要なコストの予測です。
+                        <br />
+                        EACと同じ予測方式の前提で算出されます。
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </p>
                 <p className="text-xl font-semibold">
-                  {metrics.calculationMode === "hours"
-                    ? `${metrics.etc.toFixed(1)}h`
-                    : `¥${metrics.etc.toLocaleString()}`}
+                  {formatValue(metrics.etc)}
                 </p>
               </div>
               <div className="space-y-1">
@@ -389,9 +433,7 @@ export function EvmMetricsCard({ metrics, scheduleForecast }: EvmMetricsCardProp
                 </p>
                 <div className="flex items-center gap-2">
                   <p className="text-xl font-semibold">
-                    {metrics.calculationMode === "hours"
-                      ? `${metrics.vac.toFixed(1)}h`
-                      : `¥${metrics.vac.toLocaleString()}`}
+                    {formatValue(metrics.vac)}
                   </p>
                   {getVarianceIcon(metrics.vac)}
                 </div>

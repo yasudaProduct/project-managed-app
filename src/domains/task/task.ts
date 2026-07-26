@@ -143,7 +143,6 @@ export class Task {
             // 期間モデルが存在しない場合
             const manHour = ManHour.create({ type: new ManHourType({ type: 'NORMAL' }), kosu: args.kosu });
             this.periods?.push(Period.create({ type: new PeriodType({ type: 'YOTEI' }), startDate: args.startDate, endDate: args.endDate, manHours: [manHour] }));
-            console.log(this.periods);
         }
     }
 

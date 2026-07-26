@@ -7,6 +7,7 @@ import { getWbsPhases } from "./actions/wbs-phase-actions";
 import { getWbsAssignees } from "../assignee/assignee-actions";
 import { getTaskAll } from "./actions/wbs-task-actions";
 import { getMilestones } from "./actions/milestone-actions";
+import { getProjectSettings } from "./project-settings-actions";
 import { WbsManagementContent } from "@/components/wbs/wbs-management-content";
 
 export default async function WbsManagementPage({
@@ -29,13 +30,15 @@ export default async function WbsManagementPage({
     notFound();
   }
 
-  const [tasks, buffers, phases, assignees, milestones] = await Promise.all([
-    getTaskAll(wbs.id),
-    getWbsBuffers(wbs.id),
-    getWbsPhases(wbs.id),
-    getWbsAssignees(wbs.id),
-    getMilestones(wbs.id),
-  ]);
+  const [tasks, buffers, phases, assignees, milestones, settings] =
+    await Promise.all([
+      getTaskAll(wbs.id),
+      getWbsBuffers(wbs.id),
+      getWbsPhases(wbs.id),
+      getWbsAssignees(wbs.id),
+      getMilestones(wbs.id),
+      getProjectSettings(wbs.projectId),
+    ]);
 
   return (
     <div className="container mx-auto mt-2">
@@ -49,8 +52,12 @@ export default async function WbsManagementPage({
         assignees={assignees}
         milestones={milestones}
         defaultTab={tab}
-        showEvm={false}
+        showEvm={true}
         showTags={true}
+        defaultProgressMethod={settings.progressMeasurementMethod}
+        defaultForecastMethod={settings.evmForecastMethod}
+        deadlineAlertDays={settings.deadlineAlertDays ?? 1}
+        costOverrunThresholdPct={settings.costOverrunThresholdPct ?? 100}
       />
     </div>
   );

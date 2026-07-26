@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
@@ -23,7 +23,19 @@ import type {
   EvmBreakdownRow,
 } from "@/applications/evm/evm-dashboard-dto";
 import { exportTableData } from "@/utils/export-table";
-import { Loader2, TrendingUp, DollarSign, Info, Download } from "lucide-react";
+import { formatEvmCsvValue } from "@/utils/evm-format";
+import {
+  EVM_FORECAST_METHOD_LABELS,
+  type EvmForecastMethod,
+} from "@/types/evm-forecast-method";
+import {
+  Loader2,
+  TrendingUp,
+  DollarSign,
+  Info,
+  Download,
+  RefreshCcw,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -38,11 +50,14 @@ import {
 type EvmDashboardProps = {
   wbsId: number;
   defaultProgressMethod?: "ZERO_HUNDRED" | "FIFTY_FIFTY" | "SELF_REPORTED";
+  /** プロジェクト設定の予測方式。ダッシュボード上で一時的に切り替えられる */
+  defaultForecastMethod?: EvmForecastMethod;
 };
 
 export function EvmDashboard({
   wbsId,
   defaultProgressMethod,
+  defaultForecastMethod,
 }: EvmDashboardProps) {
   const [currentMetrics, setCurrentMetrics] = useState<EvmMetricsData | null>(
     null
@@ -68,10 +83,19 @@ export function EvmDashboard({
     "ZERO_HUNDRED" | "FIFTY_FIFTY" | "SELF_REPORTED"
   >(defaultProgressMethod ?? "ZERO_HUNDRED");
 
-  // 時系列間隔
-  const [interval, setInterval] = useState<"daily" | "weekly" | "monthly">(
-    "daily"
+  // 予測方式（EAC/ETC/VACの算出前提）
+  const [forecastMethod, setForecastMethod] = useState<EvmForecastMethod>(
+    defaultForecastMethod ?? "CPI_ONLY"
   );
+
+  // 時系列間隔（既定は週次。全期間×日次は点が多く重いうえ、
+  // server action の zod 既定も weekly のため揃える）
+  const [interval, setInterval] = useState<"daily" | "weekly" | "monthly">(
+    "weekly"
+  );
+
+  // 最終データ取得時刻（インポート直後の古い数字で判断しないための手がかり）
+  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
 
   // 期間選択モード
   const [periodMode, setPeriodMode] = useState<
@@ -88,6 +112,7 @@ export function EvmDashboard({
     wbsId,
     calculationMode,
     progressMethod,
+    forecastMethod,
     interval,
     periodMode,
     showPrediction,
@@ -106,6 +131,7 @@ export function EvmDashboard({
         wbsId,
         calculationMode,
         progressMethod,
+        forecastMethod,
         interval,
         periodMode,
         showPrediction,
@@ -121,6 +147,7 @@ export function EvmDashboard({
       setScheduleForecast(result.data.scheduleForecast ?? null);
       setPhaseBreakdown(result.data.phaseBreakdown ?? []);
       setAssigneeBreakdown(result.data.assigneeBreakdown ?? []);
+      setLastLoadedAt(new Date());
     } catch (err) {
       console.error("Failed to load EVM data:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -158,8 +185,20 @@ export function EvmDashboard({
     );
   }
 
+  // CSVの丸めは画面表示（utils/evm-format）と同一基準にする
   const formatCsvValue = (value: number): string =>
-    calculationMode === "cost" ? String(Math.round(value)) : value.toFixed(1);
+    formatEvmCsvValue(value, calculationMode);
+
+  // 実績(WorkRecord)が1件も無いのに進捗率が入っている状態。
+  // ライブEVは実績開始日でゲートされるためEV/SPIが過小に出る（月報未取込のサイン）。
+  const actualsNotImported =
+    currentMetrics.ac === 0 && taskDetails.some((t) => t.progressRate > 0);
+
+  // 内訳表の色分けもヘルスバッジと同じプロジェクト設定しきい値に揃える
+  const breakdownThresholds = {
+    healthy: currentMetrics.healthyThreshold,
+    warning: currentMetrics.warningThreshold,
+  };
 
   const handleExportTimeSeries = () => {
     exportTableData(
@@ -330,7 +369,46 @@ export function EvmDashboard({
               </Select>
             </div>
 
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="forecast-method" className="text-xs whitespace-nowrap text-muted-foreground">予測方式</Label>
+              <Select
+                value={forecastMethod}
+                onValueChange={(value) =>
+                  setForecastMethod(value as EvmForecastMethod)
+                }
+              >
+                <SelectTrigger id="forecast-method" className="h-7 text-xs w-[110px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(
+                    Object.keys(EVM_FORECAST_METHOD_LABELS) as EvmForecastMethod[]
+                  ).map((method) => (
+                    <SelectItem key={method} value={method}>
+                      {EVM_FORECAST_METHOD_LABELS[method]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex items-center gap-1.5 ml-auto">
+              {lastLoadedAt && (
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  取得: {lastLoadedAt.toLocaleTimeString("ja-JP")}
+                </span>
+              )}
+              {/* インポート完了後にEVMは自動更新されないため、明示的な再取得手段を置く */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={loadEvmData}
+                title="EVMデータを再取得します（インポート実行後にご利用ください）"
+              >
+                <RefreshCcw className="h-3 w-3 mr-1" />
+                更新
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -391,6 +469,13 @@ export function EvmDashboard({
         </CardContent>
       </Card>
 
+      {/* メトリクスカード（週次レビューで最重要のため最上部に置く） */}
+      <EvmMetricsCard
+        metrics={currentMetrics}
+        scheduleForecast={scheduleForecast}
+        actualsNotImported={actualsNotImported}
+      />
+
       {/* タブ */}
       <Tabs defaultValue="chart" className="space-y-4">
         <TabsList>
@@ -424,19 +509,18 @@ export function EvmDashboard({
             title="フェーズ別内訳"
             rows={phaseBreakdown}
             calculationMode={calculationMode}
+            thresholds={breakdownThresholds}
             note="現在時点のライブタスクによる集計です。BACにバッファは含まれません。「未紐付け・削除済み」はタスクに紐付かない実績と削除済みタスクの実績です。"
           />
           <EvmBreakdownTable
             title="担当者別内訳"
             rows={assigneeBreakdown}
             calculationMode={calculationMode}
+            thresholds={breakdownThresholds}
             note="担当者軸はタスクの現担当者です（作業実績の記録者ではありません）。BACにバッファは含まれません。"
           />
         </TabsContent>
       </Tabs>
-
-      {/* メトリクスカード */}
-      <EvmMetricsCard metrics={currentMetrics} scheduleForecast={scheduleForecast} />
     </div>
   );
 }
