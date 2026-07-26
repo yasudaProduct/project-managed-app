@@ -1,23 +1,33 @@
 import { memo } from "react";
-import type { Task } from "./gantt";
+import type { Task, TaskBarVariant } from "./gantt";
 import { getTaskStatusName } from "@/utils/utils";
-import { formatYmd } from "./utils/taskFormat";
+import { formatYmd, formatHours } from "./utils/taskFormat";
 
 interface TaskTooltipProps {
   task: Task;
   /** カーソルのビューポート座標（clientX/clientY） */
   x: number;
   y: number;
+  /** ホバー対象のバー種別（予定/実績/見通し）。既定は予定 */
+  variant?: TaskBarVariant;
 }
+
+const PERIOD_LABEL: Record<TaskBarVariant, string> = {
+  planned: "予定",
+  actual: "実績",
+  forecast: "見通し",
+};
 
 /**
  * タスクバーのホバー時に、重要な情報だけに絞って表示するツールチップ。
  * カーソル位置に `position: fixed` で追従表示する（クリックは透過）。
+ * バー種別（予定/実績/見通し）に応じて、期間・工数はそれぞれの値を表示する。
  */
 export const TaskTooltip = memo(function TaskTooltip({
   task,
   x,
   y,
+  variant = "planned",
 }: TaskTooltipProps) {
   const rows: { label: string; value: string }[] = [];
 
@@ -28,14 +38,37 @@ export const TaskTooltip = memo(function TaskTooltip({
       value: getTaskStatusName(task.status ?? "NOT_STARTED"),
     });
   }
+
+  const periodStart =
+    variant === "actual"
+      ? task.actualStartDate
+      : variant === "forecast"
+        ? task.forecastStartDate
+        : task.startDate;
+  const periodEnd =
+    (variant === "actual"
+      ? task.actualEndDate
+      : variant === "forecast"
+        ? task.forecastEndDate
+        : task.endDate) ?? periodStart;
+
   rows.push({
-    label: "予定",
-    value: task.isMilestone
-      ? formatYmd(task.startDate)
-      : `${formatYmd(task.startDate)} 〜 ${formatYmd(task.endDate)}`,
+    label: PERIOD_LABEL[variant],
+    value:
+      periodStart == null
+        ? "—"
+        : task.isMilestone
+          ? formatYmd(periodStart)
+          : `${formatYmd(periodStart)} 〜 ${formatYmd(periodEnd)}`,
   });
   if (!task.isMilestone) {
-    rows.push({ label: "工数", value: `${task.duration}h` });
+    const hours =
+      variant === "actual"
+        ? task.actualDuration
+        : variant === "forecast"
+          ? task.forecastDuration
+          : task.duration;
+    rows.push({ label: "工数", value: formatHours(hours) ?? "—" });
     rows.push({ label: "進捗", value: `${task.progress}%` });
   }
 
