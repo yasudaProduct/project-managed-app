@@ -124,7 +124,13 @@ export class WorkRecordRepository implements IWorkRecordRepository {
             gte: startDate,
             lte: endDate
           },
-          wbsId: { in: wbsIds }
+          // AC集計（wbs-evm-repository）と同じ「タスク経由 OR wbsId直接紐付け」で対象を
+          // 特定する。wbsId直付けのみだと、wbsId列追加以前の旧実績（taskIdのみ）が
+          // replaceで消えず、再取込後にACへ二重計上される。
+          OR: [
+            { wbsId: { in: wbsIds } },
+            { task: { wbsId: { in: wbsIds } } }
+          ]
         }
       })
       return result.count
