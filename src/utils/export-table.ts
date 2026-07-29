@@ -6,6 +6,54 @@ interface ExportOptions {
 }
 
 /**
+ * 集計表の列表示設定。
+ * 表示設定で非表示にした列はコピー・出力の対象外とする。
+ * 未指定の項目は表示中として扱う。
+ */
+export interface SummaryColumnVisibility {
+  /** 基準工数（月別集計表のみ） */
+  showBaseline?: boolean;
+  /** 予定工数 */
+  showPlanned?: boolean;
+  /** 実績工数 */
+  showActual?: boolean;
+  /** 見通し工数（月別集計表のみ） */
+  showForecast?: boolean;
+  /** 差分（工程別・担当者別集計表のみ） */
+  showDifference?: boolean;
+}
+
+type ResolvedColumnVisibility = Required<SummaryColumnVisibility>;
+
+const DEFAULT_COLUMN_VISIBILITY: ResolvedColumnVisibility = {
+  showBaseline: true,
+  showPlanned: true,
+  showActual: true,
+  showForecast: true,
+  showDifference: true,
+};
+
+function resolveColumnVisibility(
+  columns?: SummaryColumnVisibility
+): ResolvedColumnVisibility {
+  return { ...DEFAULT_COLUMN_VISIBILITY, ...columns };
+}
+
+/** コピー・出力時の工数の小数点桁数 */
+export const OUTPUT_HOURS_FRACTION_DIGITS = 3;
+
+/**
+ * 工数をコピー・出力用にフォーマットする（小数点第3位まで）
+ * @param hours 工数（時間）
+ * @param unit 単位
+ */
+export function formatOutputHours(hours: number, unit: HoursUnit): string {
+  const formatted = convertHours(hours, unit).toFixed(OUTPUT_HOURS_FRACTION_DIGITS);
+  // -0.000 のような表記を避ける
+  return Number(formatted) === 0 ? (0).toFixed(OUTPUT_HOURS_FRACTION_DIGITS) : formatted;
+}
+
+/**
  * クリップボードにコピー
  * navigator.clipboard.writeText()はHTTPS環境でのみ利用可能なため、
  * HTTP環境でも動作するdocument.execCommand('copy')を使用する。
@@ -70,7 +118,7 @@ export function exportTableData(
   const content = [headerRow, ...dataRows].join('\n');
 
   // BOM付きのBlobを作成
-  const bom = '\uFEFF';
+  const bom = '﻿';
   const blob = new Blob([bom + content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   // ダウンロードリンクを作成
@@ -86,6 +134,42 @@ export function exportTableData(
   URL.revokeObjectURL(url);
 }
 
+/** 工程別・担当者別集計表の1行分のデータ */
+interface CategorySummaryRow {
+  label: string;
+  taskCount: number;
+  plannedHours: number;
+  actualHours: number;
+  difference: number;
+}
+
+/**
+ * 工程別・担当者別集計表のヘッダーと行を、表示中の列のみで組み立てる
+ */
+function buildCategorySummaryTable(
+  firstColumnHeader: string,
+  rows: CategorySummaryRow[],
+  unit: HoursUnit,
+  columns: ResolvedColumnVisibility
+): { headers: string[]; rows: string[][] } {
+  const unitSuffix = getUnitSuffix(unit);
+
+  const headers = [firstColumnHeader, 'タスク数'];
+  if (columns.showPlanned) headers.push(`予定工数(${unitSuffix})`);
+  if (columns.showActual) headers.push(`実績工数(${unitSuffix})`);
+  if (columns.showDifference) headers.push('差分');
+
+  const dataRows = rows.map(row => {
+    const cells: string[] = [row.label, String(row.taskCount)];
+    if (columns.showPlanned) cells.push(formatOutputHours(row.plannedHours, unit));
+    if (columns.showActual) cells.push(formatOutputHours(row.actualHours, unit));
+    if (columns.showDifference) cells.push(formatOutputHours(row.difference, unit));
+    return cells;
+  });
+
+  return { headers, rows: dataRows };
+}
+
 interface PhaseSummaryData {
   phase: string;
   taskCount: number;
@@ -94,37 +178,38 @@ interface PhaseSummaryData {
   difference: number;
 }
 
+function toPhaseSummaryRows(
+  data: PhaseSummaryData[],
+  total: Omit<PhaseSummaryData, 'phase'>
+): CategorySummaryRow[] {
+  return [
+    ...data.map(item => ({ ...item, label: item.phase })),
+    { ...total, label: '合計' },
+  ];
+}
+
 /**
  * 工程別集計表をクリップボードにコピー
- * @param data 
- * @param total 
- * @param unit 
+ * @param data データ
+ * @param total 合計
+ * @param unit 単位
+ * @param columns 表示中の列
  */
 export async function copyPhaseSummaryToClipboard(
   data: PhaseSummaryData[],
   total: Omit<PhaseSummaryData, 'phase'>,
-  unit: HoursUnit = 'hours'
+  unit: HoursUnit = 'hours',
+  columns?: SummaryColumnVisibility
 ): Promise<void> {
-  const unitSuffix = getUnitSuffix(unit);
-  const headers = ['工程', 'タスク数', `予定工数(${unitSuffix})`, `実績工数(${unitSuffix})`, '差分'];
-  // データを作成
-  const rows = [
-    ...data.map(item => [
-      item.phase,
-      item.taskCount,
-      convertHours(item.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      convertHours(item.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      convertHours(item.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    ]),
-    ['合計', total.taskCount,
-      convertHours(total.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      convertHours(total.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      convertHours(total.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    ]
-  ];
+  const table = buildCategorySummaryTable(
+    '工程',
+    toPhaseSummaryRows(data, total),
+    unit,
+    resolveColumnVisibility(columns)
+  );
 
   // クリップボードにコピー
-  await copyToClipboard(headers, rows);
+  await copyToClipboard(table.headers, table.rows);
 }
 
 /**
@@ -133,27 +218,23 @@ export async function copyPhaseSummaryToClipboard(
  * @param total 合計
  * @param format フォーマット
  * @param unit 単位
+ * @param columns 表示中の列
  */
 export function exportPhaseSummary(
   data: PhaseSummaryData[],
   total: Omit<PhaseSummaryData, 'phase'>,
   format: 'csv' | 'tsv',
-  unit: HoursUnit = 'hours'
+  unit: HoursUnit = 'hours',
+  columns?: SummaryColumnVisibility
 ): void {
-  const unitSuffix = getUnitSuffix(unit);
-  const headers = ['工程', 'タスク数', `予定工数(${unitSuffix})`, `実績工数(${unitSuffix})`, '差分'];
-  const rows = [
-    ...data.map(item => [
-      item.phase,
-      item.taskCount,
-      convertHours(item.plannedHours, unit),
-      convertHours(item.actualHours, unit),
-      convertHours(item.difference, unit)
-    ]),
-    ['合計', total.taskCount, convertHours(total.plannedHours, unit), convertHours(total.actualHours, unit), convertHours(total.difference, unit)]
-  ];
+  const table = buildCategorySummaryTable(
+    '工程',
+    toPhaseSummaryRows(data, total),
+    unit,
+    resolveColumnVisibility(columns)
+  );
 
-  exportTableData(headers, rows, {
+  exportTableData(table.headers, table.rows, {
     filename: `工程別集計表_${new Date().toISOString().slice(0, 10)}`,
     format
   });
@@ -167,35 +248,37 @@ interface AssigneeSummaryData {
   difference: number;
 }
 
+function toAssigneeSummaryRows(
+  data: AssigneeSummaryData[],
+  total: Omit<AssigneeSummaryData, 'assignee'>
+): CategorySummaryRow[] {
+  return [
+    ...data.map(item => ({ ...item, label: item.assignee })),
+    { ...total, label: '合計' },
+  ];
+}
+
 /**
  * 担当者別集計表をクリップボードにコピー
- * @param data 
- * @param total 
- * @param unit 
+ * @param data データ
+ * @param total 合計
+ * @param unit 単位
+ * @param columns 表示中の列
  */
 export async function copyAssigneeSummaryToClipboard(
   data: AssigneeSummaryData[],
   total: Omit<AssigneeSummaryData, 'assignee'>,
-  unit: HoursUnit = 'hours'
+  unit: HoursUnit = 'hours',
+  columns?: SummaryColumnVisibility
 ): Promise<void> {
-  const unitSuffix = getUnitSuffix(unit);
-  const headers = ['担当者', 'タスク数', `予定工数(${unitSuffix})`, `実績工数(${unitSuffix})`, '差分'];
-  const rows = [
-    ...data.map(item => [
-      item.assignee,
-      item.taskCount,
-      convertHours(item.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      convertHours(item.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      convertHours(item.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    ]),
-    ['合計', total.taskCount,
-      convertHours(total.plannedHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      convertHours(total.actualHours, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      convertHours(total.difference, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    ]
-  ];
+  const table = buildCategorySummaryTable(
+    '担当者',
+    toAssigneeSummaryRows(data, total),
+    unit,
+    resolveColumnVisibility(columns)
+  );
 
-  await copyToClipboard(headers, rows);
+  await copyToClipboard(table.headers, table.rows);
 }
 
 /**
@@ -204,30 +287,101 @@ export async function copyAssigneeSummaryToClipboard(
  * @param total 合計
  * @param format フォーマット
  * @param unit 単位
+ * @param columns 表示中の列
  */
 export function exportAssigneeSummary(
   data: AssigneeSummaryData[],
   total: Omit<AssigneeSummaryData, 'assignee'>,
   format: 'csv' | 'tsv',
-  unit: HoursUnit = 'hours'
+  unit: HoursUnit = 'hours',
+  columns?: SummaryColumnVisibility
 ): void {
-  const unitSuffix = getUnitSuffix(unit);
-  const headers = ['担当者', 'タスク数', `予定工数(${unitSuffix})`, `実績工数(${unitSuffix})`, '差分'];
-  const rows = [
-    ...data.map(item => [
-      item.assignee,
-      item.taskCount,
-      convertHours(item.plannedHours, unit),
-      convertHours(item.actualHours, unit),
-      convertHours(item.difference, unit)
-    ]),
-    ['合計', total.taskCount, convertHours(total.plannedHours, unit), convertHours(total.actualHours, unit), convertHours(total.difference, unit)]
-  ];
+  const table = buildCategorySummaryTable(
+    '担当者',
+    toAssigneeSummaryRows(data, total),
+    unit,
+    resolveColumnVisibility(columns)
+  );
 
-  exportTableData(headers, rows, {
+  exportTableData(table.headers, table.rows, {
     filename: `担当者別集計表_${new Date().toISOString().slice(0, 10)}`,
     format
   });
+}
+
+/** 月別集計表の工数セル */
+interface MonthlyHoursCell {
+  plannedHours?: number;
+  actualHours?: number;
+  baselineHours?: number;
+  forecastHours?: number;
+}
+
+/** 月別集計表の工数列（表示中のもののみ） */
+function buildMonthlyHoursColumns(
+  unit: HoursUnit,
+  columns: ResolvedColumnVisibility
+): { label: string; pick: (cell?: MonthlyHoursCell) => number }[] {
+  const unitSuffix = getUnitSuffix(unit);
+  const hoursColumns: { label: string; pick: (cell?: MonthlyHoursCell) => number }[] = [];
+
+  if (columns.showBaseline) {
+    hoursColumns.push({ label: `基準(${unitSuffix})`, pick: cell => cell?.baselineHours || 0 });
+  }
+  if (columns.showPlanned) {
+    hoursColumns.push({ label: `予定(${unitSuffix})`, pick: cell => cell?.plannedHours || 0 });
+  }
+  if (columns.showActual) {
+    hoursColumns.push({ label: `実績(${unitSuffix})`, pick: cell => cell?.actualHours || 0 });
+  }
+  if (columns.showForecast) {
+    hoursColumns.push({ label: `見通し(${unitSuffix})`, pick: cell => cell?.forecastHours || 0 });
+  }
+
+  return hoursColumns;
+}
+
+/**
+ * 月別集計表のヘッダーと行を、表示中の列のみで組み立てる
+ */
+function buildMonthlyTable(
+  firstColumnHeader: string,
+  months: string[],
+  rowItems: {
+    label: string;
+    getCell: (month: string) => MonthlyHoursCell | undefined;
+    total: MonthlyHoursCell | undefined;
+  }[],
+  getMonthlyTotal: (month: string) => MonthlyHoursCell | undefined,
+  grandTotal: MonthlyHoursCell,
+  unit: HoursUnit,
+  columns: ResolvedColumnVisibility
+): { headers: string[]; rows: string[][] } {
+  const hoursColumns = buildMonthlyHoursColumns(unit, columns);
+
+  const headers = [
+    firstColumnHeader,
+    ...months.flatMap(month => hoursColumns.map(c => `${month}_${c.label}`)),
+    ...hoursColumns.map(c => `合計_${c.label}`),
+  ];
+
+  const toCells = (cell: MonthlyHoursCell | undefined) =>
+    hoursColumns.map(c => formatOutputHours(c.pick(cell), unit));
+
+  const rows = [
+    ...rowItems.map(item => [
+      item.label,
+      ...months.flatMap(month => toCells(item.getCell(month))),
+      ...toCells(item.total),
+    ]),
+    [
+      '合計',
+      ...months.flatMap(month => toCells(getMonthlyTotal(month))),
+      ...toCells(grandTotal),
+    ],
+  ];
+
+  return { headers, rows };
 }
 
 interface MonthlyAssigneeData {
@@ -265,75 +419,41 @@ interface MonthlyAssigneeData {
   };
 }
 
+function buildMonthlyAssigneeTable(
+  data: MonthlyAssigneeData,
+  unit: HoursUnit,
+  columns: SummaryColumnVisibility | undefined
+): { headers: string[]; rows: string[][] } {
+  return buildMonthlyTable(
+    '担当者',
+    data.months,
+    data.assignees.map(assignee => ({
+      label: assignee,
+      getCell: (month: string) =>
+        data.data.find(d => d.month === month && d.assignee === assignee),
+      total: data.assigneeTotals[assignee],
+    })),
+    (month: string) => data.monthlyTotals[month],
+    data.grandTotal,
+    unit,
+    resolveColumnVisibility(columns)
+  );
+}
+
 /**
  * 月別担当者別集計表をクリップボードにコピー
- * @param data 
- * @param unit 
+ * @param data データ
+ * @param unit 単位
+ * @param columns 表示中の列
  */
 export async function copyMonthlyAssigneeSummaryToClipboard(
   data: MonthlyAssigneeData,
-  unit: HoursUnit = 'hours'
+  unit: HoursUnit = 'hours',
+  columns?: SummaryColumnVisibility
 ): Promise<void> {
-  const unitSuffix = getUnitSuffix(unit);
-  const fmt = (v: number) =>
-    convertHours(v, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const headers = [
-    '担当者',
-    ...data.months.flatMap(month => [
-      `${month}_基準(${unitSuffix})`,
-      `${month}_予定(${unitSuffix})`,
-      `${month}_実績(${unitSuffix})`,
-      `${month}_見通し(${unitSuffix})`,
-    ]),
-    `合計_基準(${unitSuffix})`,
-    `合計_予定(${unitSuffix})`,
-    `合計_実績(${unitSuffix})`,
-    `合計_見通し(${unitSuffix})`,
-  ];
+  const table = buildMonthlyAssigneeTable(data, unit, columns);
 
-  const rows = [
-    ...data.assignees.map(assignee => {
-      const row: (string | number)[] = [assignee];
-
-      data.months.forEach(month => {
-        const monthData = data.data.find(d => d.month === month && d.assignee === assignee);
-        row.push(
-          fmt(monthData?.baselineHours || 0),
-          fmt(monthData?.plannedHours || 0),
-          fmt(monthData?.actualHours || 0),
-          fmt(monthData?.forecastHours || 0)
-        );
-      });
-
-      const assigneeTotal = data.assigneeTotals[assignee];
-      row.push(
-        fmt(assigneeTotal?.baselineHours || 0),
-        fmt(assigneeTotal?.plannedHours || 0),
-        fmt(assigneeTotal?.actualHours || 0),
-        fmt(assigneeTotal?.forecastHours || 0)
-      );
-
-      return row;
-    }),
-    [
-      '合計',
-      ...data.months.flatMap(month => {
-        const total = data.monthlyTotals[month];
-        return [
-          fmt(total?.baselineHours || 0),
-          fmt(total?.plannedHours || 0),
-          fmt(total?.actualHours || 0),
-          fmt(total?.forecastHours || 0),
-        ];
-      }),
-      fmt(data.grandTotal.baselineHours || 0),
-      fmt(data.grandTotal.plannedHours),
-      fmt(data.grandTotal.actualHours),
-      fmt(data.grandTotal.forecastHours || 0),
-    ]
-  ];
-
-  await copyToClipboard(headers, rows);
+  await copyToClipboard(table.headers, table.rows);
 }
 
 /**
@@ -341,70 +461,17 @@ export async function copyMonthlyAssigneeSummaryToClipboard(
  * @param data データ
  * @param format フォーマット
  * @param unit 単位
+ * @param columns 表示中の列
  */
 export function exportMonthlyAssigneeSummary(
   data: MonthlyAssigneeData,
   format: 'csv' | 'tsv',
-  unit: HoursUnit = 'hours'
+  unit: HoursUnit = 'hours',
+  columns?: SummaryColumnVisibility
 ): void {
-  const unitSuffix = getUnitSuffix(unit);
-  const headers = [
-    '担当者',
-    ...data.months.flatMap(month => [
-      `${month}_基準(${unitSuffix})`,
-      `${month}_予定(${unitSuffix})`,
-      `${month}_実績(${unitSuffix})`,
-      `${month}_見通し(${unitSuffix})`,
-    ]),
-    `合計_基準(${unitSuffix})`,
-    `合計_予定(${unitSuffix})`,
-    `合計_実績(${unitSuffix})`,
-    `合計_見通し(${unitSuffix})`,
-  ];
+  const table = buildMonthlyAssigneeTable(data, unit, columns);
 
-  const rows = [
-    ...data.assignees.map(assignee => {
-      const row: (string | number)[] = [assignee];
-
-      data.months.forEach(month => {
-        const monthData = data.data.find(d => d.month === month && d.assignee === assignee);
-        row.push(
-          convertHours(monthData?.baselineHours || 0, unit),
-          convertHours(monthData?.plannedHours || 0, unit),
-          convertHours(monthData?.actualHours || 0, unit),
-          convertHours(monthData?.forecastHours || 0, unit)
-        );
-      });
-
-      const assigneeTotal = data.assigneeTotals[assignee];
-      row.push(
-        convertHours(assigneeTotal?.baselineHours || 0, unit),
-        convertHours(assigneeTotal?.plannedHours || 0, unit),
-        convertHours(assigneeTotal?.actualHours || 0, unit),
-        convertHours(assigneeTotal?.forecastHours || 0, unit)
-      );
-
-      return row;
-    }),
-    [
-      '合計',
-      ...data.months.flatMap(month => {
-        const total = data.monthlyTotals[month];
-        return [
-          convertHours(total?.baselineHours || 0, unit),
-          convertHours(total?.plannedHours || 0, unit),
-          convertHours(total?.actualHours || 0, unit),
-          convertHours(total?.forecastHours || 0, unit),
-        ];
-      }),
-      convertHours(data.grandTotal.baselineHours || 0, unit),
-      convertHours(data.grandTotal.plannedHours, unit),
-      convertHours(data.grandTotal.actualHours, unit),
-      convertHours(data.grandTotal.forecastHours || 0, unit)
-    ]
-  ];
-
-  exportTableData(headers, rows, {
+  exportTableData(table.headers, table.rows, {
     filename: `月別担当者別集計表_${new Date().toISOString().slice(0, 10)}`,
     format
   });
@@ -441,72 +508,40 @@ function getCellFromContainer(
   return (container as Record<string, MonthlyPhaseDataCell>)[key];
 }
 
+function buildMonthlyPhaseTable(
+  data: MonthlyPhaseSummaryExportInput,
+  unit: HoursUnit,
+  columns: SummaryColumnVisibility | undefined
+): { headers: string[]; rows: string[][] } {
+  return buildMonthlyTable(
+    '工程',
+    data.months,
+    data.phases.map(phase => ({
+      label: phase,
+      getCell: (month: string) => getCellFromContainer(data.cells, `${month}|${phase}`),
+      total: data.phaseTotals[phase],
+    })),
+    (month: string) => data.monthlyTotals[month],
+    data.grandTotal,
+    unit,
+    resolveColumnVisibility(columns)
+  );
+}
+
 /**
  * 月別工程別集計表をクリップボードにコピー
  * @param data データ
  * @param unit 単位
+ * @param columns 表示中の列
  */
 export async function copyMonthlyPhaseSummaryToClipboard(
   data: MonthlyPhaseSummaryExportInput,
-  unit: HoursUnit = 'hours'
+  unit: HoursUnit = 'hours',
+  columns?: SummaryColumnVisibility
 ): Promise<void> {
-  const unitSuffix = getUnitSuffix(unit);
-  const fmt = (v: number) =>
-    convertHours(v, unit).toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const headers = [
-    '工程',
-    ...data.months.flatMap(month => [
-      `${month}_基準(${unitSuffix})`,
-      `${month}_予定(${unitSuffix})`,
-      `${month}_実績(${unitSuffix})`,
-      `${month}_見通し(${unitSuffix})`,
-    ]),
-    `合計_基準(${unitSuffix})`,
-    `合計_予定(${unitSuffix})`,
-    `合計_実績(${unitSuffix})`,
-    `合計_見通し(${unitSuffix})`,
-  ];
+  const table = buildMonthlyPhaseTable(data, unit, columns);
 
-  const rows = [
-    ...data.phases.map(phase => {
-      const row: (string | number)[] = [phase];
-      data.months.forEach(month => {
-        const cell = getCellFromContainer(data.cells, `${month}|${phase}`);
-        row.push(
-          fmt(cell?.baselineHours || 0),
-          fmt(cell?.plannedHours || 0),
-          fmt(cell?.actualHours || 0),
-          fmt(cell?.forecastHours || 0)
-        );
-      });
-      const total = data.phaseTotals[phase];
-      row.push(
-        fmt(total?.baselineHours || 0),
-        fmt(total?.plannedHours || 0),
-        fmt(total?.actualHours || 0),
-        fmt(total?.forecastHours || 0)
-      );
-      return row;
-    }),
-    [
-      '合計',
-      ...data.months.flatMap(month => {
-        const total = data.monthlyTotals[month];
-        return [
-          fmt(total?.baselineHours || 0),
-          fmt(total?.plannedHours || 0),
-          fmt(total?.actualHours || 0),
-          fmt(total?.forecastHours || 0),
-        ];
-      }),
-      fmt(data.grandTotal.baselineHours || 0),
-      fmt(data.grandTotal.plannedHours),
-      fmt(data.grandTotal.actualHours),
-      fmt(data.grandTotal.forecastHours || 0)
-    ]
-  ];
-
-  await copyToClipboard(headers, rows);
+  await copyToClipboard(table.headers, table.rows);
 }
 
 /**
@@ -514,67 +549,17 @@ export async function copyMonthlyPhaseSummaryToClipboard(
  * @param data データ
  * @param format フォーマット
  * @param unit 単位
+ * @param columns 表示中の列
  */
 export function exportMonthlyPhaseSummary(
   data: MonthlyPhaseSummaryExportInput,
   format: 'csv' | 'tsv',
-  unit: HoursUnit = 'hours'
+  unit: HoursUnit = 'hours',
+  columns?: SummaryColumnVisibility
 ): void {
-  const unitSuffix = getUnitSuffix(unit);
-  const headers = [
-    '工程',
-    ...data.months.flatMap(month => [
-      `${month}_基準(${unitSuffix})`,
-      `${month}_予定(${unitSuffix})`,
-      `${month}_実績(${unitSuffix})`,
-      `${month}_見通し(${unitSuffix})`,
-    ]),
-    `合計_基準(${unitSuffix})`,
-    `合計_予定(${unitSuffix})`,
-    `合計_実績(${unitSuffix})`,
-    `合計_見通し(${unitSuffix})`,
-  ];
+  const table = buildMonthlyPhaseTable(data, unit, columns);
 
-  const rows = [
-    ...data.phases.map(phase => {
-      const row: (string | number)[] = [phase];
-      data.months.forEach(month => {
-        const cell = getCellFromContainer(data.cells, `${month}|${phase}`);
-        row.push(
-          convertHours(cell?.baselineHours || 0, unit),
-          convertHours(cell?.plannedHours || 0, unit),
-          convertHours(cell?.actualHours || 0, unit),
-          convertHours(cell?.forecastHours || 0, unit)
-        );
-      });
-      const total = data.phaseTotals[phase];
-      row.push(
-        convertHours(total?.baselineHours || 0, unit),
-        convertHours(total?.plannedHours || 0, unit),
-        convertHours(total?.actualHours || 0, unit),
-        convertHours(total?.forecastHours || 0, unit)
-      );
-      return row;
-    }),
-    [
-      '合計',
-      ...data.months.flatMap(month => {
-        const total = data.monthlyTotals[month];
-        return [
-          convertHours(total?.baselineHours || 0, unit),
-          convertHours(total?.plannedHours || 0, unit),
-          convertHours(total?.actualHours || 0, unit),
-          convertHours(total?.forecastHours || 0, unit),
-        ];
-      }),
-      convertHours(data.grandTotal.baselineHours || 0, unit),
-      convertHours(data.grandTotal.plannedHours, unit),
-      convertHours(data.grandTotal.actualHours, unit),
-      convertHours(data.grandTotal.forecastHours || 0, unit)
-    ]
-  ];
-
-  exportTableData(headers, rows, {
+  exportTableData(table.headers, table.rows, {
     filename: `月別工程別集計表_${new Date().toISOString().slice(0, 10)}`,
     format
   });
