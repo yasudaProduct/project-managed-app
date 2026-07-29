@@ -9,6 +9,7 @@ export const SYMBOL = {
     IPhaseApplicationService: Symbol.for('IPhaseApplicationService'),
     IMilestoneApplicationService: Symbol.for('IMilestoneApplicationService'),
     IScheduleApplicationService: Symbol.for('IScheduleApplicationService'),
+    IFreeTimeApplicationService: Symbol.for('IFreeTimeApplicationService'),
 
     // リポジトリ
     IProjectRepository: Symbol.for('IProjectRepository'),

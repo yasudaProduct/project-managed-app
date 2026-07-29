@@ -114,6 +114,7 @@ import prisma from '@/lib/prisma/prisma';
 import { IMilestoneApplicationService, MilestoneApplicationService } from '@/applications/milestone/milestone-application-service';
 import { IMilestoneRepository } from '@/applications/milestone/imilestone-repository';
 import { IScheduleApplicationService, ScheduleApplicationService } from '@/applications/schedule/schedule-application-service';
+import { IFreeTimeApplicationService, FreeTimeApplicationService } from '@/applications/schedule/free-time-application-service';
 import { MilestoneRepository } from '@/infrastructures/milestone/milestone-repository';
 
 // EVM関連
@@ -169,6 +170,7 @@ container.bind<IGeppoImportApplicationService>(SYMBOL.IGeppoImportApplicationSer
 container.bind<ITaskDependencyService>(SYMBOL.ITaskDependencyService).to(TaskDependencyService).inSingletonScope();
 container.bind<IMilestoneApplicationService>(SYMBOL.IMilestoneApplicationService).to(MilestoneApplicationService).inSingletonScope();
 container.bind<IScheduleApplicationService>(SYMBOL.IScheduleApplicationService).to(ScheduleApplicationService).inSingletonScope();
+container.bind<IFreeTimeApplicationService>(SYMBOL.IFreeTimeApplicationService).to(FreeTimeApplicationService).inSingletonScope();
 container.bind<IEvmService>(SYMBOL.IEvmService).to(EvmService).inSingletonScope();
 container.bind<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService).to(ImportJobApplicationService).inSingletonScope();
 container.bind<INotificationService>(SYMBOL.INotificationService).to(NotificationService).inSingletonScope();
