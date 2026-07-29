@@ -1,5 +1,6 @@
 import { CompanyCalendar } from './company-calendar';
 import { WbsAssignee } from '../wbs/wbs-assignee';
+import { isFullDayOffTitle } from './full-day-off';
 
 export interface UserSchedule {
   id: number;
@@ -92,9 +93,7 @@ export class AssigneeWorkingCalendar {
 
   // 全日休暇の判定
   private isFullDayOff(schedule: UserSchedule): boolean {
-    // タイトルに固定文字が含まれる場合を全日休みとする
-    const offKeywords = ['休暇', '有給', '休み', '全休', '代休', '振休', '有給休暇']; // TODO:設定から動的にする
-    return offKeywords.some(keyword => schedule.title === keyword);
+    return isFullDayOffTitle(schedule.title);
   }
 
   /**
