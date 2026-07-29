@@ -129,9 +129,11 @@ export class EvmMetrics {
   }
 
   // 表示用フォーマット（算出方式に応じて単位を変更）
+  // 金額は円未満を四捨五入する（UI側 utils/evm-format.ts と同一基準。
+  // 丸めなしだとカードと内訳表・CSVで桁が食い違い、数字の不一致に見える）
   formatValue(value: number): string {
     if (this.calculationMode === 'cost') {
-      return `¥${value.toLocaleString()}`;
+      return `¥${Math.round(value).toLocaleString()}`;
     }
     return `${value.toFixed(1)}h`;
   }

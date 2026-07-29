@@ -29,6 +29,7 @@ import { WbsTagInput } from "@/components/wbs/wbs-tag-input";
 import { SchedulingWorkbench } from "@/components/task-scheduling/scheduling-workbench";
 import type { ProjectStatus, WbsTask, Milestone } from "@/types/wbs";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
+import type { EvmForecastMethod } from "@/types/evm-forecast-method";
 
 type WbsManagementContentProps = {
   wbsId: number;
@@ -54,6 +55,7 @@ type WbsManagementContentProps = {
   showEvm?: boolean;
   showTags?: boolean;
   defaultProgressMethod?: ProgressMeasurementMethod;
+  defaultForecastMethod?: EvmForecastMethod;
   deadlineAlertDays?: number;
   costOverrunThresholdPct?: number;
 };
@@ -71,6 +73,7 @@ export function WbsManagementContent({
   showEvm = true,
   showTags = true,
   defaultProgressMethod,
+  defaultForecastMethod,
   deadlineAlertDays = 1,
   costOverrunThresholdPct = 100,
 }: WbsManagementContentProps) {
@@ -192,6 +195,7 @@ export function WbsManagementContent({
               <EvmDashboard
                 wbsId={wbsId}
                 defaultProgressMethod={defaultProgressMethod}
+                defaultForecastMethod={defaultForecastMethod}
               />
             </TabsContent>
           )}

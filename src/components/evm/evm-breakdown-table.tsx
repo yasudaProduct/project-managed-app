@@ -10,6 +10,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { EvmBreakdownRow } from '@/applications/evm/evm-dashboard-dto';
+import {
+  formatEvmValue,
+  evmIndexTextColorClass,
+  DEFAULT_EVM_THRESHOLDS,
+  type EvmThresholds,
+} from '@/utils/evm-format';
 
 type EvmBreakdownTableProps = {
   title: string;
@@ -17,6 +23,8 @@ type EvmBreakdownTableProps = {
   calculationMode: 'hours' | 'cost';
   /** 軸に関する注記（担当者別の帰属基準など） */
   note?: string;
+  /** SPI/CPIの色分けしきい値（プロジェクト設定値）。未指定時は既定の90%/80% */
+  thresholds?: EvmThresholds;
 };
 
 /**
@@ -28,23 +36,17 @@ export function EvmBreakdownTable({
   rows,
   calculationMode,
   note,
+  thresholds = DEFAULT_EVM_THRESHOLDS,
 }: EvmBreakdownTableProps) {
-  const formatValue = (value: number) => {
-    if (calculationMode === 'cost') {
-      return `¥${Math.round(value).toLocaleString()}`;
-    }
-    return `${value.toFixed(1)}h`;
-  };
+  const formatValue = (value: number) => formatEvmValue(value, calculationMode);
 
   const formatIndex = (value: number | null) =>
     value !== null ? value.toFixed(3) : '—';
 
-  const indexColorClass = (value: number | null) => {
-    if (value === null) return 'text-muted-foreground';
-    if (value >= 1) return 'text-green-600';
-    if (value >= 0.9) return 'text-yellow-600';
-    return 'text-red-600';
-  };
+  // 色分けはヘルスバッジと同じプロジェクト設定しきい値に連動させる
+  // （以前は1.0/0.9ハードコードで、設定を変えてもバッジと表示が矛盾していた）
+  const indexColorClass = (value: number | null) =>
+    evmIndexTextColorClass(value, thresholds);
 
   return (
     <Card>

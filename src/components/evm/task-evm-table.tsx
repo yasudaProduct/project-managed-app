@@ -15,6 +15,7 @@ import {
   PROGRESS_MEASUREMENT_METHOD_LABELS,
   type ProgressMeasurementMethod,
 } from '@/types/progress-measurement';
+import { formatEvmValue } from '@/utils/evm-format';
 
 type TaskEvmTableProps = {
   tasks: TaskEvmDataSerialized[];
@@ -45,12 +46,7 @@ export function TaskEvmTable({
     }
   };
 
-  const formatValue = (value: number) => {
-    if (calculationMode === 'cost') {
-      return `¥${value.toLocaleString()}`;
-    }
-    return `${value.toFixed(1)}h`;
-  };
+  const formatValue = (value: number) => formatEvmValue(value, calculationMode);
 
   const sortedTasks = [...tasks].sort((a, b) => {
     return a.taskNo.localeCompare(b.taskNo);

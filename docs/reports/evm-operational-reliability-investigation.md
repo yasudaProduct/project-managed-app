@@ -151,25 +151,34 @@ EVMの入力（PV/EV/BAC=タスク・スナップショット、AC=WorkRecord）
 
 優先度順。
 
-| # | 提案 | 根拠 |
-|---|------|------|
-| UI-1 | **KPIカード（SPI/CPI/健全性/予測完了日）を最上部へ**。現在は最下部（`evm-dashboard.tsx:439`）でスクロールしないと見えない | 週次レビューの最重要情報 |
-| UI-2 | **「実績未取込」警告**: AC=0 かつ 進捗>0 のとき「geppo未取込のためEV/SPIが過小です」をカードに表示（T1対策） | カードEV=0の誤解が最も危険 |
-| UI-3 | **インポート完了→EVM自動更新**（またはEVMタブに更新ボタン＋最終取込日時表示）。現在はコントロール変更かリロードでしか再取得されない（`evm-dashboard.tsx:84-94`） | 古い数字を見て意思決定するリスク |
-| UI-4 | **`/wbs/[id]` にもEVMタブを出す**。現在 `showEvm=true` は `/projects/[id]` のみ（`src/app/wbs/[id]/page.tsx:53`） | 発見性 |
-| UI-5 | **SPI/CPIバー・内訳表の色しきい値を設定値に連動**。バッジは設定値（既定90/80%）だがバーと内訳は1.0/0.9ハードコード（`evm-metrics-card.tsx:208-212`, `evm-breakdown-table.tsx:42-47`）で表示が矛盾する | 設定変更が反映されない |
-| UI-6 | **チャート凡例のPV_BASE表記修正**: 「当初計画価値 (PV)」と「計画価値 (PV)」が両方(PV)表記（`evm-chart.tsx:135,145`） | 当初/現行計画の混同 |
-| UI-7 | **予測方式(forecastMethod)をダッシュボードから切替可能に**（現在はプロジェクト設定のみ。actionは受け取れるがUIが渡していない） | EAC/ETCの前提を切り替えて見たい |
-| UI-8 | **既定間隔を週次に**（UI既定はdaily、server actionのzod既定はweeklyで乖離。全期間×日次は点が多く重い） | 性能・視認性 |
-| UI-9 | **金額の丸め統一**: カード/チャート/時系列は丸めなし、内訳とCSVは`Math.round`（`evm-breakdown-table.tsx:34`, `evm-dashboard.tsx:162`）で桁が食い違う | 数字の不一致は信頼を損なう |
-| UI-10 | **取込結果に削除件数を表示**: replaceの`deletedCount`がジョブ結果に出ないため消えすぎ/消えなさすぎに気づけない | バグ1・2の検知手段 |
-| UI-11 | 進捗履歴訂正画面の**列日付キーをUTC基準に**（現在ローカルTZの`getFullYear/getMonth/getDate`。EVM本体はUTC暦日で、非JST環境で1日ズレ得る） | 整合性 |
-| UI-12 | EAC/ETCカードの**空ツールチップに説明を入れる**（`evm-metrics-card.tsx:342,360`） | 指標の意味説明 |
+> **2026-07-26 追記: UI-1〜UI-12および軽微な修正3件すべて対応済み。** 状態列を参照。
+
+| # | 提案 | 根拠 | 状態 |
+|---|------|------|------|
+| UI-1 | **KPIカード（SPI/CPI/健全性/予測完了日）を最上部へ**。現在は最下部（`evm-dashboard.tsx:439`）でスクロールしないと見えない | 週次レビューの最重要情報 | 済（コントロール直下・タブ上へ移動） |
+| UI-2 | **「実績未取込」警告**: AC=0 かつ 進捗>0 のとき「geppo未取込のためEV/SPIが過小です」をカードに表示（T1対策） | カードEV=0の誤解が最も危険 | 済（`actualsNotImported`でAlert表示） |
+| UI-3 | **インポート完了→EVM自動更新**（またはEVMタブに更新ボタン＋最終取込日時表示）。現在はコントロール変更かリロードでしか再取得されない（`evm-dashboard.tsx:84-94`） | 古い数字を見て意思決定するリスク | 済（更新ボタン＋最終取得時刻を表示。括弧内の代替案を採用） |
+| UI-4 | **`/wbs/[id]` にもEVMタブを出す**。現在 `showEvm=true` は `/projects/[id]` のみ（`src/app/wbs/[id]/page.tsx:53`） | 発見性 | 済（`showEvm={true}`＋プロジェクト設定を連携） |
+| UI-5 | **SPI/CPIバー・内訳表の色しきい値を設定値に連動**。バッジは設定値（既定90/80%）だがバーと内訳は1.0/0.9ハードコード（`evm-metrics-card.tsx:208-212`, `evm-breakdown-table.tsx:42-47`）で表示が矛盾する | 設定変更が反映されない | 済（DTOにしきい値を公開しバー/内訳へ連動） |
+| UI-6 | **チャート凡例のPV_BASE表記修正**: 「当初計画価値 (PV)」と「計画価値 (PV)」が両方(PV)表記（`evm-chart.tsx:135,145`） | 当初/現行計画の混同 | 済（「当初計画価値 (PV_BASE)」「現行計画価値 (PV)」） |
+| UI-7 | **予測方式(forecastMethod)をダッシュボードから切替可能に**（現在はプロジェクト設定のみ。actionは受け取れるがUIが渡していない） | EAC/ETCの前提を切り替えて見たい | 済（コントロールにSelect追加。既定はプロジェクト設定値） |
+| UI-8 | **既定間隔を週次に**（UI既定はdaily、server actionのzod既定はweeklyで乖離。全期間×日次は点が多く重い） | 性能・視認性 | 済（UI既定を`weekly`へ） |
+| UI-9 | **金額の丸め統一**: カード/チャート/時系列は丸めなし、内訳とCSVは`Math.round`（`evm-breakdown-table.tsx:34`, `evm-dashboard.tsx:162`）で桁が食い違う | 数字の不一致は信頼を損なう | 済（`src/utils/evm-format.ts`に集約し全画面＋CSVで統一） |
+| UI-10 | **取込結果に削除件数を表示**: replaceの`deletedCount`がジョブ結果に出ないため消えすぎ/消えなさすぎに気づけない | バグ1・2の検知手段 | 済（ジョブ行展開に件数サマリ＋進捗ログにも削除件数） |
+| UI-11 | 進捗履歴訂正画面の**列日付キーをUTC基準に**（現在ローカルTZの`getFullYear/getMonth/getDate`。EVM本体はUTC暦日で、非JST環境で1日ズレ得る） | 整合性 | 済（`utcDateKey`利用。JSTで再現テストあり） |
+| UI-12 | EAC/ETCカードの**空ツールチップに説明を入れる**（`evm-metrics-card.tsx:342,360`） | 指標の意味説明 | 済（予測方式の式も併記） |
 
 軽微なコード修正候補:
-- `revalidatePath('/wbs/${wbsId}/gannt')` のタイポ（正: `gantt`）: `src/app/wbs/[id]/actions/wbs-task-actions.ts:133`
-- `TaskProgressCalculator.calculateEffectiveProgress` の `console.log` 残骸: `src/domains/task/task-progress-calculator.ts:45-48`
-- `Task.updateYotei` の `console.log` 残骸: `src/domains/task/task.ts:146`
+- ~~`revalidatePath('/wbs/${wbsId}/gannt')` のタイポ（正: `gantt`）~~ **済**: `src/app/wbs/[id]/actions/wbs-task-actions.ts`
+- ~~`TaskProgressCalculator.calculateEffectiveProgress` の `console.log` 残骸~~ **済**
+- ~~`Task.updateYotei` の `console.log` 残骸~~ **済**
+
+### 実装メモ（2026-07-26）
+
+- **表示フォーマットの単一基準**: `src/utils/evm-format.ts` を新設し、金額は「円未満を四捨五入」に統一（カード/チャート/時系列/タスク別/内訳/CSV）。ドメイン側 `EvmMetrics.formatValue` も同基準に揃えた（`formattedPv` 等が同じ丸めになる）。
+- **しきい値の伝播**: `EvmMetricsData` に `healthyThreshold`/`warningThreshold` を追加。バッジ・バー・内訳表がすべて同じプロジェクト設定値で切り替わる。
+- **UI-3の範囲**: 「インポート完了→自動更新」はジョブがバックグラウンド実行（SSE購読が別画面）のため、レポートが併記した代替案（更新ボタン＋最終取得時刻）を採用した。自動更新はSSE購読の共通化が前提となるため未実施。
+- **UI-10の副産物**: 従来ジョブ行はエラーがある場合のみ展開でき、成功時の件数が見えなかったため、結果がある完了ジョブも展開可能にした。あわせて `job.result` が件数サマリのときにバリデーション結果として読んでしまう不整合（`errors` 未定義で参照エラーになる形）を、形状判定で回避した。
 
 ---
 
@@ -185,6 +194,11 @@ EVMの入力（PV/EV/BAC=タスク・スナップショット、AC=WorkRecord）
 
 追加（2026-07-23）: `src/__tests__/applications/geppo-import/geppo-import-application-service.test.ts`（ユニット6ケース）
 — バグ2（全0時間ユーザーの削除対象化・混在時の全員対象・全期間の月範囲削除）、バグ3（day31スキップ＋エラー計上・閏年判定・expectedWorkRecords）
+
+追加（2026-07-26 / §6 UI対応）:
+- `src/__tests__/utils/evm-format.test.ts`（16ケース）— 金額の丸め統一（UI-9）、しきい値連動の色分け（UI-5）
+- `src/__tests__/components/evm/evm-metrics-card.test.tsx`（6ケース）— 実績未取込警告（UI-2）、バー色のしきい値連動（UI-5）、金額丸め（UI-9）、EAC/ETC説明（UI-12）
+- `src/__tests__/components/wbs/progress-history-content.test.tsx` に2ケース追加 — 列日付キーのUTC基準（UI-11。`TZ=Asia/Tokyo` で修正前は失敗することを確認済み）
 
 実行: `npm run test:integration -- --testPathPattern=evm-operational`
 
@@ -203,7 +217,7 @@ EVMの入力（PV/EV/BAC=タスク・スナップショット、AC=WorkRecord）
 2. ~~**バグ2**: 削除対象ユーザーを「対象geppo行のMEMBER_ID全員」に変更~~ **済(2026-07-23)**
 3. ~~**バグ3**: 月の実日数超の日をスキップ~~ **済(2026-07-23)**（エラー計上つき）
 4. geppo取込の10,000件上限をページング処理に（またはバリデーションで打ち切り検知をエラー化）
-5. ジョブ結果に deletedCount/skippedCount を表示（UI-10）
-6. UI-1〜UI-6（表示系の即効改善）
+5. ~~ジョブ結果に deletedCount/skippedCount を表示（UI-10）~~ **済(2026-07-26)**
+6. ~~UI-1〜UI-6（表示系の即効改善）~~ **済(2026-07-26)**（UI-7〜UI-12・軽微修正3件も同時に対応）
 7. `geppo-import-result.ts` の「分単位」誤記修正
 8. KIJUN工数0のnull化（ライブ/スナップショット不一致、T6）の解消

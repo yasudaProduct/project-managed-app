@@ -52,6 +52,35 @@ type GeppoImportValidation = {
   statistics: Record<string, unknown>;
 };
 
+/**
+ * 完了時にジョブへ保存される件数サマリ（GEPPO/WBSで項目が異なる）。
+ * replaceモードの削除件数が見えないと「消えすぎ/消えなさすぎ」に気づけないため表示する。
+ */
+type ImportJobCounts = {
+  totalGeppoRecords?: number;
+  totalWorkRecords?: number;
+  successCount?: number;
+  errorCount?: number;
+  createdCount?: number;
+  updatedCount?: number;
+  deletedCount?: number;
+  skippedCount?: number;
+  recordCount?: number;
+  addedCount?: number;
+};
+
+const COUNT_LABELS: Array<{ key: keyof ImportJobCounts; label: string }> = [
+  { key: "totalGeppoRecords", label: "月報行" },
+  { key: "recordCount", label: "対象行" },
+  { key: "totalWorkRecords", label: "変換件数" },
+  { key: "createdCount", label: "作成" },
+  { key: "addedCount", label: "追加" },
+  { key: "updatedCount", label: "更新" },
+  { key: "deletedCount", label: "削除" },
+  { key: "skippedCount", label: "スキップ" },
+  { key: "errorCount", label: "エラー" },
+];
+
 export default function ImportJobsClient() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
@@ -117,12 +146,13 @@ export default function ImportJobsClient() {
               ? "bg-gray-100 text-gray-700"
               : "bg-yellow-100 text-yellow-700";
 
-    const hasErrors =
+    const hasDetails =
       job.errorCount > 0 ||
-      job.errorDetails ||
-      (job.result as GeppoImportValidation)?.errors?.length > 0;
+      !!job.errorDetails ||
+      // 成功時も取込結果（作成/更新/削除件数）を開いて確認できるようにする
+      !!job.result;
     const isClickable =
-      (status === "FAILED" || status === "COMPLETED") && hasErrors;
+      (status === "FAILED" || status === "COMPLETED") && hasDetails;
 
     return (
       <Badge
@@ -201,17 +231,54 @@ export default function ImportJobsClient() {
     });
   };
 
-  // エラー詳細をレンダリング
+  /** 取込結果の件数サマリ（削除件数を含む）をレンダリング */
+  const renderResultCounts = (job: Job) => {
+    const counts = job.result as ImportJobCounts | undefined;
+    if (!counts) return null;
+
+    const entries = COUNT_LABELS.filter(
+      ({ key }) => typeof counts[key] === "number"
+    );
+    if (entries.length === 0) return null;
+
+    return (
+      <div className="mb-4">
+        <h4 className="font-semibold text-sm mb-2">取込結果</h4>
+        <div className="flex flex-wrap gap-2">
+          {entries.map(({ key, label }) => (
+            <Badge key={key} variant="outline" className="text-xs font-normal">
+              {label}: {counts[key]}
+            </Badge>
+          ))}
+        </div>
+        {counts.deletedCount === 0 && (counts.createdCount ?? 0) > 0 && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            削除0件で作成が発生しています。再取込の場合は既存実績が置換されず
+            二重計上になっていないか確認してください。
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  // 取込結果・エラー詳細をレンダリング
   const renderErrorDetails = (job: Job) => {
     if (!job.errorDetails && !job.result) return null;
 
-    const validation = job.result as GeppoImportValidation | undefined;
+    // job.result は成功時は件数サマリ、バリデーション失敗時は検証結果が入る。
+    // 件数サマリを検証結果として読むと errors が undefined で落ちるため、形で判別する。
+    const rawResult = job.result as Partial<GeppoImportValidation> | undefined;
+    const validation =
+      rawResult && Array.isArray(rawResult.errors)
+        ? (rawResult as GeppoImportValidation)
+        : undefined;
     const errors = job.errorDetails as
       | { errors?: GeppoImportError[] }
       | undefined;
 
     return (
       <div className="p-4 bg-gray-50 border-t">
+        {renderResultCounts(job)}
         {validation && !validation.isValid && (
           <div className="mb-4">
             <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">

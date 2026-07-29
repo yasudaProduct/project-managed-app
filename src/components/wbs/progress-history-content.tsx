@@ -21,6 +21,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/utils/utils";
+import { utcDateKey } from "@/utils/date-util";
 import {
   updateProgressSnapshot,
   type EditableProgressSnapshotData,
@@ -63,12 +64,13 @@ type Props = {
 
 type RowEdit = { progressRate: string; status: TaskStatus };
 
-/** ローカルTZでの日付キー（列のバケット単位） */
+/**
+ * UTC暦日での日付キー（列のバケット単位）。
+ * EVM本体（PV/EV/ACの日次集計）がUTC暦日で突き合わせているため、進捗履歴の列も
+ * UTC基準に揃える。ローカルTZ基準だと非JST環境で1日ズレ、EVMと照合できなくなる。
+ */
 function toDateKey(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
+  return utcDateKey(new Date(iso));
 }
 
 function formatColumnLabel(dateKey: string): { month: string; day: string } {

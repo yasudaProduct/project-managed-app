@@ -31,6 +31,9 @@ export type EvmMetricsData = {
   calculationMode: EvmCalculationMode;
   progressMethod: ProgressMeasurementMethod;
   forecastMethod: EvmForecastMethod;
+  /** ヘルス判定しきい値（0〜1）。SPI/CPIのバー・内訳表の色分けをバッジと揃えるため公開する */
+  healthyThreshold: number;
+  warningThreshold: number;
   formattedPv: string;
   formattedEv: string;
   formattedAc: string;
@@ -109,6 +112,8 @@ export function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
     calculationMode: metrics.calculationMode,
     progressMethod: metrics.progressMethod,
     forecastMethod: metrics.forecastMethod,
+    healthyThreshold: metrics.healthyThreshold,
+    warningThreshold: metrics.warningThreshold,
     formattedPv: metrics.formattedPv,
     formattedEv: metrics.formattedEv,
     formattedAc: metrics.formattedAc,
