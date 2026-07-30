@@ -43,18 +43,22 @@ import MonthlySummaryTable, {
   SummaryCell,
 } from "@/components/wbs/monthly-summary-table";
 import { useState } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Settings } from "lucide-react";
+import SummaryDisplaySettings, {
+  SummaryDisplaySettingColumn,
+} from "@/components/wbs/summary-display-settings";
 
 interface MonthlyAssigneeSummaryProps {
   monthlyData: MonthlyAssigneeSummaryData;
   hoursUnit: HoursUnit;
   showDifference?: boolean;
   showBaseline?: boolean;
+  showPlanned?: boolean;
   showForecast?: boolean;
   onShowDifferenceChange?: (value: boolean) => void;
   onShowBaselineChange?: (value: boolean) => void;
+  onShowPlannedChange?: (value: boolean) => void;
   onShowForecastChange?: (value: boolean) => void;
+  isColumnToggleDisabled?: (column: SummaryDisplaySettingColumn) => boolean;
 }
 
 export function MonthlyAssigneeSummary({
@@ -62,16 +66,26 @@ export function MonthlyAssigneeSummary({
   hoursUnit,
   showDifference = true,
   showBaseline = false,
+  showPlanned = true,
   showForecast = false,
   onShowDifferenceChange,
   onShowBaselineChange,
+  onShowPlannedChange,
   onShowForecastChange,
+  isColumnToggleDisabled,
 }: MonthlyAssigneeSummaryProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"monthly" | "task">("monthly");
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // コピー・出力は表示中の列のみを対象とする
+  const exportColumns = {
+    showBaseline,
+    showPlanned,
+    showActual: true,
+    showForecast,
+  };
 
   const formatNumber = (num: number) => {
     const converted = convertHours(num, hoursUnit);
@@ -151,66 +165,24 @@ export function MonthlyAssigneeSummary({
               </TooltipProvider>
             </CardTitle>
             <div className="flex gap-2">
-              <DropdownMenu
-                open={isSettingsOpen}
-                onOpenChange={setIsSettingsOpen}
-              >
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Settings className="h-4 w-4" />
-                    表示設定
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="p-2 space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="show-difference"
-                        checked={showDifference}
-                        onCheckedChange={(checked) =>
-                          onShowDifferenceChange?.(!!checked)
-                        }
-                      />
-                      <label
-                        htmlFor="show-difference"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        月毎の差分を表示
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="show-baseline"
-                        checked={showBaseline}
-                        onCheckedChange={(checked) =>
-                          onShowBaselineChange?.(!!checked)
-                        }
-                      />
-                      <label
-                        htmlFor="show-baseline"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        月毎の基準を表示
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="show-forecast"
-                        checked={showForecast}
-                        onCheckedChange={(checked) =>
-                          onShowForecastChange?.(!!checked)
-                        }
-                      />
-                      <label
-                        htmlFor="show-forecast"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        月毎の見通しを表示
-                      </label>
-                    </div>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <SummaryDisplaySettings
+                idPrefix="monthly-assignee"
+                columns={["difference", "baseline", "planned", "forecast"]}
+                values={{
+                  difference: showDifference,
+                  baseline: showBaseline,
+                  planned: showPlanned,
+                  forecast: showForecast,
+                }}
+                onChange={(column, next) => {
+                  if (column === "difference") onShowDifferenceChange?.(next);
+                  if (column === "baseline") onShowBaselineChange?.(next);
+                  if (column === "planned") onShowPlannedChange?.(next);
+                  if (column === "forecast") onShowForecastChange?.(next);
+                }}
+                isDisabled={isColumnToggleDisabled}
+                labelPrefix="月毎の"
+              />
               <Button
                 variant="outline"
                 size="sm"
@@ -222,7 +194,8 @@ export function MonthlyAssigneeSummary({
                         ...monthlyData,
                         assignees: monthlyData.assignees.map(a => a.key),
                       },
-                      hoursUnit
+                      hoursUnit,
+                      exportColumns
                     );
                     toast({
                       description: "TSV形式でクリップボードにコピーしました",
@@ -256,7 +229,8 @@ export function MonthlyAssigneeSummary({
                           assignees: monthlyData.assignees.map(a => a.key),
                         },
                         "csv",
-                        hoursUnit
+                        hoursUnit,
+                        exportColumns
                       )
                     }
                   >
@@ -270,7 +244,8 @@ export function MonthlyAssigneeSummary({
                           assignees: monthlyData.assignees.map(a => a.key),
                         },
                         "tsv",
-                        hoursUnit
+                        hoursUnit,
+                        exportColumns
                       )
                     }
                   >
@@ -290,6 +265,7 @@ export function MonthlyAssigneeSummary({
               hoursUnit={hoursUnit}
               showDifference={showDifference}
               showBaseline={showBaseline}
+              showPlanned={showPlanned}
               showForecast={showForecast}
               getCell={(assignee, month) => {
                 const data = monthlyData.data.find(

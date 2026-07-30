@@ -29,6 +29,7 @@ interface MonthlySummaryTableProps {
     hoursUnit: HoursUnit; // 工数単位
     showDifference: boolean; // 差分表示
     showBaseline: boolean; // 基準工数表示
+    showPlanned?: boolean; // 予定工数表示（省略時は表示）
     showForecast: boolean; // 見通し工数表示
     // 指定 row, month のセルを取得。該当なしなら undefined
     getCell: (rowKey: string, month: string) => SummaryCell | undefined;
@@ -54,6 +55,7 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
     hoursUnit,
     showDifference,
     showBaseline,
+    showPlanned = true,
     showForecast,
     getCell,
     rowTotals,
@@ -88,7 +90,8 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
         return "text-blue-600"; // 実績が予定未達
     };
 
-    const monthColSpan = (showBaseline ? 1 : 0) + 2 /* 予定 + 実績 */ + (showForecast ? 1 : 0);
+    const monthColSpan =
+        (showBaseline ? 1 : 0) + (showPlanned ? 1 : 0) + 1 /* 実績 */ + (showForecast ? 1 : 0);
 
     // スタイル：先頭列固定幅
     const firstColStyle = (() => {
@@ -138,7 +141,9 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
                             {showBaseline && (
                                 <TableHead className="text-center text-xs min-w-[60px]">基準({getUnitSuffix(hoursUnit)})</TableHead>
                             )}
-                            <TableHead className="text-center text-xs min-w-[60px]">予定({getUnitSuffix(hoursUnit)})</TableHead>
+                            {showPlanned && (
+                                <TableHead className="text-center text-xs min-w-[60px]">予定({getUnitSuffix(hoursUnit)})</TableHead>
+                            )}
                             <TableHead
                                 className={`text-center text-xs min-w-[60px] ${!showForecast ? "border-r" : ""}`}
                             >
@@ -155,7 +160,9 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
                         {showBaseline && (
                             <TableHead className="text-center text-xs min-w-[60px]">基準({getUnitSuffix(hoursUnit)})</TableHead>
                         )}
-                        <TableHead className="text-center text-xs min-w-[60px]">予定({getUnitSuffix(hoursUnit)})</TableHead>
+                        {showPlanned && (
+                            <TableHead className="text-center text-xs min-w-[60px]">予定({getUnitSuffix(hoursUnit)})</TableHead>
+                        )}
                         <TableHead className="text-center text-xs min-w-[60px]">
                             {showDifference ? `実績(差分)(${getUnitSuffix(hoursUnit)})` : `実績(${getUnitSuffix(hoursUnit)})`}
                         </TableHead>
@@ -204,9 +211,11 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
                                                 {baseline > 0 ? formatNumber(baseline) : "-"}
                                             </TableCell>
                                         )}
-                                        <TableCell className="text-center text-sm min-w-[60px]">
-                                            {planned > 0 ? formatNumber(planned) : "-"}
-                                        </TableCell>
+                                        {showPlanned && (
+                                            <TableCell className="text-center text-sm min-w-[60px]">
+                                                {planned > 0 ? formatNumber(planned) : "-"}
+                                            </TableCell>
+                                        )}
                                         <TableCell
                                             className={`text-center text-sm min-w-[60px] ${!showForecast ? "border-r" : ""}`}
                                         >
@@ -247,9 +256,11 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
                                     {(total?.baselineHours || 0) > 0 ? formatNumber(total?.baselineHours || 0) : "-"}
                                 </TableCell>
                             )}
-                            <TableCell className="text-center text-sm font-semibold bg-gray-50">
-                                {formatNumber(total?.plannedHours || 0)}
-                            </TableCell>
+                            {showPlanned && (
+                                <TableCell className="text-center text-sm font-semibold bg-gray-50">
+                                    {formatNumber(total?.plannedHours || 0)}
+                                </TableCell>
+                            )}
                             <TableCell className="text-center text-sm font-semibold bg-gray-50">
                                 {formatNumber(total?.actualHours || 0)}
                                 {showDifference && (
@@ -295,9 +306,11 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
                                         {baseline > 0 ? formatNumber(baseline) : "-"}
                                     </TableCell>
                                 )}
-                                <TableCell className="text-center text-sm">
-                                    {formatNumber(planned)}
-                                </TableCell>
+                                {showPlanned && (
+                                    <TableCell className="text-center text-sm">
+                                        {formatNumber(planned)}
+                                    </TableCell>
+                                )}
                                 <TableCell
                                     className={`text-center text-sm ${!showForecast ? "border-r" : ""}`}
                                 >
@@ -327,9 +340,11 @@ export const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
                             {(grandTotal.baselineHours || 0) > 0 ? formatNumber(grandTotal.baselineHours || 0) : "-"}
                         </TableCell>
                     )}
-                    <TableCell className="text-center text-sm bg-gray-200">
-                        {formatNumber(grandTotal.plannedHours)}
-                    </TableCell>
+                    {showPlanned && (
+                        <TableCell className="text-center text-sm bg-gray-200">
+                            {formatNumber(grandTotal.plannedHours)}
+                        </TableCell>
+                    )}
                     <TableCell className="text-center text-sm bg-gray-200">
                         {formatNumber(grandTotal.actualHours)}
                         {showDifference && (

@@ -43,6 +43,15 @@ import {
 } from "@/utils/hours-converter";
 import { Copy } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import SummaryDisplaySettings, {
+  SummaryDisplaySettingColumn,
+} from "@/components/wbs/summary-display-settings";
+import {
+  SummaryColumnSettings,
+  ToggleableSummaryColumn,
+  isSummaryColumnToggleDisabled,
+  toggleSummaryColumn,
+} from "@/utils/summary-column-visibility";
 
 interface WbsSummaryTablesProps {
   projectId: string;
@@ -53,10 +62,56 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
   const { data: summary, isLoading, error } = useWbsSummary(projectId, wbsId);
   const [hoursUnit, setHoursUnit] = useState<HoursUnit>("hours");
 
-  // 月別集計表の表示切り替え状態
-  const [showMonthlyDifference, setShowMonthlyDifference] = useState(true);
-  const [showMonthlyBaseline, setShowMonthlyBaseline] = useState(true);
-  const [showMonthlyForecast, setShowMonthlyForecast] = useState(true);
+  // 集計表の列の表示切り替え状態
+  // 基準・予定・実績・見通しの4列すべてが同時に表示されないよう、初期値は基準を非表示とする
+  const [showDifference, setShowDifference] = useState(true);
+  const [showBaseline, setShowBaseline] = useState(false);
+  const [showPlanned, setShowPlanned] = useState(true);
+  const [showForecast, setShowForecast] = useState(true);
+
+  const columnSettings: SummaryColumnSettings = {
+    showBaseline,
+    showPlanned,
+    showForecast,
+  };
+
+  // 基準・予定・見通しは同時に2列までしか表示できない
+  const changeColumnVisibility = (
+    column: ToggleableSummaryColumn,
+    next: boolean
+  ) => {
+    const updated = toggleSummaryColumn(columnSettings, column, next);
+    setShowBaseline(updated.showBaseline);
+    setShowPlanned(updated.showPlanned);
+    setShowForecast(updated.showForecast);
+  };
+
+  const isColumnToggleDisabled = (column: SummaryDisplaySettingColumn) =>
+    column === "difference"
+      ? false
+      : isSummaryColumnToggleDisabled(columnSettings, column);
+
+  // 工程別・担当者別集計表のコピー・出力対象の列（表示中の列のみ）
+  const categoryExportColumns = {
+    showPlanned,
+    showActual: true,
+    showDifference,
+  };
+
+  // 工程別・担当者別集計表の列数（工程/担当者・タスク数・実績 + 表示中の列）
+  const categoryColumnCount =
+    3 + (showPlanned ? 1 : 0) + (showDifference ? 1 : 0);
+
+  const handleCategoryColumnChange = (
+    column: SummaryDisplaySettingColumn,
+    next: boolean
+  ) => {
+    if (column === "difference") {
+      setShowDifference(next);
+      return;
+    }
+    changeColumnVisibility(column, next);
+  };
 
   const formatNumber = (num: number) => {
     const converted = convertHours(num, hoursUnit);
@@ -148,6 +203,18 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                 工程別集計表
               </CardTitle>
               <div className="flex gap-2">
+                <SummaryDisplaySettings
+                  idPrefix="phase-summary"
+                  columns={["planned", "difference"]}
+                  values={{
+                    difference: showDifference,
+                    baseline: showBaseline,
+                    planned: showPlanned,
+                    forecast: showForecast,
+                  }}
+                  onChange={handleCategoryColumnChange}
+                  isDisabled={isColumnToggleDisabled}
+                />
                 <Button
                   variant="outline"
                   size="sm"
@@ -157,7 +224,8 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                       await copyPhaseSummaryToClipboard(
                         summary.phaseSummaries,
                         summary.phaseTotal,
-                        hoursUnit
+                        hoursUnit,
+                        categoryExportColumns
                       );
                       toast({
                         description: "TSV形式でクリップボードにコピーしました",
@@ -189,7 +257,8 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                           summary.phaseSummaries,
                           summary.phaseTotal,
                           "csv",
-                          hoursUnit
+                          hoursUnit,
+                          categoryExportColumns
                         )
                       }
                     >
@@ -201,7 +270,8 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                           summary.phaseSummaries,
                           summary.phaseTotal,
                           "tsv",
-                          hoursUnit
+                          hoursUnit,
+                          categoryExportColumns
                         )
                       }
                     >
@@ -220,15 +290,19 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                   <TableHead className="text-center font-semibold">
                     タスク数
                   </TableHead>
-                  <TableHead className="text-right font-semibold">
-                    予定工数({getUnitSuffix(hoursUnit)})
-                  </TableHead>
+                  {showPlanned && (
+                    <TableHead className="text-right font-semibold">
+                      予定工数({getUnitSuffix(hoursUnit)})
+                    </TableHead>
+                  )}
                   <TableHead className="text-right font-semibold">
                     実績工数({getUnitSuffix(hoursUnit)})
                   </TableHead>
-                  <TableHead className="text-right font-semibold">
-                    差分
-                  </TableHead>
+                  {showDifference && (
+                    <TableHead className="text-right font-semibold">
+                      差分
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -238,19 +312,23 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                     <TableCell className="text-center">
                       {item.taskCount}
                     </TableCell>
-                    <TableCell className="text-right">
-                      {formatNumber(item.plannedHours)}
-                    </TableCell>
+                    {showPlanned && (
+                      <TableCell className="text-right">
+                        {formatNumber(item.plannedHours)}
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       {formatNumber(item.actualHours)}
                     </TableCell>
-                    <TableCell
-                      className={`text-right ${getDifferenceColor(
-                        item.difference
-                      )}`}
-                    >
-                      {formatNumber(item.difference)}
-                    </TableCell>
+                    {showDifference && (
+                      <TableCell
+                        className={`text-right ${getDifferenceColor(
+                          item.difference
+                        )}`}
+                      >
+                        {formatNumber(item.difference)}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
                 <TableRow className="bg-gray-50 font-semibold">
@@ -258,19 +336,23 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                   <TableCell className="text-center">
                     {summary.phaseTotal.taskCount}
                   </TableCell>
-                  <TableCell className="text-right">
-                    {formatNumber(summary.phaseTotal.plannedHours)}
-                  </TableCell>
+                  {showPlanned && (
+                    <TableCell className="text-right">
+                      {formatNumber(summary.phaseTotal.plannedHours)}
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     {formatNumber(summary.phaseTotal.actualHours)}
                   </TableCell>
-                  <TableCell
-                    className={`text-right ${getDifferenceColor(
-                      summary.phaseTotal.difference
-                    )}`}
-                  >
-                    {formatNumber(summary.phaseTotal.difference)}
-                  </TableCell>
+                  {showDifference && (
+                    <TableCell
+                      className={`text-right ${getDifferenceColor(
+                        summary.phaseTotal.difference
+                      )}`}
+                    >
+                      {formatNumber(summary.phaseTotal.difference)}
+                    </TableCell>
+                  )}
                 </TableRow>
               </TableBody>
             </Table>
@@ -287,6 +369,18 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
               </CardTitle>
               {summary.assigneeSummaries.length > 0 && (
                 <div className="flex gap-2">
+                  <SummaryDisplaySettings
+                    idPrefix="assignee-summary"
+                    columns={["planned", "difference"]}
+                    values={{
+                      difference: showDifference,
+                      baseline: showBaseline,
+                      planned: showPlanned,
+                      forecast: showForecast,
+                    }}
+                    onChange={handleCategoryColumnChange}
+                    isDisabled={isColumnToggleDisabled}
+                  />
                   <Button
                     variant="outline"
                     size="sm"
@@ -296,7 +390,8 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                         await copyAssigneeSummaryToClipboard(
                           summary.assigneeSummaries,
                           summary.assigneeTotal,
-                          hoursUnit
+                          hoursUnit,
+                          categoryExportColumns
                         );
                         toast({
                           description:
@@ -329,7 +424,8 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                             summary.assigneeSummaries,
                             summary.assigneeTotal,
                             "csv",
-                            hoursUnit
+                            hoursUnit,
+                            categoryExportColumns
                           )
                         }
                       >
@@ -341,7 +437,8 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                             summary.assigneeSummaries,
                             summary.assigneeTotal,
                             "tsv",
-                            hoursUnit
+                            hoursUnit,
+                            categoryExportColumns
                           )
                         }
                       >
@@ -361,15 +458,19 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                   <TableHead className="text-center font-semibold">
                     タスク数
                   </TableHead>
-                  <TableHead className="text-right font-semibold">
-                    予定工数({getUnitSuffix(hoursUnit)})
-                  </TableHead>
+                  {showPlanned && (
+                    <TableHead className="text-right font-semibold">
+                      予定工数({getUnitSuffix(hoursUnit)})
+                    </TableHead>
+                  )}
                   <TableHead className="text-right font-semibold">
                     実績工数({getUnitSuffix(hoursUnit)})
                   </TableHead>
-                  <TableHead className="text-right font-semibold">
-                    差分
-                  </TableHead>
+                  {showDifference && (
+                    <TableHead className="text-right font-semibold">
+                      差分
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -381,25 +482,29 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                     <TableCell className="text-center">
                       {item.taskCount}
                     </TableCell>
-                    <TableCell className="text-right">
-                      {formatNumber(item.plannedHours)}
-                    </TableCell>
+                    {showPlanned && (
+                      <TableCell className="text-right">
+                        {formatNumber(item.plannedHours)}
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       {formatNumber(item.actualHours)}
                     </TableCell>
-                    <TableCell
-                      className={`text-right ${getDifferenceColor(
-                        item.difference
-                      )}`}
-                    >
-                      {formatNumber(item.difference)}
-                    </TableCell>
+                    {showDifference && (
+                      <TableCell
+                        className={`text-right ${getDifferenceColor(
+                          item.difference
+                        )}`}
+                      >
+                        {formatNumber(item.difference)}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
                 {summary.assigneeSummaries.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={categoryColumnCount}
                       className="text-center text-gray-500 py-4"
                     >
                       担当者が割り当てられたタスクがありません
@@ -412,19 +517,23 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
                     <TableCell className="text-center">
                       {summary.assigneeTotal.taskCount}
                     </TableCell>
-                    <TableCell className="text-right">
-                      {formatNumber(summary.assigneeTotal.plannedHours)}
-                    </TableCell>
+                    {showPlanned && (
+                      <TableCell className="text-right">
+                        {formatNumber(summary.assigneeTotal.plannedHours)}
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       {formatNumber(summary.assigneeTotal.actualHours)}
                     </TableCell>
-                    <TableCell
-                      className={`text-right ${getDifferenceColor(
-                        summary.assigneeTotal.difference
-                      )}`}
-                    >
-                      {formatNumber(summary.assigneeTotal.difference)}
-                    </TableCell>
+                    {showDifference && (
+                      <TableCell
+                        className={`text-right ${getDifferenceColor(
+                          summary.assigneeTotal.difference
+                        )}`}
+                      >
+                        {formatNumber(summary.assigneeTotal.difference)}
+                      </TableCell>
+                    )}
                   </TableRow>
                 )}
               </TableBody>
@@ -437,12 +546,21 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
       <MonthlyAssigneeSummary
         monthlyData={summary.monthlyAssigneeSummary}
         hoursUnit={hoursUnit}
-        showDifference={showMonthlyDifference}
-        showBaseline={showMonthlyBaseline}
-        showForecast={showMonthlyForecast}
-        onShowDifferenceChange={setShowMonthlyDifference}
-        onShowBaselineChange={setShowMonthlyBaseline}
-        onShowForecastChange={setShowMonthlyForecast}
+        showDifference={showDifference}
+        showBaseline={showBaseline}
+        showPlanned={showPlanned}
+        showForecast={showForecast}
+        onShowDifferenceChange={setShowDifference}
+        onShowBaselineChange={(value) =>
+          changeColumnVisibility("baseline", value)
+        }
+        onShowPlannedChange={(value) =>
+          changeColumnVisibility("planned", value)
+        }
+        onShowForecastChange={(value) =>
+          changeColumnVisibility("forecast", value)
+        }
+        isColumnToggleDisabled={isColumnToggleDisabled}
       />
 
       {/* 月別・工程別集計表 */}
@@ -450,12 +568,21 @@ export function WbsSummaryTables({ projectId, wbsId }: WbsSummaryTablesProps) {
         <MonthlyPhaseSummary
           monthlyData={summary.monthlyPhaseSummary}
           hoursUnit={hoursUnit}
-          showDifference={showMonthlyDifference}
-          showBaseline={showMonthlyBaseline}
-          showForecast={showMonthlyForecast}
-          onShowDifferenceChange={setShowMonthlyDifference}
-          onShowBaselineChange={setShowMonthlyBaseline}
-          onShowForecastChange={setShowMonthlyForecast}
+          showDifference={showDifference}
+          showBaseline={showBaseline}
+          showPlanned={showPlanned}
+          showForecast={showForecast}
+          onShowDifferenceChange={setShowDifference}
+          onShowBaselineChange={(value) =>
+            changeColumnVisibility("baseline", value)
+          }
+          onShowPlannedChange={(value) =>
+            changeColumnVisibility("planned", value)
+          }
+          onShowForecastChange={(value) =>
+            changeColumnVisibility("forecast", value)
+          }
+          isColumnToggleDisabled={isColumnToggleDisabled}
         />
       )}
     </div>
