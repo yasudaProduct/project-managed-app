@@ -118,7 +118,7 @@ export function exportTableData(
   const content = [headerRow, ...dataRows].join('\n');
 
   // BOM付きのBlobを作成
-  const bom = '﻿';
+  const bom = '\uFEFF';
   const blob = new Blob([bom + content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   // ダウンロードリンクを作成

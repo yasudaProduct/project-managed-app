@@ -89,7 +89,7 @@ describe('工程別集計表', () => {
   it('非表示の列は出力されず、工数は小数点第3位まで出力される', () => {
     exportPhaseSummary(data, total, 'tsv', 'hours', { showPlanned: false });
 
-    expect(rowsOf(exportedText.replace('﻿', ''))).toEqual([
+    expect(rowsOf(exportedText.replace('\uFEFF', ''))).toEqual([
       ['工程', 'タスク数', '実績工数(h)', '差分'],
       ['設計', '2', '8.500', '-1.500'],
       ['合計', '2', '8.500', '-1.500'],
@@ -262,7 +262,7 @@ describe('月別・工程別集計表', () => {
       showForecast: false,
     });
 
-    expect(rowsOf(exportedText.replace('﻿', ''))).toEqual([
+    expect(rowsOf(exportedText.replace('\uFEFF', ''))).toEqual([
       ['工程', '2024-01_予定(h)', '2024-01_実績(h)', '合計_予定(h)', '合計_実績(h)'],
       ['設計', '10.000', '8.000', '10.000', '8.000'],
       ['合計', '10.000', '8.000', '10.000', '8.000'],
