@@ -20,20 +20,23 @@ import {
   copyMonthlyPhaseSummaryToClipboard,
   exportMonthlyPhaseSummary,
 } from "@/utils/export-table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Settings } from "lucide-react";
-import { useState } from "react";
 import MonthlySummaryTable, { SummaryCell } from "@/components/wbs/monthly-summary-table";
+import SummaryDisplaySettings, {
+  SummaryDisplaySettingColumn,
+} from "@/components/wbs/summary-display-settings";
 
 interface MonthlyPhaseSummaryProps {
   monthlyData: MonthlyPhaseSummaryData;
   hoursUnit: HoursUnit;
   showDifference?: boolean;
   showBaseline?: boolean;
+  showPlanned?: boolean;
   showForecast?: boolean;
   onShowDifferenceChange?: (value: boolean) => void;
   onShowBaselineChange?: (value: boolean) => void;
+  onShowPlannedChange?: (value: boolean) => void;
   onShowForecastChange?: (value: boolean) => void;
+  isColumnToggleDisabled?: (column: SummaryDisplaySettingColumn) => boolean;
 }
 
 type Cell = {
@@ -50,12 +53,21 @@ export function MonthlyPhaseSummary({
   hoursUnit,
   showDifference = true,
   showBaseline = false,
+  showPlanned = true,
   showForecast = false,
   onShowDifferenceChange,
   onShowBaselineChange,
+  onShowPlannedChange,
   onShowForecastChange,
+  isColumnToggleDisabled,
 }: MonthlyPhaseSummaryProps) {
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  // コピー・出力は表示中の列のみを対象とする
+  const exportColumns = {
+    showBaseline,
+    showPlanned,
+    showActual: true,
+    showForecast,
+  };
   // const formatNumber = (num: number) => {
   //   const converted = convertHours(num, hoursUnit);
   //   return converted.toLocaleString("ja-JP", {
@@ -161,66 +173,24 @@ export function MonthlyPhaseSummary({
             月別・工程別集計表
           </CardTitle>
           <div className="flex gap-2">
-            <DropdownMenu
-              open={isSettingsOpen}
-              onOpenChange={setIsSettingsOpen}
-            >
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  表示設定
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="p-2 space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="phase-show-difference"
-                      checked={showDifference}
-                      onCheckedChange={(checked) =>
-                        onShowDifferenceChange?.(!!checked)
-                      }
-                    />
-                    <label
-                      htmlFor="phase-show-difference"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      月毎の差分を表示
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="phase-show-baseline"
-                      checked={showBaseline}
-                      onCheckedChange={(checked) =>
-                        onShowBaselineChange?.(!!checked)
-                      }
-                    />
-                    <label
-                      htmlFor="phase-show-baseline"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      月毎の基準を表示
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="phase-show-forecast"
-                      checked={showForecast}
-                      onCheckedChange={(checked) =>
-                        onShowForecastChange?.(!!checked)
-                      }
-                    />
-                    <label
-                      htmlFor="phase-show-forecast"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      月毎の見通しを表示
-                    </label>
-                  </div>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <SummaryDisplaySettings
+              idPrefix="monthly-phase"
+              columns={["difference", "baseline", "planned", "forecast"]}
+              values={{
+                difference: showDifference,
+                baseline: showBaseline,
+                planned: showPlanned,
+                forecast: showForecast,
+              }}
+              onChange={(column, next) => {
+                if (column === "difference") onShowDifferenceChange?.(next);
+                if (column === "baseline") onShowBaselineChange?.(next);
+                if (column === "planned") onShowPlannedChange?.(next);
+                if (column === "forecast") onShowForecastChange?.(next);
+              }}
+              isDisabled={isColumnToggleDisabled}
+              labelPrefix="月毎の"
+            />
             <Button
               variant="outline"
               size="sm"
@@ -236,7 +206,8 @@ export function MonthlyPhaseSummary({
                       phaseTotals,
                       grandTotal,
                     },
-                    hoursUnit
+                    hoursUnit,
+                    exportColumns
                   );
                   toast({
                     description: "TSV形式でクリップボードにコピーしました",
@@ -274,7 +245,8 @@ export function MonthlyPhaseSummary({
                         grandTotal,
                       },
                       "csv",
-                      hoursUnit
+                      hoursUnit,
+                      exportColumns
                     )
                   }
                 >
@@ -292,7 +264,8 @@ export function MonthlyPhaseSummary({
                         grandTotal,
                       },
                       "tsv",
-                      hoursUnit
+                      hoursUnit,
+                      exportColumns
                     )
                   }
                 >
@@ -313,6 +286,7 @@ export function MonthlyPhaseSummary({
             hoursUnit={hoursUnit}
             showDifference={showDifference}
             showBaseline={showBaseline}
+            showPlanned={showPlanned}
             showForecast={showForecast}
             getCell={(phase, month) => {
               const cell = cells.get(`${month}|${phase}`) || {
