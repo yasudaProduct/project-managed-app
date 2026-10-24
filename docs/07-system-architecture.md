@@ -298,26 +298,35 @@ sequenceDiagram
 
 ## 6. インポート処理フロー
 
+インポートジョブは呼び出し元（画面・cron・Jenkins・curl）を問わず同じ API / Application Service で作成し、作成順に1件ずつ実行する。
+定期インポート（ImportSchedule）はジョブを作成するだけで、インポートジョブ側は定期インポートに依存しない。
+
 ```mermaid
 sequenceDiagram
-    participant User
-    participant UI
-    participant ImportJob
-    participant Queue
-    participant Worker
+    participant Client as 画面 / Jenkins / curl
+    participant Cron as cron コンテナ（毎分）
+    participant API as API Route / Server Action
+    participant Schedule as ImportScheduleApplicationService
+    participant Job as ImportJobApplicationService
     participant DB
     participant Notification
 
-    User->>UI: ファイルアップロード
-    UI->>ImportJob: インポートジョブ作成
-    ImportJob->>Queue: ジョブキュー登録
-    ImportJob-->>UI: ジョブID返却
-    Queue->>Worker: ジョブ実行
-    Worker->>Worker: データ検証
-    Worker->>DB: データ保存
-    Worker->>ImportJob: 進捗更新
-    Worker->>Notification: 完了通知
-    Notification-->>User: 通知受信
+    Client->>API: POST /api/import-jobs（ジョブ作成）
+    API->>Job: createJob
+    Job->>DB: PENDING で登録
+    Job->>Job: dispatchPendingJobs（実行中がなければ作成順に1件開始）
+    Job-->>Client: ジョブID返却（完了は待たない）
+
+    Cron->>API: POST /api/cron/import-schedules（CRON_SECRET）
+    API->>Schedule: runDueSchedules（期限が来たWBSの予定）
+    Schedule->>DB: 次回実行日時を条件付き更新（二重起動防止）
+    Schedule->>Job: createJob（WBS同期 → 実績 前月・当月）
+    API->>Job: dispatchPendingJobs（タイムアウトしたジョブの回収・待ち行列の再開）
+
+    Job->>DB: WBS同期 / 実績取込
+    Job->>DB: COMPLETED / FAILED、進捗記録
+    Job->>Job: 次の実行待ちジョブを開始
+    Job->>Notification: 完了・失敗通知
 ```
 
 ## 7. 依存性注入（DI）構成

@@ -150,28 +150,25 @@ docker compose logs -f notification-cron
 compose による `notification-cron` では、以下の環境変数が設定されています（compose.yml参照）。必要に応じて `.env` で上書きしてください。
 
 - `API_BASE_URL=http://localhost:3000`（`app` と同じく host ネットワークで動くため localhost の API を呼ぶ）
-- `SLEEP_BETWEEN_TRIGGERS=2`
-- `MAX_TO_TRIGGER=50`
-- `WBS_SYNC_IDS`（日次WBSインポートの対象WBS ID。カンマ区切り、例: `1,6`。未設定の場合はスキップ）
-- `WBS_SYNC_MODE=diff`（日次WBSインポートの同期モード。`diff`（差分）または `replace`（洗い替え））
-- `CRON_SECRET`（`.env` から取り込み）
+- `CRON_SECRET`（`.env` から取り込み。アプリ側と同じ値にする）
 
-cron のジョブはコンテナの環境変数を直接引き継がないため、`run-cron.sh` が起動時に環境変数を `/etc/cron.env` へ書き出し、crontab の `BASH_ENV` で bash スクリプト（インポート系）に読み込ませています。環境変数を変更した場合はコンテナを再作成してください（`docker compose up -d notification-cron`）。
+cron のジョブはコンテナの環境変数を直接引き継がないため、`run-cron.sh` が起動時に環境変数を `/etc/cron.env` へ書き出し、crontab の `BASH_ENV` で bash スクリプトに読み込ませています。環境変数を変更した場合はコンテナを再作成してください（`docker compose up -d notification-cron`）。
 
-### インポートの定期実行
+### 定期インポート
 
-| スケジュール（JST） | スクリプト | 内容 |
-|---|---|---|
-| 毎分 | `run-pending-import-jobs.sh` | 保留中（PENDING）のインポートジョブを開始する（画面から作成したジョブもここで実行される） |
-| 毎日 3:00 | `run-wbs-import.sh` | `WBS_SYNC_IDS` の各WBSについて、WBSインポートジョブを作成 → 実行 → 完了待ちを1件ずつ行う |
-| 毎月1日 4:00 | `run-geppo-import.sh` | 前月分のGeppoインポートジョブを作成 → 実行 → 完了待ち（`TARGET_MONTH=YYYY-MM` で対象月を指定可） |
+定期インポートの設定は画面で行います（cron の設定変更やコンテナの再作成は不要です）。
 
-ログは `logs/cron/*.log`（コンテナ内 `/var/log/cron`）に出力されます。手動で実行する場合:
+- **WBSごとの設定**: WBS画面の「設定」タブ →「定期インポート」
+  - 定期実行の有無、頻度（毎日 3:00 / 毎日 9時・12時・17時 / 毎時。いずれも JST）、WBS同期モード（差分 / 洗い替え）
+  - 「実績（Geppo）も取り込む」: WBS同期の後に、そのWBSの実績を前月分・当月分取り込む
+- **全体の設定と一覧**: システム設定（`/settings/system`）→「定期インポート」
+  - 全体の一時停止スイッチ（停止中に来た予定はスキップされる）と、全WBSの設定一覧
 
-```bash
-docker compose exec notification-cron /usr/local/bin/run-wbs-import.sh
-docker compose exec -e TARGET_MONTH=2026-01 notification-cron /usr/local/bin/run-geppo-import.sh
-```
+cron コンテナは毎分 `run-import-scheduler.sh` で `POST /api/cron/import-schedules` を呼ぶだけです。期限が来た予定のジョブ登録と、実行待ちジョブの開始はアプリ側で行います。インポートジョブは作成順に1件ずつ実行されます（詳細は [IMPORT_API_DOCS.md](./IMPORT_API_DOCS.md)）。
+
+ログは `logs/cron/import-scheduler.log`（コンテナ内 `/var/log/cron`）に、ジョブを登録したときとエラー時のみ出力されます。各ジョブの結果は画面の「インポートジョブ管理」（`/import-jobs`）で確認できます。
+
+Jenkins や curl など cron 以外からインポートを実行する場合は、インポートジョブ API を直接呼び出してください（[IMPORT_API_DOCS.md](./IMPORT_API_DOCS.md)）。
 
 
 ### テストの種類と実行方法

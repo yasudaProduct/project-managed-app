@@ -3,7 +3,7 @@
 # 注意: 最終行も必ず改行で終えること（改行のない最終行は cronie に読み込まれない）
 
 # cron のジョブはコンテナの環境変数を引き継がないため、run-cron.sh が書き出した値を
-# bash スクリプトの起動時に読み込ませる（API_BASE_URL, WBS_SYNC_IDS 等）
+# bash スクリプトの起動時に読み込ませる（API_BASE_URL, CRON_SECRET 等）
 BASH_ENV=/etc/cron.env
 
 # 6時間ごとに通知チェックを実行
@@ -18,11 +18,6 @@ BASH_ENV=/etc/cron.env
 # 毎日午前0時にログローテーション
 0 0 * * * root find /var/log/cron -name '*.log' -mtime +7 -delete
 
-# 毎分、保留中（PENDING）のインポートジョブがあれば実行トリガー
-* * * * * root /usr/local/bin/run-pending-import-jobs.sh
-
-# 毎日午前3時にWBSインポートを実行（対象は WBS_SYNC_IDS）
-0 3 * * * root /usr/local/bin/run-wbs-import.sh
-
-# 毎月1日午前4時にGeppoインポートを実行（前月分）
-0 4 1 * * root /usr/local/bin/run-geppo-import.sh
+# 毎分、定期インポートを起動（期限が来たWBSの予定をジョブとして登録し、実行待ちのジョブを開始する）
+# 各WBSの頻度・対象は画面（WBS画面の「設定」タブ / システム設定）で設定する
+* * * * * root /usr/local/bin/run-import-scheduler.sh
