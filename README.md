@@ -149,11 +149,29 @@ docker compose logs -f notification-cron
 
 compose による `notification-cron` では、以下の環境変数が設定されています（compose.yml参照）。必要に応じて `.env` で上書きしてください。
 
-- `API_BASE_URL=http://app:3000`（アプリの API を同一ネットワーク内の `app` サービスへ）
-- `SYSTEM_USER_ID=system`
+- `API_BASE_URL=http://localhost:3000`（`app` と同じく host ネットワークで動くため localhost の API を呼ぶ）
 - `SLEEP_BETWEEN_TRIGGERS=2`
 - `MAX_TO_TRIGGER=50`
+- `WBS_SYNC_IDS`（日次WBSインポートの対象WBS ID。カンマ区切り、例: `1,6`。未設定の場合はスキップ）
+- `WBS_SYNC_MODE=diff`（日次WBSインポートの同期モード。`diff`（差分）または `replace`（洗い替え））
 - `CRON_SECRET`（`.env` から取り込み）
+
+cron のジョブはコンテナの環境変数を直接引き継がないため、`run-cron.sh` が起動時に環境変数を `/etc/cron.env` へ書き出し、crontab の `BASH_ENV` で bash スクリプト（インポート系）に読み込ませています。環境変数を変更した場合はコンテナを再作成してください（`docker compose up -d notification-cron`）。
+
+### インポートの定期実行
+
+| スケジュール（JST） | スクリプト | 内容 |
+|---|---|---|
+| 毎分 | `run-pending-import-jobs.sh` | 保留中（PENDING）のインポートジョブを開始する（画面から作成したジョブもここで実行される） |
+| 毎日 3:00 | `run-wbs-import.sh` | `WBS_SYNC_IDS` の各WBSについて、WBSインポートジョブを作成 → 実行 → 完了待ちを1件ずつ行う |
+| 毎月1日 4:00 | `run-geppo-import.sh` | 前月分のGeppoインポートジョブを作成 → 実行 → 完了待ち（`TARGET_MONTH=YYYY-MM` で対象月を指定可） |
+
+ログは `logs/cron/*.log`（コンテナ内 `/var/log/cron`）に出力されます。手動で実行する場合:
+
+```bash
+docker compose exec notification-cron /usr/local/bin/run-wbs-import.sh
+docker compose exec -e TARGET_MONTH=2026-01 notification-cron /usr/local/bin/run-geppo-import.sh
+```
 
 
 ### テストの種類と実行方法

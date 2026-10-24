@@ -64,16 +64,18 @@ services:
       - CRON_SECRET=${CRON_SECRET:-dev-cron-secret-key}
       - NOTIFICATION_API_URL=http://localhost:3000/api/cron/notifications
       - API_BASE_URL=http://localhost:3000
-      - SYSTEM_USER_ID=system
       - SLEEP_BETWEEN_TRIGGERS=2
       - MAX_TO_TRIGGER=50
+      # 日次WBSインポートの対象WBS ID（カンマ区切り。未設定ならスキップ）と同期モード（diff / replace）
+      - WBS_SYNC_IDS=${WBS_SYNC_IDS:-}
+      - WBS_SYNC_MODE=${WBS_SYNC_MODE:-diff}
       - TZ=Asia/Tokyo
     volumes:
       - ./logs/cron:/var/log/cron
       - ./docker/cron:/usr/local/bin:ro
     restart: unless-stopped
-    networks:
-      - app-network
+    # app が host ネットワークで動くため、cron も host ネットワークで localhost:3000 の API を呼ぶ
+    network_mode: host
     depends_on:
       - app
     healthcheck:

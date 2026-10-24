@@ -27,6 +27,7 @@ COPY docker/cron/health-check.sh /usr/local/bin/
 COPY docker/cron/run-wbs-import.sh /usr/local/bin/
 COPY docker/cron/run-geppo-import.sh /usr/local/bin/
 COPY docker/cron/run-pending-import-jobs.sh /usr/local/bin/
+COPY docker/cron/import-job-common.sh /usr/local/bin/
 
 # スクリプトに実行権限を付与
 RUN chmod +x /usr/local/bin/*.sh

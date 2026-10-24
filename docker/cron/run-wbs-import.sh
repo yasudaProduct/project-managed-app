@@ -1,104 +1,49 @@
 #!/bin/bash
 
 # WBSインポートジョブを実行するスクリプト
+# 対象WBSは WBS_SYNC_IDS（カンマ区切りのWBS ID）で指定し、1件ずつ作成 → 実行 → 完了待ちを行う
 
 set -e
 
-# 環境変数の設定
-API_BASE_URL="${API_BASE_URL:-http://localhost:3000}"
-SYSTEM_USER_ID="${SYSTEM_USER_ID:-system}"
 LOG_FILE="/var/log/cron/wbs-import.log"
+. "$(dirname "${BASH_SOURCE[0]}")/import-job-common.sh"
 
-# ログディレクトリの作成
-mkdir -p "$(dirname "$LOG_FILE")"
+WBS_SYNC_IDS="${WBS_SYNC_IDS:-}"
+WBS_SYNC_MODE="${WBS_SYNC_MODE:-diff}"
 
-# ログ出力関数
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
-}
+if [ -z "$WBS_SYNC_IDS" ]; then
+    log "WBS_SYNC_IDS is not set. Skipping WBS import"
+    exit 0
+fi
 
-log "Starting WBS import job"
-
-# WBSインポートジョブの作成（作成のみ）
-create_response=$(curl -s -w "\n%{http_code}" \
-    -X POST \
-    -H "Content-Type: application/json" \
-    -d "{
-        \"type\": \"WBS\",
-        \"createdBy\": \"$SYSTEM_USER_ID\"
-    }" \
-    "$API_BASE_URL/api/import-jobs" || echo -e "\nERROR")
-
-# レスポンスの分離
-response_body=$(echo "$create_response" | head -n -1)
-http_code=$(echo "$create_response" | tail -n 1)
-
-if [ "$http_code" = "ERROR" ]; then
-    log "ERROR: Failed to connect to API"
+if [ "$WBS_SYNC_MODE" != "diff" ] && [ "$WBS_SYNC_MODE" != "replace" ]; then
+    log "ERROR: WBS_SYNC_MODE must be 'diff' or 'replace' (got: $WBS_SYNC_MODE)"
     exit 1
 fi
 
-if [ "$http_code" -ne 201 ]; then
-    log "ERROR: Failed to create WBS import job (HTTP $http_code)"
-    log "Response: $response_body"
-    exit 1
-fi
+log "Starting WBS import jobs (WBS IDs: $WBS_SYNC_IDS, sync mode: $WBS_SYNC_MODE)"
 
-# ジョブIDの取得
-job_id=$(echo "$response_body" | grep -o '"id":"[^"]*' | cut -d'"' -f4)
+failure_count=0
+IFS=',' read -ra wbs_ids <<< "$WBS_SYNC_IDS"
+for raw_wbs_id in "${wbs_ids[@]}"; do
+    wbs_id="$(echo "$raw_wbs_id" | tr -d '[:space:]')"
+    [ -z "$wbs_id" ] && continue
 
-if [ -z "$job_id" ]; then
-    log "ERROR: Could not extract job ID from response"
-    log "Response: $response_body"
-    exit 1
-fi
-
-log "WBS import job created successfully (ID: $job_id)"
-
-# 直後に実行トリガーを呼び出し
-execute_http=$(curl -s -o /dev/null -w "%{http_code}" \
-  -X POST "$API_BASE_URL/api/import-jobs/$job_id/execute" || echo "ERROR")
-
-if [ "$execute_http" = "ERROR" ] || [ "$execute_http" -lt 200 ] || [ "$execute_http" -ge 300 ]; then
-    log "ERROR: Failed to trigger execution for job $job_id (HTTP $execute_http)"
-    exit 1
-fi
-
-log "Triggered execution for job $job_id"
-
-# ジョブの完了を待機（最大30分）
-max_wait=1800  # 30 minutes
-wait_time=0
-sleep_interval=30
-
-while [ $wait_time -lt $max_wait ]; do
-    # ジョブステータスの確認
-    status_response=$(curl -s -w "\n%{http_code}" \
-        "$API_BASE_URL/api/import-jobs?userId=$SYSTEM_USER_ID" || echo -e "\nERROR")
-    
-    status_body=$(echo "$status_response" | head -n -1)
-    status_code=$(echo "$status_response" | tail -n 1)
-    
-    if [ "$status_code" = "ERROR" ] || [ "$status_code" -ne 200 ]; then
-        log "WARNING: Could not check job status (HTTP $status_code)"
-    else
-        # 該当ジョブのステータスを抽出
-        job_status=$(echo "$status_body" | grep -A 10 -B 10 "$job_id" | grep -o '"status":"[^"]*' | cut -d'"' -f4 | head -1)
-        
-        if [ "$job_status" = "COMPLETED" ]; then
-            log "WBS import job completed successfully"
-            exit 0
-        elif [ "$job_status" = "FAILED" ]; then
-            log "ERROR: WBS import job failed"
-            exit 1
-        else
-            log "WBS import job in progress (status: $job_status)"
-        fi
+    if ! [[ "$wbs_id" =~ ^[1-9][0-9]*$ ]]; then
+        log "ERROR: Invalid WBS ID: $wbs_id"
+        failure_count=$((failure_count + 1))
+        continue
     fi
-    
-    sleep $sleep_interval
-    wait_time=$((wait_time + sleep_interval))
+
+    if ! run_import_job "WBS $wbs_id" \
+        "{\"type\":\"WBS\",\"wbsId\":$wbs_id,\"options\":{\"syncMode\":\"$WBS_SYNC_MODE\"}}"; then
+        failure_count=$((failure_count + 1))
+    fi
 done
 
-log "WARNING: WBS import job did not complete within timeout period"
-exit 2
+if [ "$failure_count" -gt 0 ]; then
+    log "WBS import finished with $failure_count failure(s)"
+    exit 1
+fi
+
+log "WBS import finished successfully"
