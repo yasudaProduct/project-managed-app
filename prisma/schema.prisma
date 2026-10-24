@@ -596,8 +596,9 @@ model WbsImportSchedule {
   timezone       String    @default("Asia/Tokyo") // cron式を解釈するタイムゾーン
   syncMode       String    @default("diff") // WBS同期モード（diff: 差分 / replace: 洗い替え）
   includeActuals Boolean   @default(false) // WBS同期の後に実績（Geppo）の前月・当月分も取り込む
-  nextRunAt      DateTime? @db.Timestamptz // 次回実行日時（無効の場合は NULL）
-  lastRunAt      DateTime? @db.Timestamptz // 前回実行日時
+  // 次回実行日時（無効の場合は NULL）。次回実行日時の一致で二重起動を防ぐため、JS の Date と同じミリ秒精度で持つ
+  nextRunAt      DateTime? @db.Timestamptz(3)
+  lastRunAt      DateTime? @db.Timestamptz(3) // 前回実行日時
   createdAt      DateTime  @default(now()) @db.Timestamptz
   updatedAt      DateTime  @updatedAt @db.Timestamptz
 

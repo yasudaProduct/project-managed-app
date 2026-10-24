@@ -6,8 +6,8 @@ CREATE TABLE "wbs_import_schedules" (
     "timezone" TEXT NOT NULL DEFAULT 'Asia/Tokyo',
     "syncMode" TEXT NOT NULL DEFAULT 'diff',
     "includeActuals" BOOLEAN NOT NULL DEFAULT false,
-    "nextRunAt" TIMESTAMPTZ,
-    "lastRunAt" TIMESTAMPTZ,
+    "nextRunAt" TIMESTAMPTZ(3),
+    "lastRunAt" TIMESTAMPTZ(3),
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ NOT NULL,
 
