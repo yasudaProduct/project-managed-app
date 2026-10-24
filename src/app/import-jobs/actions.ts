@@ -117,11 +117,12 @@ export async function executeImportJob(
   if (!job) {
     return { success: false, error: "ジョブが見つかりません" };
   }
-  if (job.status !== "PENDING") {
+  // cron の毎分ジョブが先に開始していた場合は二重に実行しない
+  const isStarted = await importJobService.startJob(id);
+  if (!isStarted) {
     return { success: false, error: "ジョブは保留中ではありません" };
   }
 
-  await importJobService.startJob(id);
   importJobService.executeJobAsync(id);
 
   revalidatePath("/import-jobs");

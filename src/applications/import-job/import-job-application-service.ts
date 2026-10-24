@@ -13,8 +13,8 @@ import { NotificationChannel } from '@/domains/notification/notification-channel
 import type { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
 
 export interface IImportJobApplicationService {
-  createJob(options: ImportJobOptions & { createdBy: string }): Promise<ImportJob>
-  startJob(jobId: string): Promise<void>
+  createJob(options: ImportJobOptions & { createdBy?: string }): Promise<ImportJob>
+  startJob(jobId: string): Promise<boolean>
   executeJobAsync(jobId: string): void
   updateJobProgress(jobId: string, processed: number, success: number, error: number): Promise<void>
   completeJob(jobId: string, result: Record<string, unknown>): Promise<void>
@@ -54,22 +54,31 @@ export class ImportJobApplicationService implements IImportJobApplicationService
   }
 
   /**
-   * インポートジョブを開始
-   * @param jobId 
-   * @returns 
+   * インポートジョブを開始（PENDING → RUNNING）
+   * cron と手動実行などで同じジョブの開始が同時に届いても、開始できるのは1件だけ
+   * @param jobId
+   * @returns 開始できた場合 true。保留中でない（他の実行者が先に開始した）場合 false
    */
-  async startJob(jobId: string): Promise<void> {
+  async startJob(jobId: string): Promise<boolean> {
     const job = await this.importJobRepository.findById(jobId)
     if (!job) {
       throw new Error(`ジョブが見つかりません: ${jobId}`)
     }
+    if (job.status !== ImportJobStatuses.PENDING) {
+      return false
+    }
 
     job.start()
-    await this.importJobRepository.update(job)
+    const isStarted = await this.importJobRepository.updateIfStatus(job, ImportJobStatuses.PENDING)
+    if (!isStarted) {
+      return false
+    }
+
     await this.addProgress(jobId, {
       message: 'インポートジョブを開始しました',
       level: 'info',
     })
+    return true
   }
 
   /**
@@ -325,6 +334,8 @@ export class ImportJobApplicationService implements IImportJobApplicationService
         message: `WBS同期が完了しました（新規: ${result.addedCount}件 / 更新: ${result.updatedCount}件 / 削除: ${result.deletedCount}件）`,
         level: 'info',
       })
+
+      await this.sendJobNotification(jobId, 'COMPLETED')
     } else {
       await this.failJob(jobId, {
         message: 'WBS同期に失敗しました',
@@ -335,9 +346,9 @@ export class ImportJobApplicationService implements IImportJobApplicationService
         message: 'WBS同期に失敗しました',
         level: 'error',
       })
-    }
 
-    await this.sendJobNotification(jobId, 'COMPLETED')
+      await this.sendJobNotification(jobId, 'FAILED')
+    }
   }
 
   private async sendJobNotification(jobId: string, status: 'COMPLETED' | 'FAILED'): Promise<void> {
@@ -347,11 +358,7 @@ export class ImportJobApplicationService implements IImportJobApplicationService
         return
       }
 
-      const assignees = await this.wbsApplicationService.getAssignees(job.wbsId!)
-      const sendUserIds = job.createdBy
-        ? [job.createdBy]
-        : assignees?.map((assignee) => assignee.assignee?.userId)
-            .filter((userId) => userId !== null) ?? []
+      const sendUserIds = await this.resolveNotificationUserIds(job)
 
       const isSuccess = status === 'COMPLETED'
       const notificationType = isSuccess
@@ -373,7 +380,6 @@ export class ImportJobApplicationService implements IImportJobApplicationService
       }
 
       for (const userId of sendUserIds) {
-        if (!userId) continue
         await this.notificationService.createNotification({
           userId: userId,
           type: notificationType,
@@ -395,5 +401,24 @@ export class ImportJobApplicationService implements IImportJobApplicationService
     } catch (error) {
       console.error('通知送信に失敗しました:', error)
     }
+  }
+
+  /**
+   * 通知先ユーザーを決める（作成者 → 作成者がいなければ対象WBSの担当者）
+   */
+  private async resolveNotificationUserIds(job: ImportJob): Promise<string[]> {
+    if (job.createdBy) {
+      return [job.createdBy]
+    }
+    // wbsId を持たないジョブ（cron 起動の Geppo 等）で担当者を検索すると、WBS条件なしの検索になり全WBSの担当者が返るため通知しない
+    if (!job.wbsId) {
+      return []
+    }
+
+    const assignees = await this.wbsApplicationService.getAssignees(job.wbsId)
+    const userIds = (assignees ?? [])
+      .map((assignee) => assignee.assignee?.userId)
+      .filter((userId): userId is string => !!userId)
+    return Array.from(new Set(userIds))
   }
 }

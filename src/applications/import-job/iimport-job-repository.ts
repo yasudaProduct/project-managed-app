@@ -4,6 +4,8 @@ import { ImportJobType, ImportJobStatus } from '@/domains/import-job/import-job-
 export interface IImportJobRepository {
   create(job: ImportJob): Promise<ImportJob>
   update(job: ImportJob): Promise<ImportJob>
+  /** 保存済みのステータスが expectedStatus の場合のみ更新する。更新できた場合 true */
+  updateIfStatus(job: ImportJob, expectedStatus: ImportJobStatus): Promise<boolean>
   findById(id: string): Promise<ImportJob | null>
   findAll(limit?: number): Promise<ImportJob[]>
   findByUser(userId: string, limit?: number): Promise<ImportJob[]>

@@ -22,11 +22,12 @@ export async function POST(
       return createApiError('ジョブが見つかりません', 404)
     }
 
-    if (job.status !== 'PENDING') {
-      return createApiError('ジョブは保留中ではありません', 400)
+    // cron の毎分ジョブと日次/月次ジョブ等から同時に呼ばれても、開始できた1件だけが実行する
+    const isStarted = await importJobService.startJob(id)
+    if (!isStarted) {
+      return createApiError('ジョブは保留中ではありません', 409)
     }
 
-    await importJobService.startJob(id)
     importJobService.executeJobAsync(id)
 
     return createApiResponse({ started: true })

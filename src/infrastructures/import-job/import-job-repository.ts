@@ -45,20 +45,26 @@ export class ImportJobRepository implements IImportJobRepository {
   async update(job: ImportJob): Promise<ImportJob> {
     const updated = await prisma.importJob.update({
       where: { id: job.id },
-      data: {
-        status: job.status as $Enums.ImportJobStatus,
-        totalRecords: job.totalRecords,
-        processedRecords: job.processedRecords,
-        successCount: job.successCount,
-        errorCount: job.errorCount,
-        startedAt: job.startedAt,
-        completedAt: job.completedAt,
-        errorDetails: job.errorDetails as Prisma.InputJsonValue,
-        result: job.result as Prisma.InputJsonValue,
-      },
+      data: this.toUpdateData(job),
     })
 
     return this.toDomain(updated)
+  }
+
+  /**
+   * 保存済みのステータスが expectedStatus の場合のみ更新する
+   * 条件付きの単一UPDATEで判定するため、同じジョブへの同時更新でも成功するのは1件だけ
+   * @param job
+   * @param expectedStatus
+   * @returns 更新できた場合 true
+   */
+  async updateIfStatus(job: ImportJob, expectedStatus: ImportJobStatus): Promise<boolean> {
+    const { count } = await prisma.importJob.updateMany({
+      where: { id: job.id, status: expectedStatus as $Enums.ImportJobStatus },
+      data: this.toUpdateData(job),
+    })
+
+    return count === 1
   }
 
   async findById(id: string): Promise<ImportJob | null> {
@@ -131,6 +137,20 @@ export class ImportJobRepository implements IImportJobRepository {
       level: record.level as 'info' | 'warning' | 'error',
       recordedAt: record.recordedAt,
     }))
+  }
+
+  private toUpdateData(job: ImportJob): Prisma.ImportJobUpdateManyMutationInput {
+    return {
+      status: job.status as $Enums.ImportJobStatus,
+      totalRecords: job.totalRecords,
+      processedRecords: job.processedRecords,
+      successCount: job.successCount,
+      errorCount: job.errorCount,
+      startedAt: job.startedAt,
+      completedAt: job.completedAt,
+      errorDetails: job.errorDetails as Prisma.InputJsonValue,
+      result: job.result as Prisma.InputJsonValue,
+    }
   }
 
   private toDomain(prismaJob: PrismaImportJob): ImportJob {

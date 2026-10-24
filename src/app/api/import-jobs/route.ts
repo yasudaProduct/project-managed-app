@@ -1,10 +1,10 @@
 import { NextRequest } from 'next/server'
+import { z } from 'zod'
 import { container } from '@/lib/inversify.config'
 import { SYMBOL } from '@/types/symbol'
 import { IImportJobApplicationService } from '@/applications/import-job/import-job-application-service'
-import type { ImportJobType } from '@/types/import-job'
 import type { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
-import { createApiResponse, createApiError, createImportResponse, validateRequiredFields } from '@/lib/api-response'
+import { createApiResponse, createApiError, createImportResponse } from '@/lib/api-response'
 
 function formatJob(job: Awaited<ReturnType<IImportJobApplicationService['getJob']>>, wbsMap: Map<number, string>) {
   if (!job) return null
@@ -81,26 +81,35 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// createdBy は受け付けない（認証のない cron 等から任意のユーザーIDを指定させない。存在しないIDは外部キー違反になる）
+const createImportJobSchema = z
+  .object({
+    type: z.enum(['WBS', 'GEPPO']),
+    wbsId: z.number().int().positive().optional(),
+    targetMonth: z
+      .string()
+      .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'targetMonth は YYYY-MM 形式で指定してください')
+      .optional(),
+    targetProjectIds: z.array(z.string()).optional(),
+    options: z.record(z.unknown()).optional(),
+  })
+  .refine((body) => body.type !== 'WBS' || body.wbsId !== undefined, {
+    message: 'WBSのインポートには wbsId が必要です',
+    path: ['wbsId'],
+  })
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { type, ...options } = body
-
-    const requiredError = validateRequiredFields(body, ['type'])
-    if (requiredError) {
-      return createApiError('Type is required', 400)
-    }
-
-    if (type !== 'WBS' && type !== 'GEPPO') {
-      return createApiError('Invalid type', 400)
+    const parsed = createImportJobSchema.safeParse(await request.json())
+    if (!parsed.success) {
+      return createApiError('リクエストが不正です', 400, parsed.error.flatten().fieldErrors)
     }
 
     const importJobService = container.get<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService)
 
     const job = await importJobService.createJob({
-      type: type as ImportJobType,
-      createdBy: undefined,
-      ...options
+      ...parsed.data,
+      options: parsed.data.options ?? {},
     })
 
     return createImportResponse({
