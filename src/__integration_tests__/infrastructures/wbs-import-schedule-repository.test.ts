@@ -107,6 +107,17 @@ describe('WbsImportScheduleRepository Integration Tests', () => {
     await expect(repository.updateIfNextRunAt(schedule.markRun(runAt), schedule.nextRunAt!)).resolves.toBe(false);
   });
 
+  it('updateIfNextRunAt: DBを直接更新してマイクロ秒を含む次回実行日時になっても、取得した値で進められる', async () => {
+    const wbsId = await createWbs('WBS-手動更新');
+    await repository.save(WbsImportSchedule.create(wbsId, settings, NOW));
+    await global.prisma.$executeRaw`
+      UPDATE wbs_import_schedules SET "nextRunAt" = TIMESTAMPTZ '2026-10-24 03:00:00.123456+00' WHERE "wbsId" = ${wbsId}`;
+
+    const [due] = (await repository.findDue(new Date('2026-10-24T03:00:30.000Z'))).filter((s) => s.wbsId === wbsId);
+
+    await expect(repository.updateIfNextRunAt(due.markRun(new Date('2026-10-24T03:00:30.000Z')), due.nextRunAt!)).resolves.toBe(true);
+  });
+
   it('WBSを削除すると設定も削除される', async () => {
     const wbsId = await createWbs('WBS-削除');
     await repository.save(WbsImportSchedule.create(wbsId, settings, NOW));
