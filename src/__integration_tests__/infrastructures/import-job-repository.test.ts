@@ -4,20 +4,30 @@ import { ImportJobStatuses } from '@/domains/import-job/import-job-enums';
 
 describe('ImportJobRepository Integration Tests', () => {
   let repository: ImportJobRepository;
-  const createdJobIds: string[] = [];
 
-  const createPendingJob = async (): Promise<ImportJob> => {
-    const job = await repository.create(ImportJob.create({ type: 'GEPPO', targetMonth: '2026-09', options: {} }));
-    createdJobIds.push(job.id);
-    return job;
+  const createPendingJob = async (targetMonth = '2026-09'): Promise<ImportJob> =>
+    repository.create(ImportJob.create({ type: 'GEPPO', targetMonth, options: {} }));
+
+  /** 保存済みのジョブを RUNNING にする */
+  const markRunning = async (job: ImportJob): Promise<void> => {
+    const running = await repository.findById(job.id);
+    running!.start();
+    await repository.update(running!);
   };
 
   beforeAll(() => {
     repository = new ImportJobRepository();
   });
 
+  // 「他に RUNNING のジョブがあるか」を判定するため、テストごとにジョブを空にする（テスト用DB）
+  beforeEach(async () => {
+    await global.prisma.importJobProgress.deleteMany();
+    await global.prisma.importJob.deleteMany();
+  });
+
   afterAll(async () => {
-    await global.prisma.importJob.deleteMany({ where: { id: { in: createdJobIds } } });
+    await global.prisma.importJobProgress.deleteMany();
+    await global.prisma.importJob.deleteMany();
   });
 
   describe('updateIfStatus', () => {
@@ -35,9 +45,7 @@ describe('ImportJobRepository Integration Tests', () => {
 
     it('現在のステータスが期待値と異なる場合は更新せず false を返す', async () => {
       const job = await createPendingJob();
-      const running = await repository.findById(job.id);
-      running!.start();
-      await repository.update(running!);
+      await markRunning(job);
 
       const stale = await repository.findById(job.id);
       stale!.cancel();
@@ -63,6 +71,59 @@ describe('ImportJobRepository Integration Tests', () => {
       expect(results.filter(Boolean)).toHaveLength(1);
       const saved = await repository.findById(job.id);
       expect(saved?.status).toBe(ImportJobStatuses.RUNNING);
+    });
+  });
+
+  describe('updateIfStartable', () => {
+    it('PENDING で他に RUNNING のジョブがなければ RUNNING として保存し STARTED を返す', async () => {
+      const job = await createPendingJob();
+      job.start();
+
+      await expect(repository.updateIfStartable(job)).resolves.toBe('STARTED');
+      expect((await repository.findById(job.id))?.status).toBe(ImportJobStatuses.RUNNING);
+    });
+
+    it('他に RUNNING のジョブがあれば更新せず BUSY を返す', async () => {
+      await markRunning(await createPendingJob('2026-08'));
+      const job = await createPendingJob();
+      job.start();
+
+      await expect(repository.updateIfStartable(job)).resolves.toBe('BUSY');
+      expect((await repository.findById(job.id))?.status).toBe(ImportJobStatuses.PENDING);
+    });
+
+    it('保存済みのジョブが PENDING でなければ更新せず NOT_PENDING を返す', async () => {
+      const job = await createPendingJob();
+      const cancelled = await repository.findById(job.id);
+      cancelled!.cancel();
+      await repository.update(cancelled!);
+      job.start();
+
+      await expect(repository.updateIfStartable(job)).resolves.toBe('NOT_PENDING');
+      expect((await repository.findById(job.id))?.status).toBe(ImportJobStatuses.CANCELLED);
+    });
+
+    it('別々の PENDING ジョブを同時に開始しても、RUNNING になるのは1件だけ', async () => {
+      const jobs = await Promise.all(['2026-07', '2026-08', '2026-09'].map((month) => createPendingJob(month)));
+      jobs.forEach((job) => job.start());
+
+      const results = await Promise.all(jobs.map((job) => repository.updateIfStartable(job)));
+
+      expect(results.filter((result) => result === 'STARTED')).toHaveLength(1);
+      expect(results.filter((result) => result === 'BUSY')).toHaveLength(2);
+      expect(await repository.findByStatus(ImportJobStatuses.RUNNING)).toHaveLength(1);
+    });
+  });
+
+  describe('findByStatus', () => {
+    it('作成順（古い順）に返す', async () => {
+      const first = await createPendingJob('2026-07');
+      const second = await createPendingJob('2026-08');
+      const third = await createPendingJob('2026-09');
+
+      const pending = await repository.findByStatus(ImportJobStatuses.PENDING);
+
+      expect(pending.map((job) => job.id)).toEqual([first.id, second.id, third.id]);
     });
   });
 });
