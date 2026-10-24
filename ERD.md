@@ -292,6 +292,24 @@ erDiagram
   String level
   DateTime recordedAt
 }
+"wbs_import_schedules" {
+  Int wbsId PK
+  Boolean isEnabled
+  String cronExpression
+  String timezone
+  String syncMode
+  Boolean includeActuals
+  DateTime nextRunAt "nullable"
+  DateTime lastRunAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"import_schedule_settings" {
+  Int id PK
+  Boolean isEnabled
+  DateTime createdAt
+  DateTime updatedAt
+}
 "system_settings" {
   Int id PK
   Float standardWorkingHours
@@ -331,6 +349,7 @@ erDiagram
 "import_jobs" }o--o| "users" : user
 "import_jobs" }o--o| "wbs" : wbs
 "import_job_progress" }o--|| "import_jobs" : job
+"wbs_import_schedules" |o--|| "wbs" : wbs
 ```
 
 ### `projects`
@@ -670,6 +689,28 @@ erDiagram
   - `detail`: 
   - `level`: 
   - `recordedAt`: 
+
+### `wbs_import_schedules`
+
+**Properties**
+  - `wbsId`: 
+  - `isEnabled`: 
+  - `cronExpression`: 
+  - `timezone`: 
+  - `syncMode`: 
+  - `includeActuals`: 
+  - `nextRunAt`: 
+  - `lastRunAt`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `import_schedule_settings`
+
+**Properties**
+  - `id`: 
+  - `isEnabled`: 
+  - `createdAt`: 
+  - `updatedAt`: 
 
 ### `system_settings`
 

@@ -71,6 +71,11 @@ export const SYMBOL = {
     IImportJobRepository: Symbol.for('IImportJobRepository'),
     IImportJobApplicationService: Symbol.for('IImportJobApplicationService'),
 
+    // Import Schedule
+    IWbsImportScheduleRepository: Symbol.for('IWbsImportScheduleRepository'),
+    IImportScheduleSettingsRepository: Symbol.for('IImportScheduleSettingsRepository'),
+    IImportScheduleApplicationService: Symbol.for('IImportScheduleApplicationService'),
+
     // Notification
     INotificationService: Symbol.for('INotificationService'),
     INotificationRepository: Symbol.for('INotificationRepository'),

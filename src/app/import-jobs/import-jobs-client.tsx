@@ -182,7 +182,14 @@ export default function ImportJobsClient() {
   const startJob = async (id: string) => {
     const result = await executeImportJob(id);
     if (result.success) {
-      setSubscribingJobId(id);
+      if (result.data.isQueued) {
+        toast({
+          title: "実行待ち",
+          description: "他のインポートジョブが実行中のため、完了後に順番に実行されます。",
+        });
+      } else {
+        setSubscribingJobId(id);
+      }
       fetchJobs();
     } else {
       toast({

@@ -3,6 +3,7 @@ import type { ImportJob as PrismaImportJob, Prisma, $Enums } from '@prisma/clien
 import type { IImportJobRepository } from '@/applications/import-job/iimport-job-repository'
 import { ImportJob, ImportJobProgress } from '@/domains/import-job/import-job'
 import type { ImportJobType, ImportJobStatus } from '@/domains/import-job/import-job-enums'
+import type { ImportJobStartResult } from '@/types/import-job'
 import prisma from "@/lib/prisma/prisma";
 
 @injectable()
@@ -67,6 +68,32 @@ export class ImportJobRepository implements IImportJobRepository {
     return count === 1
   }
 
+  /**
+   * 開始したジョブ（RUNNING）を、保存済みが PENDING かつ他に RUNNING のジョブがない場合のみ保存する
+   * ジョブの開始はトランザクション内のアドバイザリロックで直列化し、複数のプロセス・リクエストから
+   * 同時に開始しても RUNNING になるジョブを常に1件以下にする
+   * @param job
+   * @returns STARTED: 保存した / BUSY: 他のジョブが実行中 / NOT_PENDING: 保存済みが PENDING ではない
+   */
+  async updateIfStartable(job: ImportJob): Promise<ImportJobStartResult> {
+    return prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('import_jobs:start'))`
+
+      const runningCount = await tx.importJob.count({
+        where: { status: 'RUNNING', id: { not: job.id } },
+      })
+      if (runningCount > 0) {
+        return 'BUSY'
+      }
+
+      const { count } = await tx.importJob.updateMany({
+        where: { id: job.id, status: 'PENDING' },
+        data: this.toUpdateData(job),
+      })
+      return count === 1 ? 'STARTED' : 'NOT_PENDING'
+    })
+  }
+
   async findById(id: string): Promise<ImportJob | null> {
     const job = await prisma.importJob.findUnique({
       where: { id },
@@ -97,7 +124,8 @@ export class ImportJobRepository implements IImportJobRepository {
   async findByStatus(status: ImportJobStatus): Promise<ImportJob[]> {
     const jobs = await prisma.importJob.findMany({
       where: { status: status as $Enums.ImportJobStatus },
-      orderBy: { createdAt: 'asc' },
+      // 同じミリ秒に作成されたジョブも作成順に並べる（cuid は作成順に増加する）
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     })
 
     return jobs.map(job => this.toDomain(job))

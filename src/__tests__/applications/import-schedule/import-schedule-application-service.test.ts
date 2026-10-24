@@ -9,6 +9,7 @@ import { ImportScheduleSettings } from '@/domains/import-schedule/import-schedul
 import { ImportJob } from '@/domains/import-job/import-job'
 import { Wbs } from '@/domains/wbs/wbs'
 import { Project } from '@/domains/project/project'
+import { ProjectStatus } from '@/domains/project/project-status'
 
 /**
  * WBSごとの定期インポート設定と、期限が来た予定からのジョブ作成。
@@ -256,7 +257,7 @@ describe('ImportScheduleApplicationService', () => {
         Project.createFromDb({
           id,
           name,
-          status: 'ACTIVE',
+          status: new ProjectStatus({ status: 'ACTIVE' }),
           startDate: new Date('2026-01-01T00:00:00.000Z'),
           endDate: new Date('2026-12-31T00:00:00.000Z'),
         })

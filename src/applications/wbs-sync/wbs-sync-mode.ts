@@ -1,4 +1,6 @@
-export type WbsSyncMode = 'diff' | 'replace';
+import type { WbsSyncMode } from '@/types/wbs-sync-mode';
+
+export type { WbsSyncMode };
 
 /**
  * ジョブのoptionsからWBS同期モードを解決する。
