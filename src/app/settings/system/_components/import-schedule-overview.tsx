@@ -117,12 +117,10 @@ export function ImportScheduleOverview({ settings, schedules }: Props) {
                     <TableCell>{getImportScheduleLabel(schedule.cronExpression)}</TableCell>
                     <TableCell>{WBS_SYNC_MODE_LABELS[schedule.syncMode]}</TableCell>
                     <TableCell>{schedule.includeActuals ? "取り込む" : "取り込まない"}</TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell>
                       {schedule.isEnabled && schedule.nextRunAt ? formatRunAt(schedule.nextRunAt) : "—"}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {schedule.lastRunAt ? formatRunAt(schedule.lastRunAt) : "未実行"}
-                    </TableCell>
+                    <TableCell>{schedule.lastRunAt ? formatRunAt(schedule.lastRunAt) : "未実行"}</TableCell>
                     <TableCell>
                       <Button asChild variant="outline" size="sm">
                         <Link href={`/wbs/${schedule.wbsId}?tab=settings`}>設定</Link>
