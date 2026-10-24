@@ -14,6 +14,7 @@ import { ArrowLeft, Edit } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getProjectSettings } from "@/app/wbs/[id]/project-settings-actions";
+import { getWbsImportSchedule } from "@/app/wbs/[id]/import-schedule-actions";
 import { Badge } from "@/components/ui/badge";
 import { getProjectStatusName } from "@/utils/utils";
 import { WbsManagementContent } from "@/components/wbs/wbs-management-content";
@@ -90,7 +91,7 @@ export default async function ProjectPage({
   }
 
   // WBS関連のデータを取得
-  const [tasks, buffers, phases, assignees, milestones, settings] =
+  const [tasks, buffers, phases, assignees, milestones, settings, importSchedule] =
     await Promise.all([
       getTaskAll(latestWbs.id),
       getWbsBuffers(latestWbs.id),
@@ -98,6 +99,7 @@ export default async function ProjectPage({
       getWbsAssignees(latestWbs.id),
       getMilestones(latestWbs.id),
       getProjectSettings(projectId),
+      getWbsImportSchedule(latestWbs.id),
     ]);
 
   return (
@@ -111,6 +113,7 @@ export default async function ProjectPage({
         phases={phases}
         assignees={assignees}
         milestones={milestones}
+        importSchedule={importSchedule}
         defaultTab={tab}
         showEvm={true}
         showTags={false}
