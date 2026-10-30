@@ -16,6 +16,9 @@ export interface ImportJobProgress {
 }
 
 export class ImportJob {
+  /** RUNNING のまま応答がないとみなすまでの時間（アプリの再起動などで処理が中断されたジョブの回収に使う） */
+  static readonly RUNNING_TIMEOUT_MS = 30 * 60 * 1000
+
   constructor(
     public readonly id: string,
     public readonly type: ImportJobType,
@@ -124,5 +127,11 @@ export class ImportJob {
 
   get isFinished(): boolean {
     return this.isCompleted || this.isFailed || this.isCancelled
+  }
+
+  /** 開始から RUNNING_TIMEOUT_MS を超えて RUNNING のままか */
+  isTimedOut(now: Date): boolean {
+    if (!this.isRunning || !this.startedAt) return false
+    return now.getTime() - this.startedAt.getTime() > ImportJob.RUNNING_TIMEOUT_MS
   }
 }

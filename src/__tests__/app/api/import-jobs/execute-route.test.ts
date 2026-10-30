@@ -23,9 +23,8 @@ import { container } from '@/lib/inversify.config'
 import { ImportJob } from '@/domains/import-job/import-job'
 
 /**
- * POST /api/import-jobs/{id}/execute は cron の毎分ジョブ（run-pending-import-jobs.sh）と
- * 日次/月次ジョブ（run-*-import.sh）の双方から呼ばれる。
- * 同じジョブへの重複呼び出しで二重にインポートを起動しないことを検証する。
+ * POST /api/import-jobs/{id}/execute は保留中のジョブを今すぐ実行するよう要求する。
+ * インポートは1件ずつ実行するため、他のジョブが実行中なら待ち行列に残し、重複呼び出しで二重に起動しない。
  */
 describe('POST /api/import-jobs/{id}/execute', () => {
   const mockImportJobService = {
@@ -54,19 +53,30 @@ describe('POST /api/import-jobs/{id}/execute', () => {
   })
 
   it('ジョブを開始できた場合はバックグラウンド実行を起動して 200 を返す', async () => {
-    mockImportJobService.startJob.mockResolvedValue(true)
+    mockImportJobService.startJob.mockResolvedValue('STARTED')
 
     const response = await POST(request, context('job-1'))
     const body = await response.json()
 
     expect(response.status).toBe(200)
-    expect(body.data).toEqual({ started: true })
+    expect(body.data).toEqual({ started: true, queued: false })
     expect(mockImportJobService.startJob).toHaveBeenCalledWith('job-1')
     expect(mockImportJobService.executeJobAsync).toHaveBeenCalledWith('job-1')
   })
 
+  it('他のジョブが実行中の場合は 202 を返し、ジョブは実行待ちのまま（完了後に順番に実行される）', async () => {
+    mockImportJobService.startJob.mockResolvedValue('BUSY')
+
+    const response = await POST(request, context('job-1'))
+    const body = await response.json()
+
+    expect(response.status).toBe(202)
+    expect(body.data).toEqual({ started: false, queued: true })
+    expect(mockImportJobService.executeJobAsync).not.toHaveBeenCalled()
+  })
+
   it('既に他の実行者が開始していた（保留中でない）場合は 409 を返し、実行を起動しない', async () => {
-    mockImportJobService.startJob.mockResolvedValue(false)
+    mockImportJobService.startJob.mockResolvedValue('NOT_PENDING')
 
     const response = await POST(request, context('job-1'))
     const body = await response.json()

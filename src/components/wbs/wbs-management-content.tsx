@@ -17,6 +17,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { ProjectSettings } from "@/components/wbs/project-settings";
+import { WbsImportScheduleSettings } from "@/components/wbs/wbs-import-schedule-settings";
 import { ProjectInfoCard } from "@/components/wbs/project-info-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MilestoneManagement from "@/components/milestone/milestone-management";
@@ -30,6 +31,7 @@ import { SchedulingWorkbench } from "@/components/task-scheduling/scheduling-wor
 import type { ProjectStatus, WbsTask, Milestone } from "@/types/wbs";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import type { EvmForecastMethod } from "@/types/evm-forecast-method";
+import type { WbsImportScheduleDto } from "@/types/import-schedule";
 
 type WbsManagementContentProps = {
   wbsId: number;
@@ -51,6 +53,7 @@ type WbsManagementContentProps = {
   phases: Array<{ id: number; seq: number; name: string; code: string }>;
   assignees: Array<{ assignee: { displayName: string } | null }> | null;
   milestones: Milestone[];
+  importSchedule: WbsImportScheduleDto;
   defaultTab?: string;
   showEvm?: boolean;
   showTags?: boolean;
@@ -69,6 +72,7 @@ export function WbsManagementContent({
   phases,
   assignees,
   milestones,
+  importSchedule,
   defaultTab,
   showEvm = true,
   showTags = true,
@@ -202,8 +206,9 @@ export function WbsManagementContent({
           <TabsContent value="task-scheduling">
             <SchedulingWorkbench wbsId={wbsId} />
           </TabsContent>
-          <TabsContent value="settings">
+          <TabsContent value="settings" className="space-y-4">
             <ProjectSettings projectId={project.id} />
+            <WbsImportScheduleSettings wbsId={wbsId} schedule={importSchedule} />
           </TabsContent>
         </Tabs>
       </Suspense>

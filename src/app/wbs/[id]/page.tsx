@@ -8,6 +8,7 @@ import { getWbsAssignees } from "../assignee/assignee-actions";
 import { getTaskAll } from "./actions/wbs-task-actions";
 import { getMilestones } from "./actions/milestone-actions";
 import { getProjectSettings } from "./project-settings-actions";
+import { getWbsImportSchedule } from "./import-schedule-actions";
 import { WbsManagementContent } from "@/components/wbs/wbs-management-content";
 
 export default async function WbsManagementPage({
@@ -30,7 +31,7 @@ export default async function WbsManagementPage({
     notFound();
   }
 
-  const [tasks, buffers, phases, assignees, milestones, settings] =
+  const [tasks, buffers, phases, assignees, milestones, settings, importSchedule] =
     await Promise.all([
       getTaskAll(wbs.id),
       getWbsBuffers(wbs.id),
@@ -38,6 +39,7 @@ export default async function WbsManagementPage({
       getWbsAssignees(wbs.id),
       getMilestones(wbs.id),
       getProjectSettings(wbs.projectId),
+      getWbsImportSchedule(wbs.id),
     ]);
 
   return (
@@ -51,6 +53,7 @@ export default async function WbsManagementPage({
         phases={phases}
         assignees={assignees}
         milestones={milestones}
+        importSchedule={importSchedule}
         defaultTab={tab}
         showEvm={true}
         showTags={true}

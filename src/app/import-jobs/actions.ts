@@ -108,25 +108,31 @@ export async function createImportJob(
   return { success: true, data: { id: job.id } };
 }
 
+/**
+ * 保留中のジョブを今すぐ実行する。
+ * インポートは1件ずつ実行するため、他のジョブが実行中なら実行待ちのまま（isQueued: true）完了後に順番に実行される
+ */
 export async function executeImportJob(
   id: string
-): Promise<ActionResult<void>> {
+): Promise<ActionResult<{ isQueued: boolean }>> {
   const importJobService = getImportJobService();
 
   const job = await importJobService.getJob(id);
   if (!job) {
     return { success: false, error: "ジョブが見つかりません" };
   }
-  // cron の毎分ジョブが先に開始していた場合は二重に実行しない
-  const isStarted = await importJobService.startJob(id);
-  if (!isStarted) {
+  const result = await importJobService.startJob(id);
+  if (result === "NOT_PENDING") {
     return { success: false, error: "ジョブは保留中ではありません" };
+  }
+  if (result === "BUSY") {
+    return { success: true, data: { isQueued: true } };
   }
 
   importJobService.executeJobAsync(id);
 
   revalidatePath("/import-jobs");
-  return { success: true, data: undefined };
+  return { success: true, data: { isQueued: false } };
 }
 
 export async function cancelImportJob(

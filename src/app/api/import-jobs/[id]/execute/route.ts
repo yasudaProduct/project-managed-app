@@ -22,15 +22,22 @@ export async function POST(
       return createApiError('ジョブが見つかりません', 404)
     }
 
-    // cron の毎分ジョブと日次/月次ジョブ等から同時に呼ばれても、開始できた1件だけが実行する
-    const isStarted = await importJobService.startJob(id)
-    if (!isStarted) {
+    // インポートは1件ずつ実行する。他のジョブが実行中なら実行待ちのまま、完了後に順番に開始される
+    const result = await importJobService.startJob(id)
+    if (result === 'NOT_PENDING') {
       return createApiError('ジョブは保留中ではありません', 409)
+    }
+    if (result === 'BUSY') {
+      return createApiResponse(
+        { started: false, queued: true },
+        '他のインポートジョブが実行中のため、完了後に実行されます',
+        202
+      )
     }
 
     importJobService.executeJobAsync(id)
 
-    return createApiResponse({ started: true })
+    return createApiResponse({ started: true, queued: false })
   } catch (error) {
     console.error('インポートジョブの実行に失敗しました', error)
     return createApiError('インポートジョブの実行に失敗しました', 500)

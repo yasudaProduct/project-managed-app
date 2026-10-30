@@ -39,16 +39,25 @@ describe("import-jobs actions", () => {
 
   describe("executeImportJob", () => {
     it("ジョブを開始できた場合はバックグラウンド実行を起動する", async () => {
-      mockImportJobService.startJob.mockResolvedValue(true);
+      mockImportJobService.startJob.mockResolvedValue("STARTED");
 
       const result = await executeImportJob("job-1");
 
-      expect(result).toEqual({ success: true, data: undefined });
+      expect(result).toEqual({ success: true, data: { isQueued: false } });
       expect(mockImportJobService.executeJobAsync).toHaveBeenCalledWith("job-1");
     });
 
+    it("他のジョブが実行中の場合は実行待ちとして返し、完了後の順番実行に任せる", async () => {
+      mockImportJobService.startJob.mockResolvedValue("BUSY");
+
+      const result = await executeImportJob("job-1");
+
+      expect(result).toEqual({ success: true, data: { isQueued: true } });
+      expect(mockImportJobService.executeJobAsync).not.toHaveBeenCalled();
+    });
+
     it("cron 等が先に開始していた場合はエラーを返し、二重に実行しない", async () => {
-      mockImportJobService.startJob.mockResolvedValue(false);
+      mockImportJobService.startJob.mockResolvedValue("NOT_PENDING");
 
       const result = await executeImportJob("job-1");
 

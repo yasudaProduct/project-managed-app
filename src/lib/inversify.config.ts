@@ -127,6 +127,14 @@ import type { IImportJobRepository } from '@/applications/import-job/iimport-job
 import { ImportJobRepository } from '@/infrastructures/import-job/import-job-repository';
 import type { IImportJobApplicationService } from '@/applications/import-job/import-job-application-service';
 import { ImportJobApplicationService } from '@/applications/import-job/import-job-application-service';
+
+// Import Schedule関連
+import type { IWbsImportScheduleRepository } from '@/applications/import-schedule/iwbs-import-schedule-repository';
+import { WbsImportScheduleRepository } from '@/infrastructures/import-schedule/wbs-import-schedule-repository';
+import type { IImportScheduleSettingsRepository } from '@/applications/import-schedule/iimport-schedule-settings-repository';
+import { ImportScheduleSettingsRepository } from '@/infrastructures/import-schedule/import-schedule-settings-repository';
+import type { IImportScheduleApplicationService } from '@/applications/import-schedule/import-schedule-application-service';
+import { ImportScheduleApplicationService } from '@/applications/import-schedule/import-schedule-application-service';
 import { IWbsSyncApplicationService } from '@/applications/wbs-sync/iwbs-sync-application-service';
 
 // System Settings関連
@@ -173,6 +181,7 @@ container.bind<IScheduleApplicationService>(SYMBOL.IScheduleApplicationService).
 container.bind<IFreeTimeApplicationService>(SYMBOL.IFreeTimeApplicationService).to(FreeTimeApplicationService).inSingletonScope();
 container.bind<IEvmService>(SYMBOL.IEvmService).to(EvmService).inSingletonScope();
 container.bind<IImportJobApplicationService>(SYMBOL.IImportJobApplicationService).to(ImportJobApplicationService).inSingletonScope();
+container.bind<IImportScheduleApplicationService>(SYMBOL.IImportScheduleApplicationService).to(ImportScheduleApplicationService).inSingletonScope();
 container.bind<INotificationService>(SYMBOL.INotificationService).to(NotificationService).inSingletonScope();
 container.bind<IPushNotificationService>(SYMBOL.IPushNotificationService).to(PushNotificationService).inSingletonScope();
 container.bind<NotificationEventDetector>(SYMBOL.NotificationEventDetector).to(NotificationEventDetector).inSingletonScope();
@@ -207,6 +216,8 @@ container.bind<ICompanyHolidayRepository>(SYMBOL.ICompanyHolidayRepository).to(C
 container.bind<IUserScheduleRepository>(SYMBOL.IUserScheduleRepository).to(UserScheduleRepository).inSingletonScope();
 container.bind<IWbsEvmRepository>(SYMBOL.IWbsEvmRepository).to(WbsEvmRepository).inSingletonScope();
 container.bind<IImportJobRepository>(SYMBOL.IImportJobRepository).to(ImportJobRepository).inSingletonScope();
+container.bind<IWbsImportScheduleRepository>(SYMBOL.IWbsImportScheduleRepository).to(WbsImportScheduleRepository).inSingletonScope();
+container.bind<IImportScheduleSettingsRepository>(SYMBOL.IImportScheduleSettingsRepository).to(ImportScheduleSettingsRepository).inSingletonScope();
 container.bind<INotificationRepository>(SYMBOL.INotificationRepository).to(NotificationRepository).inSingletonScope();
 container.bind<ISystemSettingsRepository>(SYMBOL.ISystemSettingsRepository).to(SystemSettingsRepository).inSingletonScope();
 container.bind<ISchedulingSettingsRepository>(SYMBOL.ISchedulingSettingsRepository).to(SchedulingSettingsRepository).inSingletonScope();

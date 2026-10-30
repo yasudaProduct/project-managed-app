@@ -11,11 +11,13 @@ import { NotificationType } from '@/types/notification'
 import { NotificationPriority } from '@/domains/notification/notification-priority'
 import { NotificationChannel } from '@/domains/notification/notification-channel'
 import type { IWbsApplicationService } from '@/applications/wbs/wbs-application-service'
+import type { ImportJobStartResult } from '@/types/import-job'
 
 export interface IImportJobApplicationService {
   createJob(options: ImportJobOptions & { createdBy?: string }): Promise<ImportJob>
-  startJob(jobId: string): Promise<boolean>
+  startJob(jobId: string): Promise<ImportJobStartResult>
   executeJobAsync(jobId: string): void
+  dispatchPendingJobs(now?: Date): Promise<void>
   updateJobProgress(jobId: string, processed: number, success: number, error: number): Promise<void>
   completeJob(jobId: string, result: Record<string, unknown>): Promise<void>
   failJob(jobId: string, errorDetails: Record<string, unknown>): Promise<void>
@@ -45,40 +47,93 @@ export class ImportJobApplicationService implements IImportJobApplicationService
 
   /**
    * インポートジョブを作成
+   * 作成したジョブは実行待ちに入り、実行中のジョブがなければ直ちに、あれば完了後に作成順で実行される
    * @param options 
    * @returns 
    */
   async createJob(options: ImportJobOptions & { createdBy?: string }): Promise<ImportJob> {
     const job = ImportJob.create(options)
-    return await this.importJobRepository.create(job)
+    const created = await this.importJobRepository.create(job)
+
+    try {
+      await this.dispatchPendingJobs()
+    } catch (error) {
+      // 作成したジョブは PENDING のまま残り、次の dispatchPendingJobs（cron の定期実行など）で開始される
+      console.error('インポートジョブの開始に失敗しました:', error)
+    }
+
+    return created
   }
 
   /**
    * インポートジョブを開始（PENDING → RUNNING）
-   * cron と手動実行などで同じジョブの開始が同時に届いても、開始できるのは1件だけ
+   * インポートは1件ずつ実行するため、他のジョブが実行中なら開始せず実行待ちのままにする。
+   * 同じジョブの開始が同時に届いても、開始できるのは1件だけ
    * @param jobId
-   * @returns 開始できた場合 true。保留中でない（他の実行者が先に開始した）場合 false
+   * @returns STARTED: 開始した / BUSY: 他のジョブが実行中 / NOT_PENDING: 保留中のジョブではない
    */
-  async startJob(jobId: string): Promise<boolean> {
+  async startJob(jobId: string): Promise<ImportJobStartResult> {
     const job = await this.importJobRepository.findById(jobId)
     if (!job) {
       throw new Error(`ジョブが見つかりません: ${jobId}`)
     }
     if (job.status !== ImportJobStatuses.PENDING) {
-      return false
+      return 'NOT_PENDING'
     }
 
     job.start()
-    const isStarted = await this.importJobRepository.updateIfStatus(job, ImportJobStatuses.PENDING)
-    if (!isStarted) {
-      return false
+    const result = await this.importJobRepository.updateIfStartable(job)
+    if (result !== 'STARTED') {
+      return result
     }
 
     await this.addProgress(jobId, {
       message: 'インポートジョブを開始しました',
       level: 'info',
     })
-    return true
+    return 'STARTED'
+  }
+
+  /**
+   * 実行待ち（PENDING）のジョブを作成順に開始する。同時に実行するのは常に1件で、
+   * 実行中のジョブが終わると次のジョブが開始される。
+   * 開始前に、再起動などで中断されて RUNNING のまま残ったジョブをタイムアウトとして失敗にする
+   * @param now
+   */
+  async dispatchPendingJobs(now: Date = new Date()): Promise<void> {
+    await this.failTimedOutJobs(now)
+
+    const pendingJobs = await this.importJobRepository.findByStatus(ImportJobStatuses.PENDING)
+    for (const pendingJob of pendingJobs) {
+      const result = await this.startJob(pendingJob.id)
+      if (result === 'STARTED') {
+        this.executeJobAsync(pendingJob.id)
+        return
+      }
+      if (result === 'BUSY') {
+        return
+      }
+      // NOT_PENDING: 一覧取得後にキャンセル等された。次のジョブを試す
+    }
+  }
+
+  private async failTimedOutJobs(now: Date): Promise<void> {
+    const runningJobs = await this.importJobRepository.findByStatus(ImportJobStatuses.RUNNING)
+    for (const job of runningJobs.filter((runningJob) => runningJob.isTimedOut(now))) {
+      job.fail({
+        message: `タイムアウトしました（${ImportJob.RUNNING_TIMEOUT_MS / 60000}分以上完了しないため、アプリの再起動などで処理が中断されたとみなしました）`,
+      })
+      // 判定後に完了した場合は上書きしない
+      const isFailed = await this.importJobRepository.updateIfStatus(job, ImportJobStatuses.RUNNING)
+      if (!isFailed) continue
+
+      await this.addProgress(job.id, {
+        message: 'インポートジョブがタイムアウトしました',
+        level: 'error',
+        detail: job.errorDetails,
+      })
+      await this.sendJobNotification(job.id, 'FAILED')
+    }
   }
 
   /**
@@ -230,6 +285,10 @@ export class ImportJobApplicationService implements IImportJobApplicationService
 
   executeJobAsync(jobId: string): void {
     void this.executeImportInBackground(jobId)
+      .catch((error) => console.error('バックグラウンドインポートの後処理に失敗しました:', error))
+      // 実行が終わったら、待っている次のジョブを開始する
+      .then(() => this.dispatchPendingJobs())
+      .catch((error) => console.error('次のインポートジョブの開始に失敗しました:', error))
   }
 
   private async executeImportInBackground(jobId: string): Promise<void> {
