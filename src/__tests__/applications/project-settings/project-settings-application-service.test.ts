@@ -13,6 +13,7 @@ describe("ProjectSettingsApplicationService", () => {
       upsertProjectSettings: jest.fn(),
       upsertDashboardSettings: jest.fn(),
       upsertEvmSettings: jest.fn(),
+      upsertProgressReviewCycle: jest.fn(),
       findSchedulingSettings: jest.fn(),
       upsertSchedulingSettings: jest.fn(),
     };
@@ -33,6 +34,7 @@ describe("ProjectSettingsApplicationService", () => {
         evmWarningThresholdPct: 80,
         deadlineAlertDays: 3,
         costOverrunThresholdPct: 120,
+        progressReviewCycle: "DAILY" as const,
       };
       repository.findByProjectId.mockResolvedValue(settings);
 
@@ -82,6 +84,25 @@ describe("ProjectSettingsApplicationService", () => {
         costOverrunThresholdPct: 150,
       });
       expect(result).toEqual({ success: true, data: undefined });
+    });
+  });
+
+  describe("updateProgressReviewCycle", () => {
+    it("正常に更新できた場合、success: trueを返すこと", async () => {
+      const result = await service.updateProgressReviewCycle("p1", "MONTHLY");
+
+      expect(repository.upsertProgressReviewCycle).toHaveBeenCalledWith(
+        "p1",
+        "MONTHLY"
+      );
+      expect(result).toEqual({ success: true, data: undefined });
+    });
+
+    it("projectIdが空の場合、success: falseを返しリポジトリを呼ばないこと", async () => {
+      const result = await service.updateProgressReviewCycle("", "DAILY");
+
+      expect(result).toEqual({ success: false, error: "projectIdは必須です。" });
+      expect(repository.upsertProgressReviewCycle).not.toHaveBeenCalled();
     });
   });
 
