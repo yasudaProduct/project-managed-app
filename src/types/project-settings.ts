@@ -8,6 +8,10 @@ import type { ForecastCalculationMethod } from "./forecast-calculation-method";
 import type { EvmForecastMethod } from "./evm-forecast-method";
 import type { EvmBufferCostMethod } from "./evm-buffer-cost-method";
 import type { EvmPvDistribution } from "./evm-pv-distribution";
+import {
+  DEFAULT_PROGRESS_REVIEW_CYCLE,
+  type ProgressReviewCycle,
+} from "./progress-review-cycle";
 
 export interface ProjectSettingsData {
   projectId: string;
@@ -21,6 +25,7 @@ export interface ProjectSettingsData {
   evmWarningThresholdPct: number;
   deadlineAlertDays: number;
   costOverrunThresholdPct: number;
+  progressReviewCycle: ProgressReviewCycle;
 }
 
 export const DEFAULT_PROJECT_SETTINGS: Omit<ProjectSettingsData, "projectId"> = {
@@ -34,6 +39,7 @@ export const DEFAULT_PROJECT_SETTINGS: Omit<ProjectSettingsData, "projectId"> = 
   evmWarningThresholdPct: 80,
   deadlineAlertDays: 1,
   costOverrunThresholdPct: 100,
+  progressReviewCycle: DEFAULT_PROGRESS_REVIEW_CYCLE,
 };
 
 /**
@@ -63,5 +69,7 @@ export function withProjectSettingsDefaults(
     deadlineAlertDays: settings?.deadlineAlertDays ?? DEFAULT_PROJECT_SETTINGS.deadlineAlertDays,
     costOverrunThresholdPct:
       settings?.costOverrunThresholdPct ?? DEFAULT_PROJECT_SETTINGS.costOverrunThresholdPct,
+    progressReviewCycle:
+      settings?.progressReviewCycle ?? DEFAULT_PROJECT_SETTINGS.progressReviewCycle,
   };
 }

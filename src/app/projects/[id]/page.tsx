@@ -119,6 +119,7 @@ export default async function ProjectPage({
         showTags={false}
         defaultProgressMethod={settings.progressMeasurementMethod}
         defaultForecastMethod={settings.evmForecastMethod}
+        progressReviewCycle={settings.progressReviewCycle}
         deadlineAlertDays={settings.deadlineAlertDays ?? 1}
         costOverrunThresholdPct={settings.costOverrunThresholdPct ?? 100}
       />

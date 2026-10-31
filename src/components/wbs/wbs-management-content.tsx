@@ -31,6 +31,7 @@ import { SchedulingWorkbench } from "@/components/task-scheduling/scheduling-wor
 import type { ProjectStatus, WbsTask, Milestone } from "@/types/wbs";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import type { EvmForecastMethod } from "@/types/evm-forecast-method";
+import type { ProgressReviewCycle } from "@/types/progress-review-cycle";
 import type { WbsImportScheduleDto } from "@/types/import-schedule";
 
 type WbsManagementContentProps = {
@@ -59,6 +60,7 @@ type WbsManagementContentProps = {
   showTags?: boolean;
   defaultProgressMethod?: ProgressMeasurementMethod;
   defaultForecastMethod?: EvmForecastMethod;
+  progressReviewCycle?: ProgressReviewCycle;
   deadlineAlertDays?: number;
   costOverrunThresholdPct?: number;
 };
@@ -78,6 +80,7 @@ export function WbsManagementContent({
   showTags = true,
   defaultProgressMethod,
   defaultForecastMethod,
+  progressReviewCycle,
   deadlineAlertDays = 1,
   costOverrunThresholdPct = 100,
 }: WbsManagementContentProps) {
@@ -200,6 +203,7 @@ export function WbsManagementContent({
                 wbsId={wbsId}
                 defaultProgressMethod={defaultProgressMethod}
                 defaultForecastMethod={defaultForecastMethod}
+                progressReviewCycle={progressReviewCycle}
               />
             </TabsContent>
           )}

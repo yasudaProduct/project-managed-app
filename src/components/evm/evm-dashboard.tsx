@@ -46,19 +46,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DEFAULT_PROGRESS_REVIEW_CYCLE,
+  EVM_VIEW_DEFAULTS_BY_REVIEW_CYCLE,
+  type ProgressReviewCycle,
+} from "@/types/progress-review-cycle";
 
 type EvmDashboardProps = {
   wbsId: number;
   defaultProgressMethod?: "ZERO_HUNDRED" | "FIFTY_FIFTY" | "SELF_REPORTED";
   /** プロジェクト設定の予測方式。ダッシュボード上で一時的に切り替えられる */
   defaultForecastMethod?: EvmForecastMethod;
+  /** プロジェクト設定の進捗確認サイクル。時系列の既定の間隔・表示期間を決める */
+  progressReviewCycle?: ProgressReviewCycle;
 };
 
 export function EvmDashboard({
   wbsId,
   defaultProgressMethod,
   defaultForecastMethod,
+  progressReviewCycle = DEFAULT_PROGRESS_REVIEW_CYCLE,
 }: EvmDashboardProps) {
+  const viewDefaults = EVM_VIEW_DEFAULTS_BY_REVIEW_CYCLE[progressReviewCycle];
   const [currentMetrics, setCurrentMetrics] = useState<EvmMetricsData | null>(
     null
   );
@@ -88,10 +97,10 @@ export function EvmDashboard({
     defaultForecastMethod ?? "CPI_ONLY"
   );
 
-  // 時系列間隔（既定は週次。全期間×日次は点が多く重いうえ、
-  // server action の zod 既定も weekly のため揃える）
+  // 時系列間隔。既定は進捗確認サイクルから決める（週次サイクルなら従来どおり週次）。
+  // 日次サイクルは表示期間を過去1ヶ月に絞り、全期間×日次で点が多く重くなるのを避ける
   const [interval, setInterval] = useState<"daily" | "weekly" | "monthly">(
-    "weekly"
+    viewDefaults.interval
   );
 
   // 最終データ取得時刻（インポート直後の古い数字で判断しないための手がかり）
@@ -100,7 +109,7 @@ export function EvmDashboard({
   // 期間選択モード
   const [periodMode, setPeriodMode] = useState<
     "project" | "recent3months" | "recent1month" | "custom"
-  >("project");
+  >(viewDefaults.periodMode);
 
   // 予測表示
   const [showPrediction, setShowPrediction] = useState(true);

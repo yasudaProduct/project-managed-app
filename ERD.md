@@ -207,6 +207,7 @@ erDiagram
   Int evmWarningThresholdPct
   Int deadlineAlertDays
   Int costOverrunThresholdPct
+  ProgressReviewCycle progressReviewCycle
   Json evmExcludeSettings
   Json schedulingSettings
   DateTime createdAt
@@ -593,6 +594,7 @@ erDiagram
   - `evmWarningThresholdPct`: 
   - `deadlineAlertDays`: 
   - `costOverrunThresholdPct`: 
+  - `progressReviewCycle`: 
   - `evmExcludeSettings`: 
   - `schedulingSettings`: 
   - `createdAt`: 

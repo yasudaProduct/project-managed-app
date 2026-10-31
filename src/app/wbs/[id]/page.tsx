@@ -59,6 +59,7 @@ export default async function WbsManagementPage({
         showTags={true}
         defaultProgressMethod={settings.progressMeasurementMethod}
         defaultForecastMethod={settings.evmForecastMethod}
+        progressReviewCycle={settings.progressReviewCycle}
         deadlineAlertDays={settings.deadlineAlertDays ?? 1}
         costOverrunThresholdPct={settings.costOverrunThresholdPct ?? 100}
       />

@@ -10,6 +10,10 @@ import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import type { ForecastCalculationMethod } from "@/types/forecast-calculation-method";
 import type { EvmForecastMethod } from "@/types/evm-forecast-method";
 import type { SchedulingSettings } from "@/types/scheduling-settings";
+import {
+    PROGRESS_REVIEW_CYCLES,
+    type ProgressReviewCycle,
+} from "@/types/progress-review-cycle";
 
 function getProjectSettingsApplicationService(): IProjectSettingsApplicationService {
     return container.get<IProjectSettingsApplicationService>(
@@ -111,6 +115,29 @@ export async function updateEvmSettings(
 
     const { projectId: pid, ...rest } = parsed.data;
     return getProjectSettingsApplicationService().updateEvmSettings(pid, rest);
+}
+
+const updateProgressReviewCycleSchema = z.object({
+    projectId: z.string().min(1),
+    progressReviewCycle: z.enum(PROGRESS_REVIEW_CYCLES),
+});
+
+export async function updateProgressReviewCycle(
+    projectId: string,
+    progressReviewCycle: ProgressReviewCycle
+): Promise<ActionResult<void>> {
+    const parsed = updateProgressReviewCycleSchema.safeParse({
+        projectId,
+        progressReviewCycle,
+    });
+    if (!parsed.success) {
+        return { success: false, error: "入力値が不正です。" };
+    }
+
+    return getProjectSettingsApplicationService().updateProgressReviewCycle(
+        parsed.data.projectId,
+        parsed.data.progressReviewCycle
+    );
 }
 
 export async function getSchedulingSettings(

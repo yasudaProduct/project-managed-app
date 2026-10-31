@@ -171,6 +171,7 @@ describe("ProjectSettingsApplicationService", () => {
         evmWarningThresholdPct: 80,
         deadlineAlertDays: 1,
         costOverrunThresholdPct: 100,
+        progressReviewCycle: "WEEKLY",
       });
 
       const result = await service.getProgressMeasurementMethod("p1");

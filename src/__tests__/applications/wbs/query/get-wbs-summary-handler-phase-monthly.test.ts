@@ -108,10 +108,12 @@ describe('GetWbsSummaryHandler monthlyPhaseSummary (server-side pre-aggregation)
         evmForecastMethod: 'CPI_ONLY',
         deadlineAlertDays: 1,
         costOverrunThresholdPct: 100,
+        progressReviewCycle: "WEEKLY",
       }),
       upsertProjectSettings: jest.fn(),
       upsertDashboardSettings: jest.fn(),
       upsertEvmSettings: jest.fn(),
+      upsertProgressReviewCycle: jest.fn(),
       findSchedulingSettings: jest.fn().mockResolvedValue(DEFAULT_SCHEDULING_SETTINGS),
       upsertSchedulingSettings: jest.fn(),
     } as IProjectSettingsRepository;

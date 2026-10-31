@@ -672,6 +672,7 @@ EVMダッシュボードの「内訳」タブで、現在時点のPV/EV/AC/BAC/S
 | `evmPvDistribution` | enum / CALENDAR | PV按分方式（暦日/営業日、4.4） |
 | `evmHealthyThresholdPct` | Int / 90 | ヘルス判定healthyしきい値（8章） |
 | `evmWarningThresholdPct` | Int / 80 | ヘルス判定warningしきい値（8章） |
+| `progressReviewCycle` | enum / WEEKLY | 進捗確認のサイクル（DAILY / WEEKLY / MONTHLY）。ダッシュボードの既定の間隔・表示期間を決める（日次＝日次・過去1ヶ月、週次＝週次・全期間、月次＝月次・全期間）。画面上で都度変更できる（`src/types/progress-review-cycle.ts`） |
 
 ---
 

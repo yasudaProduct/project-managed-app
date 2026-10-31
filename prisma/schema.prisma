@@ -414,6 +414,12 @@ enum EvmPvDistribution {
   BUSINESS_DAYS // 営業日按分（土日・祝日・会社休日を除外）
 }
 
+enum ProgressReviewCycle {
+  DAILY   // 日次
+  WEEKLY  // 週次
+  MONTHLY // 月次
+}
+
 model ProjectSettings {
   projectId                 String                     @id
   roundToQuarter            Boolean                    @default(false)
@@ -426,6 +432,7 @@ model ProjectSettings {
   evmWarningThresholdPct    Int                        @default(80)   // ヘルス判定warningしきい値(%)
   deadlineAlertDays         Int                        @default(1)    // 期限間近アラートの日数
   costOverrunThresholdPct   Int                        @default(100)  // 工数超過アラートの閾値(%)
+  progressReviewCycle       ProgressReviewCycle        @default(WEEKLY) // 進捗確認のサイクル（EVMグラフの既定間隔・前回比の比較基準）
   evmExcludeSettings        Json                       @default("{}") // EVM除外設定 (enabled, task_names 等)
   schedulingSettings        Json                       @default("{}") // スケジュール計算設定 (steadyTaskKeywords, consumeSteadyTaskCapacity, steadyDailyHoursMode 等)
   createdAt                 DateTime                   @default(now()) @db.Timestamptz

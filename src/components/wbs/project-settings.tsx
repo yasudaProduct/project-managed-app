@@ -11,9 +11,16 @@ import {
   updateProjectSettings,
   updateDashboardSettings,
   updateEvmSettings,
+  updateProgressReviewCycle,
   getSchedulingSettings,
   updateSchedulingSettings,
 } from "@/app/wbs/[id]/project-settings-actions";
+import {
+  PROGRESS_REVIEW_CYCLES,
+  PROGRESS_REVIEW_CYCLE_LABELS,
+  DEFAULT_PROGRESS_REVIEW_CYCLE,
+  type ProgressReviewCycle,
+} from "@/types/progress-review-cycle";
 import type {
   SchedulingSettings,
   SteadyDailyHoursMode,
@@ -73,6 +80,8 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
   const [evmWarningThresholdPct, setEvmWarningThresholdPct] =
     useState<number>(80);
   const [deadlineAlertDays, setDeadlineAlertDays] = useState<number>(1);
+  const [progressReviewCycle, setProgressReviewCycle] =
+    useState<ProgressReviewCycle>(DEFAULT_PROGRESS_REVIEW_CYCLE);
   const [costOverrunThresholdPct, setCostOverrunThresholdPct] =
     useState<number>(100);
   const [steadyKeywordsText, setSteadyKeywordsText] = useState<string>("");
@@ -119,6 +128,9 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
         }
         if ("costOverrunThresholdPct" in data) {
           setCostOverrunThresholdPct(data.costOverrunThresholdPct as number);
+        }
+        if (data.progressReviewCycle) {
+          setProgressReviewCycle(data.progressReviewCycle);
         }
         const sched = await getSchedulingSettings(projectId);
         setSteadyKeywordsText(sched.steadyTaskKeywords.join("\n"));
@@ -268,6 +280,13 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
     setEvmBufferCostMethod(value);
     startTransition(async () => {
       await updateEvmSettings(projectId, { evmBufferCostMethod: value });
+    });
+  };
+
+  const onProgressReviewCycleChange = (value: ProgressReviewCycle) => {
+    setProgressReviewCycle(value);
+    startTransition(async () => {
+      await updateProgressReviewCycle(projectId, value);
     });
   };
 
@@ -685,6 +704,40 @@ export function ProjectSettings({ projectId }: ProjectSettingsProps) {
             onCheckedChange={onToggle}
             disabled={saving}
           />
+        </div>
+
+        {/* 進捗確認サイクル */}
+        <div className="space-y-3 pt-4 border-t">
+          <div>
+            <Label className="text-base font-medium">進捗確認のサイクル</Label>
+            <div className="text-sm text-gray-500 mt-1">
+              進捗会議などで進捗を確認する頻度です。EVMグラフの既定の間隔・表示期間に使います（ダッシュボード上で都度変更できます）。
+            </div>
+          </div>
+          <RadioGroup
+            value={progressReviewCycle}
+            onValueChange={(value) =>
+              onProgressReviewCycleChange(value as ProgressReviewCycle)
+            }
+            name="progressReviewCycle"
+            className="flex gap-6"
+          >
+            {PROGRESS_REVIEW_CYCLES.map((cycle) => (
+              <div key={cycle} className="flex items-center space-x-2">
+                <RadioGroupItem
+                  value={cycle}
+                  id={`progress-review-cycle-${cycle}`}
+                  disabled={saving}
+                />
+                <Label
+                  htmlFor={`progress-review-cycle-${cycle}`}
+                  className="cursor-pointer"
+                >
+                  {PROGRESS_REVIEW_CYCLE_LABELS[cycle]}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
         </div>
 
         {/* ダッシュボード設定 */}
