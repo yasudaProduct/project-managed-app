@@ -61,6 +61,8 @@ type WbsManagementContentProps = {
   taskDelays?: TaskDelayDto[];
   /** データの鮮度（サマリータブ・EVMタブに表示） */
   dataFreshness?: DataFreshnessDto | null;
+  /** 前回の確認日（ISO）。遅延タスク一覧の「新規」とEVMの前回比に使う */
+  previousReviewDate?: string | null;
   importSchedule: WbsImportScheduleDto;
   defaultTab?: string;
   showEvm?: boolean;
@@ -83,6 +85,7 @@ export function WbsManagementContent({
   milestones,
   taskDelays = [],
   dataFreshness = null,
+  previousReviewDate = null,
   importSchedule,
   defaultTab,
   showEvm = true,
@@ -190,6 +193,7 @@ export function WbsManagementContent({
                 tasks={tasks}
                 milestones={milestones}
                 taskDelays={taskDelays}
+                previousReviewDate={previousReviewDate}
                 deadlineAlertDays={deadlineAlertDays}
                 costOverrunThresholdPct={costOverrunThresholdPct}
               />
@@ -216,6 +220,7 @@ export function WbsManagementContent({
                 defaultProgressMethod={defaultProgressMethod}
                 defaultForecastMethod={defaultForecastMethod}
                 progressReviewCycle={progressReviewCycle}
+                previousReviewDate={previousReviewDate}
               />
             </TabsContent>
           )}

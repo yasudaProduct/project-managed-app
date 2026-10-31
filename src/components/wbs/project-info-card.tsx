@@ -40,6 +40,8 @@ interface ProjectInfoCardProps {
   milestones: Milestone[];
   /** 遅れ・期限間近のタスク（サーバー側で判定・並び替え済み） */
   taskDelays: TaskDelayDto[];
+  /** 前回の確認日（ISO）。前回以降に遅れ始めたタスクの件数を示す */
+  previousReviewDate?: string | null;
   deadlineAlertDays: number;
   costOverrunThresholdPct: number;
 }
@@ -81,6 +83,7 @@ export function ProjectInfoCard({
   tasks,
   milestones,
   taskDelays,
+  previousReviewDate = null,
   deadlineAlertDays,
   costOverrunThresholdPct,
 }: ProjectInfoCardProps) {
@@ -584,7 +587,11 @@ export function ProjectInfoCard({
         {(taskDelays.length > 0 || costOverrunTasks.length > 0) && (
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* 遅れ・期限間近のタスク（判定はサーバー側のドメインロジック） */}
-            <TaskDelayList delays={taskDelays} dueSoonDays={deadlineAlertDays} />
+            <TaskDelayList
+              delays={taskDelays}
+              dueSoonDays={deadlineAlertDays}
+              previousReviewDate={previousReviewDate}
+            />
 
             {/* Cost Overrun Tasks */}
             {costOverrunTasks.length > 0 && (

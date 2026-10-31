@@ -103,6 +103,9 @@ export const SYMBOL = {
     // Data Freshness（データの鮮度）
     IDataFreshnessApplicationService: Symbol.for('IDataFreshnessApplicationService'),
 
+    // Progress Review（進捗確認サイクル・前回の確認日）
+    IProgressReviewApplicationService: Symbol.for('IProgressReviewApplicationService'),
+
     // WBS Tags
     IWbsTagRepository: Symbol.for('IWbsTagRepository'),
     IWbsTagApplicationService: Symbol.for('IWbsTagApplicationService'),

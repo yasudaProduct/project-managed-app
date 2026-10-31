@@ -79,6 +79,13 @@ type EvmDashboardOptions = {
   interval?: 'daily' | 'weekly' | 'monthly';
   periodMode?: 'project' | 'recent3months' | 'recent1month' | 'custom';
   showPrediction?: boolean;
+  /** 前回からの変化の比較日（前回の確認日）。渡すとその日時点のメトリクスを comparison に返す */
+  comparisonDate?: Date;
+};
+
+/** 前回からの変化（前回の確認日時点のメトリクス） */
+export type EvmComparison = {
+  previousMetrics: EvmMetrics;
 };
 
 export interface IEvmService {
@@ -112,6 +119,7 @@ export interface IEvmService {
     scheduleForecast: ScheduleForecast;
     phaseBreakdown: EvmBreakdownRow[];
     assigneeBreakdown: EvmBreakdownRow[];
+    comparison: EvmComparison | null;
   }>;
   getEvmDashboardDataSerialized(
     wbsId: number,
@@ -260,6 +268,7 @@ export class EvmService implements IEvmService {
       interval?: 'daily' | 'weekly' | 'monthly';
       periodMode?: 'project' | 'recent3months' | 'recent1month' | 'custom';
       showPrediction?: boolean;
+      comparisonDate?: Date;
     } = {}
   ): Promise<{
     currentMetrics: EvmMetrics;
@@ -269,6 +278,7 @@ export class EvmService implements IEvmService {
     scheduleForecast: ScheduleForecast;
     phaseBreakdown: EvmBreakdownRow[];
     assigneeBreakdown: EvmBreakdownRow[];
+    comparison: EvmComparison | null;
   }> {
     const {
       calculationMode = 'hours',
@@ -277,6 +287,7 @@ export class EvmService implements IEvmService {
       interval = 'weekly',
       periodMode = 'project',
       showPrediction = false,
+      comparisonDate,
     } = options;
 
     const now = new Date();
@@ -312,6 +323,17 @@ export class EvmService implements IEvmService {
     const computeHistorical = this.buildAsOfMetricsFn(
       wbsData, snapshots, now, calculationMode, method, fMethod, businessDayCounter
     );
+
+    // (5') 前回からの変化：前回の確認日時点のas-ofメトリクス（時系列と同じ再構築）
+    const comparison: EvmComparison | null =
+      comparisonDate && comparisonDate.getTime() < now.getTime()
+        ? {
+          previousMetrics: computeHistorical(
+            comparisonDate,
+            computeCumulativeAc(comparisonDate)
+          ),
+        }
+        : null;
 
     // (6) 時系列メトリクス
     const dates = this.generateDateRange(startDate, endDate, interval);
@@ -367,6 +389,7 @@ export class EvmService implements IEvmService {
       scheduleForecast,
       phaseBreakdown,
       assigneeBreakdown,
+      comparison,
     };
   }
 
@@ -379,6 +402,7 @@ export class EvmService implements IEvmService {
       interval?: 'daily' | 'weekly' | 'monthly';
       periodMode?: 'project' | 'recent3months' | 'recent1month' | 'custom';
       showPrediction?: boolean;
+      comparisonDate?: Date;
     } = {}
   ): Promise<EvmDashboardData> {
     const result = await this.getEvmDashboardData(wbsId, options);

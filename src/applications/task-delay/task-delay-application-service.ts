@@ -3,7 +3,11 @@ import { SYMBOL } from '@/types/symbol';
 import type { TaskStatus } from '@/types/wbs';
 import type { TaskDelayKind } from '@/types/task-delay';
 import { calendarDateInTimeZone } from '@/utils/date-util';
-import { detectTaskDelay, compareTaskDelays } from '@/domains/task/task-delay';
+import {
+  detectTaskDelay,
+  compareTaskDelays,
+  isNewlyDelayedSince,
+} from '@/domains/task/task-delay';
 import type { ITaskRepository } from '@/applications/task/itask-repository';
 
 /** 遅延タスク一覧の1行（Server Action 経由でクライアントへ渡すため日付は ISO 文字列） */
@@ -21,12 +25,16 @@ export type TaskDelayDto = {
   kind: TaskDelayKind;
   /** 遅れは遅延日数、期限間近は予定終了日までの残日数（本日=0） */
   days: number;
+  /** 前回の確認以降に遅れ始めたか（前回の確認日を渡さなければ常に false） */
+  isNewSincePreviousReview: boolean;
 };
 
 export type ListTaskDelaysOptions = {
   /** 予定終了日の何日前から期限間近とするか（プロジェクト設定 deadlineAlertDays） */
   dueSoonDays: number;
   now?: Date;
+  /** 前回の確認日（進捗確認サイクルから決まる）。渡すと新たに遅れたタスクに印を付ける */
+  previousReviewDate?: Date;
 };
 
 export interface ITaskDelayApplicationService {
@@ -73,6 +81,9 @@ export class TaskDelayApplicationService implements ITaskDelayApplicationService
         progressRate: task.progressRate ?? null,
         kind: delay.kind,
         days: delay.days,
+        isNewSincePreviousReview: options.previousReviewDate
+          ? isNewlyDelayedSince(delay, today, options.previousReviewDate)
+          : false,
       });
     }
 

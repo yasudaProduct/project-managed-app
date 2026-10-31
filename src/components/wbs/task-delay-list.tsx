@@ -18,6 +18,8 @@ type TaskDelayListProps = {
   delays: TaskDelayDto[];
   /** 期限間近とする日数（プロジェクト設定 deadlineAlertDays） */
   dueSoonDays: number;
+  /** 前回の確認日（ISO）。渡すと前回以降に遅れ始めたタスクの件数を示す */
+  previousReviewDate?: string | null;
 };
 
 const ALL_ASSIGNEES = "all";
@@ -37,7 +39,11 @@ const assigneeKey = (delay: TaskDelayDto) =>
  * 遅れ（終了遅れ・開始遅れ）と期限間近のタスク一覧。
  * 判定と並び順はサーバー側（ドメイン）で決まる。作業者が自分の分を見られるよう担当者で絞り込める。
  */
-export function TaskDelayList({ delays, dueSoonDays }: TaskDelayListProps) {
+export function TaskDelayList({
+  delays,
+  dueSoonDays,
+  previousReviewDate = null,
+}: TaskDelayListProps) {
   const [assigneeFilter, setAssigneeFilter] = useState(ALL_ASSIGNEES);
 
   const assigneeOptions = useMemo(() => {
@@ -52,6 +58,10 @@ export function TaskDelayList({ delays, dueSoonDays }: TaskDelayListProps) {
     assigneeFilter === ALL_ASSIGNEES
       ? delays
       : delays.filter((delay) => assigneeKey(delay) === assigneeFilter);
+
+  const newDelayCount = visibleDelays.filter(
+    (delay) => delay.isNewSincePreviousReview
+  ).length;
 
   if (delays.length === 0) return null;
 
@@ -83,6 +93,12 @@ export function TaskDelayList({ delays, dueSoonDays }: TaskDelayListProps) {
           {visibleDelays.length}件
         </Badge>
       </div>
+      {previousReviewDate && (
+        <p className="mb-2 text-xs text-gray-600">
+          前回（{formatDate(new Date(previousReviewDate), "M/D(曜)")}）以降に遅れ始めた{" "}
+          {newDelayCount}件
+        </p>
+      )}
       <div className="space-y-2">
         {visibleDelays.map((delay) => {
           const isOverdue = delay.kind !== "DUE_SOON";
@@ -107,6 +123,11 @@ export function TaskDelayList({ delays, dueSoonDays }: TaskDelayListProps) {
                   >
                     {delay.taskName}
                   </span>
+                  {delay.isNewSincePreviousReview && (
+                    <Badge variant="secondary" className="text-xs shrink-0">
+                      新規
+                    </Badge>
+                  )}
                 </div>
                 <Badge
                   variant={isOverdue ? "destructive" : "outline"}

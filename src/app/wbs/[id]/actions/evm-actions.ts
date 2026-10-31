@@ -16,6 +16,8 @@ const GetEvmDashboardDataSchema = z.object({
   interval: z.enum(['daily', 'weekly', 'monthly']).default('weekly'),
   periodMode: z.enum(['project', 'recent3months', 'recent1month', 'custom']).default('project'),
   showPrediction: z.boolean().optional(),
+  /** 前回からの変化の比較日（ISO 8601・UTC） */
+  comparisonDate: z.string().datetime().optional(),
 });
 
 type EvmActionResult<T = unknown> = {
@@ -37,6 +39,9 @@ export async function getEvmDashboardData(
       interval: validated.interval,
       periodMode: validated.periodMode,
       showPrediction: validated.showPrediction,
+      comparisonDate: validated.comparisonDate
+        ? new Date(validated.comparisonDate)
+        : undefined,
     });
 
     return {

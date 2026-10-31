@@ -662,6 +662,20 @@ EVMダッシュボードの「内訳」タブで、現在時点のPV/EV/AC/BAC/S
 
 ---
 
+## 付録: 前回からの変化
+
+EVMダッシュボードのメトリクスカードの下に、前回の確認時点からの変化（SPI / CPI / SV / CV / 出来高率の前回値・現在値・差）を表示する（`src/components/evm/evm-comparison-card.tsx`）。
+
+- 前回の確認日はプロジェクト設定 `progressReviewCycle` から決める（`src/domains/progress-review/previous-review-date.ts`）
+  - 日次: 前営業日（土日・祝日・会社休日を除く）
+  - 週次: 7日前
+  - 月次: 1ヶ月前（同じ日がなければその月の末日）
+  - 「今日」は業務タイムゾーン（JST）の暦日
+- 前回値は時系列と同じ as-of 再構築（スナップショット履歴＋比較日までの累積AC）で求める。`getEvmDashboardData` の `comparisonDate` オプションで指定し、結果は `comparison.previousMetrics` に入る
+- 比較日が現在以降の場合は `comparison` は null
+
+---
+
 ## 付録: EVM関連プロジェクト設定一覧
 
 | 設定 | 型 / 既定値 | 用途 |

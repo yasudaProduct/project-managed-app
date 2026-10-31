@@ -116,6 +116,10 @@ import { TaskDelayApplicationService } from "@/applications/task-delay/task-dela
 import type { IDataFreshnessApplicationService } from "@/applications/data-freshness/data-freshness-application-service";
 import { DataFreshnessApplicationService } from "@/applications/data-freshness/data-freshness-application-service";
 
+// Progress Review関連
+import type { IProgressReviewApplicationService } from "@/applications/progress-review/progress-review-application-service";
+import { ProgressReviewApplicationService } from "@/applications/progress-review/progress-review-application-service";
+
 // Prisma
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma/prisma';
@@ -202,6 +206,7 @@ container.bind<IProjectSettingsApplicationService>(SYMBOL.IProjectSettingsApplic
 container.bind<IForecastApplicationService>(SYMBOL.IForecastApplicationService).to(ForecastApplicationService).inSingletonScope();
 container.bind<ITaskDelayApplicationService>(SYMBOL.ITaskDelayApplicationService).to(TaskDelayApplicationService).inSingletonScope();
 container.bind<IDataFreshnessApplicationService>(SYMBOL.IDataFreshnessApplicationService).to(DataFreshnessApplicationService).inSingletonScope();
+container.bind<IProgressReviewApplicationService>(SYMBOL.IProgressReviewApplicationService).to(ProgressReviewApplicationService).inSingletonScope();
 container.bind<ICompanyHolidayApplicationService>(SYMBOL.ICompanyHolidayApplicationService).to(CompanyHolidayApplicationService).inSingletonScope();
 container.bind<ICrossWbsWorkloadService>(SYMBOL.ICrossWbsWorkloadService).to(CrossWbsWorkloadService).inSingletonScope();
 

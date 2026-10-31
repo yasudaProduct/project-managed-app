@@ -62,3 +62,13 @@ export function compareTaskDelays(a: TaskDelay, b: TaskDelay): number {
   if (kindOrder !== 0) return kindOrder;
   return a.kind === 'DUE_SOON' ? a.days - b.days : b.days - a.days;
 }
+
+/**
+ * 前回の確認（since）以降に遅れ始めたか。
+ * 遅延日数が前回からの経過日数以下なら、前回の時点ではまだ遅れていなかったとみなす。
+ * 予定日の変更は追わず、現在の予定日で判定する。
+ */
+export function isNewlyDelayedSince(delay: TaskDelay, today: Date, since: Date): boolean {
+  if (delay.kind === 'DUE_SOON') return false;
+  return delay.days <= utcDayNumber(today) - utcDayNumber(since);
+}

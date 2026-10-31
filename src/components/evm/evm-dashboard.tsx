@@ -12,6 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EvmChart } from "./evm-chart";
 import { EvmMetricsCard } from "./evm-metrics-card";
+import { EvmComparisonCard } from "./evm-comparison-card";
 import { TaskEvmTable } from "./task-evm-table";
 import { EvmTimeSeriesTable } from "./evm-timeseries-table";
 import { EvmBreakdownTable } from "./evm-breakdown-table";
@@ -59,6 +60,8 @@ type EvmDashboardProps = {
   defaultForecastMethod?: EvmForecastMethod;
   /** プロジェクト設定の進捗確認サイクル。時系列の既定の間隔・表示期間を決める */
   progressReviewCycle?: ProgressReviewCycle;
+  /** 前回の確認日（ISO）。渡すと前回からの変化を表示する */
+  previousReviewDate?: string | null;
 };
 
 export function EvmDashboard({
@@ -66,6 +69,7 @@ export function EvmDashboard({
   defaultProgressMethod,
   defaultForecastMethod,
   progressReviewCycle = DEFAULT_PROGRESS_REVIEW_CYCLE,
+  previousReviewDate = null,
 }: EvmDashboardProps) {
   const viewDefaults = EVM_VIEW_DEFAULTS_BY_REVIEW_CYCLE[progressReviewCycle];
   const [currentMetrics, setCurrentMetrics] = useState<EvmMetricsData | null>(
@@ -76,6 +80,9 @@ export function EvmDashboard({
   const [scheduleForecast, setScheduleForecast] =
     useState<ScheduleForecastData | null>(null);
   const [phaseBreakdown, setPhaseBreakdown] = useState<EvmBreakdownRow[]>([]);
+  const [previousMetrics, setPreviousMetrics] = useState<EvmMetricsData | null>(
+    null
+  );
   const [assigneeBreakdown, setAssigneeBreakdown] = useState<EvmBreakdownRow[]>(
     []
   );
@@ -125,6 +132,7 @@ export function EvmDashboard({
     interval,
     periodMode,
     showPrediction,
+    previousReviewDate,
   ]);
 
   /**
@@ -144,6 +152,7 @@ export function EvmDashboard({
         interval,
         periodMode,
         showPrediction,
+        comparisonDate: previousReviewDate ?? undefined,
       });
 
       if (!result.success || !result.data) {
@@ -156,6 +165,7 @@ export function EvmDashboard({
       setScheduleForecast(result.data.scheduleForecast ?? null);
       setPhaseBreakdown(result.data.phaseBreakdown ?? []);
       setAssigneeBreakdown(result.data.assigneeBreakdown ?? []);
+      setPreviousMetrics(result.data.comparison?.previousMetrics ?? null);
       setLastLoadedAt(new Date());
     } catch (err) {
       console.error("Failed to load EVM data:", err);
@@ -484,6 +494,11 @@ export function EvmDashboard({
         scheduleForecast={scheduleForecast}
         actualsNotImported={actualsNotImported}
       />
+
+      {/* 前回の確認時点からの変化（進捗会議で最初に見る差分） */}
+      {previousMetrics && (
+        <EvmComparisonCard current={currentMetrics} previous={previousMetrics} />
+      )}
 
       {/* タブ */}
       <Tabs defaultValue="chart" className="space-y-4">

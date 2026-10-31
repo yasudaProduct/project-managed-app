@@ -11,6 +11,8 @@ import type {
 const listTaskDelaysSchema = z.object({
   wbsId: z.number().int().positive(),
   dueSoonDays: z.number().int().min(0),
+  /** 前回の確認日（ISO 8601・UTC）。渡すと前回以降に遅れ始めたタスクに印を付ける */
+  previousReviewDate: z.string().datetime().optional(),
 });
 
 /**
@@ -19,9 +21,10 @@ const listTaskDelaysSchema = z.object({
  */
 export async function listTaskDelays(
   wbsId: number,
-  dueSoonDays: number
+  dueSoonDays: number,
+  previousReviewDate?: string
 ): Promise<TaskDelayDto[]> {
-  const parsed = listTaskDelaysSchema.safeParse({ wbsId, dueSoonDays });
+  const parsed = listTaskDelaysSchema.safeParse({ wbsId, dueSoonDays, previousReviewDate });
   if (!parsed.success) return [];
 
   const service = container.get<ITaskDelayApplicationService>(
@@ -29,5 +32,8 @@ export async function listTaskDelays(
   );
   return service.listTaskDelays(parsed.data.wbsId, {
     dueSoonDays: parsed.data.dueSoonDays,
+    previousReviewDate: parsed.data.previousReviewDate
+      ? new Date(parsed.data.previousReviewDate)
+      : undefined,
   });
 }
