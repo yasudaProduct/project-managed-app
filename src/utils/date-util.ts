@@ -172,6 +172,39 @@ export const calendarDateInTimeZone = (
 }
 
 /**
+ * 指定タイムゾーンでの当日0時の瞬間を返す。
+ * 「当日中に通知済みか」など、業務日単位で区切る判定に使う。
+ */
+export const startOfDayInTimeZone = (
+    instant: Date,
+    timeZone: string = BUSINESS_TIME_ZONE
+): Date => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        hourCycle: 'h23',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+    }).formatToParts(instant);
+    const partValue = (type: Intl.DateTimeFormatPartTypes) =>
+        Number(parts.find((part) => part.type === type)?.value);
+    // 指定タイムゾーンの壁時計を UTC とみなした値との差がUTCオフセット
+    const wallClockAsUtcMs = Date.UTC(
+        partValue('year'),
+        partValue('month') - 1,
+        partValue('day'),
+        partValue('hour'),
+        partValue('minute'),
+        partValue('second')
+    );
+    const offsetMs = wallClockAsUtcMs - Math.floor(instant.getTime() / 1000) * 1000;
+    return new Date(calendarDateInTimeZone(instant, timeZone).getTime() - offsetMs);
+}
+
+/**
  * UTC暦日のキー（YYYY-MM-DD）を返す。
  * 作業実績の日付キー・累積AC集計などUTC基準の突き合わせに使用する。
  */

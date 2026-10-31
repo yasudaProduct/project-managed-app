@@ -42,3 +42,25 @@ WBS のサマリータブ「遅れ・期限間近のタスク」（`src/componen
 - 表示: タスク番号・名前・種類と日数（「終了遅れ 3日」「開始遅れ 2日」「本日期限」「残り2日」）・フェーズ・担当者・予定期間・進捗率
 - 担当者で絞り込める（作業者が自分の分を確認する用途）。担当者未設定は「未割当」
 - データ取得: `listTaskDelays`（`src/app/wbs/[id]/actions/task-delay-actions.ts`）→ `TaskDelayApplicationService`
+
+## 6. 通知
+
+cron（`/api/cron/notifications`、6時間ごと）から `NotificationEventDetector` が呼ばれ、同じ判定でタスク担当者へ通知する（`src/applications/notification/notification-event-detector.ts`）。
+
+| 検知 | 通知種別 | 条件 | 優先度 |
+|---|---|---|---|
+| `detectTaskDeadlines` | `TASK_DEADLINE_OVERDUE` | 終了遅れ | URGENT |
+| `detectTaskDeadlines` | `TASK_DEADLINE_WARNING` | 期限間近 | HIGH |
+| `detectScheduleDelays` | `SCHEDULE_DELAY` | 開始遅れ | HIGH |
+| `detectManhourExceeded` | `TASK_MANHOUR_EXCEEDED` | 未完了で 実績工数 / 予定工数 ≧ `costOverrunThresholdPct` | 120%以上は URGENT、それ以外は HIGH |
+| `detectManhourExceeded` | `TASK_MANHOUR_WARNING` | 未完了で 実績工数 / 予定工数 ≧ `costOverrunThresholdPct` × 0.8 | 同上 |
+
+- 対象: 未開始・進行中プロジェクトの最新 WBS（担当者負荷の横断集計と同じ `ITargetWbsQueryRepository`）
+- しきい値: 各プロジェクトの設定（未作成なら既定値）
+- 宛先: タスク担当者のユーザーID（`Users.id`）。担当者のいないタスクは通知しない
+- 重複防止: 同じ宛先・種類・タスクの通知が業務日（JST）の当日中にあれば作成しない（cron が1日4回動くため）
+- 1件の作成に失敗しても残りは続行する
+- 通知のリンク先はプロジェクト画面（サマリータブに遅れ・期限間近のタスク一覧がある）。タスク詳細画面は存在しない
+- 工数超過の判定は `src/domains/task/task-manhour-overrun.ts`
+
+> 以前の実装は仮実装で、工数（実績 50h / 予定 40h）と遅延日数（5日）が固定値だった。また宛先に WBS 担当者の行ID（ユーザーIDではない）を使い、プロジェクト単位の遅延通知は存在しないユーザー `system-admin` 宛てになっていた。プロジェクトマネージャーの概念がまだないため、プロジェクト単位の遅延まとめ通知は廃止し、タスク単位の開始遅れ通知に置き換えた。

@@ -50,6 +50,7 @@ export class TaskRepository implements ITaskRepository {
                 id: taskDb.assignee.id,
                 name: taskDb.assignee.assignee.name,
                 displayName: taskDb.assignee.assignee.displayName,
+                userId: taskDb.assignee.assigneeId,
             }) : undefined,
             phaseId: taskDb.phaseId ?? undefined,
             phase: taskDb.phase ? Phase.createFromDb({
@@ -143,6 +144,7 @@ export class TaskRepository implements ITaskRepository {
                 id: taskDb.assignee.id,
                 name: taskDb.assignee.assignee.name,
                 displayName: taskDb.assignee.assignee.displayName,
+                userId: taskDb.assignee.assigneeId,
             }) : undefined,
             phaseId: taskDb.phaseId ?? undefined,
             phase: taskDb.phase ? Phase.createFromDb({
@@ -212,6 +214,7 @@ export class TaskRepository implements ITaskRepository {
                 id: taskDb.assignee.id,
                 name: taskDb.assignee.assignee.name,
                 displayName: taskDb.assignee.assignee.displayName,
+                userId: taskDb.assignee.assigneeId,
             }) : undefined,
             phaseId: taskDb.phaseId ?? undefined,
             phase: taskDb.phase ? Phase.createFromDb({
