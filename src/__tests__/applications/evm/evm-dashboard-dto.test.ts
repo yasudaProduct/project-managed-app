@@ -127,8 +127,19 @@ describe('evm-dashboard-dto', () => {
         },
         phaseBreakdown: [],
         assigneeBreakdown: [],
+        comparison: {
+          previousMetrics: EvmMetrics.create({
+            date: new Date('2025-01-01T00:00:00.000Z'),
+            pv_base: 50,
+            pv: 50,
+            ev: 0,
+            ac: 0,
+            bac: 100,
+          }),
+        },
       });
 
+      expect(result.comparison?.previousMetrics.date).toBe('2025-01-01T00:00:00.000Z');
       expect(result.taskDetails[0].methodProgressRate).toBe(0);
       expect(result.taskDetails[0].methodEarnedValue).toBe(0);
     });

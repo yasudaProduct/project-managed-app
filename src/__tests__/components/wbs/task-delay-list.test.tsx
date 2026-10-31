@@ -18,6 +18,7 @@ const makeDelay = (overrides: Partial<TaskDelayDto>): TaskDelayDto => ({
   progressRate: 60,
   kind: "END_OVERDUE",
   days: 3,
+  isNewSincePreviousReview: false,
   ...overrides,
 });
 
@@ -72,5 +73,21 @@ describe("TaskDelayList", () => {
   it("対象がなければ何も表示しない", () => {
     const { container } = render(<TaskDelayList delays={[]} dueSoonDays={1} />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("前回の確認以降に遅れ始めたタスクに「新規」を付け、件数を示す", () => {
+    render(
+      <TaskDelayList
+        delays={[
+          makeDelay({ taskId: 1, taskName: "設計A", isNewSincePreviousReview: true }),
+          makeDelay({ taskId: 2, taskName: "設計B" }),
+        ]}
+        dueSoonDays={1}
+        previousReviewDate="2026-10-24T00:00:00.000Z"
+      />
+    );
+
+    expect(screen.getAllByText("新規")).toHaveLength(1);
+    expect(screen.getByText(/前回（10\/24.*）以降に遅れ始めた 1件/)).toBeInTheDocument();
   });
 });

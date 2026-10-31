@@ -224,4 +224,33 @@ describe('EvmService: フェーズ別・担当者別内訳', () => {
     expect(result.phaseBreakdown.some((r) => r.name === '未分類')).toBe(true);
     expect(result.assigneeBreakdown.some((r) => r.name === '未割当')).toBe(true);
   });
+
+  describe('前回からの変化（comparisonDate）', () => {
+    it('比較日を渡すと、その日時点のメトリクス（AC・EVは比較日まで）を返す', async () => {
+      mockRepository.getActualCostByDate.mockResolvedValue(
+        new Map([
+          ['2025-05-01', 105],
+          ['2025-05-28', 20],
+        ])
+      );
+
+      const result = await evmService.getEvmDashboardData(1, {
+        periodMode: 'project',
+        comparisonDate: new Date('2025-05-25T00:00:00.000Z'),
+      });
+
+      expect(result.comparison).not.toBeNull();
+      expect(result.comparison!.previousMetrics.date.toISOString()).toBe(
+        '2025-05-25T00:00:00.000Z'
+      );
+      expect(result.comparison!.previousMetrics.ac).toBe(105);
+      expect(result.currentMetrics.ac).toBe(125);
+    });
+
+    it('比較日を渡さなければ comparison は null', async () => {
+      const result = await evmService.getEvmDashboardData(1, { periodMode: 'project' });
+
+      expect(result.comparison).toBeNull();
+    });
+  });
 });

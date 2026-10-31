@@ -115,4 +115,34 @@ describe('TaskDelayApplicationService', () => {
     expect(delay.assigneeName).toBeNull();
     expect(delay.phaseName).toBeNull();
   });
+
+  it('前回の確認日を渡すと、それ以降に遅れ始めたタスクに印を付ける', async () => {
+    repository.findActiveByWbsId.mockResolvedValue([
+      // 10/28 終了予定 → 3日遅れ（前回 10/24 以降に遅れ始めた）
+      makeTask({ id: 1, status: 'IN_PROGRESS', start: '2026-10-01', end: '2026-10-28' }),
+      // 10/20 終了予定 → 11日遅れ（前回の時点ですでに遅れていた）
+      makeTask({ id: 2, status: 'IN_PROGRESS', start: '2026-10-01', end: '2026-10-20' }),
+    ]);
+
+    const result = await service.listTaskDelays(1, {
+      dueSoonDays: 1,
+      now,
+      previousReviewDate: new Date('2026-10-24T00:00:00.000Z'),
+    });
+
+    expect(result.map((r) => [r.taskId, r.isNewSincePreviousReview])).toEqual([
+      [2, false],
+      [1, true],
+    ]);
+  });
+
+  it('前回の確認日がなければ印は付けない', async () => {
+    repository.findActiveByWbsId.mockResolvedValue([
+      makeTask({ id: 1, status: 'IN_PROGRESS', start: '2026-10-01', end: '2026-10-28' }),
+    ]);
+
+    const [delay] = await service.listTaskDelays(1, { dueSoonDays: 1, now });
+
+    expect(delay.isNewSincePreviousReview).toBe(false);
+  });
 });

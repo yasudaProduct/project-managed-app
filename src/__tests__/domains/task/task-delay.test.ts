@@ -1,4 +1,4 @@
-import { detectTaskDelay, compareTaskDelays } from '@/domains/task/task-delay';
+import { detectTaskDelay, compareTaskDelays, isNewlyDelayedSince } from '@/domains/task/task-delay';
 
 /**
  * タスクの遅れ・期限間近の判定。
@@ -119,5 +119,23 @@ describe('compareTaskDelays', () => {
       { kind: 'DUE_SOON', days: 0 },
       { kind: 'DUE_SOON', days: 1 },
     ]);
+  });
+});
+
+describe('isNewlyDelayedSince', () => {
+  const today = new Date('2026-10-31T00:00:00.000Z');
+  const since = new Date('2026-10-24T00:00:00.000Z'); // 7日前
+
+  it('前回の確認以降に遅れ始めた（遅延日数が経過日数以下）なら true', () => {
+    expect(isNewlyDelayedSince({ kind: 'END_OVERDUE', days: 7 }, today, since)).toBe(true);
+    expect(isNewlyDelayedSince({ kind: 'START_OVERDUE', days: 1 }, today, since)).toBe(true);
+  });
+
+  it('前回の確認時点ですでに遅れていたなら false', () => {
+    expect(isNewlyDelayedSince({ kind: 'END_OVERDUE', days: 8 }, today, since)).toBe(false);
+  });
+
+  it('期限間近は遅れではないので false', () => {
+    expect(isNewlyDelayedSince({ kind: 'DUE_SOON', days: 0 }, today, since)).toBe(false);
   });
 });
