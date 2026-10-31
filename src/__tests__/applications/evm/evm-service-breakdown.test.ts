@@ -144,6 +144,30 @@ describe('EvmService: フェーズ別・担当者別内訳', () => {
     expect(impl!.ac).toBe(60);
   });
 
+  it('各行にSV（EV-PV）とCV（EV-AC）が含まれる', async () => {
+    const result = await evmService.getEvmDashboardData(1, {
+      periodMode: 'project',
+    });
+
+    const design = result.phaseBreakdown.find((r) => r.name === '設計');
+    expect(design!.sv).toBeCloseTo(50 - 100, 5);
+    expect(design!.cv).toBeCloseTo(50 - 30, 5);
+
+    const yamada = result.assigneeBreakdown.find((r) => r.name === '山田');
+    expect(yamada!.sv).toBeCloseTo(-50, 5);
+    expect(yamada!.cv).toBeCloseTo(20, 5);
+  });
+
+  it('未紐付け・削除済み行のSVは0、CVは-AC', async () => {
+    const result = await evmService.getEvmDashboardData(1, {
+      periodMode: 'project',
+    });
+
+    const unlinked = result.phaseBreakdown.find((r) => r.isUnlinked);
+    expect(unlinked!.sv).toBe(0);
+    expect(unlinked!.cv).toBe(-15);
+  });
+
   it('担当者別に集計される（軸はタスクの現担当者）', async () => {
     const result = await evmService.getEvmDashboardData(1, {
       periodMode: 'project',

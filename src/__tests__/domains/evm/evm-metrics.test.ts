@@ -106,6 +106,61 @@ describe('EvmMetrics', () => {
     });
   });
 
+  describe('TCPI（残作業効率指数）', () => {
+    it('TCPI = (BAC - EV) / (BAC - AC) を返す', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01T00:00:00.000Z'),
+        pv_base: 100,
+        pv: 100,
+        ev: 80,
+        ac: 100,
+        bac: 200,
+      });
+
+      // 残作業 120 を 残予算 100 でこなす必要がある → 1.2
+      expect(metrics.tcpi).toBeCloseTo(1.2, 5);
+    });
+
+    it('残予算が0以下（AC ≥ BAC）の場合はnull（予算内での完了は不可能）', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01T00:00:00.000Z'),
+        pv_base: 100,
+        pv: 100,
+        ev: 150,
+        ac: 200,
+        bac: 200,
+      });
+
+      expect(metrics.tcpi).toBeNull();
+    });
+
+    it('BACが0の場合はnull', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01T00:00:00.000Z'),
+        pv_base: 0,
+        pv: 0,
+        ev: 0,
+        ac: 0,
+        bac: 0,
+      });
+
+      expect(metrics.tcpi).toBeNull();
+    });
+
+    it('EVがBACを超えている場合、残作業は0として扱い0を返す', () => {
+      const metrics = new EvmMetrics({
+        date: new Date('2025-01-01T00:00:00.000Z'),
+        pv_base: 100,
+        pv: 100,
+        ev: 210,
+        ac: 150,
+        bac: 200,
+      });
+
+      expect(metrics.tcpi).toBe(0);
+    });
+  });
+
   describe('完了率の計算', () => {
     it('完了率を正しく計算する', () => {
       const metrics = new EvmMetrics({

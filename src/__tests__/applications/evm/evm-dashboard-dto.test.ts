@@ -1,6 +1,7 @@
 import {
   serializeTaskEvmData,
   serializeEvmDashboardData,
+  serializeEvmMetrics,
 } from '@/applications/evm/evm-dashboard-dto';
 import { TaskEvmData } from '@/domains/evm/task-evm-data';
 import { EvmMetrics } from '@/domains/evm/evm-metrics';
@@ -77,6 +78,23 @@ describe('evm-dashboard-dto', () => {
 
       expect(dto.methodProgressRate).toBe(100);
       expect(dto.methodEarnedValue).toBe(100);
+    });
+  });
+
+  describe('serializeEvmMetrics', () => {
+    it('TCPIを含める', () => {
+      const result = serializeEvmMetrics(
+        EvmMetrics.create({
+          date: new Date('2025-01-05T00:00:00.000Z'),
+          pv_base: 100,
+          pv: 100,
+          ev: 80,
+          ac: 100,
+          bac: 200,
+        })
+      );
+
+      expect(result.tcpi).toBeCloseTo(1.2, 5);
     });
   });
 
