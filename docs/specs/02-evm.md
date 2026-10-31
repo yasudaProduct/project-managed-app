@@ -10,7 +10,7 @@ EVM（Earned Value Management）は、プロジェクトの進捗をスケジュ
 
 本システムでは、WBS（Work Breakdown Structure）単位でEVMを計算する。具体的には以下の機能を提供する。
 
-- 任意の評価日時点でのEVMメトリクス（PV/EV/AC/BAC/SV/CV/SPI/CPI/EAC/ETC/VAC）の計算
+- 任意の評価日時点でのEVMメトリクス（PV/EV/AC/BAC/SV/CV/SPI/CPI/EAC/ETC/VAC/TCPI）の計算
 - 工数ベース（hours）またはコストベース（cost）での計算モード切り替え
 - 3種類の進捗測定方式（ZERO_HUNDRED / FIFTY_FIFTY / SELF_REPORTED）の選択
 - 3種類のEAC/ETC予測計算方式（CPI_ONLY / CPI_SPI / PLANNED）の選択
@@ -41,6 +41,7 @@ EVM（Earned Value Management）は、プロジェクトの進捗をスケジュ
 | EAC | Estimate At Completion | 完了時総コスト予測 | 現在の実績をもとに予測した完了時の総コスト |
 | ETC | Estimate To Complete | 完了までの残コスト予測 | 現時点から完了までに必要な残コスト予測 |
 | VAC | Variance At Completion | 完了時差異予測 | BAC - EAC。完了時の予算に対する差異予測 |
+| TCPI | To-Complete Performance Index | 残作業効率指数 | (BAC - EV) / (BAC - AC)。残作業を残予算で終えるために必要な効率。1.0超は計画以上の効率が必要 |
 
 ---
 
@@ -226,7 +227,18 @@ VAC = BAC - EAC
 
 VAC < 0 はコスト超過予測、VAC > 0 はコスト節約予測を意味する。
 
-### 6.4 completionRate（完了率）
+### 6.4 TCPI（残作業効率指数）
+
+```
+TCPI = max(0, BAC - EV) / (BAC - AC)
+```
+
+残りの作業を残りの予算（BAC 基準）で終えるために必要な効率を示す。TCPI > 1 は計画以上の効率が必要であることを意味し、TCPI が現在の CPI を上回る場合は、今のペースでは予算内に収まらない。
+
+- BAC = 0、または残予算（BAC - AC）が 0 以下の場合は **null**（予算内での完了は不可能）
+- EV が BAC を超えている場合、残作業は 0 として扱い TCPI = 0
+
+### 6.5 completionRate（完了率）
 
 ```
 completionRate = (EV / BAC) × 100  [%]
@@ -638,13 +650,15 @@ AC（評価日時点） = Σ（evaluationDate 以前の日付の実績コスト�
 
 ## 付録: フェーズ別・担当者別内訳
 
-EVMダッシュボードの「内訳」タブで、現在時点のPV/EV/AC/BAC/SPI/CPIをフェーズ別・担当者別に表示する。
+EVMダッシュボードの「内訳」タブで、現在時点のPV/EV/AC/BAC/SV/CV/SPI/CPIをフェーズ別・担当者別に表示する。
 
 - 集計対象は **ライブタスク × 現在時点** のみ（スナップショットにフェーズ/担当者情報が無いため過去日のas-of内訳は算出しない）
 - 担当者軸は **タスクの現担当者**（作業実績の記録者ではない）
 - グルーピングキーはID（同名フェーズ・同姓同名の衝突回避）。フェーズ未設定は「未分類」、担当者未設定は「未割当」
 - タスク未紐付け実績（taskId=null）とライブタスクに存在しないtaskId（削除済み）のACは「未紐付け・削除済み」行へ合算し、**内訳のAC合計 = 全体AC** を維持する（この行のSPI/CPIはnull）
 - バッファはグループBACに含めない（カードのBACとは一致しない。UIに注記あり）
+- 未紐付け・削除済み行の SV は 0、CV は -AC
+- 比率（SPI/CPI）だけでは影響の大きさが分からないため、表ごとに並び順を「既定の順／遅れの大きい順（SV の小さい順）／超過の大きい順（CV の小さい順）」から選べる。未紐付け・削除済み行は常に末尾（`src/utils/evm-breakdown.ts`）
 
 ---
 

@@ -62,6 +62,10 @@ export type EvmBreakdownRow = {
   ev: number;
   ac: number;
   bac: number;
+  /** スケジュール差異（EV - PV）。影響の大きさを比率でなく絶対値で見るため */
+  sv: number;
+  /** コスト差異（EV - AC） */
+  cv: number;
   spi: number | null;
   cpi: number | null;
   /** タスク未紐付け・削除済みタスクのAC行（PV/EV/BACなし） */
@@ -697,7 +701,7 @@ export class EvmService implements IEvmService {
     method: ProgressMeasurementMethod,
     businessDayCounter?: BusinessDayCounter
   ): { phaseBreakdown: EvmBreakdownRow[]; assigneeBreakdown: EvmBreakdownRow[] } {
-    type Acc = Omit<EvmBreakdownRow, 'spi' | 'cpi'>;
+    type Acc = Omit<EvmBreakdownRow, 'sv' | 'cv' | 'spi' | 'cpi'>;
     const phaseMap = new Map<string, Acc>();
     const assigneeMap = new Map<string, Acc>();
     const liveTaskIds = new Set<number>();
@@ -762,6 +766,8 @@ export class EvmService implements IEvmService {
     const toRows = (map: Map<string, Acc>): EvmBreakdownRow[] => {
       const rows: EvmBreakdownRow[] = Array.from(map.values()).map((acc) => ({
         ...acc,
+        sv: acc.ev - acc.pv,
+        cv: acc.ev - acc.ac,
         spi: acc.pv === 0 ? null : acc.ev / acc.pv,
         cpi: acc.ac === 0 ? null : acc.ev / acc.ac,
       }));
@@ -774,6 +780,8 @@ export class EvmService implements IEvmService {
           ev: 0,
           ac: unlinkedAc,
           bac: 0,
+          sv: 0,
+          cv: -unlinkedAc,
           spi: null,
           cpi: null,
           isUnlinked: true,

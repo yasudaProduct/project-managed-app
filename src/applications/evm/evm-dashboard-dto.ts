@@ -23,6 +23,8 @@ export type EvmMetricsData = {
   cv: number;
   spi: number | null;
   cpi: number | null;
+  /** 残作業効率指数。残予算が0以下の場合はnull */
+  tcpi: number | null;
   eac: number;
   etc: number;
   vac: number;
@@ -104,6 +106,7 @@ export function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
     cv: metrics.cv,
     spi: metrics.spi,
     cpi: metrics.cpi,
+    tcpi: metrics.tcpi,
     eac: metrics.eac,
     etc: metrics.etc,
     vac: metrics.vac,

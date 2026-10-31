@@ -25,6 +25,7 @@ const makeMetrics = (overrides: Partial<EvmMetricsData> = {}): EvmMetricsData =>
   cv: -10,
   spi: 0.8,
   cpi: 0.888,
+  tcpi: 120 / 110,
   eac: 225,
   etc: 135,
   vac: -25,
@@ -136,6 +137,27 @@ describe("EvmMetricsCard", () => {
         screen.getByLabelText(/EAC.*完了時点の総コスト予測/)
       ).toBeInTheDocument();
       expect(screen.getByLabelText(/ETC.*残作業に必要なコスト/)).toBeInTheDocument();
+    });
+  });
+
+  describe("TCPI（残作業効率指数）", () => {
+    it("TCPIが1を超えるとき、必要な効率を表示する", () => {
+      render(<EvmMetricsCard metrics={makeMetrics({ tcpi: 1.2 })} />);
+
+      expect(screen.getByText("1.200")).toBeInTheDocument();
+      expect(screen.getByText(/計画の120\.0%の効率が必要/)).toBeInTheDocument();
+    });
+
+    it("TCPIが1以下のとき、予算内に完了できる旨を表示する", () => {
+      render(<EvmMetricsCard metrics={makeMetrics({ tcpi: 0.95 })} />);
+
+      expect(screen.getByText(/計画どおりの効率で予算内に完了できます/)).toBeInTheDocument();
+    });
+
+    it("TCPIがnull（残予算なし）のとき、予算内で完了できない旨を表示する", () => {
+      render(<EvmMetricsCard metrics={makeMetrics({ tcpi: null })} />);
+
+      expect(screen.getByText(/予算内での完了はできません/)).toBeInTheDocument();
     });
   });
 });

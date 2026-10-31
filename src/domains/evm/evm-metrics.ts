@@ -111,6 +111,15 @@ export class EvmMetrics {
     return this.bac - this.eac;
   }
 
+  // To-Complete Performance Index (残作業効率指数)
+  // 残作業（BAC - EV）を残予算（BAC - AC）で完了させるために必要な効率。1超なら計画以上の効率が必要。
+  // 残予算が0以下（予算消化済み）は予算内での完了が不可能なためnullを返す。
+  get tcpi(): number | null {
+    const remainingBudget = this.bac - this.ac;
+    if (this.bac === 0 || remainingBudget <= 0) return null;
+    return Math.max(0, this.bac - this.ev) / remainingBudget;
+  }
+
   // 完了率
   get completionRate(): number {
     return this.bac === 0 ? 0 : (this.ev / this.bac) * 100;
