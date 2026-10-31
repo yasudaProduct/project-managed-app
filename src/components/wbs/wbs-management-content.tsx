@@ -32,6 +32,7 @@ import type { ProjectStatus, WbsTask, Milestone } from "@/types/wbs";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import type { EvmForecastMethod } from "@/types/evm-forecast-method";
 import type { ProgressReviewCycle } from "@/types/progress-review-cycle";
+import type { TaskDelayDto } from "@/applications/task-delay/task-delay-application-service";
 import type { WbsImportScheduleDto } from "@/types/import-schedule";
 
 type WbsManagementContentProps = {
@@ -54,6 +55,8 @@ type WbsManagementContentProps = {
   phases: Array<{ id: number; seq: number; name: string; code: string }>;
   assignees: Array<{ assignee: { displayName: string } | null }> | null;
   milestones: Milestone[];
+  /** 遅れ・期限間近のタスク（サマリータブに表示） */
+  taskDelays?: TaskDelayDto[];
   importSchedule: WbsImportScheduleDto;
   defaultTab?: string;
   showEvm?: boolean;
@@ -74,6 +77,7 @@ export function WbsManagementContent({
   phases,
   assignees,
   milestones,
+  taskDelays = [],
   importSchedule,
   defaultTab,
   showEvm = true,
@@ -180,6 +184,7 @@ export function WbsManagementContent({
                 buffers={buffers}
                 tasks={tasks}
                 milestones={milestones}
+                taskDelays={taskDelays}
                 deadlineAlertDays={deadlineAlertDays}
                 costOverrunThresholdPct={costOverrunThresholdPct}
               />

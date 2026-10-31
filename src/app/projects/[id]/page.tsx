@@ -10,6 +10,7 @@ import { getWbsPhases } from "@/app/wbs/[id]/actions/wbs-phase-actions";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
 import { getTaskAll } from "@/app/wbs/[id]/actions/wbs-task-actions";
 import { getMilestones } from "@/app/wbs/[id]/actions/milestone-actions";
+import { listTaskDelays } from "@/app/wbs/[id]/actions/task-delay-actions";
 import { ArrowLeft, Edit } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,8 @@ export default async function ProjectPage({
       getProjectSettings(projectId),
       getWbsImportSchedule(latestWbs.id),
     ]);
+  // 期限間近の日数はプロジェクト設定に依存するため、設定の取得後に判定する
+  const taskDelays = await listTaskDelays(latestWbs.id, settings.deadlineAlertDays);
 
   return (
     <div className="container mx-auto mt-2">
@@ -113,6 +116,7 @@ export default async function ProjectPage({
         phases={phases}
         assignees={assignees}
         milestones={milestones}
+        taskDelays={taskDelays}
         importSchedule={importSchedule}
         defaultTab={tab}
         showEvm={true}

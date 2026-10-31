@@ -97,6 +97,9 @@ export const SYMBOL = {
     // Forecast
     IForecastApplicationService: Symbol.for('IForecastApplicationService'),
 
+    // Task Delay（遅延タスク一覧）
+    ITaskDelayApplicationService: Symbol.for('ITaskDelayApplicationService'),
+
     // WBS Tags
     IWbsTagRepository: Symbol.for('IWbsTagRepository'),
     IWbsTagApplicationService: Symbol.for('IWbsTagApplicationService'),

@@ -108,6 +108,10 @@ import { ProjectSettingsApplicationService } from "@/applications/project-settin
 import type { IForecastApplicationService } from "@/applications/forecast/forecast-application-service";
 import { ForecastApplicationService } from "@/applications/forecast/forecast-application-service";
 
+// Task Delay関連
+import type { ITaskDelayApplicationService } from "@/applications/task-delay/task-delay-application-service";
+import { TaskDelayApplicationService } from "@/applications/task-delay/task-delay-application-service";
+
 // Prisma
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma/prisma';
@@ -192,6 +196,7 @@ container.bind<IWbsTagApplicationService>(SYMBOL.IWbsTagApplicationService).to(W
 container.bind<IWbsAnalyticsApplicationService>(SYMBOL.IWbsAnalyticsApplicationService).to(WbsAnalyticsApplicationService).inSingletonScope();
 container.bind<IProjectSettingsApplicationService>(SYMBOL.IProjectSettingsApplicationService).to(ProjectSettingsApplicationService).inSingletonScope();
 container.bind<IForecastApplicationService>(SYMBOL.IForecastApplicationService).to(ForecastApplicationService).inSingletonScope();
+container.bind<ITaskDelayApplicationService>(SYMBOL.ITaskDelayApplicationService).to(TaskDelayApplicationService).inSingletonScope();
 container.bind<ICompanyHolidayApplicationService>(SYMBOL.ICompanyHolidayApplicationService).to(CompanyHolidayApplicationService).inSingletonScope();
 container.bind<ICrossWbsWorkloadService>(SYMBOL.ICrossWbsWorkloadService).to(CrossWbsWorkloadService).inSingletonScope();
 

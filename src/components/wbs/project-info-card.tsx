@@ -6,7 +6,6 @@ import {
   User,
   Trello,
   ClipboardList,
-  AlertTriangle,
   Clock,
   Flag,
   Copy,
@@ -20,6 +19,8 @@ import { formatDate } from "@/utils/date-util";
 import { ProjectStatus, WbsTask, Milestone, TaskStatus } from "@/types/wbs";
 import { useMemo, useState, useCallback } from "react";
 import { copyToClipboard } from "@/utils/export-table";
+import { TaskDelayList } from "@/components/wbs/task-delay-list";
+import type { TaskDelayDto } from "@/applications/task-delay/task-delay-application-service";
 
 interface ProjectInfoCardProps {
   project: {
@@ -37,6 +38,8 @@ interface ProjectInfoCardProps {
   }>;
   tasks: WbsTask[];
   milestones: Milestone[];
+  /** 遅れ・期限間近のタスク（サーバー側で判定・並び替え済み） */
+  taskDelays: TaskDelayDto[];
   deadlineAlertDays: number;
   costOverrunThresholdPct: number;
 }
@@ -77,6 +80,7 @@ export function ProjectInfoCard({
   buffers,
   tasks,
   milestones,
+  taskDelays,
   deadlineAlertDays,
   costOverrunThresholdPct,
 }: ProjectInfoCardProps) {
@@ -194,28 +198,6 @@ export function ProjectInfoCard({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [phaseTaskSummary]);
-
-  // 期限間近 / 期限超過タスク（未着手・着手中のみ）
-  const deadlineTasks = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const alertDate = new Date(today);
-    alertDate.setDate(alertDate.getDate() + deadlineAlertDays);
-
-    return tasks
-      .filter((task) => {
-        if (task.status === "COMPLETED" || task.status === "ON_HOLD")
-          return false;
-        if (!task.yoteiEnd) return false;
-        const endDate = new Date(task.yoteiEnd);
-        return endDate <= alertDate;
-      })
-      .sort((a, b) => {
-        const aEnd = new Date(a.yoteiEnd!).getTime();
-        const bEnd = new Date(b.yoteiEnd!).getTime();
-        return aEnd - bEnd;
-      });
-  }, [tasks, deadlineAlertDays]);
 
   // 工数超過タスク
   const costOverrunTasks = useMemo(() => {
@@ -599,94 +581,10 @@ export function ProjectInfoCard({
         )}
 
         {/* Deadline Alert & Cost Overrun Tasks - Side by Side */}
-        {(deadlineTasks.length > 0 || costOverrunTasks.length > 0) && (
+        {(taskDelays.length > 0 || costOverrunTasks.length > 0) && (
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Deadline Alert Tasks */}
-            {deadlineTasks.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className="h-5 w-5 text-orange-500" />
-                  <h3 className="text-sm font-semibold text-gray-600">
-                    期限間近のタスク
-                  </h3>
-                  <span className="text-xs text-gray-400">
-                    (期限{deadlineAlertDays}日前〜)
-                  </span>
-                  <Badge variant="destructive" className="text-xs ml-auto">
-                    {deadlineTasks.length}件
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  {deadlineTasks.map((task) => {
-                    const daysUntil = getDaysUntil(new Date(task.yoteiEnd!));
-                    const isOverdue = daysUntil < 0;
-                    return (
-                      <div
-                        key={task.id}
-                        className={`p-3 rounded-lg border ${
-                          isOverdue
-                            ? "bg-red-50 border-red-200"
-                            : "bg-orange-50 border-orange-200"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {task.taskNo && (
-                              <span className="text-xs font-mono text-gray-500 shrink-0">
-                                {task.taskNo}
-                              </span>
-                            )}
-                            <span
-                              className={`text-sm truncate ${
-                                isOverdue
-                                  ? "text-red-700 font-semibold"
-                                  : "text-gray-700"
-                              }`}
-                            >
-                              {task.name}
-                            </span>
-                            <span
-                              className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${
-                                TASK_STATUS_COLORS[task.status]
-                              }`}
-                            >
-                              {TASK_STATUS_LABELS[task.status]}
-                            </span>
-                          </div>
-                          <Badge
-                            variant={isOverdue ? "destructive" : "outline"}
-                            className="text-xs shrink-0 ml-2"
-                          >
-                            {isOverdue
-                              ? `${Math.abs(daysUntil)}日超過`
-                              : daysUntil === 0
-                              ? "本日期限"
-                              : `残${daysUntil}日`}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
-                          {task.phase && (
-                            <span className="bg-gray-100 px-1.5 py-0.5 rounded">
-                              {task.phase.name}
-                            </span>
-                          )}
-                          {task.assignee && (
-                            <span>{task.assignee.displayName}</span>
-                          )}
-                          <span>
-                            {task.yoteiStart
-                              ? formatDate(new Date(task.yoteiStart), "YYYY/MM/DD")
-                              : "未定"}
-                            {" 〜 "}
-                            {formatDate(new Date(task.yoteiEnd!), "YYYY/MM/DD")}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {/* 遅れ・期限間近のタスク（判定はサーバー側のドメインロジック） */}
+            <TaskDelayList delays={taskDelays} dueSoonDays={deadlineAlertDays} />
 
             {/* Cost Overrun Tasks */}
             {costOverrunTasks.length > 0 && (

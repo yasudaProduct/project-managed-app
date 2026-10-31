@@ -21,6 +21,13 @@ const makeDelay = (overrides: Partial<TaskDelayDto>): TaskDelayDto => ({
   ...overrides,
 });
 
+// Radix UI の Select は jsdom 未実装の Pointer Capture / scrollIntoView を使うため補う
+beforeAll(() => {
+  Element.prototype.hasPointerCapture ??= () => false;
+  Element.prototype.releasePointerCapture ??= () => {};
+  Element.prototype.scrollIntoView ??= () => {};
+});
+
 describe("TaskDelayList", () => {
   it("種類ごとのラベルを表示する", () => {
     render(
