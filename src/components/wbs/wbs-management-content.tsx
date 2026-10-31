@@ -33,6 +33,8 @@ import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import type { EvmForecastMethod } from "@/types/evm-forecast-method";
 import type { ProgressReviewCycle } from "@/types/progress-review-cycle";
 import type { TaskDelayDto } from "@/applications/task-delay/task-delay-application-service";
+import type { DataFreshnessDto } from "@/applications/data-freshness/data-freshness-application-service";
+import { DataFreshnessPanel } from "@/components/wbs/data-freshness-panel";
 import type { WbsImportScheduleDto } from "@/types/import-schedule";
 
 type WbsManagementContentProps = {
@@ -57,6 +59,8 @@ type WbsManagementContentProps = {
   milestones: Milestone[];
   /** 遅れ・期限間近のタスク（サマリータブに表示） */
   taskDelays?: TaskDelayDto[];
+  /** データの鮮度（サマリータブ・EVMタブに表示） */
+  dataFreshness?: DataFreshnessDto | null;
   importSchedule: WbsImportScheduleDto;
   defaultTab?: string;
   showEvm?: boolean;
@@ -78,6 +82,7 @@ export function WbsManagementContent({
   assignees,
   milestones,
   taskDelays = [],
+  dataFreshness = null,
   importSchedule,
   defaultTab,
   showEvm = true,
@@ -188,6 +193,7 @@ export function WbsManagementContent({
                 deadlineAlertDays={deadlineAlertDays}
                 costOverrunThresholdPct={costOverrunThresholdPct}
               />
+              {dataFreshness && <DataFreshnessPanel freshness={dataFreshness} />}
             </div>
           </TabsContent>
           <TabsContent value="list">
@@ -203,7 +209,8 @@ export function WbsManagementContent({
             <AssigneeGanttChart wbsId={wbsId} />
           </TabsContent>
           {showEvm && (
-            <TabsContent value="evm">
+            <TabsContent value="evm" className="space-y-4">
+              {dataFreshness && <DataFreshnessPanel freshness={dataFreshness} />}
               <EvmDashboard
                 wbsId={wbsId}
                 defaultProgressMethod={defaultProgressMethod}

@@ -8,6 +8,7 @@ import { getWbsAssignees } from "../assignee/assignee-actions";
 import { getTaskAll } from "./actions/wbs-task-actions";
 import { getMilestones } from "./actions/milestone-actions";
 import { listTaskDelays } from "./actions/task-delay-actions";
+import { getDataFreshness } from "./actions/data-freshness-actions";
 import { getProjectSettings } from "./project-settings-actions";
 import { getWbsImportSchedule } from "./import-schedule-actions";
 import { WbsManagementContent } from "@/components/wbs/wbs-management-content";
@@ -43,7 +44,10 @@ export default async function WbsManagementPage({
       getWbsImportSchedule(wbs.id),
     ]);
   // 期限間近の日数はプロジェクト設定に依存するため、設定の取得後に判定する
-  const taskDelays = await listTaskDelays(wbs.id, settings.deadlineAlertDays);
+  const [taskDelays, dataFreshness] = await Promise.all([
+    listTaskDelays(wbs.id, settings.deadlineAlertDays),
+    getDataFreshness(wbs.id, wbs.projectId),
+  ]);
 
   return (
     <div className="container mx-auto mt-2">
@@ -57,6 +61,7 @@ export default async function WbsManagementPage({
         assignees={assignees}
         milestones={milestones}
         taskDelays={taskDelays}
+        dataFreshness={dataFreshness}
         importSchedule={importSchedule}
         defaultTab={tab}
         showEvm={true}

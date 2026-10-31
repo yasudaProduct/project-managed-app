@@ -100,6 +100,9 @@ export const SYMBOL = {
     // Task Delay（遅延タスク一覧）
     ITaskDelayApplicationService: Symbol.for('ITaskDelayApplicationService'),
 
+    // Data Freshness（データの鮮度）
+    IDataFreshnessApplicationService: Symbol.for('IDataFreshnessApplicationService'),
+
     // WBS Tags
     IWbsTagRepository: Symbol.for('IWbsTagRepository'),
     IWbsTagApplicationService: Symbol.for('IWbsTagApplicationService'),
