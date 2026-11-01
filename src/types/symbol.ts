@@ -106,6 +106,9 @@ export const SYMBOL = {
     // Progress Review（進捗確認サイクル・前回の確認日）
     IProgressReviewApplicationService: Symbol.for('IProgressReviewApplicationService'),
 
+    // Portfolio（ポートフォリオ一覧）
+    IPortfolioApplicationService: Symbol.for('IPortfolioApplicationService'),
+
     // WBS Tags
     IWbsTagRepository: Symbol.for('IWbsTagRepository'),
     IWbsTagApplicationService: Symbol.for('IWbsTagApplicationService'),

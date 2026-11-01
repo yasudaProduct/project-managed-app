@@ -25,6 +25,7 @@
 | `/projects/[id]` | プロジェクト詳細 | 個別プロジェクトの詳細情報とWBS一覧 |
 | `/projects/[id]/edit` | プロジェクト編集 | 既存プロジェクトの情報更新 |
 | `/projects/[id]/wbs` | プロジェクト別WBS一覧 | 特定プロジェクトのWBS管理 |
+| `/portfolio` | ポートフォリオ | 未開始・進行中プロジェクトの最新WBSを危ない順に一覧（ヘルス・SPI/CPI・予測完了日・遅れタスク・入力漏れ）。[11仕様書](./specs/11-portfolio.md) |
 
 ## 4. WBS（Work Breakdown Structure）管理
 

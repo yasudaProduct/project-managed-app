@@ -83,6 +83,12 @@ type EvmDashboardOptions = {
   comparisonDate?: Date;
 };
 
+/** 現在メトリクスとスケジュール予測（工数モード・プロジェクト設定の測定方式／予測方式） */
+export type EvmSummary = {
+  currentMetrics: EvmMetrics;
+  scheduleForecast: ScheduleForecast;
+};
+
 /** 前回からの変化（前回の確認日時点のメトリクス） */
 export type EvmComparison = {
   previousMetrics: EvmMetrics;
@@ -125,6 +131,8 @@ export interface IEvmService {
     wbsId: number,
     options?: EvmDashboardOptions
   ): Promise<EvmDashboardData>;
+  /** 現在メトリクスとスケジュール予測だけを求める軽量版（ポートフォリオ一覧用。時系列は計算しない） */
+  getEvmSummary(wbsId: number, now?: Date): Promise<EvmSummary>;
   getTaskEvmDetails(wbsId: number): Promise<TaskEvmData[]>;
   getHealthStatus(metrics: EvmMetrics): EvmHealthStatus;
 }
@@ -391,6 +399,23 @@ export class EvmService implements IEvmService {
       assigneeBreakdown,
       comparison,
     };
+  }
+
+  async getEvmSummary(wbsId: number, now: Date = new Date()): Promise<EvmSummary> {
+    const calculationMode: EvmCalculationMode = 'hours';
+    const wbsData = await this.wbsEvmRepository.getWbsEvmData(wbsId, now);
+    const method = wbsData.settings?.progressMeasurementMethod ?? 'SELF_REPORTED';
+    const fMethod = wbsData.settings?.evmForecastMethod ?? 'CPI_ONLY';
+
+    const computeCumulativeAc = await this.buildCumulativeAcFn(wbsId, now, calculationMode);
+    const businessDayCounter = await this.buildBusinessDayCounter(wbsData);
+    const currentMetrics = this.computeMetricsFromData(
+      wbsData, now, computeCumulativeAc(now), calculationMode, method, fMethod, false, now, businessDayCounter
+    );
+    const scheduleForecast = this.computeScheduleForecast(
+      wbsData, currentMetrics.ev, this.computeDateRange(wbsData, now), now, calculationMode, method, businessDayCounter
+    );
+    return { currentMetrics, scheduleForecast };
   }
 
   async getEvmDashboardDataSerialized(
