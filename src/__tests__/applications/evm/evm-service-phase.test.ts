@@ -196,4 +196,45 @@ describe('EvmService: フェーズ別EVM', () => {
     // 担当者別内訳には付けない
     expect(result.assigneeBreakdown[0].plannedEndDate).toBeUndefined();
   });
+
+  describe('バッファ消化（2-2）', () => {
+    it('全体表示ではバッファ消化を返す（バッファ20h、EV150h・AC160h → 消化10h=50%、出来高率50%）', async () => {
+      mockRepository.getActualCostByDate.mockResolvedValue(new Map([['2025-01-20', 160]]));
+
+      const result = await evmService.getEvmDashboardData(1, { periodMode: 'project' });
+
+      expect(result.bufferConsumption?.current).toEqual({
+        bufferAmount: 20,
+        consumedAmount: 10,
+        remainingAmount: 10,
+        consumptionPct: 50,
+        progressPct: 50,
+        zone: 'healthy',
+      });
+      expect(result.bufferConsumption?.previous).toBeNull();
+    });
+
+    it('前回の確認日を渡すと前回時点のバッファ消化も返す', async () => {
+      mockRepository.getActualCostByDate.mockResolvedValue(
+        new Map([
+          ['2025-01-20', 150],
+          ['2025-05-01', 10],
+        ])
+      );
+
+      const result = await evmService.getEvmDashboardData(1, {
+        periodMode: 'project',
+        comparisonDate: new Date('2025-04-01T00:00:00.000Z'),
+      });
+
+      expect(result.bufferConsumption?.previous?.consumedAmount).toBe(0);
+      expect(result.bufferConsumption?.current.consumedAmount).toBe(10);
+    });
+
+    it('フェーズ指定時はバッファ消化を返さない（バッファはフェーズに属さない）', async () => {
+      const result = await evmService.getEvmDashboardData(1, { periodMode: 'project', phaseId: 10 });
+
+      expect(result.bufferConsumption).toBeNull();
+    });
+  });
 });
