@@ -2,6 +2,10 @@ import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
 import type { IWbsEvmRepository, WbsEvmData, TaskProgressSnapshotRecord, EditableProgressSnapshot, ProjectSettingsData } from './iwbs-evm-repository';
 import { EvmMetrics, type EvmHealthStatus } from '@/domains/evm/evm-metrics';
+import {
+  evaluateBufferConsumption,
+  type BufferConsumption,
+} from '@/domains/evm/buffer-consumption';
 import { TaskEvmData, type BusinessDayCounter } from '@/domains/evm/task-evm-data';
 import { DEFAULT_COST_PER_HOUR } from '@/domains/evm/evm-constants';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
@@ -108,6 +112,12 @@ export type EvmComparison = {
   previousMetrics: EvmMetrics;
 };
 
+/** バッファ消化（現在と、前回の確認日時点） */
+export type EvmBufferConsumption = {
+  current: BufferConsumption;
+  previous: BufferConsumption | null;
+};
+
 export interface IEvmService {
   getEditableProgressSnapshots(wbsId: number): Promise<EditableProgressSnapshot[]>;
   updateProgressSnapshot(id: number, progressRate: number | null, status: TaskStatus): Promise<void>;
@@ -140,6 +150,7 @@ export interface IEvmService {
     phaseBreakdown: EvmBreakdownRow[];
     assigneeBreakdown: EvmBreakdownRow[];
     comparison: EvmComparison | null;
+    bufferConsumption: EvmBufferConsumption | null;
   }>;
   getEvmDashboardDataSerialized(
     wbsId: number,
@@ -302,6 +313,7 @@ export class EvmService implements IEvmService {
     phaseBreakdown: EvmBreakdownRow[];
     assigneeBreakdown: EvmBreakdownRow[];
     comparison: EvmComparison | null;
+    bufferConsumption: EvmBufferConsumption | null;
   }> {
     const {
       calculationMode = 'hours',
@@ -428,7 +440,32 @@ export class EvmService implements IEvmService {
       phaseBreakdown,
       assigneeBreakdown,
       comparison,
+      bufferConsumption: this.computeBufferConsumption(
+        wbsData, currentMetrics, comparison?.previousMetrics ?? null, calculationMode
+      ),
     };
+  }
+
+  /**
+   * バッファ消化（2-2）。バッファはWBS全体に属するため、フェーズ指定時（buffers=[]）は null になる。
+   */
+  private computeBufferConsumption(
+    wbsData: WbsEvmData,
+    currentMetrics: EvmMetrics,
+    previousMetrics: EvmMetrics | null,
+    calculationMode: EvmCalculationMode
+  ): EvmBufferConsumption | null {
+    const bufferAmount = this.bufferBacContribution(wbsData, calculationMode);
+    const evaluate = (metrics: EvmMetrics) =>
+      evaluateBufferConsumption({
+        bufferAmount,
+        ev: metrics.ev,
+        ac: metrics.ac,
+        taskBac: metrics.bac - bufferAmount,
+      });
+    const current = evaluate(currentMetrics);
+    if (!current) return null;
+    return { current, previous: previousMetrics ? evaluate(previousMetrics) : null };
   }
 
   async getEvmSummary(wbsId: number, now: Date = new Date()): Promise<EvmSummary> {

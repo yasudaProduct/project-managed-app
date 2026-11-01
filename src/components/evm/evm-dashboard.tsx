@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EvmChart } from "./evm-chart";
 import { EvmMetricsCard } from "./evm-metrics-card";
 import { EvmComparisonCard } from "./evm-comparison-card";
+import { EvmBufferCard } from "./evm-buffer-card";
+import type { EvmBufferConsumption } from "@/applications/evm/evm-service";
 import { TaskEvmTable } from "./task-evm-table";
 import { EvmTimeSeriesTable } from "./evm-timeseries-table";
 import { EvmBreakdownTable } from "./evm-breakdown-table";
@@ -89,6 +91,8 @@ export function EvmDashboard({
   const [previousMetrics, setPreviousMetrics] = useState<EvmMetricsData | null>(
     null
   );
+  const [bufferConsumption, setBufferConsumption] =
+    useState<EvmBufferConsumption | null>(null);
   const [assigneeBreakdown, setAssigneeBreakdown] = useState<EvmBreakdownRow[]>(
     []
   );
@@ -179,6 +183,7 @@ export function EvmDashboard({
       setPhaseBreakdown(result.data.phaseBreakdown ?? []);
       setAssigneeBreakdown(result.data.assigneeBreakdown ?? []);
       setPreviousMetrics(result.data.comparison?.previousMetrics ?? null);
+      setBufferConsumption(result.data.bufferConsumption ?? null);
       setLastLoadedAt(new Date());
     } catch (err) {
       console.error("Failed to load EVM data:", err);
@@ -535,6 +540,15 @@ export function EvmDashboard({
       {/* 前回の確認時点からの変化（進捗会議で最初に見る差分） */}
       {previousMetrics && (
         <EvmComparisonCard current={currentMetrics} previous={previousMetrics} />
+      )}
+
+      {/* バッファ消化（バッファがない・フェーズ指定時は表示しない） */}
+      {bufferConsumption && (
+        <EvmBufferCard
+          bufferConsumption={bufferConsumption}
+          calculationMode={calculationMode}
+          previousDate={previousMetrics?.date ?? null}
+        />
       )}
 
       {/* タブ */}

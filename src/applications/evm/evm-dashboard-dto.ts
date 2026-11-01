@@ -9,6 +9,7 @@ import type {
   ScheduleForecast,
   ScheduleForecastStatus,
   EvmComparison,
+  EvmBufferConsumption,
 } from '@/applications/evm/evm-service';
 
 export type { EvmBreakdownRow };
@@ -95,6 +96,8 @@ export type EvmDashboardData = {
   assigneeBreakdown: EvmBreakdownRow[];
   /** 前回からの変化（前回の確認日を指定しなかった場合は null） */
   comparison: { previousMetrics: EvmMetricsData } | null;
+  /** バッファ消化（バッファがない・フェーズ指定時は null）。値はすべて数値のため変換不要 */
+  bufferConsumption: EvmBufferConsumption | null;
 };
 
 export function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
@@ -163,6 +166,7 @@ export function serializeEvmDashboardData(result: {
   phaseBreakdown: EvmBreakdownRow[];
   assigneeBreakdown: EvmBreakdownRow[];
   comparison?: EvmComparison | null;
+  bufferConsumption?: EvmBufferConsumption | null;
 }): EvmDashboardData {
   // タスク明細のEVは、合計EVと同じ「解決済みの測定方式」で算出する（明細と合計の不一致を防ぐ）
   const progressMethod = result.currentMetrics.progressMethod;
@@ -194,5 +198,6 @@ export function serializeEvmDashboardData(result: {
     comparison: result.comparison
       ? { previousMetrics: serializeEvmMetrics(result.comparison.previousMetrics) }
       : null,
+    bufferConsumption: result.bufferConsumption ?? null,
   };
 }
