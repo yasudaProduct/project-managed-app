@@ -60,6 +60,8 @@ import { TaskStatus, WbsTask } from "@/types/wbs";
 import { getTaskStatusName } from "@/utils/utils";
 import { formatDate } from "@/utils/date-util";
 import { TaskModal } from "./task-modal";
+import { ScheduleSlipBadge } from "./schedule-slip-badge";
+import { scheduleSlipDays } from "@/utils/schedule-slip";
 
 export interface TaskTableViewPageProps {
   wbsTasks: WbsTask[];
@@ -76,6 +78,10 @@ export type TaskTableViewProp = {
   yoteiStart?: Date;
   yoteiEnd?: Date;
   yoteiKosu?: number;
+  /** 基準終了日（KIJUN） */
+  kijunEnd?: Date;
+  /** 基準日程からのずれ（予定終了日 − 基準終了日。基準未設定は null） */
+  slipDays: number | null;
   jissekiStart?: Date;
   jissekiEnd?: Date;
   jissekiKosu?: number;
@@ -235,6 +241,24 @@ export function TaskTableViewPage({
           <div className="capitalize">
             {formatDate(row.getValue("yoteiEnd"), "YYYY/MM/DD")}
           </div>
+        ),
+        aggregatedCell: () => <span />,
+      },
+      {
+        accessorKey: "kijunEnd",
+        header: "基準終了日",
+        cell: ({ row }) => (
+          <div className="capitalize">
+            {formatDate(row.getValue("kijunEnd"), "YYYY/MM/DD")}
+          </div>
+        ),
+        aggregatedCell: () => <span />,
+      },
+      {
+        accessorKey: "slipDays",
+        header: "ずれ",
+        cell: ({ row }) => (
+          <ScheduleSlipBadge days={row.getValue<number | null>("slipDays")} />
         ),
         aggregatedCell: () => <span />,
       },
@@ -411,6 +435,8 @@ export function TaskTableViewPage({
             yoteiStart: wbsTask.yoteiStart,
             yoteiEnd: wbsTask.yoteiEnd,
             yoteiKosu: wbsTask.yoteiKosu,
+            kijunEnd: wbsTask.kijunEnd,
+            slipDays: scheduleSlipDays(wbsTask.kijunEnd, wbsTask.yoteiEnd),
             jissekiStart: wbsTask.jissekiStart,
             jissekiEnd: wbsTask.jissekiEnd,
             jissekiKosu: wbsTask.jissekiKosu,

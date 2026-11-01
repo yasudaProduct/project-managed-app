@@ -24,6 +24,7 @@ const previewStyle: GanttStyle = {
   showProgress: false,
   showActual: false,
   showForecast: false,
+  showBaseline: false,
   colorMode: "phase",
   showDependencies: true,
   showCriticalPath: false,

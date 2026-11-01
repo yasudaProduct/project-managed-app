@@ -287,8 +287,14 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
     const BAR_GAP = Math.max(2, Math.round(2 * rowScale));
     const barsPerRow =
       1 + (style.showActual ? 1 : 0) + (style.showForecast ? 1 : 0);
+    // 基準バーは予定バーの直下に細く描く（予定より狭い専用の段を足す）
+    const BASELINE_HEIGHT = Math.max(3, Math.round(TASK_HEIGHT / 4));
+    const baselineLane = style.showBaseline ? BAR_GAP + BASELINE_HEIGHT : 0;
     const ROW_HEIGHT =
-      TASK_HEIGHT * barsPerRow + BAR_GAP * (barsPerRow - 1) + ROW_SPACING;
+      TASK_HEIGHT * barsPerRow +
+      BAR_GAP * (barsPerRow - 1) +
+      baselineLane +
+      ROW_SPACING;
     const CATEGORY_HEIGHT = Math.round(BASE_CATEGORY_HEIGHT * rowScale);
     const HEADER_HEIGHT = 50;
     const TASK_LIST_WIDTH = taskListWidth;
@@ -1375,15 +1381,26 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             1 +
                             (showActualBar ? 1 : 0) +
                             (showForecastBar ? 1 : 0);
+                          // 基準バーは予定バーの直下（マイルストーンは描かない）
+                          const showBaselineBar =
+                            style.showBaseline && !task.isMilestone;
+                          const baselineOffset = showBaselineBar
+                            ? baselineLane
+                            : 0;
                           const blockHeight =
-                            TASK_HEIGHT * rowBars + BAR_GAP * (rowBars - 1);
+                            TASK_HEIGHT * rowBars +
+                            BAR_GAP * (rowBars - 1) +
+                            baselineOffset;
                           const plannedBarY =
                             row.y + (row.height - blockHeight) / 2;
-                          const actualBarY =
+                          const baselineBarY =
                             plannedBarY + TASK_HEIGHT + BAR_GAP;
+                          const actualBarY =
+                            plannedBarY + TASK_HEIGHT + BAR_GAP + baselineOffset;
                           const forecastBarY =
                             plannedBarY +
-                            (showActualBar ? 2 : 1) * (TASK_HEIGHT + BAR_GAP);
+                            (showActualBar ? 2 : 1) * (TASK_HEIGHT + BAR_GAP) +
+                            baselineOffset;
                           // ドラッグ中はプレビュー日付でバーを描画
                           const preview =
                             dragPreview && dragPreview.taskId === task.id
@@ -1393,6 +1410,33 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                             ? preview.startDate
                             : task.startDate;
                           const barEnd = preview ? preview.endDate : task.endDate;
+
+                          // 基準バー（基準日程がある非マイルストーンのみ）。予定バーとの左右のずれが基準からの遅れ・前倒し
+                          let baselineBar: JSX.Element | null = null;
+                          if (
+                            showBaselineBar &&
+                            task.baselineStartDate &&
+                            task.baselineEndDate
+                          ) {
+                            const baselineX = dateToX(task.baselineStartDate);
+                            const baselineWidth = Math.max(
+                              dateToXEnd(task.baselineEndDate) - baselineX,
+                              4,
+                            );
+                            baselineBar = (
+                              <rect
+                                key={`${row.id}-baseline`}
+                                data-testid="gantt-baseline-bar"
+                                x={baselineX}
+                                y={baselineBarY}
+                                width={baselineWidth}
+                                height={BASELINE_HEIGHT}
+                                rx={1}
+                                fill="#6B7280"
+                                fillOpacity={0.6}
+                              />
+                            );
+                          }
 
                           // 実績バー（実績開始がある非マイルストーンのみ）
                           let actualBar: JSX.Element | null = null;
@@ -1538,6 +1582,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(
                                 onHover={handleBarHover}
                                 onHoverEnd={handleBarHoverEnd}
                               />
+                              {baselineBar}
                               {actualBar}
                               {forecastBar}
                             </g>

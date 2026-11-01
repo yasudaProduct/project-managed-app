@@ -289,6 +289,8 @@ function convertTask(
             actualStartDate,
             actualEndDate,
             actualDuration: task.jissekiKosu ?? undefined,
+            baselineStartDate: task.kijunStart,
+            baselineEndDate: task.kijunEnd,
             color: color,
             isMilestone: false,
             progress,

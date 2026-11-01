@@ -37,6 +37,7 @@ import {
   ArrowUpDown,
   BarChart3,
   TrendingUp,
+  Ruler,
   Palette,
   Blend,
   Zap,
@@ -397,6 +398,19 @@ export const QuickActions = ({
             }
           >
             <TrendingUp className="w-4 h-4" />
+          </IconActionButton>
+
+          <IconActionButton
+            label="基準バー表示（予定の下に基準日程を細く表示）"
+            active={style.showBaseline}
+            onClick={() =>
+              onStyleChange({
+                ...style,
+                showBaseline: !style.showBaseline,
+              })
+            }
+          >
+            <Ruler className="w-4 h-4" />
           </IconActionButton>
         </div>
 
