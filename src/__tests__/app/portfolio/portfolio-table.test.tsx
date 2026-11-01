@@ -36,7 +36,7 @@ describe("PortfolioTable", () => {
       "href",
       "/projects/p2"
     );
-    expect(row).toHaveTextContent("要対応");
+    expect(row).toHaveTextContent("危機的");
     expect(row).toHaveTextContent("0.600");
     expect(row).toHaveTextContent("0.750");
     expect(row).toHaveTextContent("62日遅れ");
