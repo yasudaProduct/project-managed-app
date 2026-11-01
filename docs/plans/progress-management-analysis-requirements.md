@@ -276,5 +276,6 @@ Q0 は他のすべての前提。数字を信用できないと、どの分析�
 | 2-2 | バッファ消化管理 | 実装済み | [02-evm §9「バッファ消化」](../specs/02-evm.md) |
 | 2-3 | マイルストーン達成見込み | 実装済み | [12-milestone](../specs/12-milestone.md) |
 | 2-4 | 基準日程からのずれ | 実装済み | [13-schedule-slip](../specs/13-schedule-slip.md) |
-| 3-2、3-3 | ― | 未着手 | ― |
+| 3-2 | 見積精度分析 | 実装済み | [14-estimation-accuracy](../specs/14-estimation-accuracy.md) |
+| 3-3 | ― | 未着手 | ― |
 

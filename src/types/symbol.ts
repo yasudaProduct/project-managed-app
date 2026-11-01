@@ -109,6 +109,10 @@ export const SYMBOL = {
     // Portfolio（ポートフォリオ一覧）
     IPortfolioApplicationService: Symbol.for('IPortfolioApplicationService'),
 
+    // Estimation Accuracy（見積精度・CQRS）
+    IEstimationAccuracyQueryRepository: Symbol.for('IEstimationAccuracyQueryRepository'),
+    GetEstimationAccuracyHandler: Symbol.for('GetEstimationAccuracyHandler'),
+
     // WBS Tags
     IWbsTagRepository: Symbol.for('IWbsTagRepository'),
     IWbsTagApplicationService: Symbol.for('IWbsTagApplicationService'),

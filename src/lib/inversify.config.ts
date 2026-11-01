@@ -124,6 +124,12 @@ import { ProgressReviewApplicationService } from "@/applications/progress-review
 import type { IPortfolioApplicationService } from "@/applications/portfolio/portfolio-application-service";
 import { PortfolioApplicationService } from "@/applications/portfolio/portfolio-application-service";
 
+// Estimation Accuracy関連（CQRS）
+import type { IEstimationAccuracyQueryRepository } from "@/applications/estimation-accuracy/iestimation-accuracy-query-repository";
+import { EstimationAccuracyQueryRepository } from "@/infrastructures/estimation-accuracy/estimation-accuracy-query-repository";
+import { GetEstimationAccuracyHandler } from "@/applications/estimation-accuracy/get-estimation-accuracy-handler";
+import { GetEstimationAccuracyQuery } from "@/applications/estimation-accuracy/get-estimation-accuracy-query";
+
 // Prisma
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma/prisma';
@@ -263,6 +269,8 @@ container.bind<IQueryBus>(SYMBOL.IQueryBus).to(QueryBus).inSingletonScope();
 container.bind<GetDashboardStatsHandler>(SYMBOL.GetDashboardStatsHandler).to(GetDashboardStatsHandler).inSingletonScope();
 container.bind<GetWbsSummaryHandler>(SYMBOL.GetWbsSummaryHandler).to(GetWbsSummaryHandler).inSingletonScope();
 container.bind<GetWbsTaskSummaryHandler>(SYMBOL.GetWbsTaskSummaryHandler).to(GetWbsTaskSummaryHandler).inSingletonScope();
+container.bind<IEstimationAccuracyQueryRepository>(SYMBOL.IEstimationAccuracyQueryRepository).to(EstimationAccuracyQueryRepository).inSingletonScope();
+container.bind<GetEstimationAccuracyHandler>(SYMBOL.GetEstimationAccuracyHandler).to(GetEstimationAccuracyHandler).inSingletonScope();
 
 // QueryBusの初期化（ハンドラーの登録）
 const queryBus = container.get<QueryBus>(SYMBOL.IQueryBus);
@@ -274,5 +282,8 @@ queryBus.register(GetWbsSummaryQuery as new (...args: unknown[]) => GetWbsSummar
 
 const wbsTaskSummaryHandler = container.get<GetWbsTaskSummaryHandler>(SYMBOL.GetWbsTaskSummaryHandler);
 queryBus.register(GetWbsTaskSummaryQuery as new (...args: unknown[]) => GetWbsTaskSummaryQuery, wbsTaskSummaryHandler);
+
+const estimationAccuracyHandler = container.get<GetEstimationAccuracyHandler>(SYMBOL.GetEstimationAccuracyHandler);
+queryBus.register(GetEstimationAccuracyQuery as new (...args: unknown[]) => GetEstimationAccuracyQuery, estimationAccuracyHandler);
 
 export { container };
