@@ -253,4 +253,16 @@ describe('EvmService: フェーズ別・担当者別内訳', () => {
       expect(result.comparison).toBeNull();
     });
   });
+
+  describe('getEvmSummary（ポートフォリオ一覧用の軽量版）', () => {
+    it('現在メトリクスとスケジュール予測を返し、ダッシュボードと同じ値になる', async () => {
+      const summary = await evmService.getEvmSummary(1);
+      const dashboard = await evmService.getEvmDashboardData(1, { periodMode: 'project' });
+
+      expect(summary.currentMetrics.ev).toBeCloseTo(dashboard.currentMetrics.ev, 5);
+      expect(summary.currentMetrics.ac).toBeCloseTo(dashboard.currentMetrics.ac, 5);
+      expect(summary.currentMetrics.spi).toBeCloseTo(dashboard.currentMetrics.spi!, 5);
+      expect(summary.scheduleForecast).toEqual(dashboard.scheduleForecast);
+    });
+  });
 });
