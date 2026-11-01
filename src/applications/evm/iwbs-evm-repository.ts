@@ -14,12 +14,14 @@ export interface IWbsEvmRepository {
   // タスクごとのEVMデータを取得
   getTasksEvmData(wbsId: number): Promise<TaskEvmData[]>;
 
-  // 実績コストの集計（算出方式に応じて工数または金額）
+  // 実績コストの集計（算出方式に応じて工数または金額）。
+  // phaseId を渡すと、そのフェーズのタスク（現在のフェーズ）に紐付く実績だけを集計する
   getActualCostByDate(
     wbsId: number,
     startDate: Date,
     endDate: Date,
-    calculationMode?: EvmCalculationMode
+    calculationMode?: EvmCalculationMode,
+    phaseId?: number
   ): Promise<Map<string, number>>;
 
   // タスク別の実績コスト集計（内訳表示用）。キーはtaskId、タスク未紐付け実績はnullキー
@@ -81,6 +83,8 @@ export interface TaskProgressSnapshotRecord {
   actualStart: Date | null;
   actualEnd: Date | null;
   isRemoved: boolean;
+  /** 記録時点のフェーズ。フェーズ記録の導入前のスナップショットは null */
+  phaseId: number | null;
 }
 
 export interface WbsEvmData {

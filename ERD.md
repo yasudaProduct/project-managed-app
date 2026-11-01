@@ -254,6 +254,7 @@ erDiagram
   DateTime actualStart "nullable"
   DateTime actualEnd "nullable"
   Boolean isRemoved
+  Int phaseId "nullable"
   Int syncLogId FK "nullable"
   DateTime createdAt
 }
@@ -647,6 +648,7 @@ erDiagram
   - `actualStart`: 
   - `actualEnd`: 
   - `isRemoved`: 
+  - `phaseId`: 
   - `syncLogId`: 
   - `createdAt`: 
 

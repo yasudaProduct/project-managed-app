@@ -396,6 +396,7 @@ export class TaskRepository implements ITaskRepository {
                 actualStart: s.actualStart,
                 actualEnd: s.actualEnd,
                 isRemoved: s.isRemoved,
+                phaseId: s.phaseId,
                 syncLogId: null,
             },
         });
@@ -506,6 +507,7 @@ export class TaskRepository implements ITaskRepository {
                         actualStart: s.actualStart,
                         actualEnd: s.actualEnd,
                         isRemoved: s.isRemoved,
+                        phaseId: s.phaseId,
                         syncLogId: createdSyncLogId,
                     };
                 });

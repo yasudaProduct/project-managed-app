@@ -177,23 +177,27 @@ export class WbsEvmRepository implements IWbsEvmRepository {
     wbsId: number,
     startDate: Date,
     endDate: Date,
-    calculationMode: EvmCalculationMode = 'hours'
+    calculationMode: EvmCalculationMode = 'hours',
+    phaseId?: number
   ): Promise<Map<string, number>> {
+    const date = { gte: startDate, lte: endDate };
     const workRecords = await prisma.workRecord.findMany({
-      where: {
-        // AC（実績コスト）はworkRecordという不変事実の集計。タスクがsoft-delete
-        // されても実績は消えないため、isDeletedで絞らずWBS配下の実績を全て対象にする。
-        // タスクに紐付かない実績（Geppo未マッチ、全量置換同期によるtaskIdのSetNull後）も
-        // wbsId直接紐付けで拾い、ACから消えないようにする。
-        OR: [
-          { task: { wbsId } },
-          { wbsId },
-        ],
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
+      where:
+        phaseId !== undefined
+          ? // フェーズ別：フェーズはタスク経由でしか分からないため、タスクに紐付く実績だけを対象にする
+          // （実績はフェーズを持たないため、タスクの現在のフェーズで振り分ける）
+          { task: { wbsId, phaseId }, date }
+          : {
+            // AC（実績コスト）はworkRecordという不変事実の集計。タスクがsoft-delete
+            // されても実績は消えないため、isDeletedで絞らずWBS配下の実績を全て対象にする。
+            // タスクに紐付かない実績（Geppo未マッチ、全量置換同期によるtaskIdのSetNull後）も
+            // wbsId直接紐付けで拾い、ACから消えないようにする。
+            OR: [
+              { task: { wbsId } },
+              { wbsId },
+            ],
+            date,
+          },
       orderBy: { date: 'asc' },
     });
 
@@ -309,6 +313,7 @@ export class WbsEvmRepository implements IWbsEvmRepository {
       actualStart: r.actualStart,
       actualEnd: r.actualEnd,
       isRemoved: r.isRemoved,
+      phaseId: r.phaseId,
     }));
   }
 

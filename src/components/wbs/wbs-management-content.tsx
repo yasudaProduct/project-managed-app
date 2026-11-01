@@ -221,6 +221,7 @@ export function WbsManagementContent({
                 defaultForecastMethod={defaultForecastMethod}
                 progressReviewCycle={progressReviewCycle}
                 previousReviewDate={previousReviewDate}
+                phases={phases}
               />
             </TabsContent>
           )}

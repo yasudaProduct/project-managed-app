@@ -62,7 +62,12 @@ type EvmDashboardProps = {
   progressReviewCycle?: ProgressReviewCycle;
   /** 前回の確認日（ISO）。渡すと前回からの変化を表示する */
   previousReviewDate?: string | null;
+  /** WBSのフェーズ。対象フェーズの切り替えに使う */
+  phases?: Array<{ id: number; name: string }>;
 };
+
+/** 対象フェーズの選択値（全体） */
+const ALL_PHASES = "all";
 
 export function EvmDashboard({
   wbsId,
@@ -70,6 +75,7 @@ export function EvmDashboard({
   defaultForecastMethod,
   progressReviewCycle = DEFAULT_PROGRESS_REVIEW_CYCLE,
   previousReviewDate = null,
+  phases = [],
 }: EvmDashboardProps) {
   const viewDefaults = EVM_VIEW_DEFAULTS_BY_REVIEW_CYCLE[progressReviewCycle];
   const [currentMetrics, setCurrentMetrics] = useState<EvmMetricsData | null>(
@@ -121,6 +127,11 @@ export function EvmDashboard({
   // 予測表示
   const [showPrediction, setShowPrediction] = useState(true);
 
+  // 対象フェーズ（全体 or フェーズID）
+  const [phaseFilter, setPhaseFilter] = useState<string>(ALL_PHASES);
+  const selectedPhaseId =
+    phaseFilter === ALL_PHASES ? undefined : Number(phaseFilter);
+
   useEffect(() => {
     loadEvmData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -133,6 +144,7 @@ export function EvmDashboard({
     periodMode,
     showPrediction,
     previousReviewDate,
+    phaseFilter,
   ]);
 
   /**
@@ -153,6 +165,7 @@ export function EvmDashboard({
         periodMode,
         showPrediction,
         comparisonDate: previousReviewDate ?? undefined,
+        phaseId: selectedPhaseId,
       });
 
       if (!result.success || !result.data) {
@@ -295,6 +308,24 @@ export function EvmDashboard({
       <Card>
         <CardContent className="pt-3 pb-3">
           <div className="flex flex-wrap items-center gap-3">
+            {phases.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="phase-filter" className="text-xs whitespace-nowrap text-muted-foreground">対象</Label>
+                <Select value={phaseFilter} onValueChange={setPhaseFilter}>
+                  <SelectTrigger id="phase-filter" className="h-7 text-xs w-[130px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_PHASES}>全体</SelectItem>
+                    {phases.map((phase) => (
+                      <SelectItem key={phase.id} value={String(phase.id)}>
+                        {phase.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="flex items-center gap-1.5">
               <Label htmlFor="period-mode" className="text-xs whitespace-nowrap text-muted-foreground">表示期間</Label>
               <Select
@@ -487,6 +518,12 @@ export function EvmDashboard({
           </div>
         </CardContent>
       </Card>
+
+      {selectedPhaseId !== undefined && (
+        <p className="text-xs text-muted-foreground">
+          フェーズ「{phases.find((phase) => phase.id === selectedPhaseId)?.name}」のタスクだけで集計しています。BACにバッファは含めません。過去時点はその時点のフェーズで集計します（実績はタスクの現在のフェーズで振り分けます）。
+        </p>
+      )}
 
       {/* メトリクスカード（週次レビューで最重要のため最上部に置く） */}
       <EvmMetricsCard

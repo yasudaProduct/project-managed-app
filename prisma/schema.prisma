@@ -505,6 +505,7 @@ model TaskProgressSnapshot {
   actualStart     DateTime?  @db.Date // Excel JISSEKI（自己申告実績）
   actualEnd       DateTime?  @db.Date
   isRemoved       Boolean    @default(false) // soft-delete連動のtombstone
+  phaseId         Int? // 記録時点のフェーズ（フェーズ別EVMの過去時点集計用。参照整合は持たない）
   syncLogId       Int? // null = 手動編集（ガント等のタスク更新）による記録
   syncLog         SyncLog?   @relation(fields: [syncLogId], references: [id])
   createdAt       DateTime   @default(now()) @db.Timestamptz

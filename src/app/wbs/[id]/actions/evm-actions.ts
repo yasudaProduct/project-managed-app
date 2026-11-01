@@ -18,6 +18,8 @@ const GetEvmDashboardDataSchema = z.object({
   showPrediction: z.boolean().optional(),
   /** 前回からの変化の比較日（ISO 8601・UTC） */
   comparisonDate: z.string().datetime().optional(),
+  /** 対象フェーズ（未指定は全体） */
+  phaseId: z.number().int().positive().optional(),
 });
 
 type EvmActionResult<T = unknown> = {
@@ -42,6 +44,7 @@ export async function getEvmDashboardData(
       comparisonDate: validated.comparisonDate
         ? new Date(validated.comparisonDate)
         : undefined,
+      phaseId: validated.phaseId,
     });
 
     return {

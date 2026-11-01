@@ -30,6 +30,7 @@ import {
   EVM_BREAKDOWN_SORT_LABELS,
   type EvmBreakdownSortKey,
 } from '@/utils/evm-breakdown';
+import { formatDate } from '@/utils/date-util';
 
 type EvmBreakdownTableProps = {
   title: string;
@@ -55,6 +56,18 @@ export function EvmBreakdownTable({
 }: EvmBreakdownTableProps) {
   const [sortKey, setSortKey] = useState<EvmBreakdownSortKey>('default');
   const sortedRows = sortEvmBreakdownRows(rows, sortKey);
+  // フェーズ別内訳だけが予定終了日・予測完了日を持つ
+  const hasSchedule = rows.some((row) => row.plannedEndDate !== undefined);
+  const columnCount = hasSchedule ? 12 : 10;
+
+  const formatScheduleDate = (iso: string | null | undefined) =>
+    iso ? formatDate(new Date(iso), 'YYYY/MM/DD') : '—';
+  const scheduleDelayText = (days: number | null | undefined) => {
+    if (days === null || days === undefined) return '';
+    if (days > 0) return `${days}日遅れ`;
+    if (days < 0) return `${-days}日前倒し`;
+    return '計画どおり';
+  };
 
   const formatValue = (value: number) => formatEvmValue(value, calculationMode);
 
@@ -108,13 +121,19 @@ export function EvmBreakdownTable({
                 <TableHead className="text-right">CV</TableHead>
                 <TableHead className="text-right">SPI</TableHead>
                 <TableHead className="text-right">CPI</TableHead>
+                {hasSchedule && (
+                  <>
+                    <TableHead>予定終了</TableHead>
+                    <TableHead>予測完了</TableHead>
+                  </>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={columnCount}
                     className="text-center text-muted-foreground"
                   >
                     データがありません
@@ -162,6 +181,23 @@ export function EvmBreakdownTable({
                     >
                       {formatIndex(row.cpi)}
                     </TableCell>
+                    {hasSchedule && (
+                      <>
+                        <TableCell>{formatScheduleDate(row.plannedEndDate)}</TableCell>
+                        <TableCell>
+                          {formatScheduleDate(row.forecastCompletionDate)}
+                          <div
+                            className={`text-xs ${
+                              (row.scheduleDelayDays ?? 0) > 0
+                                ? 'text-red-600'
+                                : 'text-muted-foreground'
+                            }`}
+                          >
+                            {scheduleDelayText(row.scheduleDelayDays)}
+                          </div>
+                        </TableCell>
+                      </>
+                    )}
                   </TableRow>
                 ))
               )}

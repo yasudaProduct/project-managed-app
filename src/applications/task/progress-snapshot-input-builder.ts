@@ -38,6 +38,7 @@ export function buildProgressSnapshotInput(args: {
     actualStart,
     actualEnd,
     isRemoved: false,
+    phaseId: task.phaseId ?? null,
   };
 }
 

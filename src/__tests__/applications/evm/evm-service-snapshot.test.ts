@@ -73,6 +73,7 @@ describe('EvmService - スナップショットas-of時系列（2B）', () => {
     actualStart: new Date('2025-01-01'),
     actualEnd: null,
     isRemoved: false,
+    phaseId: null,
     ...overrides,
   });
 
