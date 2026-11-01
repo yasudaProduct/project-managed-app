@@ -23,6 +23,8 @@ const makeRow = (overrides: Partial<PortfolioRowDto> = {}): PortfolioRowDto => (
   startOverdueCount: 1,
   assigneesWithMissingEntries: 2,
   lastWbsSyncAt: "2026-11-01T00:00:00.000Z",
+  isSpiDeteriorating: false,
+  isCpiDeteriorating: false,
   loadError: null,
   ...overrides,
 });
@@ -59,5 +61,13 @@ describe("PortfolioTable", () => {
     render(<PortfolioTable rows={[]} />);
 
     expect(screen.getByText(/対象のプロジェクトがありません/)).toBeInTheDocument();
+  });
+
+  it("SPI/CPIが連続して悪化しているプロジェクトに印を付ける", () => {
+    render(<PortfolioTable rows={[makeRow({ isSpiDeteriorating: true })]} />);
+
+    const row = screen.getByRole("row", { name: /案件B/ });
+    expect(row).toHaveTextContent("SPI悪化");
+    expect(row).not.toHaveTextContent("CPI悪化");
   });
 });

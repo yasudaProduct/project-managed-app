@@ -4,6 +4,7 @@ import type { IEvmService } from '@/applications/evm/evm-service';
 import type { ITaskDelayApplicationService } from '@/applications/task-delay/task-delay-application-service';
 import type { IDataFreshnessApplicationService } from '@/applications/data-freshness/data-freshness-application-service';
 import type { IProjectSettingsRepository } from '@/applications/project-settings/iproject-settings-repository';
+import type { IEvmTrendApplicationService } from '@/applications/trend/evm-trend-application-service';
 import { EvmMetrics } from '@/domains/evm/evm-metrics';
 import { withProjectSettingsDefaults } from '@/types/project-settings';
 
@@ -22,6 +23,7 @@ describe('PortfolioApplicationService', () => {
   let taskDelayService: { listTaskDelays: jest.Mock };
   let dataFreshnessService: { getDataFreshness: jest.Mock };
   let projectSettingsRepository: { findByProjectId: jest.Mock };
+  let evmTrendService: { getEvmTrend: jest.Mock };
   let service: PortfolioApplicationService;
 
   const freshness = (missingCount: number) => ({
@@ -88,12 +90,22 @@ describe('PortfolioApplicationService', () => {
           withProjectSettingsDefaults(projectId, { deadlineAlertDays: 3 })
         ),
     };
+    evmTrendService = {
+      getEvmTrend: jest.fn().mockImplementation(async (wbsId: number) => ({
+        progressReviewCycle: 'WEEKLY',
+        periods: 3,
+        points: [],
+        isSpiDeteriorating: wbsId === 2,
+        isCpiDeteriorating: false,
+      })),
+    };
     service = new PortfolioApplicationService(
       targetWbsQueryRepository as unknown as ITargetWbsQueryRepository,
       evmService as unknown as IEvmService,
       taskDelayService as unknown as ITaskDelayApplicationService,
       dataFreshnessService as unknown as IDataFreshnessApplicationService,
-      projectSettingsRepository as unknown as IProjectSettingsRepository
+      projectSettingsRepository as unknown as IProjectSettingsRepository,
+      evmTrendService as unknown as IEvmTrendApplicationService
     );
   });
 
@@ -117,6 +129,8 @@ describe('PortfolioApplicationService', () => {
       startOverdueCount: 1,
       assigneesWithMissingEntries: 2,
       lastWbsSyncAt: '2026-11-01T00:00:00.000Z',
+      isSpiDeteriorating: true,
+      isCpiDeteriorating: false,
       loadError: null,
     });
     expect(b.eac).toBeCloseTo(100 + 140 / 0.6, 5);

@@ -30,4 +30,10 @@ describe('ProgressReviewApplicationService', () => {
 
     expect(result).toEqual(d('2026-10-29'));
   });
+
+  it('getRecentReviewDates は直近の確認日を今日を含めて古い順に返す', async () => {
+    const result = await service.getRecentReviewDates('WEEKLY', 2, new Date('2026-11-01T03:00:00.000Z'));
+
+    expect(result).toEqual([d('2026-10-18'), d('2026-10-25'), d('2026-11-01')]);
+  });
 });

@@ -253,4 +253,22 @@ describe('EvmService: フェーズ別EVM', () => {
       expect(forecasts.has(20)).toBe(true);
     });
   });
+
+  describe('getTrendMetrics（悪化トレンド用）', () => {
+    it('過去の日付は as-of 再構築、最後に現在値（ダッシュボードのカードと同じ値）を返す', async () => {
+      mockRepository.getProgressSnapshots.mockResolvedValue([
+        snap(1, '2025-03-01T00:00:00.000Z', 10, 20),
+        snap(2, '2025-03-01T00:00:00.000Z', 20, 20),
+      ]);
+
+      const result = await evmService.getTrendMetrics(1, [new Date('2025-04-01T00:00:00.000Z')]);
+      const dashboard = await evmService.getEvmDashboardData(1, { periodMode: 'project' });
+
+      expect(result).toHaveLength(2);
+      expect(result[0].date.toISOString()).toBe('2025-04-01T00:00:00.000Z');
+      expect(result[0].ev).toBeCloseTo(20 + 40, 5);
+      expect(result[1].ev).toBeCloseTo(dashboard.currentMetrics.ev, 5);
+      expect(result[1].spi).toBeCloseTo(dashboard.currentMetrics.spi!, 5);
+    });
+  });
 });
