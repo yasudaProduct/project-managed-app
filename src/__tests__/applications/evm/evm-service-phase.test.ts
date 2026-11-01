@@ -242,4 +242,15 @@ describe('EvmService: フェーズ別EVM', () => {
       expect(result.bufferConsumption).toBeNull();
     });
   });
+
+  describe('getPhaseForecastDates（マイルストーンのフェーズ完了型用）', () => {
+    it('フェーズごとの予測完了日（Earned Schedule）を、フェーズ別内訳と同じ値で返す', async () => {
+      const forecasts = await evmService.getPhaseForecastDates(1);
+      const dashboard = await evmService.getEvmDashboardData(1, { periodMode: 'project' });
+      const design = dashboard.phaseBreakdown.find((row) => row.name === '設計')!;
+
+      expect(forecasts.get(10)?.toISOString()).toBe(design.forecastCompletionDate);
+      expect(forecasts.has(20)).toBe(true);
+    });
+  });
 });
