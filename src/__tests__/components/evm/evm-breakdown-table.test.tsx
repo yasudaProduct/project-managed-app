@@ -64,4 +64,33 @@ describe("EvmBreakdownTable", () => {
       .map((r) => within(r).getAllByRole("cell")[0].textContent);
     expect(names).toEqual(["設計", "実装"]);
   });
+
+  it("行に予定終了日・予測完了日があれば列を表示し、遅れ日数を示す", () => {
+    render(
+      <EvmBreakdownTable
+        title="フェーズ別内訳"
+        rows={[
+          makeRow({
+            plannedEndDate: "2026-11-30T00:00:00.000Z",
+            forecastCompletionDate: "2026-12-10T00:00:00.000Z",
+            scheduleDelayDays: 10,
+          }),
+        ]}
+        calculationMode="hours"
+      />
+    );
+
+    expect(screen.getByRole("columnheader", { name: "予定終了" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "予測完了" })).toBeInTheDocument();
+    const row = screen.getByRole("row", { name: /設計/ });
+    expect(row).toHaveTextContent("10日遅れ");
+  });
+
+  it("予定終了日を持つ行がなければ予定終了・予測完了の列を出さない", () => {
+    render(
+      <EvmBreakdownTable title="担当者別内訳" rows={[makeRow({})]} calculationMode="hours" />
+    );
+
+    expect(screen.queryByRole("columnheader", { name: "予定終了" })).not.toBeInTheDocument();
+  });
 });
