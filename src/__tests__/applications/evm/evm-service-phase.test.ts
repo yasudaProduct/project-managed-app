@@ -215,6 +215,11 @@ describe('EvmService: フェーズ別EVM', () => {
     });
 
     it('前回の確認日を渡すと前回時点のバッファ消化も返す', async () => {
+      // 前回時点のEVを確定させる（スナップショットがない日のEVは時間按分のフォールバックになるため）
+      mockRepository.getProgressSnapshots.mockResolvedValue([
+        snap(1, '2025-03-01T00:00:00.000Z', 10, 50),
+        snap(2, '2025-03-01T00:00:00.000Z', 20, 50),
+      ]);
       mockRepository.getActualCostByDate.mockResolvedValue(
         new Map([
           ['2025-01-20', 150],
