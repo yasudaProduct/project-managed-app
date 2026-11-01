@@ -158,6 +158,11 @@ export interface IEvmService {
   ): Promise<EvmDashboardData>;
   /** 現在メトリクスとスケジュール予測だけを求める軽量版（ポートフォリオ一覧用。時系列は計算しない） */
   getEvmSummary(wbsId: number, now?: Date): Promise<EvmSummary>;
+  /**
+   * フェーズごとの予測完了日（Earned Schedule。工数モード）。フェーズ別内訳と同じ値。
+   * 予測できないフェーズ（出来高ゼロ等）の値は null。マイルストーンのフェーズ完了型で使う
+   */
+  getPhaseForecastDates(wbsId: number, now?: Date): Promise<Map<number, Date | null>>;
   getTaskEvmDetails(wbsId: number): Promise<TaskEvmData[]>;
   getHealthStatus(metrics: EvmMetrics): EvmHealthStatus;
 }
@@ -466,6 +471,35 @@ export class EvmService implements IEvmService {
     const current = evaluate(currentMetrics);
     if (!current) return null;
     return { current, previous: previousMetrics ? evaluate(previousMetrics) : null };
+  }
+
+  async getPhaseForecastDates(
+    wbsId: number,
+    now: Date = new Date()
+  ): Promise<Map<number, Date | null>> {
+    const calculationMode: EvmCalculationMode = 'hours';
+    const wbsData = await this.wbsEvmRepository.getWbsEvmData(wbsId, now);
+    const method = wbsData.settings?.progressMeasurementMethod ?? 'SELF_REPORTED';
+    const businessDayCounter = await this.buildBusinessDayCounter(wbsData);
+
+    const phaseIds = new Set<number>();
+    for (const task of wbsData.tasks) {
+      if (task.meta?.phaseId != null) phaseIds.add(task.meta.phaseId);
+    }
+
+    const forecasts = new Map<number, Date | null>();
+    for (const phaseId of phaseIds) {
+      const phaseData = this.scopeToPhase(wbsData, phaseId);
+      const ev = phaseData.tasks.reduce(
+        (sum, task) => sum + task.getEarnedValue(now, calculationMode, method, now),
+        0
+      );
+      const forecast = this.computeScheduleForecast(
+        phaseData, ev, this.computeDateRange(phaseData, now), now, calculationMode, method, businessDayCounter
+      );
+      forecasts.set(phaseId, forecast.forecastCompletionDate);
+    }
+    return forecasts;
   }
 
   async getEvmSummary(wbsId: number, now: Date = new Date()): Promise<EvmSummary> {

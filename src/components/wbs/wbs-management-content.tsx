@@ -34,6 +34,7 @@ import type { EvmForecastMethod } from "@/types/evm-forecast-method";
 import type { ProgressReviewCycle } from "@/types/progress-review-cycle";
 import type { TaskDelayDto } from "@/applications/task-delay/task-delay-application-service";
 import type { DataFreshnessDto } from "@/applications/data-freshness/data-freshness-application-service";
+import type { MilestoneForecastDto } from "@/applications/milestone/milestone-application-service";
 import { DataFreshnessPanel } from "@/components/wbs/data-freshness-panel";
 import type { WbsImportScheduleDto } from "@/types/import-schedule";
 
@@ -57,6 +58,8 @@ type WbsManagementContentProps = {
   phases: Array<{ id: number; seq: number; name: string; code: string }>;
   assignees: Array<{ assignee: { displayName: string } | null }> | null;
   milestones: Milestone[];
+  /** マイルストーンと達成見込み（マイルストーンタブに表示） */
+  milestoneForecasts?: MilestoneForecastDto[];
   /** 遅れ・期限間近のタスク（サマリータブに表示） */
   taskDelays?: TaskDelayDto[];
   /** データの鮮度（サマリータブ・EVMタブに表示） */
@@ -83,6 +86,7 @@ export function WbsManagementContent({
   phases,
   assignees,
   milestones,
+  milestoneForecasts = [],
   taskDelays = [],
   dataFreshness = null,
   previousReviewDate = null,
@@ -204,7 +208,12 @@ export function WbsManagementContent({
             <TaskTableViewPage wbsTasks={tasks} wbsId={wbsId} />
           </TabsContent>
           <TabsContent value="milestone">
-            <MilestoneManagement wbsId={wbsId} initialMilestones={milestones} />
+            <MilestoneManagement
+              wbsId={wbsId}
+              initialMilestones={milestoneForecasts}
+              phases={phases}
+              tasks={tasks.map((task) => ({ id: task.id, taskNo: task.taskNo, name: task.name }))}
+            />
           </TabsContent>
           <TabsContent value="table">
             <WbsSummaryTables projectId={project.id} wbsId={wbsId} />

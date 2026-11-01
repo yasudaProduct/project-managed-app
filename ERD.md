@@ -130,8 +130,15 @@ erDiagram
   Int wbsId FK
   String name
   DateTime date
+  MilestoneTargetType targetType
+  Int phaseId FK "nullable"
+  DateTime achievedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
+}
+"milestone_task" {
+  Int milestoneId FK
+  Int taskId FK
 }
 "work_records" {
   Int id PK
@@ -336,6 +343,9 @@ erDiagram
 "task_status_log" }o--|| "wbs_task" : task
 "task_status_log" }o--o| "users" : changer
 "milestone" }o--|| "wbs" : wbs
+"milestone" }o--o| "wbs_phase" : phase
+"milestone_task" }o--|| "milestone" : milestone
+"milestone_task" }o--|| "wbs_task" : task
 "work_records" }o--|| "users" : user
 "work_records" }o--o| "wbs_task" : task
 "work_records" }o--o| "wbs" : wbs
@@ -506,8 +516,17 @@ erDiagram
   - `wbsId`: 
   - `name`: 
   - `date`: 
+  - `targetType`: 
+  - `phaseId`: 
+  - `achievedAt`: 
   - `createdAt`: 
   - `updatedAt`: 
+
+### `milestone_task`
+
+**Properties**
+  - `milestoneId`: 
+  - `taskId`: 
 
 ### `work_records`
 

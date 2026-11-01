@@ -6,7 +6,7 @@ import { getProjectById } from "@/app/projects/actions";
 import { getWbsPhases } from "./actions/wbs-phase-actions";
 import { getWbsAssignees } from "../assignee/assignee-actions";
 import { getTaskAll } from "./actions/wbs-task-actions";
-import { getMilestones } from "./actions/milestone-actions";
+import { getMilestones, listMilestoneForecasts } from "./actions/milestone-actions";
 import { listTaskDelays } from "./actions/task-delay-actions";
 import { getDataFreshness } from "./actions/data-freshness-actions";
 import { getPreviousReviewDate } from "./actions/progress-review-actions";
@@ -46,9 +46,10 @@ export default async function WbsManagementPage({
     ]);
   // 期限間近の日数・前回の確認日はプロジェクト設定に依存するため、設定の取得後に判定する
   const previousReviewDate = await getPreviousReviewDate(settings.progressReviewCycle);
-  const [taskDelays, dataFreshness] = await Promise.all([
+  const [taskDelays, dataFreshness, milestoneForecasts] = await Promise.all([
     listTaskDelays(wbs.id, settings.deadlineAlertDays, previousReviewDate ?? undefined),
     getDataFreshness(wbs.id, wbs.projectId),
+    listMilestoneForecasts(wbs.id),
   ]);
 
   return (
@@ -62,6 +63,7 @@ export default async function WbsManagementPage({
         phases={phases}
         assignees={assignees}
         milestones={milestones}
+        milestoneForecasts={milestoneForecasts}
         taskDelays={taskDelays}
         dataFreshness={dataFreshness}
         previousReviewDate={previousReviewDate}

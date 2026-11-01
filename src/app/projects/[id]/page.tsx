@@ -9,7 +9,7 @@ import {
 import { getWbsPhases } from "@/app/wbs/[id]/actions/wbs-phase-actions";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
 import { getTaskAll } from "@/app/wbs/[id]/actions/wbs-task-actions";
-import { getMilestones } from "@/app/wbs/[id]/actions/milestone-actions";
+import { getMilestones, listMilestoneForecasts } from "@/app/wbs/[id]/actions/milestone-actions";
 import { listTaskDelays } from "@/app/wbs/[id]/actions/task-delay-actions";
 import { getDataFreshness } from "@/app/wbs/[id]/actions/data-freshness-actions";
 import { getPreviousReviewDate } from "@/app/wbs/[id]/actions/progress-review-actions";
@@ -106,9 +106,10 @@ export default async function ProjectPage({
     ]);
   // 期限間近の日数・前回の確認日はプロジェクト設定に依存するため、設定の取得後に判定する
   const previousReviewDate = await getPreviousReviewDate(settings.progressReviewCycle);
-  const [taskDelays, dataFreshness] = await Promise.all([
+  const [taskDelays, dataFreshness, milestoneForecasts] = await Promise.all([
     listTaskDelays(latestWbs.id, settings.deadlineAlertDays, previousReviewDate ?? undefined),
     getDataFreshness(latestWbs.id, projectId),
+    listMilestoneForecasts(latestWbs.id),
   ]);
 
   return (
@@ -122,6 +123,7 @@ export default async function ProjectPage({
         phases={phases}
         assignees={assignees}
         milestones={milestones}
+        milestoneForecasts={milestoneForecasts}
         taskDelays={taskDelays}
         dataFreshness={dataFreshness}
         previousReviewDate={previousReviewDate}

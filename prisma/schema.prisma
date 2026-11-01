@@ -121,6 +121,7 @@ model WbsPhase {
   wbs        Wbs             @relation(fields: [wbsId], references: [id])
   template   PhaseTemplate?  @relation(fields: [templateId], references: [id])
   tasks      WbsTask[]
+  milestones Milestone[]
   createdAt  DateTime        @default(now()) @db.Timestamptz
   updatedAt  DateTime        @updatedAt @db.Timestamptz
 
@@ -173,6 +174,7 @@ model WbsTask {
   workRecords      WorkRecord[]
   predecessors     TaskDependency[] @relation("PredecessorTask")
   successors       TaskDependency[] @relation("SuccessorTask")
+  milestoneTasks   MilestoneTask[]
 
   @@unique(fields: [taskNo,wbsId])
   @@index([wbsId, isDeleted])
@@ -222,15 +224,38 @@ model TaskStatusLog {
 }
 
 model Milestone {
-  id        Int        @id @default(autoincrement())
-  wbsId     Int
-  name      String
-  date      DateTime   @db.Timestamptz
-  wbs       Wbs        @relation(fields: [wbsId], references: [id])
-  createdAt DateTime   @default(now()) @db.Timestamptz
-  updatedAt DateTime   @updatedAt @db.Timestamptz
+  id         Int                 @id @default(autoincrement())
+  wbsId      Int
+  name       String
+  date       DateTime            @db.Timestamptz
+  targetType MilestoneTargetType @default(EVENT) // 達成の対象（イベント／フェーズ完了／タスク指定）
+  phaseId    Int? // フェーズ完了型の対象フェーズ
+  achievedAt DateTime?           @db.Date // 達成日（記録した場合）
+  wbs        Wbs                 @relation(fields: [wbsId], references: [id])
+  phase      WbsPhase?           @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  tasks      MilestoneTask[]
+  createdAt  DateTime            @default(now()) @db.Timestamptz
+  updatedAt  DateTime            @updatedAt @db.Timestamptz
 
   @@map("milestone")
+}
+
+// タスク指定型マイルストーンの対象タスク（タスク削除・振り直しで紐付けは消える）
+model MilestoneTask {
+  milestoneId Int
+  taskId      Int
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  task        WbsTask   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([milestoneId, taskId])
+  @@index([taskId])
+  @@map("milestone_task")
+}
+
+enum MilestoneTargetType {
+  EVENT // 対象なし（顧客レビュー等。達成日を記録するだけ）
+  PHASE // フェーズ完了型
+  TASKS // タスク指定型
 }
 
 model WorkRecord {
