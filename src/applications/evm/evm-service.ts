@@ -163,6 +163,11 @@ export interface IEvmService {
    * 予測できないフェーズ（出来高ゼロ等）の値は null。マイルストーンのフェーズ完了型で使う
    */
   getPhaseForecastDates(wbsId: number, now?: Date): Promise<Map<number, Date | null>>;
+  /**
+   * 悪化トレンド用のメトリクス（工数モード）。過去の日付は as-of 再構築、最後に現在値を付けて古い順に返す
+   * （pastDates.length + 1 件。現在値はダッシュボードのカードと同じ）
+   */
+  getTrendMetrics(wbsId: number, pastDates: Date[], now?: Date): Promise<EvmMetrics[]>;
   getTaskEvmDetails(wbsId: number): Promise<TaskEvmData[]>;
   getHealthStatus(metrics: EvmMetrics): EvmHealthStatus;
 }
@@ -500,6 +505,30 @@ export class EvmService implements IEvmService {
       forecasts.set(phaseId, forecast.forecastCompletionDate);
     }
     return forecasts;
+  }
+
+  async getTrendMetrics(
+    wbsId: number,
+    pastDates: Date[],
+    now: Date = new Date()
+  ): Promise<EvmMetrics[]> {
+    const calculationMode: EvmCalculationMode = 'hours';
+    const wbsData = await this.wbsEvmRepository.getWbsEvmData(wbsId, now);
+    const method = wbsData.settings?.progressMeasurementMethod ?? 'SELF_REPORTED';
+    const fMethod = wbsData.settings?.evmForecastMethod ?? 'CPI_ONLY';
+
+    const computeCumulativeAc = await this.buildCumulativeAcFn(wbsId, now, calculationMode);
+    const businessDayCounter = await this.buildBusinessDayCounter(wbsData);
+    const snapshots = await this.wbsEvmRepository.getProgressSnapshots(wbsId, now);
+    const computeHistorical = this.buildAsOfMetricsFn(
+      wbsData, snapshots, now, calculationMode, method, fMethod, businessDayCounter
+    );
+
+    const past = pastDates.map((date) => computeHistorical(date, computeCumulativeAc(date)));
+    const current = this.computeMetricsFromData(
+      wbsData, now, computeCumulativeAc(now), calculationMode, method, fMethod, false, now, businessDayCounter
+    );
+    return [...past, current];
   }
 
   async getEvmSummary(wbsId: number, now: Date = new Date()): Promise<EvmSummary> {

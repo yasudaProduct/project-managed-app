@@ -14,6 +14,8 @@ import { EvmChart } from "./evm-chart";
 import { EvmMetricsCard } from "./evm-metrics-card";
 import { EvmComparisonCard } from "./evm-comparison-card";
 import { EvmBufferCard } from "./evm-buffer-card";
+import { EvmTrendAlert } from "./evm-trend-alert";
+import type { EvmTrendDto } from "@/applications/trend/evm-trend-application-service";
 import type { EvmBufferConsumption } from "@/applications/evm/evm-service";
 import { TaskEvmTable } from "./task-evm-table";
 import { EvmTimeSeriesTable } from "./evm-timeseries-table";
@@ -66,6 +68,8 @@ type EvmDashboardProps = {
   previousReviewDate?: string | null;
   /** WBSのフェーズ。対象フェーズの切り替えに使う */
   phases?: Array<{ id: number; name: string }>;
+  /** 悪化トレンド（WBS全体。進捗確認サイクルの単位） */
+  trend?: EvmTrendDto | null;
 };
 
 /** 対象フェーズの選択値（全体） */
@@ -78,6 +82,7 @@ export function EvmDashboard({
   progressReviewCycle = DEFAULT_PROGRESS_REVIEW_CYCLE,
   previousReviewDate = null,
   phases = [],
+  trend = null,
 }: EvmDashboardProps) {
   const viewDefaults = EVM_VIEW_DEFAULTS_BY_REVIEW_CYCLE[progressReviewCycle];
   const [currentMetrics, setCurrentMetrics] = useState<EvmMetricsData | null>(
@@ -529,6 +534,9 @@ export function EvmDashboard({
           フェーズ「{phases.find((phase) => phase.id === selectedPhaseId)?.name}」のタスクだけで集計しています。BACにバッファは含めません。過去時点はその時点のフェーズで集計します（実績はタスクの現在のフェーズで振り分けます）。
         </p>
       )}
+
+      {/* 悪化トレンド（WBS全体。フェーズ指定時も全体の傾向として表示する） */}
+      {trend && <EvmTrendAlert trend={trend} />}
 
       {/* メトリクスカード（週次レビューで最重要のため最上部に置く） */}
       <EvmMetricsCard

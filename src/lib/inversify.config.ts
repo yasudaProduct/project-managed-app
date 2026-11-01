@@ -124,6 +124,10 @@ import { ProgressReviewApplicationService } from "@/applications/progress-review
 import type { IPortfolioApplicationService } from "@/applications/portfolio/portfolio-application-service";
 import { PortfolioApplicationService } from "@/applications/portfolio/portfolio-application-service";
 
+// EVM Trend関連
+import type { IEvmTrendApplicationService } from "@/applications/trend/evm-trend-application-service";
+import { EvmTrendApplicationService } from "@/applications/trend/evm-trend-application-service";
+
 // Estimation Accuracy関連（CQRS）
 import type { IEstimationAccuracyQueryRepository } from "@/applications/estimation-accuracy/iestimation-accuracy-query-repository";
 import { EstimationAccuracyQueryRepository } from "@/infrastructures/estimation-accuracy/estimation-accuracy-query-repository";
@@ -218,6 +222,7 @@ container.bind<ITaskDelayApplicationService>(SYMBOL.ITaskDelayApplicationService
 container.bind<IDataFreshnessApplicationService>(SYMBOL.IDataFreshnessApplicationService).to(DataFreshnessApplicationService).inSingletonScope();
 container.bind<IProgressReviewApplicationService>(SYMBOL.IProgressReviewApplicationService).to(ProgressReviewApplicationService).inSingletonScope();
 container.bind<IPortfolioApplicationService>(SYMBOL.IPortfolioApplicationService).to(PortfolioApplicationService).inSingletonScope();
+container.bind<IEvmTrendApplicationService>(SYMBOL.IEvmTrendApplicationService).to(EvmTrendApplicationService).inSingletonScope();
 container.bind<ICompanyHolidayApplicationService>(SYMBOL.ICompanyHolidayApplicationService).to(CompanyHolidayApplicationService).inSingletonScope();
 container.bind<ICrossWbsWorkloadService>(SYMBOL.ICrossWbsWorkloadService).to(CrossWbsWorkloadService).inSingletonScope();
 

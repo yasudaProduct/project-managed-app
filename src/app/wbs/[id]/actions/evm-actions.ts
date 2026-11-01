@@ -5,6 +5,10 @@ import { container } from '@/lib/inversify.config';
 import { SYMBOL } from '@/types/symbol';
 import type { IEvmService } from '@/applications/evm/evm-service';
 import type { EvmDashboardData } from '@/applications/evm/evm-dashboard-dto';
+import type {
+  IEvmTrendApplicationService,
+  EvmTrendDto,
+} from '@/applications/trend/evm-trend-application-service';
 
 const evmService = container.get<IEvmService>(SYMBOL.IEvmService);
 
@@ -59,3 +63,29 @@ export async function getEvmDashboardData(
     };
   }
 }
+
+const GetEvmTrendSchema = z.object({
+  wbsId: z.number().int().positive(),
+  projectId: z.string().min(1),
+});
+
+/**
+ * 悪化トレンド（進捗確認サイクルの単位で SPI / CPI が連続して下がっているか）を返す。
+ * 入力が不正・取得に失敗した場合は null を返す。
+ */
+export async function getEvmTrend(
+  wbsId: number,
+  projectId: string
+): Promise<EvmTrendDto | null> {
+  const parsed = GetEvmTrendSchema.safeParse({ wbsId, projectId });
+  if (!parsed.success) return null;
+  try {
+    return await container
+      .get<IEvmTrendApplicationService>(SYMBOL.IEvmTrendApplicationService)
+      .getEvmTrend(parsed.data.wbsId, parsed.data.projectId);
+  } catch (error) {
+    console.error('Failed to get EVM trend:', error);
+    return null;
+  }
+}
+

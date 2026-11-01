@@ -10,6 +10,7 @@ import { getMilestones, listMilestoneForecasts } from "./actions/milestone-actio
 import { listTaskDelays } from "./actions/task-delay-actions";
 import { getDataFreshness } from "./actions/data-freshness-actions";
 import { getPreviousReviewDate } from "./actions/progress-review-actions";
+import { getEvmTrend } from "./actions/evm-actions";
 import { getProjectSettings } from "./project-settings-actions";
 import { getWbsImportSchedule } from "./import-schedule-actions";
 import { WbsManagementContent } from "@/components/wbs/wbs-management-content";
@@ -46,10 +47,11 @@ export default async function WbsManagementPage({
     ]);
   // 期限間近の日数・前回の確認日はプロジェクト設定に依存するため、設定の取得後に判定する
   const previousReviewDate = await getPreviousReviewDate(settings.progressReviewCycle);
-  const [taskDelays, dataFreshness, milestoneForecasts] = await Promise.all([
+  const [taskDelays, dataFreshness, milestoneForecasts, evmTrend] = await Promise.all([
     listTaskDelays(wbs.id, settings.deadlineAlertDays, previousReviewDate ?? undefined),
     getDataFreshness(wbs.id, wbs.projectId),
     listMilestoneForecasts(wbs.id),
+    getEvmTrend(wbs.id, wbs.projectId),
   ]);
 
   return (
@@ -67,6 +69,7 @@ export default async function WbsManagementPage({
         taskDelays={taskDelays}
         dataFreshness={dataFreshness}
         previousReviewDate={previousReviewDate}
+        evmTrend={evmTrend}
         importSchedule={importSchedule}
         defaultTab={tab}
         showEvm={true}

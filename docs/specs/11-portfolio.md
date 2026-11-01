@@ -21,6 +21,7 @@
 | 遅れタスク | 終了遅れ・開始遅れの件数 | 遅延タスク判定（[09-task-delay](./09-task-delay.md)） |
 | 入力漏れ | 直近10営業日に実績の入力漏れがある担当者数 | データの鮮度（[10-data-freshness](./10-data-freshness.md)） |
 | WBS同期 | 最終同期日時 | データの鮮度 |
+| 悪化傾向 | SPI / CPI が進捗確認サイクルの単位で3期連続して悪化していれば「SPI悪化」「CPI悪化」 | 悪化トレンド（[02-evm 付録「悪化トレンド」](./02-evm.md)） |
 
 - 値は工数（h）。進捗測定方式・予測方式は各プロジェクトの設定に従う
 - 計算は各画面と同じ Application Service（`EvmService.getEvmSummary`・`TaskDelayApplicationService`・`DataFreshnessApplicationService`）を組み合わせて行い、個別画面と数字が食い違わないようにする

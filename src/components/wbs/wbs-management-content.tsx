@@ -35,6 +35,7 @@ import type { ProgressReviewCycle } from "@/types/progress-review-cycle";
 import type { TaskDelayDto } from "@/applications/task-delay/task-delay-application-service";
 import type { DataFreshnessDto } from "@/applications/data-freshness/data-freshness-application-service";
 import type { MilestoneForecastDto } from "@/applications/milestone/milestone-application-service";
+import type { EvmTrendDto } from "@/applications/trend/evm-trend-application-service";
 import { DataFreshnessPanel } from "@/components/wbs/data-freshness-panel";
 import type { WbsImportScheduleDto } from "@/types/import-schedule";
 
@@ -66,6 +67,8 @@ type WbsManagementContentProps = {
   dataFreshness?: DataFreshnessDto | null;
   /** 前回の確認日（ISO）。遅延タスク一覧の「新規」とEVMの前回比に使う */
   previousReviewDate?: string | null;
+  /** 悪化トレンド（EVMタブに表示） */
+  evmTrend?: EvmTrendDto | null;
   importSchedule: WbsImportScheduleDto;
   defaultTab?: string;
   showEvm?: boolean;
@@ -90,6 +93,7 @@ export function WbsManagementContent({
   taskDelays = [],
   dataFreshness = null,
   previousReviewDate = null,
+  evmTrend = null,
   importSchedule,
   defaultTab,
   showEvm = true,
@@ -231,6 +235,7 @@ export function WbsManagementContent({
                 progressReviewCycle={progressReviewCycle}
                 previousReviewDate={previousReviewDate}
                 phases={phases}
+                trend={evmTrend}
               />
             </TabsContent>
           )}

@@ -57,6 +57,7 @@ export function PortfolioTable({ rows }: PortfolioTableProps) {
           <TableRow>
             <TableHead>プロジェクト / WBS</TableHead>
             <TableHead>ヘルス</TableHead>
+            <TableHead>悪化傾向</TableHead>
             <TableHead className="text-right">SPI</TableHead>
             <TableHead className="text-right">CPI</TableHead>
             <TableHead className="text-right">出来高率</TableHead>
@@ -82,13 +83,24 @@ export function PortfolioTable({ rows }: PortfolioTableProps) {
                   <div className="text-xs text-gray-500">{row.wbsName}</div>
                 </TableCell>
                 {row.loadError ? (
-                  <TableCell colSpan={9} className="text-sm text-red-600">
+                  <TableCell colSpan={10} className="text-sm text-red-600">
                     {row.loadError}
                   </TableCell>
                 ) : (
                   <>
                     <TableCell>
                       <Badge className={badge.className}>{badge.label}</Badge>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {row.isSpiDeteriorating && (
+                        <div className="font-medium text-red-600">SPI悪化</div>
+                      )}
+                      {row.isCpiDeteriorating && (
+                        <div className="font-medium text-red-600">CPI悪化</div>
+                      )}
+                      {!row.isSpiDeteriorating && !row.isCpiDeteriorating && (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">{formatIndex(row.spi)}</TableCell>
                     <TableCell className="text-right">{formatIndex(row.cpi)}</TableCell>

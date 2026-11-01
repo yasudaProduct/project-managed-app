@@ -35,3 +35,20 @@ export function previousReviewDate(
       return oneMonthBefore(today);
   }
 }
+
+/**
+ * 今日から前回の確認日を count 回さかのぼった確認日を、今日を含めて古い順に返す（count + 1 件）。
+ * 悪化トレンドの検知で、サイクル単位の推移を求めるのに使う。
+ */
+export function recentReviewDates(
+  cycle: ProgressReviewCycle,
+  today: Date,
+  isBusinessDay: (date: Date) => boolean,
+  count: number
+): Date[] {
+  const dates = [today];
+  for (let i = 0; i < count; i++) {
+    dates.unshift(previousReviewDate(cycle, dates[0], isBusinessDay));
+  }
+  return dates;
+}

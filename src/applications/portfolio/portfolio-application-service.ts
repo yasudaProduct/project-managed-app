@@ -10,6 +10,7 @@ import type { IEvmService } from '@/applications/evm/evm-service';
 import type { ITaskDelayApplicationService } from '@/applications/task-delay/task-delay-application-service';
 import type { IDataFreshnessApplicationService } from '@/applications/data-freshness/data-freshness-application-service';
 import type { IProjectSettingsRepository } from '@/applications/project-settings/iproject-settings-repository';
+import type { IEvmTrendApplicationService } from '@/applications/trend/evm-trend-application-service';
 
 /** ポートフォリオ一覧の1行（Server Action 経由でクライアントへ渡すため日付は ISO 文字列。値は工数） */
 export type PortfolioRowDto = {
@@ -34,6 +35,9 @@ export type PortfolioRowDto = {
   /** 直近10営業日に実績の入力漏れがある担当者数 */
   assigneesWithMissingEntries: number;
   lastWbsSyncAt: string | null;
+  /** 進捗確認サイクルの単位で SPI / CPI が連続して悪化しているか（3-3） */
+  isSpiDeteriorating: boolean;
+  isCpiDeteriorating: boolean;
   /** 取得に失敗した場合のメッセージ（成功時は null） */
   loadError: string | null;
 };
@@ -62,7 +66,9 @@ export class PortfolioApplicationService implements IPortfolioApplicationService
     @inject(SYMBOL.IDataFreshnessApplicationService)
     private readonly dataFreshnessService: IDataFreshnessApplicationService,
     @inject(SYMBOL.IProjectSettingsRepository)
-    private readonly projectSettingsRepository: IProjectSettingsRepository
+    private readonly projectSettingsRepository: IProjectSettingsRepository,
+    @inject(SYMBOL.IEvmTrendApplicationService)
+    private readonly evmTrendService: IEvmTrendApplicationService
   ) {}
 
   public async listPortfolio(now: Date = new Date()): Promise<PortfolioRowDto[]> {
@@ -87,13 +93,14 @@ export class PortfolioApplicationService implements IPortfolioApplicationService
         target.projectId,
         await this.projectSettingsRepository.findByProjectId(target.projectId)
       );
-      const [summary, delays, freshness] = await Promise.all([
+      const [summary, delays, freshness, trend] = await Promise.all([
         this.evmService.getEvmSummary(target.wbsId, now),
         this.taskDelayService.listTaskDelays(target.wbsId, {
           dueSoonDays: settings.deadlineAlertDays,
           now,
         }),
         this.dataFreshnessService.getDataFreshness(target.wbsId, target.projectId, { now }),
+        this.evmTrendService.getEvmTrend(target.wbsId, target.projectId, now),
       ]);
       const { currentMetrics: metrics, scheduleForecast: forecast } = summary;
 
@@ -115,6 +122,8 @@ export class PortfolioApplicationService implements IPortfolioApplicationService
           (assignee) => assignee.missingDates.length > 0
         ).length,
         lastWbsSyncAt: freshness.lastWbsSync?.syncedAt ?? null,
+        isSpiDeteriorating: trend.isSpiDeteriorating,
+        isCpiDeteriorating: trend.isCpiDeteriorating,
         loadError: null,
       };
     } catch (error) {
@@ -135,6 +144,8 @@ export class PortfolioApplicationService implements IPortfolioApplicationService
         startOverdueCount: 0,
         assigneesWithMissingEntries: 0,
         lastWbsSyncAt: null,
+        isSpiDeteriorating: false,
+        isCpiDeteriorating: false,
         loadError: 'データを取得できませんでした',
       };
     }

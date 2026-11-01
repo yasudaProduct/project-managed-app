@@ -109,6 +109,9 @@ export const SYMBOL = {
     // Portfolio（ポートフォリオ一覧）
     IPortfolioApplicationService: Symbol.for('IPortfolioApplicationService'),
 
+    // EVM Trend（悪化トレンドの検知）
+    IEvmTrendApplicationService: Symbol.for('IEvmTrendApplicationService'),
+
     // Estimation Accuracy（見積精度・CQRS）
     IEstimationAccuracyQueryRepository: Symbol.for('IEstimationAccuracyQueryRepository'),
     GetEstimationAccuracyHandler: Symbol.for('GetEstimationAccuracyHandler'),

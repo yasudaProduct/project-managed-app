@@ -13,6 +13,7 @@ import { getMilestones, listMilestoneForecasts } from "@/app/wbs/[id]/actions/mi
 import { listTaskDelays } from "@/app/wbs/[id]/actions/task-delay-actions";
 import { getDataFreshness } from "@/app/wbs/[id]/actions/data-freshness-actions";
 import { getPreviousReviewDate } from "@/app/wbs/[id]/actions/progress-review-actions";
+import { getEvmTrend } from "@/app/wbs/[id]/actions/evm-actions";
 import { ArrowLeft, Edit } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -106,10 +107,11 @@ export default async function ProjectPage({
     ]);
   // 期限間近の日数・前回の確認日はプロジェクト設定に依存するため、設定の取得後に判定する
   const previousReviewDate = await getPreviousReviewDate(settings.progressReviewCycle);
-  const [taskDelays, dataFreshness, milestoneForecasts] = await Promise.all([
+  const [taskDelays, dataFreshness, milestoneForecasts, evmTrend] = await Promise.all([
     listTaskDelays(latestWbs.id, settings.deadlineAlertDays, previousReviewDate ?? undefined),
     getDataFreshness(latestWbs.id, projectId),
     listMilestoneForecasts(latestWbs.id),
+    getEvmTrend(latestWbs.id, projectId),
   ]);
 
   return (
@@ -127,6 +129,7 @@ export default async function ProjectPage({
         taskDelays={taskDelays}
         dataFreshness={dataFreshness}
         previousReviewDate={previousReviewDate}
+        evmTrend={evmTrend}
         importSchedule={importSchedule}
         defaultTab={tab}
         showEvm={true}
