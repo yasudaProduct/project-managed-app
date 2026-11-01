@@ -6,31 +6,35 @@ interface QueryHandlerMetadata {
     handler: IQueryHandler<IQuery, unknown>;
 }
 
+/**
+ * クエリのクラスそのものをキーにハンドラを引く。
+ * クラス名をキーにすると、本番ビルドで名前が圧縮されて別々のクエリが同じ名前になり衝突する。
+ */
 @injectable()
 export class QueryBus implements IQueryBus {
-    private handlers = new Map<string, QueryHandlerMetadata>();
+    private handlers = new Map<abstract new (...args: never[]) => IQuery, QueryHandlerMetadata>();
 
     register<TQuery extends IQuery, TResult>(
         queryType: new (...args: unknown[]) => TQuery,
         handler: IQueryHandler<TQuery, TResult>
     ): void {
-        const queryName = queryType.name;
-        if (this.handlers.has(queryName)) {
-            throw new Error(`Handler for ${queryName} is already registered`);
+        if (this.handlers.has(queryType)) {
+            throw new Error(`Handler for ${queryType.name} is already registered`);
         }
 
-        this.handlers.set(queryName, {
+        this.handlers.set(queryType, {
             queryType: queryType as new (...args: unknown[]) => IQuery,
             handler: handler as IQueryHandler<IQuery, unknown>
         });
     }
 
     async execute<TResult>(query: IQuery): Promise<TResult> {
-        const queryName = query.constructor.name;
-        const metadata = this.handlers.get(queryName);
+        const metadata = this.handlers.get(
+            query.constructor as abstract new (...args: never[]) => IQuery
+        );
 
         if (!metadata) {
-            throw new Error(`No handler registered for query ${queryName}`);
+            throw new Error(`No handler registered for query ${query.constructor.name}`);
         }
 
         return metadata.handler.execute(query) as Promise<TResult>;
