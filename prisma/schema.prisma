@@ -18,6 +18,8 @@ model Projects {
   id          String        @id @default(uuid())
   name        String
   status      ProjectStatus @default(ACTIVE)
+  kind        ProjectKind   @default(PROJECT) // 種別（案件 / 常設）。作成後は変更しない
+  category    StandingCategory? // 常設プロジェクトの分類（常設のみ）
   description String?
   startDate   DateTime      @db.Date
   endDate     DateTime      @db.Date
@@ -175,6 +177,7 @@ model WbsTask {
   predecessors     TaskDependency[] @relation("PredecessorTask")
   successors       TaskDependency[] @relation("SuccessorTask")
   milestoneTasks   MilestoneTask[]
+  steadyWorkPlans  SteadyWorkPlan[]
 
   @@unique(fields: [taskNo,wbsId])
   @@index([wbsId, isDeleted])
@@ -304,6 +307,41 @@ enum ProjectStatus {
   DONE
   CANCELLED
   PENDING
+}
+
+// プロジェクトの種別
+enum ProjectKind {
+  PROJECT  // 案件（開始・終了が決まった案件。従来どおり）
+  STANDING // 常設（定常・不定期作業の受け皿。EVM等の案件分析の対象外）
+}
+
+// 常設プロジェクトの分類
+enum StandingCategory {
+  MAINTENANCE // 保守
+  INTERNAL    // 社内
+  OTHER       // その他
+}
+
+// 定常枠の単位
+enum SteadyPlanUnit {
+  PER_DAY   // 1営業日あたり（稼働日に固定値）
+  PER_MONTH // 1か月あたり（その月の稼働可能時間の比で日別按分）
+}
+
+// 定常枠: 常設プロジェクトの定常タスクについて、担当者が使う予定量（docs/plans/non-project-work-management.md）
+model SteadyWorkPlan {
+  id        Int            @id @default(autoincrement())
+  taskId    Int
+  unit      SteadyPlanUnit
+  hours     Decimal        // 単位あたりの時間（≥ 0）
+  validFrom DateTime       @db.Date // 有効期間の開始日（含む）
+  validTo   DateTime?      @db.Date // 有効期間の終了日（含む）。NULL は無期限
+  task      WbsTask        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now()) @db.Timestamptz
+  updatedAt DateTime       @updatedAt @db.Timestamptz
+
+  @@index([taskId, validFrom])
+  @@map("steady_work_plan")
 }
 
 enum BufferType {
