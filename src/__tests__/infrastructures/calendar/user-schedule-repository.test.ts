@@ -79,4 +79,40 @@ describe("UserScheduleRepository", () => {
       });
     });
   });
+
+  describe("replaceByUserIdAndDateRange", () => {
+    it("指定ユーザーの指定期間のスケジュールだけを削除してから新規作成すること", async () => {
+      prismaMock.userSchedule.deleteMany.mockResolvedValue({ count: 3 });
+      prismaMock.userSchedule.createMany.mockResolvedValue({ count: 1 });
+
+      await repository.replaceByUserIdAndDateRange(
+        "u1",
+        new Date("2026-11-01"),
+        new Date("2026-11-30"),
+        [{ userId: "u1", date: new Date("2026-11-02"), startTime: "10:00", endTime: "11:00", title: "会議", location: "会議室A" }]
+      );
+
+      expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+      expect(prismaMock.userSchedule.deleteMany).toHaveBeenCalledWith({
+        where: { userId: "u1", date: { gte: new Date("2026-11-01"), lte: new Date("2026-11-30") } },
+      });
+      expect(prismaMock.userSchedule.createMany).toHaveBeenCalledWith({
+        data: [
+          { userId: "u1", date: new Date("2026-11-02"), startTime: "10:00", endTime: "11:00", title: "会議", location: "会議室A", description: undefined },
+        ],
+      });
+      expect(prismaMock.userSchedule.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
+        prismaMock.userSchedule.createMany.mock.invocationCallOrder[0]
+      );
+    });
+
+    it("新規スケジュールが空の場合は削除のみ行うこと", async () => {
+      prismaMock.userSchedule.deleteMany.mockResolvedValue({ count: 2 });
+
+      await repository.replaceByUserIdAndDateRange("u1", new Date("2026-11-01"), new Date("2026-11-30"), []);
+
+      expect(prismaMock.userSchedule.deleteMany).toHaveBeenCalledTimes(1);
+      expect(prismaMock.userSchedule.createMany).not.toHaveBeenCalled();
+    });
+  });
 });
