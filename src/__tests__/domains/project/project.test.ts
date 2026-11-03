@@ -195,3 +195,89 @@ describe('Project', () => {
     });
   });
 });
+/**
+ * プロジェクトの種別（案件 / 常設）。
+ * docs/plans/non-project-work-management.md §6.2, §11
+ * - 種別を省略すると案件（PROJECT）。既存の挙動を変えない
+ * - 分類（category）は常設（STANDING）のみ持てる
+ */
+describe('Project の種別（kind）と分類（category）', () => {
+  const startDate = new Date('2026-04-01');
+  const endDate = new Date('2027-03-31');
+
+  it('種別を省略すると案件（PROJECT）になり、常設ではないこと', () => {
+    const project = Project.create({ name: '案件A', startDate, endDate });
+
+    expect(project.kind).toBe('PROJECT');
+    expect(project.category).toBeUndefined();
+    expect(project.isStanding()).toBe(false);
+  });
+
+  it('常設（STANDING）として分類付きで作成できること', () => {
+    const project = Project.create({
+      name: '保守 X システム',
+      startDate,
+      endDate,
+      kind: 'STANDING',
+      category: 'MAINTENANCE',
+    });
+
+    expect(project.kind).toBe('STANDING');
+    expect(project.category).toBe('MAINTENANCE');
+    expect(project.isStanding()).toBe(true);
+  });
+
+  it('常設は分類なしでも作成できること', () => {
+    const project = Project.create({ name: '社内業務', startDate, endDate, kind: 'STANDING' });
+
+    expect(project.isStanding()).toBe(true);
+    expect(project.category).toBeUndefined();
+  });
+
+  it('案件に分類を付けると例外になること', () => {
+    expect(() =>
+      Project.create({ name: '案件A', startDate, endDate, kind: 'PROJECT', category: 'INTERNAL' })
+    ).toThrow('分類は常設プロジェクトのみ設定できます');
+  });
+
+  it('DBから種別・分類を復元できること', () => {
+    const project = Project.createFromDb({
+      id: 'project-1',
+      name: '社内業務',
+      status: new ProjectStatus({ status: 'ACTIVE' }),
+      startDate,
+      endDate,
+      kind: 'STANDING',
+      category: 'INTERNAL',
+    });
+
+    expect(project.kind).toBe('STANDING');
+    expect(project.category).toBe('INTERNAL');
+  });
+
+  it('DBからの復元で種別を省略すると案件になること（既存データ互換）', () => {
+    const project = Project.createFromDb({
+      id: 'project-1',
+      name: '案件A',
+      status: new ProjectStatus({ status: 'ACTIVE' }),
+      startDate,
+      endDate,
+    });
+
+    expect(project.kind).toBe('PROJECT');
+  });
+
+  it('常設の分類を更新できること', () => {
+    const project = Project.create({ name: '社内業務', startDate, endDate, kind: 'STANDING' });
+
+    project.updateCategory('OTHER');
+
+    expect(project.category).toBe('OTHER');
+  });
+
+  it('案件の分類を更新しようとすると例外になること', () => {
+    const project = Project.create({ name: '案件A', startDate, endDate });
+
+    expect(() => project.updateCategory('OTHER')).toThrow('分類は常設プロジェクトのみ設定できます');
+  });
+});
