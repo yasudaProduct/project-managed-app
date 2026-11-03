@@ -25,6 +25,16 @@ import {
 } from "@/components/ui/select";
 import { createProject, deleteProject, updateProject } from "./actions";
 import type { ProjectStatus } from "@/types/wbs";
+import {
+  PROJECT_KINDS,
+  PROJECT_KIND_LABELS,
+  STANDING_CATEGORIES,
+  STANDING_CATEGORY_LABELS,
+  type ProjectKind,
+  type StandingCategory,
+} from "@/types/project";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { DatePicker } from "@/components/date-picker";
 import { formatDate } from "@/utils/date-util";
@@ -45,7 +55,16 @@ const formSchema = z.object({
   status: z
     .enum(["INACTIVE", "ACTIVE", "DONE", "CANCELLED", "PENDING"])
     .optional(), // TODO: 更新の場合は必須にする
+  /** 種別（案件 / 常設）。作成時のみ選べる */
+  kind: z.enum(PROJECT_KINDS),
+  /** 常設プロジェクトの分類（常設のみ） */
+  category: z.enum(STANDING_CATEGORIES).optional(),
 });
+
+const KIND_DESCRIPTIONS: Record<ProjectKind, string> = {
+  PROJECT: "開始・終了が決まった案件。EVM や進捗分析の対象になります",
+  STANDING: "保守・社内雑務など定常・不定期作業の受け皿。担当者の負荷にだけ反映し、EVM 等の案件分析からは除きます",
+};
 
 type ProjectFormProps = {
   project?: {
@@ -55,6 +74,8 @@ type ProjectFormProps = {
     startDate: Date;
     endDate: Date;
     status?: ProjectStatus;
+    kind?: ProjectKind;
+    category?: StandingCategory;
   };
 };
 
@@ -69,6 +90,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
         ...project,
         startDate: formatDate(project.startDate, "YYYY/MM/DD"),
         endDate: formatDate(project.endDate, "YYYY/MM/DD"),
+        kind: project.kind ?? "PROJECT",
+        category: project.category,
       }
       : {
         name: "",
@@ -76,16 +99,24 @@ export function ProjectForm({ project }: ProjectFormProps) {
         startDate: "",
         endDate: "",
         status: "INACTIVE",
+        kind: "PROJECT",
+        category: undefined,
       },
   });
+  const kind = form.watch("kind");
+  const isStanding = kind === "STANDING";
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
       if (project) {
         const result = await updateProject(project.id, {
-          ...values,
+          name: values.name,
+          description: values.description,
+          startDate: values.startDate,
+          endDate: values.endDate,
           status: values.status!,
+          category: isStanding ? values.category : undefined,
         });
         if (!result.success) {
           toast({
@@ -105,6 +136,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
           description: values.description,
           startDate: new Date(values.startDate),
           endDate: new Date(values.endDate),
+          kind: values.kind,
+          category: isStanding ? values.category : undefined,
         });
         if (!result.success) {
           toast({
@@ -176,6 +209,69 @@ export function ProjectForm({ project }: ProjectFormProps) {
         />
         <FormField
           control={form.control}
+          name="kind"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>種別</FormLabel>
+              <FormControl>
+                <RadioGroup
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  className="flex flex-col gap-2"
+                >
+                  {PROJECT_KINDS.map((option) => (
+                    <div key={option} className="flex items-start space-x-3">
+                      <RadioGroupItem
+                        value={option}
+                        id={`project-kind-${option}`}
+                        className="mt-0.5"
+                        disabled={!!project}
+                      />
+                      <div className="flex flex-col">
+                        <Label htmlFor={`project-kind-${option}`} className="cursor-pointer font-medium">
+                          {PROJECT_KIND_LABELS[option]}
+                        </Label>
+                        <span className="text-xs text-gray-500">{KIND_DESCRIPTIONS[option]}</span>
+                      </div>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </FormControl>
+              {project && (
+                <p className="text-xs text-muted-foreground">種別は作成後に変更できません。</p>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        {isStanding && (
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>分類</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="分類を選択（任意）" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {STANDING_CATEGORIES.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {STANDING_CATEGORY_LABELS[category]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        <FormField
+          control={form.control}
           name="description"
           render={({ field }) => (
             <FormItem>
@@ -209,6 +305,11 @@ export function ProjectForm({ project }: ProjectFormProps) {
             <FormItem>
               <FormLabel>終了予定日</FormLabel>
               <DatePicker field={field}></DatePicker>
+              {isStanding && (
+                <p className="text-xs text-muted-foreground">
+                  常設の場合は保守契約の終了日や年度末など、運用上の目安を入れてください。負荷への反映は定常枠の有効期間で決まります。
+                </p>
+              )}
               <FormMessage />
             </FormItem>
           )}

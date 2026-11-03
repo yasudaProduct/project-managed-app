@@ -17,6 +17,12 @@ import { Progress } from "@/components/ui/progress";
 import { getProjectStatusName } from "@/utils/utils";
 import { formatDate } from "@/utils/date-util";
 import { ProjectStatus, WbsTask, Milestone, TaskStatus } from "@/types/wbs";
+import {
+  PROJECT_KIND_LABELS,
+  STANDING_CATEGORY_LABELS,
+  type ProjectKind,
+  type StandingCategory,
+} from "@/types/project";
 import { useMemo, useState, useCallback } from "react";
 import { copyToClipboard } from "@/utils/export-table";
 import { TaskDelayList } from "@/components/wbs/task-delay-list";
@@ -28,6 +34,9 @@ interface ProjectInfoCardProps {
     status: ProjectStatus;
     startDate: Date;
     endDate: Date;
+    /** 種別（省略時は案件） */
+    kind?: ProjectKind;
+    category?: StandingCategory;
   };
   phases: Array<{ name: string; seq?: number }>;
   assignees: Array<{ assignee: { displayName: string } | null }> | null;
@@ -264,6 +273,12 @@ export function ProjectInfoCard({
                   <Badge variant="outline" className="text-sm">
                     {getProjectStatusName(project.status)}
                   </Badge>
+                  {project.kind === "STANDING" && (
+                    <Badge variant="secondary" className="text-sm ml-2">
+                      {PROJECT_KIND_LABELS.STANDING}
+                      {project.category ? `（${STANDING_CATEGORY_LABELS[project.category]}）` : ""}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>

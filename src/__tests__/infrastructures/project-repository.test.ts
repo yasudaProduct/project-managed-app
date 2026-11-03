@@ -191,6 +191,9 @@ describe('ProjectRepository', () => {
           name: '新規プロジェクト',
           description: '新規作成テスト',
           status: 'INACTIVE',
+          // 種別を省略した場合は案件（kind: PROJECT、分類なし）
+          kind: 'PROJECT',
+          category: null,
           startDate,
           endDate,
         }
@@ -238,6 +241,8 @@ describe('ProjectRepository', () => {
           name: '更新後プロジェクト',
           description: '更新テスト',
           status: 'DONE',
+          // 種別は更新しない。分類は常設のみ持つ（案件は null）
+          category: null,
           startDate: new Date('2025-03-01'),
           endDate: new Date('2025-09-30'),
         }
@@ -256,6 +261,49 @@ describe('ProjectRepository', () => {
 
       expect(prismaMock.projects.delete).toHaveBeenCalledWith({
         where: { id: 'project-1' }
+      });
+    });
+  });
+
+  describe('種別・分類のマッピング', () => {
+    it('DB の kind / category をドメインへ復元し、常設の分類を保存すること', async () => {
+      (prismaMock.projects.findUnique as jest.Mock).mockResolvedValue({
+        id: 'project-standing',
+        name: '社内業務',
+        description: null,
+        status: 'ACTIVE',
+        kind: 'STANDING',
+        category: 'INTERNAL',
+        startDate,
+        endDate,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const project = await projectRepository.findById('project-standing');
+
+      expect(project?.kind).toBe('STANDING');
+      expect(project?.category).toBe('INTERNAL');
+      expect(project?.isStanding()).toBe(true);
+
+      (prismaMock.projects.create as jest.Mock).mockResolvedValue({
+        id: 'project-standing',
+        name: '社内業務',
+        description: null,
+        status: 'INACTIVE',
+        kind: 'STANDING',
+        category: 'MAINTENANCE',
+        startDate,
+        endDate,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      await projectRepository.create(
+        Project.create({ name: '社内業務', startDate, endDate, kind: 'STANDING', category: 'MAINTENANCE' })
+      );
+
+      expect(prismaMock.projects.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ kind: 'STANDING', category: 'MAINTENANCE' }),
       });
     });
   });
