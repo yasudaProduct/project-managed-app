@@ -6,6 +6,11 @@ import { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-
 import { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
 import { IWbsRepository } from '@/applications/wbs/iwbs-repository';
+import type {
+  ISteadyWorkPlanRepository,
+  SteadyWorkPlanWithTask,
+} from '@/applications/standing-work/isteady-work-plan-repository';
+import { SteadyWorkPlan } from '@/domains/standing-work/steady-work-plan';
 import { Task } from '@/domains/task/task';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/task-status';
@@ -32,6 +37,7 @@ describe('CrossWbsWorkloadService', () => {
   let mockCompanyHolidayRepository: jest.Mocked<ICompanyHolidayRepository>;
   let mockSystemSettingsRepository: jest.Mocked<ISystemSettingsRepository>;
   let mockWbsRepository: jest.Mocked<IWbsRepository>;
+  let mockSteadyWorkPlanRepository: jest.Mocked<ISteadyWorkPlanRepository>;
 
   beforeEach(() => {
     mockTargetWbsQueryRepository = {
@@ -60,6 +66,9 @@ describe('CrossWbsWorkloadService', () => {
     mockWbsRepository = {
       findById: jest.fn(),
     } as unknown as jest.Mocked<IWbsRepository>;
+    mockSteadyWorkPlanRepository = {
+      findActiveByWbsIds: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<ISteadyWorkPlanRepository>;
 
     service = new CrossWbsWorkloadService(
       mockTargetWbsQueryRepository,
@@ -68,9 +77,35 @@ describe('CrossWbsWorkloadService', () => {
       mockUserScheduleRepository,
       mockCompanyHolidayRepository,
       mockSystemSettingsRepository,
-      mockWbsRepository
+      mockWbsRepository,
+      mockSteadyWorkPlanRepository
     );
   });
+
+  /** 定常枠（PER_DAY）とその所属タスク。findActiveByWbsIds は要求されたWBSのものだけ返す */
+  const createSteadyPlan = (args: {
+    planId: number;
+    taskId: number;
+    wbsId: number;
+    assigneeId: number;
+    hoursPerDay: number;
+    name?: string;
+  }): SteadyWorkPlanWithTask => ({
+    plan: SteadyWorkPlan.createFromDb({
+      id: args.planId,
+      taskId: args.taskId,
+      unit: 'PER_DAY',
+      hours: args.hoursPerDay,
+      validFrom: new Date(2024, 0, 1),
+    }),
+    task: { id: args.taskId, name: args.name ?? `定常${args.taskId}`, wbsId: args.wbsId, assigneeId: args.assigneeId },
+  });
+
+  const stubSteadyPlans = (plans: SteadyWorkPlanWithTask[]) => {
+    mockSteadyWorkPlanRepository.findActiveByWbsIds.mockImplementation(async (wbsIds: number[]) =>
+      plans.filter(entry => wbsIds.includes(entry.task.wbsId))
+    );
+  };
 
   const createTask = (args: {
     id: number;
@@ -392,6 +427,149 @@ describe('CrossWbsWorkloadService', () => {
 
       expect(result.size).toBe(0);
       expect(mockTaskRepository.findActiveByWbsIds).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * 常設プロジェクト（定常枠）の反映。docs/plans/non-project-work-management.md §6.4, §11.3
+   * - 定常枠を持つタスクは枠で配分し、YOTEI 按分の対象から外す（二重計上しない）
+   * - 枠だけの担当者も行に出す。常設分は projectName ラベル付き
+   */
+  describe('常設プロジェクトの定常枠', () => {
+    const STANDING_WBS_ID = 33;
+
+    it('横断ページ: 定常枠の配分を常設プロジェクト名のラベル付きで合算する', async () => {
+      mockTargetWbsQueryRepository.findTargetWbs.mockResolvedValue([
+        { wbsId: 11, wbsName: 'WBS-A', projectId: 'p1', projectName: 'PJ-A' },
+        { wbsId: STANDING_WBS_ID, wbsName: '社内業務', projectId: 'p-standing', projectName: '社内業務' },
+      ]);
+      mockWbsAssigneeRepository.findByWbsIds.mockResolvedValue([
+        createAssignee({ id: 101, wbsId: 11, userId: 'user-1', name: '山田太郎' }),
+        createAssignee({ id: 303, wbsId: STANDING_WBS_ID, userId: 'user-1', name: '山田太郎', rate: 0.2 }),
+      ]);
+      mockTaskRepository.findActiveByWbsIds.mockResolvedValue([
+        createTask({ id: 1, wbsId: 11, assigneeId: 101, startDate: MON, endDate: MON, kosu: 5 }),
+      ]);
+      // 定常タスク(7)は YOTEI 期間を持たないため findActiveByWbsIds には現れない
+      stubSteadyPlans([
+        createSteadyPlan({ planId: 1, taskId: 7, wbsId: STANDING_WBS_ID, assigneeId: 303, hoursPerDay: 1, name: '社内雑務' }),
+      ]);
+
+      const result = await service.getCrossProjectUserWorkloads(MON, FRI);
+
+      expect(result).toHaveLength(1);
+      const user1 = result[0];
+      const mon = dayOf(user1, MON);
+      // PJ-A 5h + 定常 1h（参画率0.2は見ない）
+      expect(mon.allocatedHours).toBeCloseTo(6, 5);
+      expect(mon.taskAllocations.map(t => [t.taskName, t.projectName])).toEqual([
+        ['タスク1', 'PJ-A'],
+        ['社内雑務', '社内業務'],
+      ]);
+      // 定常枠は期間中の稼働日ごとに続く
+      expect(dayOf(user1, TUE).allocatedHours).toBeCloseTo(1, 5);
+      expect(dayOf(user1, FRI).allocatedHours).toBeCloseTo(1, 5);
+      expect(mockSteadyWorkPlanRepository.findActiveByWbsIds).toHaveBeenCalledWith(
+        [11, STANDING_WBS_ID],
+        { start: MON, end: FRI }
+      );
+    });
+
+    it('定常枠を持つタスクは YOTEI の工数で按分せず、枠の値だけを使う（二重計上しない）', async () => {
+      mockTargetWbsQueryRepository.findTargetWbs.mockResolvedValue([
+        { wbsId: STANDING_WBS_ID, wbsName: '社内業務', projectId: 'p-standing', projectName: '社内業務' },
+      ]);
+      mockWbsAssigneeRepository.findByWbsIds.mockResolvedValue([
+        createAssignee({ id: 303, wbsId: STANDING_WBS_ID, userId: 'user-1', name: '山田太郎' }),
+      ]);
+      // 同じタスク(8)に YOTEI(月〜金 10h) と定常枠(1h/日)の両方がある
+      mockTaskRepository.findActiveByWbsIds.mockResolvedValue([
+        createTask({ id: 8, wbsId: STANDING_WBS_ID, assigneeId: 303, startDate: MON, endDate: FRI, kosu: 10 }),
+      ]);
+      stubSteadyPlans([
+        createSteadyPlan({ planId: 2, taskId: 8, wbsId: STANDING_WBS_ID, assigneeId: 303, hoursPerDay: 1 }),
+      ]);
+
+      const result = await service.getCrossProjectUserWorkloads(MON, FRI);
+
+      const mon = dayOf(result[0], MON);
+      expect(mon.allocatedHours).toBeCloseTo(1, 5);
+      expect(mon.taskAllocations).toHaveLength(1);
+    });
+
+    it('定常枠だけを持つ担当者も行として返す', async () => {
+      mockTargetWbsQueryRepository.findTargetWbs.mockResolvedValue([
+        { wbsId: STANDING_WBS_ID, wbsName: '社内業務', projectId: 'p-standing', projectName: '社内業務' },
+      ]);
+      mockWbsAssigneeRepository.findByWbsIds.mockResolvedValue([
+        createAssignee({ id: 305, wbsId: STANDING_WBS_ID, userId: 'user-5', name: '鈴木一郎' }),
+      ]);
+      mockTaskRepository.findActiveByWbsIds.mockResolvedValue([]);
+      stubSteadyPlans([
+        createSteadyPlan({ planId: 3, taskId: 9, wbsId: STANDING_WBS_ID, assigneeId: 305, hoursPerDay: 2 }),
+      ]);
+
+      const result = await service.getCrossProjectUserWorkloads(MON, FRI);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].assigneeId).toBe('user-5');
+      expect(dayOf(result[0], MON).allocatedHours).toBeCloseTo(2, 5);
+      expect(dayOf(result[0], MON).taskAllocations[0].projectName).toBe('社内業務');
+    });
+
+    it('WBS内トグル: 現WBS（常設）の定常枠はラベルなし、他の常設プロジェクトの定常枠はラベル付きで合算する', async () => {
+      const CURRENT_WBS_ID = 10;
+      mockWbsRepository.findById.mockResolvedValue(
+        Wbs.createFromDb({ id: CURRENT_WBS_ID, name: '保守X', projectId: 'p-cur' })
+      );
+      mockTargetWbsQueryRepository.findTargetWbs.mockResolvedValue([
+        { wbsId: CURRENT_WBS_ID, wbsName: '保守X', projectId: 'p-cur', projectName: '保守X' },
+        { wbsId: STANDING_WBS_ID, wbsName: '社内業務', projectId: 'p-standing', projectName: '社内業務' },
+      ]);
+      mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([
+        createAssignee({ id: 100, wbsId: CURRENT_WBS_ID, userId: 'user-1', name: '山田太郎' }),
+      ]);
+      mockTaskRepository.findByWbsId.mockResolvedValue([]);
+      mockWbsAssigneeRepository.findByWbsIds.mockResolvedValue([
+        createAssignee({ id: 303, wbsId: STANDING_WBS_ID, userId: 'user-1', name: '山田太郎' }),
+      ]);
+      mockTaskRepository.findActiveByWbsIds.mockResolvedValue([]);
+      stubSteadyPlans([
+        createSteadyPlan({ planId: 4, taskId: 20, wbsId: CURRENT_WBS_ID, assigneeId: 100, hoursPerDay: 2, name: '保守対応' }),
+        createSteadyPlan({ planId: 5, taskId: 7, wbsId: STANDING_WBS_ID, assigneeId: 303, hoursPerDay: 1, name: '社内雑務' }),
+      ]);
+
+      const result = await service.getWbsWorkloadsWithExternal(CURRENT_WBS_ID, MON, FRI);
+
+      expect(result).toHaveLength(1);
+      const mon = dayOf(result[0].workload, MON);
+      expect(mon.allocatedHours).toBeCloseTo(3, 5);
+      expect(mon.taskAllocations.map(t => [t.taskName, t.projectName])).toEqual([
+        ['保守対応', undefined],
+        ['社内雑務', '社内業務'],
+      ]);
+    });
+
+    it('外部配分セット: 常設プロジェクトの定常枠もユーザーIDごとのラベル付きセットに含める', async () => {
+      mockTargetWbsQueryRepository.findTargetWbs.mockResolvedValue([
+        { wbsId: STANDING_WBS_ID, wbsName: '社内業務', projectId: 'p-standing', projectName: '社内業務' },
+      ]);
+      mockWbsAssigneeRepository.findByWbsIds.mockResolvedValue([
+        createAssignee({ id: 303, wbsId: STANDING_WBS_ID, userId: 'user-1', name: '山田太郎' }),
+      ]);
+      mockTaskRepository.findActiveByWbsIds.mockResolvedValue([]);
+      stubSteadyPlans([
+        createSteadyPlan({ planId: 6, taskId: 7, wbsId: STANDING_WBS_ID, assigneeId: 303, hoursPerDay: 1 }),
+      ]);
+
+      const sets = await service.getExternalAllocationSets({ startDate: MON, endDate: FRI, userIds: ['user-1'] });
+
+      const user1Sets = sets.get('user-1')!;
+      expect(user1Sets).toHaveLength(1);
+      expect(user1Sets[0].wbsId).toBe(STANDING_WBS_ID);
+      expect(user1Sets[0].projectName).toBe('社内業務');
+      const mon = user1Sets[0].dailyAllocations.find(d => d.date.toDateString() === MON.toDateString())!;
+      expect(mon.allocatedHours).toBeCloseTo(1, 5);
     });
   });
 });
