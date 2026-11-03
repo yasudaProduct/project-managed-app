@@ -1,4 +1,7 @@
 import { ProjectStatus } from "./project-status";
+import type { ProjectKind, StandingCategory } from "@/types/project";
+
+const CATEGORY_ONLY_FOR_STANDING = "分類は常設プロジェクトのみ設定できます";
 
 export class Project {
     public readonly id?: string;
@@ -7,14 +10,31 @@ export class Project {
     public description?: string;
     public startDate: Date;
     public endDate: Date;
+    /** 種別。案件（PROJECT）/ 常設（STANDING）。作成後は変更しない */
+    public readonly kind: ProjectKind;
+    /** 常設プロジェクトの分類（常設のみ） */
+    public category?: StandingCategory;
 
-    private constructor(args: { id?: string; name: string; status?: ProjectStatus; description?: string; startDate: Date; endDate: Date }) {
+    private constructor(args: {
+        id?: string;
+        name: string;
+        status?: ProjectStatus;
+        description?: string;
+        startDate: Date;
+        endDate: Date;
+        kind?: ProjectKind;
+        category?: StandingCategory;
+    }) {
         this.id = args.id;
         this.name = args.name;
         this.status = args.status ?? new ProjectStatus({ status: 'INACTIVE' });
         this.description = args.description;
         this.startDate = args.startDate;
         this.endDate = args.endDate;
+        this.kind = args.kind ?? 'PROJECT';
+        this.category = args.category;
+
+        this.validateCategory();
     }
 
     public isEqual(project: Project) {
@@ -24,16 +44,37 @@ export class Project {
         return this.id === project.id;
     }
 
-    public static create(args: { name: string; description?: string; startDate: Date; endDate: Date }): Project {
+    public static create(args: {
+        name: string;
+        description?: string;
+        startDate: Date;
+        endDate: Date;
+        kind?: ProjectKind;
+        category?: StandingCategory;
+    }): Project {
         return new Project(args);
     }
 
-    public static createFromDb(args: { id: string; name: string; status: ProjectStatus, description?: string; startDate: Date; endDate: Date }): Project {
+    public static createFromDb(args: {
+        id: string;
+        name: string;
+        status: ProjectStatus;
+        description?: string;
+        startDate: Date;
+        endDate: Date;
+        kind?: ProjectKind;
+        category?: StandingCategory;
+    }): Project {
         return new Project(args);
     }
 
     public getStatus() {
         return this.status.status;
+    }
+
+    /** 常設プロジェクト（定常・不定期作業の受け皿）か */
+    public isStanding(): boolean {
+        return this.kind === 'STANDING';
     }
 
     public updateName(name: string) {
@@ -60,6 +101,19 @@ export class Project {
 
     public updateStatus(status: ProjectStatus) {
         this.status = status;
+    }
+
+    public updateCategory(category: StandingCategory) {
+        if (!this.isStanding()) {
+            throw new Error(CATEGORY_ONLY_FOR_STANDING);
+        }
+        this.category = category;
+    }
+
+    private validateCategory() {
+        if (this.category !== undefined && !this.isStanding()) {
+            throw new Error(CATEGORY_ONLY_FOR_STANDING);
+        }
     }
 
 }
