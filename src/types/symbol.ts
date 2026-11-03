@@ -128,6 +128,10 @@ export const SYMBOL = {
     ICrossWbsWorkloadService: Symbol.for('ICrossWbsWorkloadService'),
     ITargetWbsQueryRepository: Symbol.for('ITargetWbsQueryRepository'),
 
+    // Standing Work（常設プロジェクトの定常枠）
+    ISteadyWorkPlanRepository: Symbol.for('ISteadyWorkPlanRepository'),
+    IStandingWorkApplicationService: Symbol.for('IStandingWorkApplicationService'),
+
 
     // Infrastructure
     PrismaClient: Symbol.for('PrismaClient'),

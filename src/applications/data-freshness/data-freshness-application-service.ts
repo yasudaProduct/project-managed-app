@@ -16,6 +16,8 @@ import type { IUserScheduleRepository } from '@/applications/calendar/iuser-sche
 import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
 import type { ISyncLogRepository } from '@/applications/wbs-sync/isync-log-repository';
+import type { ISteadyWorkPlanRepository } from '@/applications/standing-work/isteady-work-plan-repository';
+import type { SteadyWorkPlan } from '@/domains/standing-work/steady-work-plan';
 
 /** 入力漏れを確認する営業日数（前日まで）。毎日入力する運用で、2週間分見れば漏れに気づける */
 export const MISSING_ENTRY_CHECK_BUSINESS_DAYS = 10;
@@ -77,7 +79,9 @@ export class DataFreshnessApplicationService implements IDataFreshnessApplicatio
     @inject(SYMBOL.ISystemSettingsRepository)
     private readonly systemSettingsRepository: ISystemSettingsRepository,
     @inject(SYMBOL.ISyncLogRepository)
-    private readonly syncLogRepository: ISyncLogRepository
+    private readonly syncLogRepository: ISyncLogRepository,
+    @inject(SYMBOL.ISteadyWorkPlanRepository)
+    private readonly steadyWorkPlanRepository: ISteadyWorkPlanRepository
   ) {}
 
   public async getDataFreshness(
@@ -86,10 +90,12 @@ export class DataFreshnessApplicationService implements IDataFreshnessApplicatio
     options: GetDataFreshnessOptions = {}
   ): Promise<DataFreshnessDto> {
     const today = calendarDateInTimeZone(options.now ?? new Date());
-    const [tasks, assignees, lastSync] = await Promise.all([
+    const [tasks, assignees, lastSync, steadyPlans] = await Promise.all([
       this.taskRepository.findActiveByWbsId(wbsId),
       this.wbsAssigneeRepository.findByWbsId(wbsId),
       this.syncLogRepository.getLastSync(projectId),
+      // 常設プロジェクトの定常枠は有効期間を予定期間とみなす
+      this.steadyWorkPlanRepository.findByWbsId(wbsId),
     ]);
 
     return {
@@ -98,6 +104,7 @@ export class DataFreshnessApplicationService implements IDataFreshnessApplicatio
         : null,
       entryCheck: await this.checkWorkEntries(
         tasks,
+        steadyPlans,
         assignees.map((assignee) => ({
           userId: assignee.userId,
           name: assignee.userName ?? assignee.userId,
@@ -110,6 +117,7 @@ export class DataFreshnessApplicationService implements IDataFreshnessApplicatio
 
   private async checkWorkEntries(
     tasks: Task[],
+    steadyPlans: SteadyWorkPlan[],
     assignees: Array<{ userId: string; name: string }>,
     today: Date
   ): Promise<DataFreshnessDto['entryCheck']> {
@@ -148,7 +156,7 @@ export class DataFreshnessApplicationService implements IDataFreshnessApplicatio
       assignees: assignees.map((assignee) => {
         const missingDates = findMissingWorkEntryDates({
           businessDays,
-          plannedPeriods: this.plannedPeriodsOf(tasks, assignee.userId),
+          plannedPeriods: this.plannedPeriodsOf(tasks, steadyPlans, assignee.userId, today),
           recordedDateKeys: new Set(
             dailyHours
               .filter((row) => row.userId === assignee.userId && row.hours > 0)
@@ -173,13 +181,23 @@ export class DataFreshnessApplicationService implements IDataFreshnessApplicatio
     };
   }
 
-  private plannedPeriodsOf(tasks: Task[], userId: string): PlannedPeriod[] {
+  /** 担当者の予定期間 = 担当タスクの YOTEI 期間 + 担当タスクの定常枠の有効期間（無期限は今日まで） */
+  private plannedPeriodsOf(
+    tasks: Task[],
+    steadyPlans: SteadyWorkPlan[],
+    userId: string,
+    today: Date
+  ): PlannedPeriod[] {
     const periods: PlannedPeriod[] = [];
     for (const task of tasks) {
       if (task.assignee?.userId !== userId) continue;
       const start = task.getYoteiStart();
       const end = task.getYoteiEnd();
       if (start && end) periods.push({ start, end });
+      for (const plan of steadyPlans) {
+        if (plan.taskId !== task.id) continue;
+        periods.push({ start: plan.validFrom, end: plan.validTo ?? today });
+      }
     }
     return periods;
   }

@@ -25,9 +25,10 @@ export class EstimationAccuracyQueryRepository implements IEstimationAccuracyQue
   ) {}
 
   async listCompletedTaskEstimates(): Promise<CompletedTaskEstimate[]> {
-    // 振り返りが目的のため、完了済みプロジェクトも対象にする（中止のみ除く）
+    // 振り返りが目的のため、完了済みプロジェクトも対象にする（中止のみ除く）。
+    // 常設プロジェクト（定常・不定期作業の受け皿）は見積精度の対象外。
     const projects = await this.prisma.projects.findMany({
-      where: { status: { not: "CANCELLED" } },
+      where: { status: { not: "CANCELLED" }, kind: "PROJECT" },
       orderBy: { startDate: "asc" },
       select: {
         id: true,

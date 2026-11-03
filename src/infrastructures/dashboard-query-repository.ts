@@ -12,7 +12,8 @@ import prisma from "@/lib/prisma/prisma";
 @injectable()
 export class DashboardQueryRepository implements IDashboardQueryRepository {
     async getProjectStatistics(): Promise<ProjectStatistics> {
-        const projects = await prisma.projects.findMany();
+        // 常設プロジェクト（定常・不定期作業の受け皿）は案件数に含めない
+        const projects = await prisma.projects.findMany({ where: { kind: "PROJECT" } });
         return {
             total: projects.length,
             active: projects.filter(project => project.status === "ACTIVE").length,
@@ -41,7 +42,8 @@ export class DashboardQueryRepository implements IDashboardQueryRepository {
         // TODO: 実際の実装では、Prismaを使用してアクティブプロジェクトを取得
         const activeProjects = await prisma.projects.findMany({
             where: {
-                status: "ACTIVE"
+                status: "ACTIVE",
+                kind: "PROJECT"
             },
             include: {
                 wbs: true
@@ -106,6 +108,7 @@ export class DashboardQueryRepository implements IDashboardQueryRepository {
         const projects = await prisma.projects.findMany({
             where: {
                 status: 'ACTIVE',
+                kind: 'PROJECT',
                 endDate: {
                     gte: today,
                     lte: new Date(futureDate)
@@ -126,6 +129,7 @@ export class DashboardQueryRepository implements IDashboardQueryRepository {
         const overdueProjects = await prisma.projects.findMany({
             where: {
                 status: "ACTIVE",
+                kind: "PROJECT",
                 endDate: {
                     lt: today
                 }
