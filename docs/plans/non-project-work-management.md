@@ -304,7 +304,7 @@ Step 1 と 2 は同時に進めてもよい。Step 0 は開発の前に **実際
 
 ## 11. 実装設計（Step 1・2）
 
-- ステータス: **実装中**（2026-11-03。ブランチ `feature/non-project-work`）
+- ステータス: **実装済み**（2026-11-03。ブランチ `feature/non-project-work`。統合テスト `src/__integration_tests__/infrastructures/steady-work-plan-repository.test.ts` を含む）
 - 対象: [§7](#7-段階的な進め方ロードマップ案) の Step 1（種別と除外ルール）と Step 2（定常枠と負荷への反映）。Step 3（予定／実績切替・実績タブ・割込み作業ダイアログ）と Step 4 は対象外
 - 進め方: TDD（テストを先に書いて失敗を確認してからコミットし、実装でテストを通す）。既存機能は「種別 = 案件（`PROJECT`）」の挙動を一切変えない
 
@@ -361,4 +361,14 @@ model SteadyWorkPlan {            // @@map("steady_work_plan")
 | domain | `src/__tests__/domains/project/project.test.ts`（種別・分類の不変条件）、`src/__tests__/domains/standing-work/steady-work-plan.test.ts`、`steady-work-allocation-service.test.ts`（稼働日のみ・休日/全日休暇 0・月按分・有効期間の端・通常タスクとのマージ） |
 | application | `src/__tests__/applications/standing-work/standing-work-application-service.test.ts`、既存の `cross-wbs-workload-service.test.ts` / `assignee-gantt.service.test.ts` / `portfolio-application-service.test.ts` / `notification-event-detector.test.ts` / `data-freshness-application-service.test.ts` / `project-application-service.test.ts` への追加 |
 | UI | `src/__tests__/actions/steady-work-plan-actions.test.ts`、`src/__tests__/actions/projects-actions.test.ts`、`src/__tests__/components/wbs/wbs-tabs.test.ts`、`src/__tests__/components/standing-work/steady-work-plan-panel.test.tsx` |
-| 統合 | `SteadyWorkPlanRepository` の統合テストは DB が必要なため、本ブランチでは作成のみ（CI/ローカルで実行） |
+| 統合 | `src/__integration_tests__/infrastructures/steady-work-plan-repository.test.ts`（往復・範囲交差・タスク削除時のカスケード） |
+
+### 11.5 実装状況（2026-11-03）
+
+| 項目 | 状況 |
+|---|---|
+| Step 1: 種別（`Projects.kind` / `category`）、プロジェクト作成・一覧の種別対応、案件分析からの除外（ポートフォリオ・通知・見積精度・ダッシュボード）、常設 WBS のタブ構成 | 実装済み |
+| Step 2: 定常枠（`steady_work_plan`）、定常枠タブ（定常タスク追加・枠の追加/編集/削除）、担当者負荷（横断・WBS内・単一WBS）と他WBS考慮スケジューリングへの反映、入力漏れ判定への反映 | 実装済み |
+| Step 3: 予定／実績の切替表示・実績タブ・「割込み作業を追加」 | 未着手（単発タスクは既存のタスク登録で代替） |
+| Step 4: 保守契約の工数管理・Geppo 別名表 | 未着手 |
+| §9.1 Geppo の案件外行の取込挙動 | 未修正（別タスク） |
