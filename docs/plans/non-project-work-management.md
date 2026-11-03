@@ -235,6 +235,8 @@ model SteadyWorkPlan {
 
 Step 1 と 2 は同時に進めてもよい。Step 0 は開発の前に **実際の Geppo の案件外行がどの `PROJECT_ID` / `WBS_NO` で入っているか** を確かめる目的も兼ねる（§10 Q1）。
 
+Step 3・4 の詳細な実装計画（サブステップへの分割、仕様、設計、テスト、確認事項）は [実装計画: Step 3・Step 4](./non-project-work-step3-4-plan.md) を参照。
+
 ---
 
 ## 8. 既存コードへの主な影響（Step 1〜2）
@@ -369,6 +371,6 @@ model SteadyWorkPlan {            // @@map("steady_work_plan")
 |---|---|
 | Step 1: 種別（`Projects.kind` / `category`）、プロジェクト作成・一覧の種別対応、案件分析からの除外（ポートフォリオ・通知・見積精度・ダッシュボード）、常設 WBS のタブ構成 | 実装済み |
 | Step 2: 定常枠（`steady_work_plan`）、定常枠タブ（定常タスク追加・枠の追加/編集/削除）、担当者負荷（横断・WBS内・単一WBS）と他WBS考慮スケジューリングへの反映、入力漏れ判定への反映 | 実装済み |
-| Step 3: 予定／実績の切替表示・実績タブ・「割込み作業を追加」 | 未着手（単発タスクは既存のタスク登録で代替） |
-| Step 4: 保守契約の工数管理・Geppo 別名表 | 未着手 |
-| §9.1 Geppo の案件外行の取込挙動 | 未修正（別タスク） |
+| Step 3: 予定／実績の切替表示・実績タブ・「割込み作業を追加」 | 計画済み（[別紙](./non-project-work-step3-4-plan.md) 3-A〜3-C）。単発タスクは当面、既存のタスク登録で代替 |
+| Step 4: 保守契約の工数管理・Geppo 別名表 | 計画済み（[別紙](./non-project-work-step3-4-plan.md) 4-B・4-C） |
+| §9.1 Geppo の案件外行の取込挙動 | 未修正。[別紙](./non-project-work-step3-4-plan.md) 4-A として計画 |
