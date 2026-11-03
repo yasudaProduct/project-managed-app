@@ -5,10 +5,21 @@ import type { IUserRepository } from "@/applications/user/iuser-repository";
 import type { UserSchedule } from "@/domains/calendar/assignee-working-calendar";
 import type { ScheduleEntry } from "@/types/schedule";
 import type { scheduleTsvData } from "@/types/csv";
+import type { ImportOutlookScheduleInput, OutlookScheduleImportSummaryDto } from "@/types/outlook-calendar";
+import { utcDateKey } from "@/utils/date-util";
+import { parseOutlookCalendarRows } from "./outlook-calendar-row-parser";
+
+export type ImportOutlookSchedulesResult =
+    | { success: true; data: OutlookScheduleImportSummaryDto }
+    | { success: false; error: string };
 
 export interface IScheduleApplicationService {
     getSchedules(): Promise<ScheduleEntry[]>;
     importScheduleTsv(tsvData: scheduleTsvData[]): Promise<{ success: boolean; error?: string }>;
+    /**
+     * Outlook 予定表エクスポートの行を取り込み、選択ユーザーのファイル期間内の予定を置き換える
+     */
+    importOutlookSchedules(input: ImportOutlookScheduleInput): Promise<ImportOutlookSchedulesResult>;
 }
 
 const DATE_TIME_REGEX = /^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+\d{2}:\d{2}:\d{2}$/;
@@ -62,6 +73,47 @@ export class ScheduleApplicationService implements IScheduleApplicationService {
                 success: false,
                 error: error instanceof Error ? error.message : "不明なエラーが発生しました",
             };
+        }
+    }
+
+    public async importOutlookSchedules(input: ImportOutlookScheduleInput): Promise<ImportOutlookSchedulesResult> {
+        try {
+            const user = await this.userRepository.findById(input.userId);
+            if (!user) {
+                return { success: false, error: "取り込み先のユーザーが存在しません" };
+            }
+
+            const { events, errors } = parseOutlookCalendarRows(input.rows);
+            if (events.length === 0) {
+                const firstError = errors[0];
+                const detail = firstError ? `（${firstError.rowNumber}行目: ${firstError.message}）` : "";
+                return { success: false, error: `取り込める予定がありません${detail}` };
+            }
+
+            // 置換期間はスキップする予定も含めたファイル内の予定がカバーする期間とする
+            const ranges = events.map((event) => event.coveredDateRange());
+            const periodStart = new Date(Math.min(...ranges.map((range) => range.startDate.getTime())));
+            const periodEnd = new Date(Math.max(...ranges.map((range) => range.endDate.getTime())));
+
+            const blockingEvents = events.filter((event) => event.isBlocking());
+            const schedules = blockingEvents.flatMap((event) => event.toDailySchedules(input.userId));
+
+            await this.userScheduleRepository.replaceByUserIdAndDateRange(input.userId, periodStart, periodEnd, schedules);
+
+            return {
+                success: true,
+                data: {
+                    importedEventCount: blockingEvents.length,
+                    createdScheduleCount: schedules.length,
+                    skippedEventCount: events.length - blockingEvents.length,
+                    periodStart: utcDateKey(periodStart),
+                    periodEnd: utcDateKey(periodEnd),
+                    errors,
+                },
+            };
+        } catch (error) {
+            console.error("Outlook schedule import failed:", error);
+            return { success: false, error: "スケジュールのインポートに失敗しました" };
         }
     }
 

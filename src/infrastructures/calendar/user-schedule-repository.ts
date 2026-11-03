@@ -129,18 +129,36 @@ export class UserScheduleRepository implements IUserScheduleRepository {
       await tx.userSchedule.deleteMany({});
       if (schedules.length === 0) return;
 
-      await tx.userSchedule.createMany({
-        data: schedules.map((schedule) => ({
-          userId: schedule.userId,
-          date: schedule.date,
-          startTime: schedule.startTime,
-          endTime: schedule.endTime,
-          title: schedule.title,
-          location: schedule.location,
-          description: schedule.description,
-        })),
-      });
+      await tx.userSchedule.createMany({ data: schedules.map(this.toCreateData) });
     });
+  }
+
+  async replaceByUserIdAndDateRange(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    schedules: Omit<UserSchedule, "id">[]
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userSchedule.deleteMany({
+        where: { userId, date: { gte: startDate, lte: endDate } },
+      });
+      if (schedules.length === 0) return;
+
+      await tx.userSchedule.createMany({ data: schedules.map(this.toCreateData) });
+    });
+  }
+
+  private toCreateData(schedule: Omit<UserSchedule, "id">) {
+    return {
+      userId: schedule.userId,
+      date: schedule.date,
+      startTime: schedule.startTime,
+      endTime: schedule.endTime,
+      title: schedule.title,
+      location: schedule.location,
+      description: schedule.description,
+    };
   }
 
   private toDomain(schedule: {

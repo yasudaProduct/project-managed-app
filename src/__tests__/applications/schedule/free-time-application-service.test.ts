@@ -33,6 +33,7 @@ describe("FreeTimeApplicationService", () => {
       update: jest.fn(),
       delete: jest.fn(),
       replaceAll: jest.fn(),
+      replaceByUserIdAndDateRange: jest.fn(),
     };
 
     companyHolidayRepository = {

@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
 import type { IScheduleApplicationService } from "@/applications/schedule/schedule-application-service";
@@ -8,6 +9,7 @@ import type { IUserApplicationService } from "@/applications/user/user-applicati
 import type { scheduleTsvData } from "@/types/csv";
 import type { ScheduleEntry } from "@/types/schedule";
 import type { ActionResult } from "@/types/action-result";
+import type { ImportOutlookScheduleInput, OutlookScheduleImportSummaryDto } from "@/types/outlook-calendar";
 
 function getScheduleApplicationService(): IScheduleApplicationService {
     return container.get<IScheduleApplicationService>(SYMBOL.IScheduleApplicationService);
@@ -58,4 +60,55 @@ export async function importScheduleTsv(tsvData: scheduleTsvData[]): Promise<Act
     }
 
     return { success: true, data: undefined };
+}
+
+/** 1回のOutlookインポートで受け付ける最大行数（Server Actionの本文サイズ・処理時間の上限対策） */
+const MAX_OUTLOOK_IMPORT_ROWS = 10000;
+
+const optionalCell = z.string().optional();
+
+const importOutlookScheduleSchema = z.object({
+    userId: z.string().min(1, "取り込み先のユーザーを選択してください。"),
+    rows: z
+        .array(
+            z.object({
+                rowNumber: z.number().int().positive(),
+                subject: z.string(),
+                startDate: z.string(),
+                startTime: optionalCell,
+                endDate: optionalCell,
+                endTime: optionalCell,
+                allDay: optionalCell,
+                location: optionalCell,
+                description: optionalCell,
+                showTimeAs: optionalCell,
+            })
+        )
+        .min(1, "取り込むデータがありません。")
+        .max(
+            MAX_OUTLOOK_IMPORT_ROWS,
+            `一度に取り込める予定は${MAX_OUTLOOK_IMPORT_ROWS}件までです。期間を分けてエクスポートしてください。`
+        ),
+});
+
+/** 検証メッセージを利用者向けに出す項目（それ以外の形式不正は一般化したメッセージにする） */
+const USER_FACING_ISSUE_PATHS = new Set(["userId", "rows"]);
+
+export async function importOutlookSchedule(
+    input: ImportOutlookScheduleInput
+): Promise<ActionResult<OutlookScheduleImportSummaryDto>> {
+    const parsed = importOutlookScheduleSchema.safeParse(input);
+    if (!parsed.success) {
+        const issue = parsed.error.issues[0];
+        const isUserFacing = issue && issue.path.length === 1 && USER_FACING_ISSUE_PATHS.has(String(issue.path[0]));
+        return { success: false, error: isUserFacing ? issue.message : "入力値が不正です。" };
+    }
+
+    const result = await getScheduleApplicationService().importOutlookSchedules(parsed.data);
+    if (!result.success) {
+        return { success: false, error: result.error };
+    }
+
+    revalidatePath("/schedule");
+    return { success: true, data: result.data };
 }

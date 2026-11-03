@@ -86,6 +86,7 @@ describe('GetWbsSummaryHandler monthlyPhaseSummary (server-side pre-aggregation)
       update: jest.fn(),
       delete: jest.fn(),
       replaceAll: jest.fn(),
+      replaceByUserIdAndDateRange: jest.fn(),
     } as IUserScheduleRepository;
     assigneeRepo = {
       findById: jest.fn().mockResolvedValue(null),

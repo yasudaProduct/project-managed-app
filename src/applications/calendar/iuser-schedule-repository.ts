@@ -29,4 +29,14 @@ export interface IUserScheduleRepository {
    * 既存の全ユーザースケジュールを削除し、渡されたスケジュールで置き換える
    */
   replaceAll(schedules: Omit<UserSchedule, "id">[]): Promise<void>;
+
+  /**
+   * 指定ユーザーの指定期間（両端含む）のスケジュールを削除し、渡されたスケジュールで置き換える
+   */
+  replaceByUserIdAndDateRange(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    schedules: Omit<UserSchedule, "id">[]
+  ): Promise<void>;
 }
