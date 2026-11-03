@@ -16,7 +16,7 @@ jest.mock("@/lib/inversify.config", () => ({
 }));
 
 import { revalidatePath } from "next/cache";
-import { importOutlookSchedule } from "@/app/schedule/actions";
+import { getUsers, importOutlookSchedule } from "@/app/schedule/actions";
 import { container } from "@/lib/inversify.config";
 import { SYMBOL } from "@/types/symbol";
 import type { OutlookCalendarRowDto, OutlookScheduleImportSummaryDto } from "@/types/outlook-calendar";
@@ -26,6 +26,9 @@ describe("schedule actions", () => {
     getSchedules: jest.fn(),
     importScheduleTsv: jest.fn(),
     importOutlookSchedules: jest.fn(),
+  };
+  const mockUserService = {
+    getAllUsers: jest.fn(),
   };
 
   const row: OutlookCalendarRowDto = {
@@ -54,7 +57,20 @@ describe("schedule actions", () => {
     jest.clearAllMocks();
     (container.get as jest.Mock).mockImplementation((symbol: symbol) => {
       if (symbol === SYMBOL.IScheduleApplicationService) return mockScheduleService;
+      if (symbol === SYMBOL.IUserApplicationService) return mockUserService;
       throw new Error(`unexpected symbol: ${String(symbol)}`);
+    });
+  });
+
+  describe("getUsers", () => {
+    it("ファイル名との照合に使う表示名を含めてユーザー一覧を返し、原価は含めないこと", async () => {
+      mockUserService.getAllUsers.mockResolvedValue([
+        { id: "12345", name: "山田太郎", email: "yamada@example.com", displayName: "山田", costPerHour: 3000 },
+      ]);
+
+      const result = await getUsers();
+
+      expect(result).toEqual([{ id: "12345", name: "山田太郎", email: "yamada@example.com", displayName: "山田" }]);
     });
   });
 
