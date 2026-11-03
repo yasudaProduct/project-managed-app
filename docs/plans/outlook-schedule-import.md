@@ -64,12 +64,12 @@
 ```text
 UI  /schedule/import (page.tsx: Server Component でユーザー一覧取得)
  ├─ _components/outlook-import-form.tsx   ユーザー選択 + ファイル選択（react-hook-form + zod）
- ├─ _components/outlook-csv.ts            CSV テキスト → 行（必要列だけに絞って送信量を削減）
+ ├─ _components/outlook-csv.ts            CSV テキスト → 列名を正規化した行DTO（必要列だけに絞って送信量を削減）
  ├─ _components/tsv-import-form.tsx       既存 TSV 取込（page.tsx から移設）
  └─ src/utils/text-decoding.ts            Shift_JIS / UTF-8 自動判定
       ↓ Server Action importOutlookSchedule（Zod 検証, ActionResult, revalidatePath）
 Application  ScheduleApplicationService.importOutlookSchedules
- └─ outlook-calendar-csv-parser.ts        行 → CalendarEvent（列名ゆれ・日付時刻形式・公開方法の解釈）
+ └─ outlook-calendar-row-parser.ts        行DTO → CalendarEvent（日付時刻形式・公開方法の解釈）
       ↓
 Domain  CalendarEvent（値オブジェクト）
  ├─ isBlocking()            稼働を妨げる予定か（ルール2）
@@ -79,8 +79,8 @@ Domain  CalendarEvent（値オブジェクト）
 Infrastructure  UserScheduleRepository.replaceByUserIdAndDateRange（トランザクションで削除→一括作成）
 ```
 
-- 共有の列名定義（日本語/英語のエイリアス）は `src/types/outlook-calendar-csv.ts` に置き、UI（送信列の絞り込み）とアプリ層（解釈）で共有する。
-- Server Action の本文上限（既定 1MB）に配慮し、クライアント側で必要列だけに絞って送る（出席者一覧などの大きな列を落とす）。
+- 列名（日本語/英語の別名）の解決はファイル読込時（UI）に行い、Server Action には列名を正規化した行DTO（`OutlookCalendarRowDto`、`src/types/outlook-calendar.ts`）を送る。Server Action の境界で行の形を Zod で厳密に検証でき、値（日付・時刻・公開方法）の解釈はアプリ層に集約される。
+- Server Action の本文上限（既定 1MB）に配慮し、必要列だけを送る（出席者一覧などの大きな列を落とす）。
 
 ## 6. 取り込み結果（画面表示）
 
@@ -92,7 +92,7 @@ Infrastructure  UserScheduleRepository.replaceByUserIdAndDateRange（トラン�
 | Step | 対象 | テスト |
 |---|---|---|
 | 1 | Domain `CalendarEvent` | `src/__tests__/domains/calendar/calendar-event.test.ts` |
-| 2 | Application CSV パーサー | `src/__tests__/applications/schedule/outlook-calendar-csv-parser.test.ts` |
+| 2 | Application 行パーサー | `src/__tests__/applications/schedule/outlook-calendar-row-parser.test.ts` |
 | 3 | Repository / Application Service / Server Action | `user-schedule-repository.test.ts`・`schedule-application-service.test.ts`・`src/__tests__/actions/schedule-actions.test.ts` |
 | 4 | UI（文字コード判定・CSV 行変換・フォーム） | `src/__tests__/utils/text-decoding.test.ts`・`src/__tests__/app/schedule/*.test.ts(x)` |
 
@@ -101,4 +101,4 @@ Infrastructure  UserScheduleRepository.replaceByUserIdAndDateRange（トラン�
 - iCalendar（.ics）形式の取り込み（RRULE 展開・VTIMEZONE 解釈が必要）
 - Microsoft Graph API による予定表の自動同期
 - 全休タイトルの設定化（`FULL_DAY_OFF_TITLES` の TODO）
-- 「公開方法」の数値コードは公式仕様が見当たらないため、実データで差異が見つかった場合は `outlook-calendar-csv-parser.ts` のマッピングを修正する
+- 「公開方法」の数値コードは公式仕様が見当たらないため、実データで差異が見つかった場合は `outlook-calendar-row-parser.ts` のマッピングを修正する
