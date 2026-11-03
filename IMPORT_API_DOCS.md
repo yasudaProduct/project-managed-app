@@ -2,346 +2,230 @@
 
 ## 概要
 
-MySQLのWBSテーブルとGeppoテーブルからのインポート機能をCronやJenkinsからAPI呼び出しで実行できるエンドポイントです。
+外部のWBSデータ（MySQL の `wbs` テーブル）と実績（Geppo）を取り込む **インポートジョブ** のAPIです。
 
-## 環境変数
+- 呼び出し元を問いません。画面・定期インポート（cron）・Jenkins・curl のいずれからでも、同じAPIでインポートを実行できます。定期インポートの設定には依存しません。
+- **ジョブを作成するとインポートが実行されます。** 作成したジョブは実行待ち（`PENDING`）になり、実行中のジョブがなければ直ちに開始されます。
+- **ジョブは作成順に1件ずつ実行されます（並行実行はしません）。** 実行中のジョブが終わると、次の実行待ちジョブが自動で開始されます。
+  - WBSの洗い替えと実績取込を同時に行う、同じ対象を二重に取り込む、といった並行実行ではデータが壊れるためです。
+- 30分以上 `RUNNING` のままのジョブ（アプリの再起動などで処理が中断されたもの）は、タイムアウトとして `FAILED` になります。
 
-特別な環境変数の設定は不要です。
+### ジョブの状態
 
-## Geppoインポート API
+| 状態 | 説明 |
+|---|---|
+| `PENDING` | 実行待ち |
+| `RUNNING` | 実行中（同時に1件まで） |
+| `COMPLETED` | 完了 |
+| `FAILED` | 失敗（`errorDetails` に原因） |
+| `CANCELLED` | キャンセル（`PENDING` / `RUNNING` から） |
 
-### プロジェクト一覧取得
+### 認証
 
-**GET** `/api/import/geppo?targetMonth=2024-12`
+インポートジョブAPI（`/api/import-jobs`）は現在認証なしです。アプリをネットワークで保護してください。
+定期インポートの起動API（`/api/cron/import-schedules`）のみ `CRON_SECRET` による認証があります。
 
-指定された月の利用可能なプロジェクト一覧を取得します。
+### レスポンス形式
 
-#### パラメータ
+成功: `{ "success": true, "data": ..., "message"?: string, "timestamp": string }`
+失敗: `{ "success": false, "error": string, "errors"?: ..., "timestamp": string }`
 
-| パラメータ | 型 | 必須 | 説明 |
+日時はすべて ISO 8601（UTC）です。
+
+## エンドポイント一覧
+
+| メソッド | パス | 説明 |
+|---|---|---|
+| POST | `/api/import-jobs` | ジョブを作成する（＝インポートを実行する） |
+| GET | `/api/import-jobs/{id}` | ジョブの状態・結果を取得する |
+| GET | `/api/import-jobs` | ジョブ一覧を取得する（`?status=PENDING` / `?status=RUNNING` / `?userId=`） |
+| POST | `/api/import-jobs/{id}/execute` | 実行待ちのジョブを今すぐ開始する（通常は不要） |
+| POST | `/api/import-jobs/{id}/cancel` | ジョブをキャンセルする |
+| DELETE | `/api/import-jobs/{id}` | 実行中でないジョブを削除扱い（未完了ならキャンセル）にする |
+| GET | `/api/import-jobs/{id}/stream` | 進捗を Server-Sent Events で受け取る |
+| POST | `/api/cron/import-schedules` | 定期インポートを起動する（cron から毎分呼ぶ。`CRON_SECRET` 必須） |
+
+## ジョブの作成（インポートの実行）
+
+**POST** `/api/import-jobs`
+
+### リクエストボディ
+
+| フィールド | 型 | 必須 | 説明 |
 |---|---|---|---|
-| targetMonth | string | ✓ | インポート対象月 (YYYY-MM) |
+| `type` | `"WBS"` \| `"GEPPO"` | ✓ | WBS同期 / 実績（Geppo）取込 |
+| `wbsId` | number | WBS は ✓ | 対象WBSのID。GEPPO では任意（指定すると完了通知がそのWBSの担当者に届く） |
+| `targetMonth` | string | | GEPPO の対象月（`YYYY-MM`）。省略時は全期間 |
+| `targetProjectIds` | string[] | | GEPPO の対象WBS名（Geppo の `PROJECT_ID` と完全一致で照合）。省略時は全プロジェクト |
+| `options` | object | | WBS: `{ "syncMode": "diff" \| "replace" }`（既定 `diff`）。GEPPO: `{ "dryRun": true }` で保存せずに検証のみ |
 
-#### レスポンス例
+- `syncMode`
+  - `diff`（差分）: タスクNoで照合して追加・更新・削除します。既存タスクと実績の紐付けは保たれます。
+  - `replace`（洗い替え）: WBSのタスクをすべて削除して作り直します。**実績とタスクの紐付けが外れる**ため、続けて実績（GEPPO）を取り込み直してください。
+- GEPPO は対象月・対象WBSの実績を置き換えます（`replace`）。
 
-```json
-{
-  "success": true,
-  "data": {
-    "projects": [
-      {
-        "projectId": "1",
-        "projectName": "プロジェクトA",
-        "geppoProjectIds": ["100", "101"],
-        "recordCount": 150,
-        "userCount": 5,
-        "mappingStatus": "mapped"
-      }
-    ]
-  },
-  "message": "Projects retrieved successfully",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
+### レスポンス
 
-### インポート実行
-
-**POST** `/api/import/geppo`
-
-Geppoインポートを実行します。
-
-#### リクエストボディ
-
-```json
-{
-  "targetMonth": "2024-12",
-  "targetProjectNames": ["プロジェクトA", "プロジェクトB"],
-  "updateMode": "replace",
-  "dryRun": false,
-  "skipValidation": false
-}
-```
-
-#### パラメータ
-
-| パラメータ | 型 | 必須 | デフォルト | 説明 |
-|---|---|---|---|---|
-| targetMonth | string | ✓ | - | インポート対象月 (YYYY-MM) |
-| targetProjectNames | string[] | - | null | 対象プロジェクト名配列（未指定時は全プロジェクト） |
-| updateMode | string | - | "replace" | 更新モード（"replace"のみサポート） |
-| dryRun | boolean | - | false | ドライラン実行 |
-| skipValidation | boolean | - | false | バリデーションスキップ |
-
-#### レスポンス例
+`201 Created`（ジョブを作成した時点で返ります。完了は待ちません）
 
 ```json
 {
   "success": true,
   "data": {
-    "successCount": 145,
-    "createdCount": 145,
-    "updatedCount": 0,
-    "errorCount": 5,
-    "errors": [
-      {
-        "recordId": "user123 - 2024-12-01",
-        "message": "Invalid work hours",
-        "details": {
-          "memberId": "user123",
-          "date": "2024-12-01",
-          "originalError": {}
-        }
-      }
-    ],
-    "executionTime": 5432
+    "id": "cmvmqszxr000s7dgcblgfhe3z",
+    "type": "WBS",
+    "status": "PENDING",
+    "createdAt": "2026-10-24T18:39:01.000Z"
   },
-  "message": "Import completed successfully",
-  "timestamp": "2024-01-01T00:00:00.000Z"
+  "timestamp": "2026-10-24T18:39:01.010Z"
 }
 ```
 
-## WBSインポート API
-
-### WBS同期プレビュー取得
-
-**GET** `/api/import/wbs?wbsId=1`
-
-WBS同期のプレビュー情報を取得します。
-
-#### パラメータ
-
-| パラメータ | 型 | 必須 | 説明 |
-|---|---|---|---|
-| wbsId | number | ✓ | WBS ID |
-
-#### レスポンス例
-
-```json
-{
-  "success": true,
-  "data": {
-    "preview": {
-      "toAdd": 10,
-      "toUpdate": 5,
-      "toDelete": 2,
-      "validationErrors": [],
-      "newPhases": [
-        {
-          "name": "新フェーズ",
-          "code": "P001"
-        }
-      ],
-      "newUsers": [],
-      "details": {
-        "toAdd": [
-          {
-            "wbsId": "1.1",
-            "taskName": "新タスク",
-            "phase": "開発",
-            "assignee": "田中太郎"
-          }
-        ],
-        "toUpdate": [],
-        "toDelete": []
-      }
-    },
-    "lastSync": {
-      "syncedAt": "2024-01-01T00:00:00.000Z",
-      "recordCount": 15,
-      "syncStatus": "SUCCESS"
-    },
-    "wbsInfo": {
-      "id": 1,
-      "name": "プロジェクトA WBS",
-      "projectId": 1
-    }
-  },
-  "message": "WBS sync preview retrieved successfully",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### WBS同期実行
-
-**POST** `/api/import/wbs`
-
-WBS同期を実行します。
-
-#### リクエストボディ
-
-```json
-{
-  "wbsId": 1,
-  "syncMode": "replace",
-  "skipValidation": false
-}
-```
-
-#### パラメータ
-
-| パラメータ | 型 | 必須 | デフォルト | 説明 |
-|---|---|---|---|---|
-| wbsId | number | ✓ | - | WBS ID |
-| syncMode | string | - | "replace" | 同期モード（"replace"のみサポート） |
-| skipValidation | boolean | - | false | バリデーションスキップ |
-
-#### レスポンス例
-
-```json
-{
-  "success": true,
-  "data": {
-    "successCount": 17,
-    "createdCount": 10,
-    "updatedCount": 5,
-    "errorCount": 0,
-    "errors": [],
-    "executionTime": 2341
-  },
-  "message": "WBS sync completed successfully",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-## エラーレスポンス
-
-すべてのエラーは以下の形式で返されます：
+`400 Bad Request`（入力不正。例: WBS で `wbsId` がない、`targetMonth` が `YYYY-MM` でない）
 
 ```json
 {
   "success": false,
-  "error": "Error message",
-  "timestamp": "2024-01-01T00:00:00.000Z"
+  "error": "リクエストが不正です",
+  "errors": { "wbsId": ["WBSのインポートには wbsId が必要です"] },
+  "timestamp": "2026-10-24T18:39:01.010Z"
 }
 ```
 
-### HTTPステータスコード
+## ジョブの状態・結果の取得
 
-| コード | 説明 |
-|---|---|
-| 200 | 成功 |
-| 400 | リクエストパラメータエラー |
-| 404 | リソースが見つからない |
-| 422 | バリデーションエラー |
-| 500 | サーバーエラー |
+**GET** `/api/import-jobs/{id}`
 
-## Cronでの使用例
-
-### Geppoインポートの定期実行
-
-```bash
-# 毎月1日の午前2時に前月のデータをインポート
-0 2 1 * * /usr/bin/curl -X POST \
-  -H "Content-Type: application/json" \
-  -d '{
-    "targetMonth": "'$(date -d "last month" +%Y-%m)'",
-    "updateMode": "replace",
-    "skipValidation": false
-  }' \
-  https://your-domain.com/api/import/geppo
-```
-
-### WBSインポートの定期実行
-
-```bash
-# 毎日午前3時にWBS同期
-0 3 * * * /usr/bin/curl -X POST \
-  -H "Content-Type: application/json" \
-  -d '{
+```json
+{
+  "success": true,
+  "data": {
+    "id": "cmvmqszxr000s7dgcblgfhe3z",
+    "type": "WBS",
+    "status": "COMPLETED",
+    "progress": 0,
+    "totalRecords": 0,
+    "processedRecords": 0,
+    "successCount": 0,
+    "errorCount": 0,
+    "createdAt": "2026-10-24T18:39:01.000Z",
+    "startedAt": "2026-10-24T18:39:01.100Z",
+    "completedAt": "2026-10-24T18:39:02.000Z",
     "wbsId": 1,
-    "syncMode": "replace",
-    "skipValidation": true
-  }' \
-  https://your-domain.com/api/import/wbs
+    "errorDetails": null,
+    "result": { "recordCount": 21, "addedCount": 0, "updatedCount": 21, "deletedCount": 0 }
+  },
+  "timestamp": "2026-10-24T18:39:05.000Z"
+}
 ```
 
-## Jenkinsでの使用例
+`status` が `COMPLETED` / `FAILED` / `CANCELLED` になれば終了です。`404` はジョブが存在しない場合です。
 
-### Jenkinsfile (Geppoインポート)
+## 実行待ちのジョブを今すぐ開始
+
+**POST** `/api/import-jobs/{id}/execute`
+
+ジョブは作成時に自動で開始・順番待ちされるため、通常は呼ぶ必要はありません。
+
+| ステータス | 説明 |
+|---|---|
+| `200` | 開始した（`{ "started": true, "queued": false }`） |
+| `202` | 他のジョブが実行中のため実行待ちのまま。完了後に順番に開始される（`{ "started": false, "queued": true }`） |
+| `404` | ジョブが存在しない |
+| `409` | 実行待ちのジョブではない（既に開始・終了・キャンセル済み） |
+
+## 定期インポートの起動
+
+**POST** `/api/cron/import-schedules`（ヘッダー `Authorization: Bearer <CRON_SECRET>`）
+
+WBS画面の「設定」タブで設定した定期インポートのうち、期限が来たものをジョブとして登録し、実行待ちのジョブを開始します。cron コンテナ（`docker/cron/run-import-scheduler.sh`）が毎分呼び出します。
+
+```json
+{ "success": true, "data": { "isSkipped": false, "createdJobIds": ["cmv..."] }, "timestamp": "..." }
+```
+
+`isSkipped: true` は、システム設定で定期インポートが停止中のためジョブを作成しなかったことを表します。
+
+## 使用例
+
+### curl
+
+```bash
+BASE_URL=http://localhost:3000
+
+# WBS（ID: 1）を差分同期する
+curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"type":"WBS","wbsId":1,"options":{"syncMode":"diff"}}' \
+  "$BASE_URL/api/import-jobs"
+
+# WBS「新規機能開発A」の 2026-09 の実績を取り込む
+curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"type":"GEPPO","wbsId":1,"targetMonth":"2026-09","targetProjectIds":["新規機能開発A"]}' \
+  "$BASE_URL/api/import-jobs"
+
+# 全プロジェクトの 2026-09 の実績を取り込む
+curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"type":"GEPPO","targetMonth":"2026-09"}' \
+  "$BASE_URL/api/import-jobs"
+
+# 状態を確認する
+curl -s "$BASE_URL/api/import-jobs/<ジョブID>"
+```
+
+### 完了まで待つ（シェルスクリプト）
+
+```bash
+#!/bin/bash
+set -e
+BASE_URL="${BASE_URL:-http://localhost:3000}"
+
+job_id=$(curl -sf -X POST -H 'Content-Type: application/json' \
+  -d '{"type":"WBS","wbsId":1}' "$BASE_URL/api/import-jobs" \
+  | grep -o '"id":"[^"]*"' | head -n 1 | cut -d '"' -f4)
+
+for _ in $(seq 1 60); do
+  status=$(curl -sf "$BASE_URL/api/import-jobs/$job_id" \
+    | grep -o '"status":"[^"]*"' | head -n 1 | cut -d '"' -f4)
+  case "$status" in
+    COMPLETED) echo "completed"; exit 0 ;;
+    FAILED|CANCELLED) echo "finished with $status"; exit 1 ;;
+  esac
+  sleep 30
+done
+echo "timeout"; exit 2
+```
+
+### Jenkins（Declarative Pipeline）
 
 ```groovy
 pipeline {
-    agent any
-    
-    environment {
-        API_KEY = credentials('api-key')
-        BASE_URL = 'https://your-domain.com'
-    }
-    
-    triggers {
-        cron('0 2 1 * *') // 毎月1日の午前2時
-    }
-    
-    stages {
-        stage('Geppo Import') {
-            steps {
-                script {
-                    def targetMonth = sh(
-                        script: "date -d 'last month' +%Y-%m",
-                        returnStdout: true
-                    ).trim()
-                    
-                    def response = httpRequest(
-                        httpMode: 'POST',
-                        url: "${BASE_URL}/api/import/geppo",
-                        customHeaders: [
-                            [name: 'Content-Type', value: 'application/json']
-                        ],
-                        requestBody: """
-                        {
-                            "targetMonth": "${targetMonth}",
-                            "updateMode": "replace",
-                            "skipValidation": false
-                        }
-                        """
-                    )
-                    
-                    def result = readJSON text: response.content
-                    
-                    if (!result.success) {
-                        error("Import failed: ${result.error}")
-                    }
-                    
-                    echo "Import completed: ${result.data.successCount} records processed"
-                }
+  agent any
+  environment { BASE_URL = 'http://app.example.local:3000' }
+  stages {
+    stage('Import') {
+      steps {
+        script {
+          def created = readJSON text: httpRequest(
+            httpMode: 'POST',
+            url: "${BASE_URL}/api/import-jobs",
+            contentType: 'APPLICATION_JSON',
+            requestBody: '{"type":"WBS","wbsId":1,"options":{"syncMode":"diff"}}',
+            validResponseCodes: '201'
+          ).content
+          def jobId = created.data.id
+
+          timeout(time: 30, unit: 'MINUTES') {
+            waitUntil(initialRecurrencePeriod: 15000) {
+              def job = readJSON text: httpRequest(url: "${BASE_URL}/api/import-jobs/${jobId}").content
+              if (job.data.status in ['FAILED', 'CANCELLED']) {
+                error("Import job ${jobId} finished with ${job.data.status}")
+              }
+              return job.data.status == 'COMPLETED'
             }
+          }
         }
+      }
     }
-    
-    post {
-        success {
-            emailext(
-                subject: "Geppo Import Successful",
-                body: "Monthly Geppo import completed successfully.",
-                to: "admin@company.com"
-            )
-        }
-        failure {
-            emailext(
-                subject: "Geppo Import Failed",
-                body: "Monthly Geppo import failed. Check Jenkins logs for details.",
-                to: "admin@company.com"
-            )
-        }
-    }
+  }
 }
 ```
-
-
-## セキュリティ考慮事項
-
-1. **ログ監視**: APIアクセスログを監視し、異常なアクセスを検知してください
-2. **ネットワーク制限**: 必要に応じてファイアウォール等でアクセス制御を行ってください
-
-## トラブルシューティング
-
-### よくあるエラー
-
-1. **422 Validation failed**: データの整合性エラー、バリデーションログを確認
-2. **500 Internal server error**: サーバー側エラー、ログを確認
-
-### デバッグ方法
-
-1. まずGETエンドポイントでデータを確認
-2. `dryRun: true`でテスト実行
-3. `skipValidation: true`でバリデーションエラーを回避（注意して使用）

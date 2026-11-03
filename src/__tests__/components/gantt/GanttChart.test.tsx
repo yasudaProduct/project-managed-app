@@ -1013,3 +1013,59 @@ describe("GanttChart", () => {
     });
   });
 });
+
+describe("基準バー（基準日程からのずれ）", () => {
+  const baselineTask = [
+    makeTask({
+      id: "1",
+      name: "タスクA",
+      category: "設計",
+      startDate: new Date("2024-01-03T00:00:00.000Z"),
+      endDate: new Date("2024-01-06T00:00:00.000Z"),
+      baselineStartDate: new Date("2024-01-01T00:00:00.000Z"),
+      baselineEndDate: new Date("2024-01-04T00:00:00.000Z"),
+    }),
+  ];
+
+  it("showBaseline のとき、基準日程の位置に細いバーを描く（予定バーより左＝基準より遅れている）", () => {
+    const { container } = render(
+      <GanttChart
+        {...defaultProps}
+        tasks={baselineTask}
+        style={makeStyle({ showDependencies: false, showTodayLine: false, showBaseline: true })}
+      />,
+    );
+
+    const baseline = container.querySelector('[data-testid="gantt-baseline-bar"]');
+    expect(baseline).not.toBeNull();
+    const planned = container.querySelector('[data-task-id="1"] rect')!;
+    expect(Number(baseline!.getAttribute("x"))).toBeLessThan(Number(planned.getAttribute("x")));
+    expect(Number(baseline!.getAttribute("height"))).toBeLessThan(
+      Number(planned.getAttribute("height")),
+    );
+  });
+
+  it("showBaseline でなければ描かない", () => {
+    const { container } = render(
+      <GanttChart
+        {...defaultProps}
+        tasks={baselineTask}
+        style={makeStyle({ showDependencies: false, showTodayLine: false })}
+      />,
+    );
+
+    expect(container.querySelector('[data-testid="gantt-baseline-bar"]')).toBeNull();
+  });
+
+  it("基準日程のないタスクには描かない", () => {
+    const { container } = render(
+      <GanttChart
+        {...defaultProps}
+        style={makeStyle({ showDependencies: false, showTodayLine: false, showBaseline: true })}
+      />,
+    );
+
+    expect(container.querySelector('[data-testid="gantt-baseline-bar"]')).toBeNull();
+  });
+});
+

@@ -184,4 +184,54 @@ describe('WbsEvmRepository', () => {
       expect(result.get('2025-06-10')).toBe(12);
     });
   });
+
+  describe('フェーズ別EVM', () => {
+    it('getActualCostByDate に phaseId を渡すと、そのフェーズのタスクの実績だけを集計する', async () => {
+      (prismaMock.workRecord.findMany as jest.Mock).mockResolvedValue([]);
+
+      await repository.getActualCostByDate(
+        wbsId,
+        new Date(0),
+        new Date('2025-06-30'),
+        'hours',
+        20
+      );
+
+      expect(prismaMock.workRecord.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            task: { wbsId, phaseId: 20 },
+            date: { gte: new Date(0), lte: new Date('2025-06-30') },
+          },
+        })
+      );
+    });
+
+    it('getProgressSnapshots は記録時点のフェーズIDを返す', async () => {
+      (prismaMock.taskProgressSnapshot.findMany as jest.Mock).mockResolvedValue([
+        {
+          taskId: 1,
+          taskNo: 'D1-0001',
+          snapshotAt: new Date('2025-06-01T00:00:00.000Z'),
+          progressRate: 50,
+          status: 'IN_PROGRESS',
+          plannedManHours: 10,
+          baseManHours: 10,
+          costPerHour: 5000,
+          plannedStart: null,
+          plannedEnd: null,
+          baseStart: null,
+          baseEnd: null,
+          actualStart: null,
+          actualEnd: null,
+          isRemoved: false,
+          phaseId: 20,
+        },
+      ]);
+
+      const [record] = await repository.getProgressSnapshots(wbsId, new Date('2025-06-30'));
+
+      expect(record.phaseId).toBe(20);
+    });
+  });
 });

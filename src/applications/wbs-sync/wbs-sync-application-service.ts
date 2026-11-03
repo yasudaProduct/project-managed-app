@@ -487,6 +487,7 @@ export class WbsSyncApplicationService implements IWbsSyncApplicationService {
         actualStart: null,
         actualEnd: null,
         isRemoved: true,
+        phaseId: null,
       });
     }
 

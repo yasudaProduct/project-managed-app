@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import type { EvmMetricsData } from "@/applications/evm/evm-dashboard-dto";
+import { formatEvmValue } from "@/utils/evm-format";
 import {
   LineChart,
   Line,
@@ -65,12 +66,8 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
    * 値を計算モードに応じてフォーマット
    * @param value 値
    */
-  const formatValue = (value: number): string => {
-    if (calculationMode === "cost") {
-      return `¥${value.toLocaleString()}`;
-    }
-    return `${value.toFixed(1)}h`;
-  };
+  const formatValue = (value: number): string =>
+    formatEvmValue(value, calculationMode);
 
   return (
     <Card>
@@ -133,7 +130,7 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
               type="monotone"
               dataKey="PV_BASE"
               stroke="#585555ff"
-              name="当初計画価値 (PV)"
+              name="当初計画価値 (PV_BASE)"
               strokeDasharray="5 5"
               strokeWidth={1}
               hide={!showPvBase}
@@ -142,7 +139,7 @@ export function EvmChart({ data, calculationMode }: EvmChartProps) {
               type="monotone"
               dataKey="PV"
               stroke="#8884d8"
-              name="計画価値 (PV)"
+              name="現行計画価値 (PV)"
               strokeWidth={2}
             />
             {/* 実績線 */}

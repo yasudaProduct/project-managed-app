@@ -130,8 +130,15 @@ erDiagram
   Int wbsId FK
   String name
   DateTime date
+  MilestoneTargetType targetType
+  Int phaseId FK "nullable"
+  DateTime achievedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
+}
+"milestone_task" {
+  Int milestoneId FK
+  Int taskId FK
 }
 "work_records" {
   Int id PK
@@ -207,6 +214,7 @@ erDiagram
   Int evmWarningThresholdPct
   Int deadlineAlertDays
   Int costOverrunThresholdPct
+  ProgressReviewCycle progressReviewCycle
   Json evmExcludeSettings
   Json schedulingSettings
   DateTime createdAt
@@ -253,6 +261,7 @@ erDiagram
   DateTime actualStart "nullable"
   DateTime actualEnd "nullable"
   Boolean isRemoved
+  Int phaseId "nullable"
   Int syncLogId FK "nullable"
   DateTime createdAt
 }
@@ -292,6 +301,24 @@ erDiagram
   String level
   DateTime recordedAt
 }
+"wbs_import_schedules" {
+  Int wbsId PK
+  Boolean isEnabled
+  String cronExpression
+  String timezone
+  String syncMode
+  Boolean includeActuals
+  DateTime nextRunAt "nullable"
+  DateTime lastRunAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"import_schedule_settings" {
+  Int id PK
+  Boolean isEnabled
+  DateTime createdAt
+  DateTime updatedAt
+}
 "system_settings" {
   Int id PK
   Float standardWorkingHours
@@ -316,6 +343,9 @@ erDiagram
 "task_status_log" }o--|| "wbs_task" : task
 "task_status_log" }o--o| "users" : changer
 "milestone" }o--|| "wbs" : wbs
+"milestone" }o--o| "wbs_phase" : phase
+"milestone_task" }o--|| "milestone" : milestone
+"milestone_task" }o--|| "wbs_task" : task
 "work_records" }o--|| "users" : user
 "work_records" }o--o| "wbs_task" : task
 "work_records" }o--o| "wbs" : wbs
@@ -331,6 +361,7 @@ erDiagram
 "import_jobs" }o--o| "users" : user
 "import_jobs" }o--o| "wbs" : wbs
 "import_job_progress" }o--|| "import_jobs" : job
+"wbs_import_schedules" |o--|| "wbs" : wbs
 ```
 
 ### `projects`
@@ -485,8 +516,17 @@ erDiagram
   - `wbsId`: 
   - `name`: 
   - `date`: 
+  - `targetType`: 
+  - `phaseId`: 
+  - `achievedAt`: 
   - `createdAt`: 
   - `updatedAt`: 
+
+### `milestone_task`
+
+**Properties**
+  - `milestoneId`: 
+  - `taskId`: 
 
 ### `work_records`
 
@@ -574,6 +614,7 @@ erDiagram
   - `evmWarningThresholdPct`: 
   - `deadlineAlertDays`: 
   - `costOverrunThresholdPct`: 
+  - `progressReviewCycle`: 
   - `evmExcludeSettings`: 
   - `schedulingSettings`: 
   - `createdAt`: 
@@ -626,6 +667,7 @@ erDiagram
   - `actualStart`: 
   - `actualEnd`: 
   - `isRemoved`: 
+  - `phaseId`: 
   - `syncLogId`: 
   - `createdAt`: 
 
@@ -670,6 +712,28 @@ erDiagram
   - `detail`: 
   - `level`: 
   - `recordedAt`: 
+
+### `wbs_import_schedules`
+
+**Properties**
+  - `wbsId`: 
+  - `isEnabled`: 
+  - `cronExpression`: 
+  - `timezone`: 
+  - `syncMode`: 
+  - `includeActuals`: 
+  - `nextRunAt`: 
+  - `lastRunAt`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `import_schedule_settings`
+
+**Properties**
+  - `id`: 
+  - `isEnabled`: 
+  - `createdAt`: 
+  - `updatedAt`: 
 
 ### `system_settings`
 

@@ -162,4 +162,35 @@ describe("ProgressHistoryContent（マトリクス表示）", () => {
       screen.getByText(/訂正対象のスナップショットがありません/)
     ).toBeInTheDocument();
   });
+
+  /**
+   * 列のバケット単位はEVM本体（UTC暦日）と揃える。
+   * ローカルTZ基準だと非JST環境で1日ズレ、EVMの時系列と突き合わせできない。
+   * （調査レポート UI-11）
+   */
+  describe("列日付キーのUTC基準（UI-11）", () => {
+    it("UTC日付が同じ記録は、ローカルTZに関係なく同じ列にまとまる", () => {
+      // 2025-07-10T23:00Z と 2025-07-10T01:00Z は同じUTC暦日(7/10)。
+      // JST(+9)のローカル解釈では 7/11 と 7/10 に分かれてしまう。
+      setup([
+        makeSnapshot({ id: 1, snapshotAt: "2025-07-10T01:00:00.000Z", progressRate: 20 }),
+        makeSnapshot({ id: 2, snapshotAt: "2025-07-10T23:00:00.000Z", progressRate: 40 }),
+      ]);
+
+      // 列は7/10の1本だけ（2本に割れない）
+      expect(screen.getAllByText("7月")).toHaveLength(1);
+      expect(screen.getByText("10")).toBeInTheDocument();
+      expect(screen.queryByText("11")).not.toBeInTheDocument();
+    });
+
+    it("UTC暦日で列見出しを表示する（月末境界でも前後にずれない）", () => {
+      // 2025-07-31T23:00Z はJSTでは8/1だが、UTC暦日は7/31
+      setup([
+        makeSnapshot({ id: 1, snapshotAt: "2025-07-31T23:00:00.000Z", progressRate: 60 }),
+      ]);
+
+      expect(screen.getByText("7月")).toBeInTheDocument();
+      expect(screen.getByText("31")).toBeInTheDocument();
+    });
+  });
 });

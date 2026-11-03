@@ -31,6 +31,8 @@ interface TaskProgressSnapshotInput {
     actualStart: Date | null;
     actualEnd: Date | null;
     isRemoved: boolean;
+    /** 記録時点のフェーズ（フェーズ別EVMの過去時点集計用） */
+    phaseId: number | null;
 }
 
 /** SyncLog の書き込みデータ（tx内採番用） */

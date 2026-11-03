@@ -15,11 +15,12 @@ import {
 } from "date-fns";
 import { ja } from "date-fns/locale";
 import {
+  CalendarSearch,
   ChevronLeft,
   ChevronRight,
-  Plus,
   Clock,
   MapPin,
+  Upload,
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -161,12 +162,26 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
                 </Button>
               </div>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setCurrentMonth(startOfMonth(new Date()))}
-            >
-              今日
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Link href="/schedule/free-time">
+                <Button variant="outline">
+                  <CalendarSearch className="w-4 h-4 mr-2" />
+                  空き時間検索
+                </Button>
+              </Link>
+              <Link href="/schedule/import">
+                <Button variant="outline">
+                  <Upload className="w-4 h-4 mr-2" />
+                  インポート
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentMonth(startOfMonth(new Date()))}
+              >
+                今日
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -338,14 +353,6 @@ export function ModernCalendar({ schedules, users }: ModernCalendarProps) {
             </p>
           )}
 
-          <div className="mt-6">
-            <Link href="/schedule/import">
-              <Button className="w-full justify-center" size="lg">
-                <Plus className="w-4 h-4 mr-2" />
-                インポート
-              </Button>
-            </Link>
-          </div>
         </div>
       )}
     </div>

@@ -22,14 +22,22 @@ export async function POST(
       return createApiError('ジョブが見つかりません', 404)
     }
 
-    if (job.status !== 'PENDING') {
-      return createApiError('ジョブは保留中ではありません', 400)
+    // インポートは1件ずつ実行する。他のジョブが実行中なら実行待ちのまま、完了後に順番に開始される
+    const result = await importJobService.startJob(id)
+    if (result === 'NOT_PENDING') {
+      return createApiError('ジョブは保留中ではありません', 409)
+    }
+    if (result === 'BUSY') {
+      return createApiResponse(
+        { started: false, queued: true },
+        '他のインポートジョブが実行中のため、完了後に実行されます',
+        202
+      )
     }
 
-    await importJobService.startJob(id)
     importJobService.executeJobAsync(id)
 
-    return createApiResponse({ started: true })
+    return createApiResponse({ started: true, queued: false })
   } catch (error) {
     console.error('インポートジョブの実行に失敗しました', error)
     return createApiError('インポートジョブの実行に失敗しました', 500)

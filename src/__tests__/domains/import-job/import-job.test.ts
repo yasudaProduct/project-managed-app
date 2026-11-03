@@ -244,4 +244,38 @@ describe('ImportJob', () => {
       expect(running.isFinished).toBe(false);
     });
   });
+
+  describe('isTimedOut - 中断されたジョブの検出', () => {
+    const startedJob = (startedAt: string) => {
+      const job = ImportJob.create(createDefaultOptions());
+      job.start();
+      job.startedAt = new Date(startedAt);
+      return job;
+    };
+
+    it('開始から RUNNING_TIMEOUT_MS を超えて RUNNING のままなら true', () => {
+      const job = startedJob('2026-10-24T00:00:00.000Z');
+      const now = new Date(Date.parse('2026-10-24T00:00:00.000Z') + ImportJob.RUNNING_TIMEOUT_MS + 1);
+
+      expect(job.isTimedOut(now)).toBe(true);
+    });
+
+    it('開始から RUNNING_TIMEOUT_MS 以内なら false', () => {
+      const job = startedJob('2026-10-24T00:00:00.000Z');
+      const now = new Date(Date.parse('2026-10-24T00:00:00.000Z') + ImportJob.RUNNING_TIMEOUT_MS);
+
+      expect(job.isTimedOut(now)).toBe(false);
+    });
+
+    it('RUNNING 以外のジョブは経過時間に関係なく false', () => {
+      const job = startedJob('2026-10-24T00:00:00.000Z');
+      job.complete({});
+
+      expect(job.isTimedOut(new Date('2026-10-25T00:00:00.000Z'))).toBe(false);
+    });
+
+    it('タイムアウトは30分', () => {
+      expect(ImportJob.RUNNING_TIMEOUT_MS).toBe(30 * 60 * 1000);
+    });
+  });
 });

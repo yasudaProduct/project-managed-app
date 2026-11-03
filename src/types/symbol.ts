@@ -9,6 +9,7 @@ export const SYMBOL = {
     IPhaseApplicationService: Symbol.for('IPhaseApplicationService'),
     IMilestoneApplicationService: Symbol.for('IMilestoneApplicationService'),
     IScheduleApplicationService: Symbol.for('IScheduleApplicationService'),
+    IFreeTimeApplicationService: Symbol.for('IFreeTimeApplicationService'),
 
     // リポジトリ
     IProjectRepository: Symbol.for('IProjectRepository'),
@@ -70,6 +71,11 @@ export const SYMBOL = {
     IImportJobRepository: Symbol.for('IImportJobRepository'),
     IImportJobApplicationService: Symbol.for('IImportJobApplicationService'),
 
+    // Import Schedule
+    IWbsImportScheduleRepository: Symbol.for('IWbsImportScheduleRepository'),
+    IImportScheduleSettingsRepository: Symbol.for('IImportScheduleSettingsRepository'),
+    IImportScheduleApplicationService: Symbol.for('IImportScheduleApplicationService'),
+
     // Notification
     INotificationService: Symbol.for('INotificationService'),
     INotificationRepository: Symbol.for('INotificationRepository'),
@@ -90,6 +96,25 @@ export const SYMBOL = {
 
     // Forecast
     IForecastApplicationService: Symbol.for('IForecastApplicationService'),
+
+    // Task Delay（遅延タスク一覧）
+    ITaskDelayApplicationService: Symbol.for('ITaskDelayApplicationService'),
+
+    // Data Freshness（データの鮮度）
+    IDataFreshnessApplicationService: Symbol.for('IDataFreshnessApplicationService'),
+
+    // Progress Review（進捗確認サイクル・前回の確認日）
+    IProgressReviewApplicationService: Symbol.for('IProgressReviewApplicationService'),
+
+    // Portfolio（ポートフォリオ一覧）
+    IPortfolioApplicationService: Symbol.for('IPortfolioApplicationService'),
+
+    // EVM Trend（悪化トレンドの検知）
+    IEvmTrendApplicationService: Symbol.for('IEvmTrendApplicationService'),
+
+    // Estimation Accuracy（見積精度・CQRS）
+    IEstimationAccuracyQueryRepository: Symbol.for('IEstimationAccuracyQueryRepository'),
+    GetEstimationAccuracyHandler: Symbol.for('GetEstimationAccuracyHandler'),
 
     // WBS Tags
     IWbsTagRepository: Symbol.for('IWbsTagRepository'),

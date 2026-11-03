@@ -10,6 +10,8 @@ describe("WorkRecordApplicationService", () => {
       findAll: jest.fn(),
       bulkCreate: jest.fn(),
       bulkUpsert: jest.fn(),
+      findDailyHoursByUsers: jest.fn(),
+      findLastRecordDateByUsers: jest.fn(),
       deleteByUserAndDateRange: jest.fn(),
     };
 

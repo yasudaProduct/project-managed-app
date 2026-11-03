@@ -8,6 +8,8 @@ import type {
   EvmBreakdownRow,
   ScheduleForecast,
   ScheduleForecastStatus,
+  EvmComparison,
+  EvmBufferConsumption,
 } from '@/applications/evm/evm-service';
 
 export type { EvmBreakdownRow };
@@ -23,6 +25,8 @@ export type EvmMetricsData = {
   cv: number;
   spi: number | null;
   cpi: number | null;
+  /** 残作業効率指数。残予算が0以下の場合はnull */
+  tcpi: number | null;
   eac: number;
   etc: number;
   vac: number;
@@ -31,6 +35,9 @@ export type EvmMetricsData = {
   calculationMode: EvmCalculationMode;
   progressMethod: ProgressMeasurementMethod;
   forecastMethod: EvmForecastMethod;
+  /** ヘルス判定しきい値（0〜1）。SPI/CPIのバー・内訳表の色分けをバッジと揃えるため公開する */
+  healthyThreshold: number;
+  warningThreshold: number;
   formattedPv: string;
   formattedEv: string;
   formattedAc: string;
@@ -87,6 +94,10 @@ export type EvmDashboardData = {
   scheduleForecast: ScheduleForecastData;
   phaseBreakdown: EvmBreakdownRow[];
   assigneeBreakdown: EvmBreakdownRow[];
+  /** 前回からの変化（前回の確認日を指定しなかった場合は null） */
+  comparison: { previousMetrics: EvmMetricsData } | null;
+  /** バッファ消化（バッファがない・フェーズ指定時は null）。値はすべて数値のため変換不要 */
+  bufferConsumption: EvmBufferConsumption | null;
 };
 
 export function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
@@ -101,6 +112,7 @@ export function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
     cv: metrics.cv,
     spi: metrics.spi,
     cpi: metrics.cpi,
+    tcpi: metrics.tcpi,
     eac: metrics.eac,
     etc: metrics.etc,
     vac: metrics.vac,
@@ -109,6 +121,8 @@ export function serializeEvmMetrics(metrics: EvmMetrics): EvmMetricsData {
     calculationMode: metrics.calculationMode,
     progressMethod: metrics.progressMethod,
     forecastMethod: metrics.forecastMethod,
+    healthyThreshold: metrics.healthyThreshold,
+    warningThreshold: metrics.warningThreshold,
     formattedPv: metrics.formattedPv,
     formattedEv: metrics.formattedEv,
     formattedAc: metrics.formattedAc,
@@ -151,6 +165,8 @@ export function serializeEvmDashboardData(result: {
   scheduleForecast: ScheduleForecast;
   phaseBreakdown: EvmBreakdownRow[];
   assigneeBreakdown: EvmBreakdownRow[];
+  comparison?: EvmComparison | null;
+  bufferConsumption?: EvmBufferConsumption | null;
 }): EvmDashboardData {
   // タスク明細のEVは、合計EVと同じ「解決済みの測定方式」で算出する（明細と合計の不一致を防ぐ）
   const progressMethod = result.currentMetrics.progressMethod;
@@ -179,5 +195,9 @@ export function serializeEvmDashboardData(result: {
     },
     phaseBreakdown: result.phaseBreakdown,
     assigneeBreakdown: result.assigneeBreakdown,
+    comparison: result.comparison
+      ? { previousMetrics: serializeEvmMetrics(result.comparison.previousMetrics) }
+      : null,
+    bufferConsumption: result.bufferConsumption ?? null,
   };
 }

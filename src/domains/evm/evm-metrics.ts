@@ -111,6 +111,15 @@ export class EvmMetrics {
     return this.bac - this.eac;
   }
 
+  // To-Complete Performance Index (残作業効率指数)
+  // 残作業（BAC - EV）を残予算（BAC - AC）で完了させるために必要な効率。1超なら計画以上の効率が必要。
+  // 残予算が0以下（予算消化済み）は予算内での完了が不可能なためnullを返す。
+  get tcpi(): number | null {
+    const remainingBudget = this.bac - this.ac;
+    if (this.bac === 0 || remainingBudget <= 0) return null;
+    return Math.max(0, this.bac - this.ev) / remainingBudget;
+  }
+
   // 完了率
   get completionRate(): number {
     return this.bac === 0 ? 0 : (this.ev / this.bac) * 100;
@@ -129,9 +138,11 @@ export class EvmMetrics {
   }
 
   // 表示用フォーマット（算出方式に応じて単位を変更）
+  // 金額は円未満を四捨五入する（UI側 utils/evm-format.ts と同一基準。
+  // 丸めなしだとカードと内訳表・CSVで桁が食い違い、数字の不一致に見える）
   formatValue(value: number): string {
     if (this.calculationMode === 'cost') {
-      return `¥${value.toLocaleString()}`;
+      return `¥${Math.round(value).toLocaleString()}`;
     }
     return `${value.toFixed(1)}h`;
   }

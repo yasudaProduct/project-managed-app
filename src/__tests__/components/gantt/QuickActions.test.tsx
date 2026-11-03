@@ -67,6 +67,7 @@ describe("QuickActions", () => {
     ["イナズマ線（進捗線）表示", "showProgressLine"],
     ["実績バー表示（予定の下段に実績を表示）", "showActual"],
     ["見通しバー表示（実績の下段に見通しを表示）", "showForecast"],
+    ["基準バー表示（予定の下に基準日程を細く表示）", "showBaseline"],
   ] as const)("%s ボタンで %s がトグルされる", (label, flag) => {
     const style = makeStyle();
     render(<QuickActions {...baseProps} style={style} />);

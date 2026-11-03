@@ -145,6 +145,31 @@ describe("ProjectSettingsRepository", () => {
     });
   });
 
+  describe("progressReviewCycle", () => {
+    it("findByProjectIdで進捗確認サイクルを返すこと", async () => {
+      prismaMock.projectSettings.findUnique.mockResolvedValue({
+        ...dbRow,
+        progressReviewCycle: "MONTHLY",
+      });
+
+      const result = await repository.findByProjectId("p1");
+
+      expect(result?.progressReviewCycle).toBe("MONTHLY");
+    });
+
+    it("upsertProgressReviewCycleで進捗確認サイクルだけをupsertすること", async () => {
+      prismaMock.projectSettings.upsert.mockResolvedValue(dbRow);
+
+      await repository.upsertProgressReviewCycle("p1", "DAILY");
+
+      expect(prismaMock.projectSettings.upsert).toHaveBeenCalledWith({
+        where: { projectId: "p1" },
+        create: { projectId: "p1", progressReviewCycle: "DAILY" },
+        update: { progressReviewCycle: "DAILY" },
+      });
+    });
+  });
+
   describe("findSchedulingSettings", () => {
     it("schedulingSettings列を正規化して返すこと", async () => {
       prismaMock.projectSettings.findUnique.mockResolvedValue(dbRow);

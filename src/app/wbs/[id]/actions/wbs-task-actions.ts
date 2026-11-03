@@ -130,7 +130,7 @@ export async function updateTask(
         return { success: false, error: result.error ?? "タスクの更新に失敗しました" };
     }
 
-    revalidatePath(`/wbs/${wbsId}/gannt`);
+    revalidatePath(`/wbs/${wbsId}/gantt`);
     return { success: true, data: undefined };
 }
 

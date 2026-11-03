@@ -3,6 +3,7 @@ import type { ImportJob as PrismaImportJob, Prisma, $Enums } from '@prisma/clien
 import type { IImportJobRepository } from '@/applications/import-job/iimport-job-repository'
 import { ImportJob, ImportJobProgress } from '@/domains/import-job/import-job'
 import type { ImportJobType, ImportJobStatus } from '@/domains/import-job/import-job-enums'
+import type { ImportJobStartResult } from '@/types/import-job'
 import prisma from "@/lib/prisma/prisma";
 
 @injectable()
@@ -45,20 +46,52 @@ export class ImportJobRepository implements IImportJobRepository {
   async update(job: ImportJob): Promise<ImportJob> {
     const updated = await prisma.importJob.update({
       where: { id: job.id },
-      data: {
-        status: job.status as $Enums.ImportJobStatus,
-        totalRecords: job.totalRecords,
-        processedRecords: job.processedRecords,
-        successCount: job.successCount,
-        errorCount: job.errorCount,
-        startedAt: job.startedAt,
-        completedAt: job.completedAt,
-        errorDetails: job.errorDetails as Prisma.InputJsonValue,
-        result: job.result as Prisma.InputJsonValue,
-      },
+      data: this.toUpdateData(job),
     })
 
     return this.toDomain(updated)
+  }
+
+  /**
+   * 保存済みのステータスが expectedStatus の場合のみ更新する
+   * 条件付きの単一UPDATEで判定するため、同じジョブへの同時更新でも成功するのは1件だけ
+   * @param job
+   * @param expectedStatus
+   * @returns 更新できた場合 true
+   */
+  async updateIfStatus(job: ImportJob, expectedStatus: ImportJobStatus): Promise<boolean> {
+    const { count } = await prisma.importJob.updateMany({
+      where: { id: job.id, status: expectedStatus as $Enums.ImportJobStatus },
+      data: this.toUpdateData(job),
+    })
+
+    return count === 1
+  }
+
+  /**
+   * 開始したジョブ（RUNNING）を、保存済みが PENDING かつ他に RUNNING のジョブがない場合のみ保存する
+   * ジョブの開始はトランザクション内のアドバイザリロックで直列化し、複数のプロセス・リクエストから
+   * 同時に開始しても RUNNING になるジョブを常に1件以下にする
+   * @param job
+   * @returns STARTED: 保存した / BUSY: 他のジョブが実行中 / NOT_PENDING: 保存済みが PENDING ではない
+   */
+  async updateIfStartable(job: ImportJob): Promise<ImportJobStartResult> {
+    return prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('import_jobs:start'))`
+
+      const runningCount = await tx.importJob.count({
+        where: { status: 'RUNNING', id: { not: job.id } },
+      })
+      if (runningCount > 0) {
+        return 'BUSY'
+      }
+
+      const { count } = await tx.importJob.updateMany({
+        where: { id: job.id, status: 'PENDING' },
+        data: this.toUpdateData(job),
+      })
+      return count === 1 ? 'STARTED' : 'NOT_PENDING'
+    })
   }
 
   async findById(id: string): Promise<ImportJob | null> {
@@ -91,7 +124,8 @@ export class ImportJobRepository implements IImportJobRepository {
   async findByStatus(status: ImportJobStatus): Promise<ImportJob[]> {
     const jobs = await prisma.importJob.findMany({
       where: { status: status as $Enums.ImportJobStatus },
-      orderBy: { createdAt: 'asc' },
+      // 同じミリ秒に作成されたジョブも作成順に並べる（cuid は作成順に増加する）
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     })
 
     return jobs.map(job => this.toDomain(job))
@@ -131,6 +165,20 @@ export class ImportJobRepository implements IImportJobRepository {
       level: record.level as 'info' | 'warning' | 'error',
       recordedAt: record.recordedAt,
     }))
+  }
+
+  private toUpdateData(job: ImportJob): Prisma.ImportJobUpdateManyMutationInput {
+    return {
+      status: job.status as $Enums.ImportJobStatus,
+      totalRecords: job.totalRecords,
+      processedRecords: job.processedRecords,
+      successCount: job.successCount,
+      errorCount: job.errorCount,
+      startedAt: job.startedAt,
+      completedAt: job.completedAt,
+      errorDetails: job.errorDetails as Prisma.InputJsonValue,
+      result: job.result as Prisma.InputJsonValue,
+    }
   }
 
   private toDomain(prismaJob: PrismaImportJob): ImportJob {

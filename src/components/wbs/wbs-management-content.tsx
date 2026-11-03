@@ -17,6 +17,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TaskModal } from "@/components/wbs/task-modal";
 import { ProjectSettings } from "@/components/wbs/project-settings";
+import { WbsImportScheduleSettings } from "@/components/wbs/wbs-import-schedule-settings";
 import { ProjectInfoCard } from "@/components/wbs/project-info-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MilestoneManagement from "@/components/milestone/milestone-management";
@@ -29,6 +30,14 @@ import { WbsTagInput } from "@/components/wbs/wbs-tag-input";
 import { SchedulingWorkbench } from "@/components/task-scheduling/scheduling-workbench";
 import type { ProjectStatus, WbsTask, Milestone } from "@/types/wbs";
 import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
+import type { EvmForecastMethod } from "@/types/evm-forecast-method";
+import type { ProgressReviewCycle } from "@/types/progress-review-cycle";
+import type { TaskDelayDto } from "@/applications/task-delay/task-delay-application-service";
+import type { DataFreshnessDto } from "@/applications/data-freshness/data-freshness-application-service";
+import type { MilestoneForecastDto } from "@/applications/milestone/milestone-application-service";
+import type { EvmTrendDto } from "@/applications/trend/evm-trend-application-service";
+import { DataFreshnessPanel } from "@/components/wbs/data-freshness-panel";
+import type { WbsImportScheduleDto } from "@/types/import-schedule";
 
 type WbsManagementContentProps = {
   wbsId: number;
@@ -50,10 +59,23 @@ type WbsManagementContentProps = {
   phases: Array<{ id: number; seq: number; name: string; code: string }>;
   assignees: Array<{ assignee: { displayName: string } | null }> | null;
   milestones: Milestone[];
+  /** マイルストーンと達成見込み（マイルストーンタブに表示） */
+  milestoneForecasts?: MilestoneForecastDto[];
+  /** 遅れ・期限間近のタスク（サマリータブに表示） */
+  taskDelays?: TaskDelayDto[];
+  /** データの鮮度（サマリータブ・EVMタブに表示） */
+  dataFreshness?: DataFreshnessDto | null;
+  /** 前回の確認日（ISO）。遅延タスク一覧の「新規」とEVMの前回比に使う */
+  previousReviewDate?: string | null;
+  /** 悪化トレンド（EVMタブに表示） */
+  evmTrend?: EvmTrendDto | null;
+  importSchedule: WbsImportScheduleDto;
   defaultTab?: string;
   showEvm?: boolean;
   showTags?: boolean;
   defaultProgressMethod?: ProgressMeasurementMethod;
+  defaultForecastMethod?: EvmForecastMethod;
+  progressReviewCycle?: ProgressReviewCycle;
   deadlineAlertDays?: number;
   costOverrunThresholdPct?: number;
 };
@@ -67,10 +89,18 @@ export function WbsManagementContent({
   phases,
   assignees,
   milestones,
+  milestoneForecasts = [],
+  taskDelays = [],
+  dataFreshness = null,
+  previousReviewDate = null,
+  evmTrend = null,
+  importSchedule,
   defaultTab,
   showEvm = true,
   showTags = true,
   defaultProgressMethod,
+  defaultForecastMethod,
+  progressReviewCycle,
   deadlineAlertDays = 1,
   costOverrunThresholdPct = 100,
 }: WbsManagementContentProps) {
@@ -170,16 +200,24 @@ export function WbsManagementContent({
                 buffers={buffers}
                 tasks={tasks}
                 milestones={milestones}
+                taskDelays={taskDelays}
+                previousReviewDate={previousReviewDate}
                 deadlineAlertDays={deadlineAlertDays}
                 costOverrunThresholdPct={costOverrunThresholdPct}
               />
+              {dataFreshness && <DataFreshnessPanel freshness={dataFreshness} />}
             </div>
           </TabsContent>
           <TabsContent value="list">
             <TaskTableViewPage wbsTasks={tasks} wbsId={wbsId} />
           </TabsContent>
           <TabsContent value="milestone">
-            <MilestoneManagement wbsId={wbsId} initialMilestones={milestones} />
+            <MilestoneManagement
+              wbsId={wbsId}
+              initialMilestones={milestoneForecasts}
+              phases={phases}
+              tasks={tasks.map((task) => ({ id: task.id, taskNo: task.taskNo, name: task.name }))}
+            />
           </TabsContent>
           <TabsContent value="table">
             <WbsSummaryTables projectId={project.id} wbsId={wbsId} />
@@ -188,18 +226,25 @@ export function WbsManagementContent({
             <AssigneeGanttChart wbsId={wbsId} />
           </TabsContent>
           {showEvm && (
-            <TabsContent value="evm">
+            <TabsContent value="evm" className="space-y-4">
+              {dataFreshness && <DataFreshnessPanel freshness={dataFreshness} />}
               <EvmDashboard
                 wbsId={wbsId}
                 defaultProgressMethod={defaultProgressMethod}
+                defaultForecastMethod={defaultForecastMethod}
+                progressReviewCycle={progressReviewCycle}
+                previousReviewDate={previousReviewDate}
+                phases={phases}
+                trend={evmTrend}
               />
             </TabsContent>
           )}
           <TabsContent value="task-scheduling">
             <SchedulingWorkbench wbsId={wbsId} />
           </TabsContent>
-          <TabsContent value="settings">
+          <TabsContent value="settings" className="space-y-4">
             <ProjectSettings projectId={project.id} />
+            <WbsImportScheduleSettings wbsId={wbsId} schedule={importSchedule} />
           </TabsContent>
         </Tabs>
       </Suspense>

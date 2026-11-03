@@ -1,7 +1,10 @@
 import prisma from "@/lib/prisma/prisma";
 import { injectable} from 'inversify'
 import { WorkRecord } from '@/domains/work-record/work-record'
-import { IWorkRecordRepository } from '@/applications/work-record/repositories/iwork-record-repository'
+import type {
+  IWorkRecordRepository,
+  DailyWorkHours,
+} from '@/applications/work-record/repositories/iwork-record-repository'
 import type { WorkRecordDetail } from '@/types/work-record'
 
 @injectable()
@@ -110,6 +113,48 @@ export class WorkRecordRepository implements IWorkRecordRepository {
     }
   }
 
+  async findDailyHoursByUsers(
+    userIds: string[],
+    startDate: Date,
+    endDate: Date
+  ): Promise<DailyWorkHours[]> {
+    if (userIds.length === 0) return []
+    const rows = await prisma.workRecord.groupBy({
+      by: ['userId', 'date'],
+      where: {
+        userId: { in: userIds },
+        date: { gte: startDate, lte: endDate },
+      },
+      _sum: { hours_worked: true },
+    })
+    return rows.map((row) => ({
+      userId: row.userId,
+      date: row.date,
+      hours: Number(row._sum.hours_worked ?? 0),
+    }))
+  }
+
+  async findLastRecordDateByUsers(
+    userIds: string[],
+    onOrBefore: Date
+  ): Promise<Map<string, Date>> {
+    if (userIds.length === 0) return new Map()
+    const rows = await prisma.workRecord.groupBy({
+      by: ['userId'],
+      where: {
+        userId: { in: userIds },
+        date: { lte: onOrBefore },
+        hours_worked: { gt: 0 },
+      },
+      _max: { date: true },
+    })
+    const lastDates = new Map<string, Date>()
+    for (const row of rows) {
+      if (row._max.date) lastDates.set(row.userId, row._max.date)
+    }
+    return lastDates
+  }
+
   async deleteByUserAndDateRange(
     userIds: string[],
     startDate: Date,
@@ -124,7 +169,13 @@ export class WorkRecordRepository implements IWorkRecordRepository {
             gte: startDate,
             lte: endDate
           },
-          wbsId: { in: wbsIds }
+          // AC集計（wbs-evm-repository）と同じ「タスク経由 OR wbsId直接紐付け」で対象を
+          // 特定する。wbsId直付けのみだと、wbsId列追加以前の旧実績（taskIdのみ）が
+          // replaceで消えず、再取込後にACへ二重計上される。
+          OR: [
+            { wbsId: { in: wbsIds } },
+            { task: { wbsId: { in: wbsIds } } }
+          ]
         }
       })
       return result.count

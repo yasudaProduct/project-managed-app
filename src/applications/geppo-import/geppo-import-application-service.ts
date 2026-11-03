@@ -161,7 +161,7 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
       }
 
       // 3. データ変換・マッピング
-      const { workRecords, errors } = await this.convertGeppoToWorkRecords(geppoRecords)
+      const { workRecords, errors, mappedUserIds } = await this.convertGeppoToWorkRecords(geppoRecords)
 
       // 4. ドライランの場合は実際の更新は行わない
       if (options.dryRun) {
@@ -187,7 +187,10 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
       if (options.updateMode === 'replace') {
         // replaceモード: 既存データを削除してから新規作成
         // 削除対象はインポート対象WBSに限定する（別WBSの実績を消さないため）
-        const userIds = [...new Set(workRecords.map(wr => wr.userId!).filter(Boolean))]
+        // 削除対象ユーザーは「対象geppo行のMEMBER_ID全員（マッピング成功者）」。
+        // 「変換後WorkRecord（>0h）を持つユーザー」に限定すると、当月の実績を
+        // 全日0時間に訂正したユーザーが削除対象から漏れ、旧実績が残り続ける。
+        const userIds = mappedUserIds
         const uniqueGeppoProjectIdsForDelete = [...new Set(geppoRecords.map(g => g.PROJECT_ID).filter((p): p is string => Boolean(p)))]
         const projectToWbsIdMapForDelete = await this.projectMappingService.createProjectMap(uniqueGeppoProjectIdsForDelete)
         const wbsIds = [...new Set(
@@ -204,11 +207,18 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
             const monthEnd = new Date(Date.UTC(ty, tm, 0)) // 当月末日（翌月0日）
             deletedCount = await this.workRecordService.deleteByUserAndDateRange(userIds, monthStart, monthEnd, wbsIds)
           } else {
-            // 全期間の場合は、インポートされたデータの日付範囲で削除
-            const dates = workRecords.map(wr => wr.startDate!).filter(Boolean)
-            if (dates.length > 0) {
-              const minDate = new Date(Math.min(...dates.map(d => d.getTime())))
-              const maxDate = new Date(Math.max(...dates.map(d => d.getTime())))
+            // 全期間の場合は、対象geppo行の月範囲（先頭月の初日〜最終月の末日）で削除。
+            // 変換後WorkRecordの日付範囲を使うと、端の月を全日0時間に訂正したときに
+            // その月が削除範囲から外れ、旧実績が残り続ける（月次replaceと同じ根の問題）
+            const months = [...new Set(
+              geppoRecords.map(g => g.GEPPO_YYYYMM).filter((m): m is string => Boolean(m))
+            )].sort()
+            if (months.length > 0) {
+              const [minY, minM] = [parseInt(months[0].substring(0, 4), 10), parseInt(months[0].substring(4, 6), 10)]
+              const lastMonth = months[months.length - 1]
+              const [maxY, maxM] = [parseInt(lastMonth.substring(0, 4), 10), parseInt(lastMonth.substring(4, 6), 10)]
+              const minDate = utcDateFromYmd(minY, minM, 1)
+              const maxDate = new Date(Date.UTC(maxY, maxM, 0)) // 最終月の末日（翌月0日）
               deletedCount = await this.workRecordService.deleteByUserAndDateRange(userIds, minDate, maxDate, wbsIds)
             }
           }
@@ -286,6 +296,8 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
   private async convertGeppoToWorkRecords(geppoRecords: Geppo[]): Promise<{
     workRecords: WorkRecord[]
     errors: GeppoImportError[]
+    /** 対象geppo行のMEMBER_IDのうちユーザーへマッピングできた全員（作業時間の有無を問わない） */
+    mappedUserIds: string[]
   }> {
     const workRecords: WorkRecord[] = []
     const errors: GeppoImportError[] = []
@@ -298,6 +310,12 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
     const projectToWbsIdMap = await this.projectMappingService.createProjectMap(uniqueGeppoProjectIds)
     const taskMappingEntries = this.buildTaskMappingEntries(geppoRecords, projectToWbsIdMap)
     const taskMap = await this.taskMappingService.createTaskMap(taskMappingEntries)
+
+    const mappedUserIds = [...new Set(
+      uniqueMemberIds
+        .map(memberId => userMap.get(memberId))
+        .filter((id): id is string => Boolean(id))
+    )]
 
     for (const geppo of geppoRecords) {
       const userId = userMap.get(geppo.MEMBER_ID)
@@ -317,11 +335,26 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
       const wbsId = wbsIdStr ? Number(wbsIdStr) : undefined
 
       // 日次データに展開
+      // 月の実日数を超える日（30日月のday31等）は取り込まずエラー計上する。
+      // Date.UTC はオーバーフローを翌月へ繰り上げるため、そのまま生成すると
+      // 翌月1日の実績になり、月範囲replaceの削除対象外で再取込のたびに増殖する。
+      const daysInMonth = this.getDaysInMonth(geppo.GEPPO_YYYYMM)
       for (let day = 1; day <= 31; day++) {
         const dayField = `day${day.toString().padStart(2, '0')}` as keyof Geppo
         const hoursWorked = geppo[dayField] as number
 
         if (hoursWorked > 0) {
+          if (day > daysInMonth) {
+            errors.push({
+              memberId: geppo.MEMBER_ID,
+              projectId: geppo.PROJECT_ID,
+              date: this.createDateFromYearMonthDay(geppo.GEPPO_YYYYMM, daysInMonth),
+              errorType: 'INVALID_DATA',
+              message: `${geppo.GEPPO_YYYYMM}に存在しない日（${day}日）に作業時間${hoursWorked}hが入力されているためスキップしました`,
+              originalData: geppo
+            })
+            continue
+          }
           try {
             const workDate = this.createDateFromYearMonthDay(geppo.GEPPO_YYYYMM, day)
 
@@ -347,7 +380,7 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
       }
     }
 
-    return { workRecords, errors }
+    return { workRecords, errors, mappedUserIds }
   }
 
   /**
@@ -359,6 +392,13 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
   private createDateFromYearMonthDay(yyyymm: string, day: number): Date {
     // 保存はUTC前提（ローカルTZ解釈だとサーバーTZ次第で日付が1日ずれる）
     return createUtcDateFromYearMonthDay(yyyymm, day)
+  }
+
+  /** YYYYMMの月の実日数（例: 202511 → 30） */
+  private getDaysInMonth(yyyymm: string): number {
+    const year = parseInt(yyyymm.substring(0, 4), 10)
+    const month = parseInt(yyyymm.substring(4, 6), 10)
+    return new Date(Date.UTC(year, month, 0)).getUTCDate() // 翌月0日 = 当月末日
   }
 
   private convertWorkRecordsToImportRecords(workRecords: WorkRecord[]): GeppoImportRecord[] {
@@ -411,7 +451,9 @@ export class GeppoImportApplicationService implements IGeppoImportApplicationSer
   private calculateExpectedWorkRecords(geppoRecords: Geppo[]): number {
     let total = 0
     geppoRecords.forEach(record => {
-      for (let day = 1; day <= 31; day++) {
+      // 月の実日数を超える日はインポートされない（エラー計上）ため件数に含めない
+      const daysInMonth = this.getDaysInMonth(record.GEPPO_YYYYMM)
+      for (let day = 1; day <= daysInMonth; day++) {
         const dayField = `day${day.toString().padStart(2, '0')}` as keyof Geppo
         const hours = record[dayField] as number
         if (hours > 0) {

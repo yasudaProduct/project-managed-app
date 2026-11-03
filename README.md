@@ -149,11 +149,26 @@ docker compose logs -f notification-cron
 
 compose による `notification-cron` では、以下の環境変数が設定されています（compose.yml参照）。必要に応じて `.env` で上書きしてください。
 
-- `API_BASE_URL=http://app:3000`（アプリの API を同一ネットワーク内の `app` サービスへ）
-- `SYSTEM_USER_ID=system`
-- `SLEEP_BETWEEN_TRIGGERS=2`
-- `MAX_TO_TRIGGER=50`
-- `CRON_SECRET`（`.env` から取り込み）
+- `API_BASE_URL=http://localhost:3000`（`app` と同じく host ネットワークで動くため localhost の API を呼ぶ）
+- `CRON_SECRET`（`.env` から取り込み。アプリ側と同じ値にする）
+
+cron のジョブはコンテナの環境変数を直接引き継がないため、`run-cron.sh` が起動時に環境変数を `/etc/cron.env` へ書き出し、crontab の `BASH_ENV` で bash スクリプトに読み込ませています。環境変数を変更した場合はコンテナを再作成してください（`docker compose up -d notification-cron`）。
+
+### 定期インポート
+
+定期インポートの設定は画面で行います（cron の設定変更やコンテナの再作成は不要です）。
+
+- **WBSごとの設定**: WBS画面の「設定」タブ →「定期インポート」
+  - 定期実行の有無、頻度（毎日 3:00 / 毎日 9時・12時・17時 / 毎時。いずれも JST）、WBS同期モード（差分 / 洗い替え）
+  - 「実績（Geppo）も取り込む」: WBS同期の後に、そのWBSの実績を前月分・当月分取り込む
+- **全体の設定と一覧**: システム設定（`/settings/system`）→「定期インポート」
+  - 全体の一時停止スイッチ（停止中に来た予定はスキップされる）と、全WBSの設定一覧
+
+cron コンテナは毎分 `run-import-scheduler.sh` で `POST /api/cron/import-schedules` を呼ぶだけです。期限が来た予定のジョブ登録と、実行待ちジョブの開始はアプリ側で行います。インポートジョブは作成順に1件ずつ実行されます（詳細は [IMPORT_API_DOCS.md](./IMPORT_API_DOCS.md)）。
+
+ログは `logs/cron/import-scheduler.log`（コンテナ内 `/var/log/cron`）に、ジョブを登録したときとエラー時のみ出力されます。各ジョブの結果は画面の「インポートジョブ管理」（`/import-jobs`）で確認できます。
+
+Jenkins や curl など cron 以外からインポートを実行する場合は、インポートジョブ API を直接呼び出してください（[IMPORT_API_DOCS.md](./IMPORT_API_DOCS.md)）。
 
 
 ### テストの種類と実行方法

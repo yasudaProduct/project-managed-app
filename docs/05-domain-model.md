@@ -80,8 +80,16 @@ ER図と実装中の`src/domains/`配下を要約し、主要集約と境界を�
 
 ### Import 集約
 - `import_jobs`, `import_job_progress`
-- 責務: インポートジョブのライフサイクル管理（ステートマシン）、進捗・監査の記録
+- 責務: インポートジョブのライフサイクル管理（ステートマシン）、進捗・監査の記録、実行順序の制御（作成順に1件ずつ実行）
 - 主要エンティティ: `ImportJob`（type, status, progress, totalRecords, processedRecords）
+
+### ImportSchedule 集約
+- `wbs_import_schedules`, `import_schedule_settings`
+- 責務: WBSごとの定期インポート設定と、期限が来た予定からのインポートジョブ作成（実行は Import 集約に任せる。Import 集約は本集約に依存しない）
+- 主要エンティティ:
+  - `WbsImportSchedule`（wbsId, isEnabled, 実行タイミング=`ScheduleExpression`, syncMode, includeActuals, nextRunAt, lastRunAt）
+  - `ScheduleExpression`（cron式 + タイムゾーン。値オブジェクト）
+  - `ImportScheduleSettings`（定期インポート全体の有効/無効）
 
 ### Auth 集約
 - `users`, `user_sessions`
@@ -133,6 +141,8 @@ ER図と実装中の`src/domains/`配下を要約し、主要集約と境界を�
 | NotificationChannel | notification | `PUSH` / `IN_APP` / `EMAIL` |
 | ImportJobType | import-job | `WBS` / `GEPPO` |
 | ImportJobStatus | import-job | `PENDING` / `RUNNING` / `COMPLETED` / `FAILED` / `CANCELLED` |
+| ImportJobStartResult | import-job | `STARTED` / `BUSY` / `NOT_PENDING` |
+| WbsSyncMode | wbs-sync | `diff` / `replace` |
 | BufferType | wbs | `RISK` / `OTHER` |
 | SyncStatus | sync | `SUCCESS` / `FAILED` / `PARTIAL` |
 | CompanyHolidayType | calendar | `NATIONAL` / `COMPANY` / `SPECIAL` |
@@ -182,6 +192,15 @@ ER図と実装中の`src/domains/`配下を要約し、主要集約と境界を�
 - `fail()`: `RUNNING` or `PENDING` → `FAILED` のみ
 - `cancel()`: `COMPLETED` / `FAILED` からはキャンセル不可
 
+- `isTimedOut()`: `RUNNING` のまま `RUNNING_TIMEOUT_MS`（30分）を超えたら true（中断されたジョブの回収用）
+- 同時に `RUNNING` にできるジョブは1件まで（開始判定は `IImportJobRepository.updateIfStartable` で排他）
+
+### WbsImportSchedule
+- 実行タイミングは5フィールドの cron 式（分 時 日 月 曜日）と有効なタイムゾーン
+- 有効な場合のみ `nextRunAt` を持つ（設定変更時に再計算、前回実行日時は保持）
+- 実行・スキップ時は `nextRunAt` を現在時刻より後へ進める（実行を逃した過去分は遡らない）
+- 実績取込の対象月は、設定のタイムゾーンでの前月・当月
+
 ### SystemSettings
 - `standardWorkingHours > 0`
 - `defaultUserCostPerHour ≥ 0`（null許容）
@@ -226,6 +245,7 @@ ER図と実装中の`src/domains/`配下を要約し、主要集約と境界を�
   - `IAuthRepository`, `IUserRepository`
   - `ICompanyHolidayRepository`, `IUserScheduleRepository`
   - `INotificationRepository`, `IImportJobRepository`
+  - `IWbsImportScheduleRepository`, `IImportScheduleSettingsRepository`
   - `IWorkRecordRepository`, `IGeppoRepository`
   - `IWbsEvmRepository`, `IDashboardQueryRepository`
   - `ISystemSettingsRepository`

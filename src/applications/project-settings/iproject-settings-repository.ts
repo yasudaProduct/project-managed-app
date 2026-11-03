@@ -4,6 +4,7 @@ import type { ForecastCalculationMethod } from "@/types/forecast-calculation-met
 import type { EvmForecastMethod } from "@/types/evm-forecast-method";
 import type { EvmBufferCostMethod } from "@/types/evm-buffer-cost-method";
 import type { EvmPvDistribution } from "@/types/evm-pv-distribution";
+import type { ProgressReviewCycle } from "@/types/progress-review-cycle";
 import type { SchedulingSettings } from "@/types/scheduling-settings";
 
 export interface UpsertProjectSettingsInput {
@@ -42,6 +43,10 @@ export interface IProjectSettingsRepository {
   upsertEvmSettings(
     projectId: string,
     data: UpsertEvmSettingsInput
+  ): Promise<void>;
+  upsertProgressReviewCycle(
+    projectId: string,
+    progressReviewCycle: ProgressReviewCycle
   ): Promise<void>;
   findSchedulingSettings(projectId: string): Promise<SchedulingSettings>;
   upsertSchedulingSettings(
