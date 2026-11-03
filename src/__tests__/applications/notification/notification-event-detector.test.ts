@@ -269,7 +269,7 @@ describe('NotificationEventDetector', () => {
     it('期限・遅延・工数超過の検知は案件（PROJECT）のみを対象にし、常設プロジェクトは見ない', async () => {
       await detector.detectTaskDeadlines(now);
       await detector.detectScheduleDelays(now);
-      await detector.detectManhourOverruns(now);
+      await detector.detectManhourExceeded(now);
 
       expect(targetWbsQueryRepository.findTargetWbs).toHaveBeenCalledTimes(3);
       for (const call of targetWbsQueryRepository.findTargetWbs.mock.calls) {
