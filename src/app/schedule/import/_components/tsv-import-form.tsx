@@ -59,7 +59,7 @@ export function TsvImportForm() {
         inputLabel="スケジュールTSVファイル"
         formatDescription="対応形式: .txt（TSV形式）"
         isLoading={isLoading}
-        onFileSelect={importFile}
+        onFilesSelect={(files) => importFile(files[0])}
       />
 
       <div className="bg-gray-50 rounded-lg p-4">

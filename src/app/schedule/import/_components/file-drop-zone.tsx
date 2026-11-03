@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type DragEvent, type KeyboardEvent } from "react";
-import { FileText, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/utils/utils";
@@ -13,36 +13,45 @@ type FileDropZoneProps = {
   inputLabel: string;
   /** 対応形式の説明 */
   formatDescription: string;
-  selectedFileName?: string;
+  /** 複数ファイルを選択できるか */
+  multiple?: boolean;
   disabled?: boolean;
   isLoading?: boolean;
-  onFileSelect: (file: File) => void;
+  /** 拡張子が一致したファイルだけを渡す（multiple でない場合は先頭の1件） */
+  onFilesSelect: (files: File[]) => void;
 };
 
 export function FileDropZone({
   accept,
   inputLabel,
   formatDescription,
-  selectedFileName,
+  multiple = false,
   disabled = false,
   isLoading = false,
-  onFileSelect,
+  onFilesSelect,
 }: FileDropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isInactive = disabled || isLoading;
 
-  const selectFile = (file: File | undefined) => {
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith(accept.toLowerCase())) {
+  const selectFiles = (fileList: FileList | null | undefined) => {
+    const files = Array.from(fileList ?? []).slice(0, multiple ? undefined : 1);
+    if (files.length === 0) return;
+
+    const hasAcceptedExtension = (file: File) => file.name.toLowerCase().endsWith(accept.toLowerCase());
+    const rejectedFiles = files.filter((file) => !hasAcceptedExtension(file));
+    if (rejectedFiles.length > 0) {
       toast({
         title: "ファイル形式エラー",
-        description: `${accept}形式のファイルを選択してください`,
+        description: `${accept}形式のファイルを選択してください（${rejectedFiles.map((file) => file.name).join("、")}）`,
         variant: "destructive",
       });
-      return;
     }
-    onFileSelect(file);
+
+    const acceptedFiles = files.filter(hasAcceptedExtension);
+    if (acceptedFiles.length > 0) {
+      onFilesSelect(acceptedFiles);
+    }
   };
 
   const openFilePicker = () => {
@@ -74,7 +83,7 @@ export function FileDropZone({
     event.stopPropagation();
     setIsDragging(false);
     if (isInactive) return;
-    selectFile(event.dataTransfer.files?.[0]);
+    selectFiles(event.dataTransfer.files);
   };
 
   return (
@@ -97,12 +106,13 @@ export function FileDropZone({
         ref={fileInputRef}
         type="file"
         accept={accept}
+        multiple={multiple}
         aria-label={inputLabel}
         disabled={isInactive}
         className="hidden"
         onClick={(event) => event.stopPropagation()}
         onChange={(event) => {
-          selectFile(event.target.files?.[0]);
+          selectFiles(event.target.files);
           // 同じファイルを選び直しても onChange が発火するようにする
           event.target.value = "";
         }}
@@ -118,12 +128,6 @@ export function FileDropZone({
             または<span className="text-blue-600 hover:text-blue-700">クリックして選択</span>
           </p>
         </div>
-        {selectedFileName && (
-          <p className="flex items-center gap-2 text-sm font-medium text-gray-800">
-            <FileText className="w-4 h-4" />
-            <span>{selectedFileName}</span>
-          </p>
-        )}
         <div className="text-xs text-gray-500">{formatDescription}</div>
       </div>
 

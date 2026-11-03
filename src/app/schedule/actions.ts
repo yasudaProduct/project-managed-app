@@ -23,13 +23,14 @@ export async function getSchedules(): Promise<ScheduleEntry[]> {
     return getScheduleApplicationService().getSchedules();
 }
 
-export async function getUsers(): Promise<Array<{ id: string, name: string, email: string }>> {
+export async function getUsers(): Promise<Array<{ id: string, name: string, email: string, displayName: string }>> {
     const users = await getUserApplicationService().getAllUsers();
 
     return users.map(user => ({
         id: user.id,
         name: user.name,
         email: user.email,
+        displayName: user.displayName,
     }));
 }
 
