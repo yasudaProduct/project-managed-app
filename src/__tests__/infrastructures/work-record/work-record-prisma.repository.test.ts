@@ -11,6 +11,7 @@ jest.mock("@/lib/prisma/prisma", () => ({
       update: jest.fn(),
       create: jest.fn(),
       deleteMany: jest.fn(),
+      groupBy: jest.fn(),
     },
   },
 }));
@@ -77,6 +78,74 @@ describe("WorkRecordRepository", () => {
           hoursWorked: 4,
         },
       ]);
+    });
+  });
+
+  describe("findDailyHoursByUsers", () => {
+    it("ユーザー・日付ごとの実績時間の合計を返すこと（全WBS横断）", async () => {
+      (prismaMock.workRecord.groupBy as jest.Mock).mockResolvedValue([
+        { userId: "u1", date: new Date("2026-10-28T00:00:00.000Z"), _sum: { hours_worked: 7.5 } },
+        { userId: "u2", date: new Date("2026-10-29T00:00:00.000Z"), _sum: { hours_worked: null } },
+      ]);
+
+      const result = await repository.findDailyHoursByUsers(
+        ["u1", "u2"],
+        new Date("2026-10-27T00:00:00.000Z"),
+        new Date("2026-10-30T00:00:00.000Z")
+      );
+
+      expect(prismaMock.workRecord.groupBy).toHaveBeenCalledWith({
+        by: ["userId", "date"],
+        where: {
+          userId: { in: ["u1", "u2"] },
+          date: {
+            gte: new Date("2026-10-27T00:00:00.000Z"),
+            lte: new Date("2026-10-30T00:00:00.000Z"),
+          },
+        },
+        _sum: { hours_worked: true },
+      });
+      expect(result).toEqual([
+        { userId: "u1", date: new Date("2026-10-28T00:00:00.000Z"), hours: 7.5 },
+        { userId: "u2", date: new Date("2026-10-29T00:00:00.000Z"), hours: 0 },
+      ]);
+    });
+
+    it("ユーザーが空なら問い合わせずに空配列を返すこと", async () => {
+      const result = await repository.findDailyHoursByUsers(
+        [],
+        new Date("2026-10-27T00:00:00.000Z"),
+        new Date("2026-10-30T00:00:00.000Z")
+      );
+
+      expect(result).toEqual([]);
+      expect(prismaMock.workRecord.groupBy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("findLastRecordDateByUsers", () => {
+    it("指定日以前で実績のある最終日をユーザーごとに返すこと", async () => {
+      (prismaMock.workRecord.groupBy as jest.Mock).mockResolvedValue([
+        { userId: "u1", _max: { date: new Date("2026-10-30T00:00:00.000Z") } },
+      ]);
+
+      const result = await repository.findLastRecordDateByUsers(
+        ["u1", "u2"],
+        new Date("2026-10-31T00:00:00.000Z")
+      );
+
+      expect(prismaMock.workRecord.groupBy).toHaveBeenCalledWith({
+        by: ["userId"],
+        where: {
+          userId: { in: ["u1", "u2"] },
+          date: { lte: new Date("2026-10-31T00:00:00.000Z") },
+          hours_worked: { gt: 0 },
+        },
+        _max: { date: true },
+      });
+      expect(result).toEqual(
+        new Map([["u1", new Date("2026-10-30T00:00:00.000Z")]])
+      );
     });
   });
 });

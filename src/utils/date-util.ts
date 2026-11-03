@@ -148,6 +148,62 @@ export const getHolidays = (year: number): Holiday[] => {
 // UTC日付ヘルパー（EVM・インポート系で使用。サーバーTZに依存しない日付境界処理）
 // ---------------------------------------------------------------------------
 
+/** 業務日付（「今日」など）を判定するタイムゾーン。会社カレンダー・祝日と同じ日本時間 */
+export const BUSINESS_TIME_ZONE = 'Asia/Tokyo';
+
+/**
+ * 指定タイムゾーンでの暦日を、UTC深夜0時の Date で返す。
+ * サーバーは UTC で動くため、JST の朝（UTC では前日）に「今日」を取り違えないよう、
+ * @db.Date 列（UTC深夜0時）と暦日で比較するときに使う。
+ */
+export const calendarDateInTimeZone = (
+    instant: Date,
+    timeZone: string = BUSINESS_TIME_ZONE
+): Date => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+    }).formatToParts(instant);
+    const partValue = (type: Intl.DateTimeFormatPartTypes) =>
+        Number(parts.find((part) => part.type === type)?.value);
+    return utcDateFromYmd(partValue('year'), partValue('month'), partValue('day'));
+}
+
+/**
+ * 指定タイムゾーンでの当日0時の瞬間を返す。
+ * 「当日中に通知済みか」など、業務日単位で区切る判定に使う。
+ */
+export const startOfDayInTimeZone = (
+    instant: Date,
+    timeZone: string = BUSINESS_TIME_ZONE
+): Date => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        hourCycle: 'h23',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+    }).formatToParts(instant);
+    const partValue = (type: Intl.DateTimeFormatPartTypes) =>
+        Number(parts.find((part) => part.type === type)?.value);
+    // 指定タイムゾーンの壁時計を UTC とみなした値との差がUTCオフセット
+    const wallClockAsUtcMs = Date.UTC(
+        partValue('year'),
+        partValue('month') - 1,
+        partValue('day'),
+        partValue('hour'),
+        partValue('minute'),
+        partValue('second')
+    );
+    const offsetMs = wallClockAsUtcMs - Math.floor(instant.getTime() / 1000) * 1000;
+    return new Date(calendarDateInTimeZone(instant, timeZone).getTime() - offsetMs);
+}
+
 /**
  * UTC暦日のキー（YYYY-MM-DD）を返す。
  * 作業実績の日付キー・累積AC集計などUTC基準の突き合わせに使用する。

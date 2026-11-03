@@ -237,6 +237,7 @@ export class TaskApplicationService implements ITaskApplicationService {
                     actualStart: null,
                     actualEnd: null,
                     isRemoved: true,
+                    phaseId: null,
                 },
                 snapshotAt: new Date(),
             };

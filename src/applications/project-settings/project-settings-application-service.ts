@@ -7,6 +7,7 @@ import type { ProgressMeasurementMethod } from "@/types/progress-measurement";
 import type { ForecastCalculationMethod } from "@/types/forecast-calculation-method";
 import type { EvmForecastMethod } from "@/types/evm-forecast-method";
 import type { SchedulingSettings } from "@/types/scheduling-settings";
+import type { ProgressReviewCycle } from "@/types/progress-review-cycle";
 import type {
   IProjectSettingsRepository,
   UpsertEvmSettingsInput,
@@ -29,6 +30,10 @@ export interface IProjectSettingsApplicationService {
   updateEvmSettings(
     projectId: string,
     settings: UpsertEvmSettingsInput
+  ): Promise<ActionResult<void>>;
+  updateProgressReviewCycle(
+    projectId: string,
+    progressReviewCycle: ProgressReviewCycle
   ): Promise<ActionResult<void>>;
   getSchedulingSettings(projectId: string): Promise<SchedulingSettings>;
   updateSchedulingSettings(
@@ -107,6 +112,21 @@ export class ProjectSettingsApplicationService
     }
 
     await this.projectSettingsRepository.upsertEvmSettings(projectId, settings);
+    return { success: true, data: undefined };
+  }
+
+  public async updateProgressReviewCycle(
+    projectId: string,
+    progressReviewCycle: ProgressReviewCycle
+  ): Promise<ActionResult<void>> {
+    if (!projectId) {
+      return { success: false, error: "projectIdは必須です。" };
+    }
+
+    await this.projectSettingsRepository.upsertProgressReviewCycle(
+      projectId,
+      progressReviewCycle
+    );
     return { success: true, data: undefined };
   }
 

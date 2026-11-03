@@ -7,6 +7,8 @@ import {
   FolderKanban,
   Gauge,
   Home,
+  LayoutList,
+  Scale,
   Menu,
   Trello,
   Users,
@@ -62,6 +64,20 @@ export function SideMenu() {
             >
               <FolderKanban className="h-4 w-4" />
               プロジェクト
+            </Link>
+            <Link
+              href="/portfolio"
+              className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
+              <LayoutList className="h-4 w-4" />
+              ポートフォリオ
+            </Link>
+            <Link
+              href="/estimation-accuracy"
+              className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground px-2 py-1 rounded-md transition-colors"
+            >
+              <Scale className="h-4 w-4" />
+              見積精度
             </Link>
             <Link
               href="/users"

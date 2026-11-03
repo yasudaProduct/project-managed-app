@@ -39,6 +39,7 @@ const defaultGanttStyle: GanttStyle = {
   showProgress: true,
   showActual: false,
   showForecast: false,
+  showBaseline: false,
   colorMode: "phase",
   showDependencies: true,
   showCriticalPath: true,

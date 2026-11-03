@@ -364,6 +364,41 @@ export function EvmMetricsCard({
                     : "コストが予算を超過しています"}
                 </p>
               </div>
+              <div className="space-y-2">
+                <p className="flex items-center text-sm text-muted-foreground">
+                  残作業効率指数 (TCPI)
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {<Info className="w-4 ml-2" />}
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm">
+                        TCPI = (BAC - EV) / (BAC - AC)
+                        <br />
+                        残りの作業を残りの予算で終えるために必要な効率です。
+                        <br />
+                        1を超えると計画以上の効率が必要です。現在のCPIより大きい場合、今のペースでは予算内に収まりません。
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </p>
+                <p
+                  className={`text-xl font-semibold ${
+                    metrics.tcpi === null || metrics.tcpi > 1
+                      ? "text-red-600"
+                      : ""
+                  }`}
+                >
+                  {metrics.tcpi !== null ? metrics.tcpi.toFixed(3) : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {metrics.tcpi === null
+                    ? "残予算がないため、予算内での完了はできません"
+                    : metrics.tcpi > 1
+                      ? `予算内に収めるには計画の${formatPercentage(metrics.tcpi)}の効率が必要です`
+                      : "計画どおりの効率で予算内に完了できます"}
+                </p>
+              </div>
             </div>
             {/* 予測指標 */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">

@@ -12,6 +12,8 @@ export interface Task {
   forecastStartDate?: Date; // 見通し開始日（実績開始日と同じ。実績なし・完了タスクは未設定）
   forecastEndDate?: Date; // 見通し終了日（残見通し工数を基準稼働時間で消化し終える営業日）
   forecastDuration?: number; // 見通し工数（時間）
+  baselineStartDate?: Date; // 基準開始日（KIJUN。基準日程からのずれの表示用）
+  baselineEndDate?: Date; // 基準終了日（KIJUN）
   color: string; // 色
   isMilestone: boolean; // マイルストーンかどうか
   progress: number; // 進捗（進捗測定方式で算出した実効値。表示用）
@@ -71,6 +73,7 @@ export interface GanttStyle {
   showProgress: boolean;
   showActual: boolean; // 実績バー（予定の下段）の表示
   showForecast: boolean; // 見通しバー（実績の下段）の表示
+  showBaseline: boolean; // 基準バー（予定の直下に細く基準日程を表示）の表示
   colorMode: GanttColorMode; // タスクバーの色分け方式
   showDependencies: boolean;
   showCriticalPath: boolean;

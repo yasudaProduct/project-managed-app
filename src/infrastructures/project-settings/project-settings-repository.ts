@@ -8,6 +8,7 @@ import type {
   UpsertProjectSettingsInput,
 } from "@/applications/project-settings/iproject-settings-repository";
 import type { ProjectSettingsData } from "@/types/project-settings";
+import type { ProgressReviewCycle } from "@/types/progress-review-cycle";
 import {
   parseSchedulingSettings,
   type SchedulingSettings,
@@ -37,6 +38,7 @@ export class ProjectSettingsRepository implements IProjectSettingsRepository {
       evmWarningThresholdPct: settings.evmWarningThresholdPct,
       deadlineAlertDays: settings.deadlineAlertDays,
       costOverrunThresholdPct: settings.costOverrunThresholdPct,
+      progressReviewCycle: settings.progressReviewCycle,
     };
   }
 
@@ -111,6 +113,17 @@ export class ProjectSettingsRepository implements IProjectSettingsRepository {
           evmWarningThresholdPct: data.evmWarningThresholdPct,
         }),
       },
+    });
+  }
+
+  async upsertProgressReviewCycle(
+    projectId: string,
+    progressReviewCycle: ProgressReviewCycle
+  ): Promise<void> {
+    await this.prisma.projectSettings.upsert({
+      where: { projectId },
+      create: { projectId, progressReviewCycle },
+      update: { progressReviewCycle },
     });
   }
 

@@ -124,4 +124,38 @@ describe('buildProgressSnapshotInput', () => {
       expect(input.baseEnd).toBeNull();
     });
   });
+
+  describe('フェーズ', () => {
+    it('記録時点のタスクのフェーズIDを持つ（フェーズ別EVMの過去時点の集計に使う）', () => {
+      const task = Task.createFromDb({
+        id: 10,
+        taskNo: TaskNo.reconstruct('D1-0001'),
+        wbsId: 1,
+        name: 'タスク',
+        status: new TaskStatus({ status: 'IN_PROGRESS' }),
+        phaseId: 20,
+        periods: [],
+      });
+
+      const input = buildProgressSnapshotInput({
+        task,
+        costPerHour: 5000,
+        actualStart: null,
+        actualEnd: null,
+      });
+
+      expect(input.phaseId).toBe(20);
+    });
+
+    it('フェーズ未設定ならnull', () => {
+      const input = buildProgressSnapshotInput({
+        task: makeTask([]),
+        costPerHour: 5000,
+        actualStart: null,
+        actualEnd: null,
+      });
+
+      expect(input.phaseId).toBeNull();
+    });
+  });
 });

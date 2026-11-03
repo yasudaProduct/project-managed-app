@@ -2,6 +2,10 @@ import { injectable, inject } from 'inversify';
 import { SYMBOL } from '@/types/symbol';
 import type { IWbsEvmRepository, WbsEvmData, TaskProgressSnapshotRecord, EditableProgressSnapshot, ProjectSettingsData } from './iwbs-evm-repository';
 import { EvmMetrics, type EvmHealthStatus } from '@/domains/evm/evm-metrics';
+import {
+  evaluateBufferConsumption,
+  type BufferConsumption,
+} from '@/domains/evm/buffer-consumption';
 import { TaskEvmData, type BusinessDayCounter } from '@/domains/evm/task-evm-data';
 import { DEFAULT_COST_PER_HOUR } from '@/domains/evm/evm-constants';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
@@ -62,10 +66,20 @@ export type EvmBreakdownRow = {
   ev: number;
   ac: number;
   bac: number;
+  /** スケジュール差異（EV - PV）。影響の大きさを比率でなく絶対値で見るため */
+  sv: number;
+  /** コスト差異（EV - AC） */
+  cv: number;
   spi: number | null;
   cpi: number | null;
   /** タスク未紐付け・削除済みタスクのAC行（PV/EV/BACなし） */
   isUnlinked?: boolean;
+  /** フェーズ別の行のみ：フェーズの予定終了日（ISO） */
+  plannedEndDate?: string | null;
+  /** フェーズ別の行のみ：フェーズの予測完了日（Earned Schedule。ISO） */
+  forecastCompletionDate?: string | null;
+  /** フェーズ別の行のみ：予定終了日に対する予測完了日の遅れ（日。負値は前倒し） */
+  scheduleDelayDays?: number | null;
 };
 
 type EvmDashboardOptions = {
@@ -75,6 +89,33 @@ type EvmDashboardOptions = {
   interval?: 'daily' | 'weekly' | 'monthly';
   periodMode?: 'project' | 'recent3months' | 'recent1month' | 'custom';
   showPrediction?: boolean;
+  /** 前回からの変化の比較日（前回の確認日）。渡すとその日時点のメトリクスを comparison に返す */
+  comparisonDate?: Date;
+  /** 対象フェーズ。渡すとそのフェーズのタスクだけで集計する（バッファは含めない） */
+  phaseId?: number;
+};
+
+/** フェーズ別EVMの対象フェーズと、スナップショットにフェーズが無い場合の代用（タスクの現在のフェーズ） */
+type PhaseScope = {
+  phaseId: number;
+  currentPhaseByTaskId: Map<number, number | null>;
+};
+
+/** 現在メトリクスとスケジュール予測（工数モード・プロジェクト設定の測定方式／予測方式） */
+export type EvmSummary = {
+  currentMetrics: EvmMetrics;
+  scheduleForecast: ScheduleForecast;
+};
+
+/** 前回からの変化（前回の確認日時点のメトリクス） */
+export type EvmComparison = {
+  previousMetrics: EvmMetrics;
+};
+
+/** バッファ消化（現在と、前回の確認日時点） */
+export type EvmBufferConsumption = {
+  current: BufferConsumption;
+  previous: BufferConsumption | null;
 };
 
 export interface IEvmService {
@@ -108,11 +149,25 @@ export interface IEvmService {
     scheduleForecast: ScheduleForecast;
     phaseBreakdown: EvmBreakdownRow[];
     assigneeBreakdown: EvmBreakdownRow[];
+    comparison: EvmComparison | null;
+    bufferConsumption: EvmBufferConsumption | null;
   }>;
   getEvmDashboardDataSerialized(
     wbsId: number,
     options?: EvmDashboardOptions
   ): Promise<EvmDashboardData>;
+  /** 現在メトリクスとスケジュール予測だけを求める軽量版（ポートフォリオ一覧用。時系列は計算しない） */
+  getEvmSummary(wbsId: number, now?: Date): Promise<EvmSummary>;
+  /**
+   * フェーズごとの予測完了日（Earned Schedule。工数モード）。フェーズ別内訳と同じ値。
+   * 予測できないフェーズ（出来高ゼロ等）の値は null。マイルストーンのフェーズ完了型で使う
+   */
+  getPhaseForecastDates(wbsId: number, now?: Date): Promise<Map<number, Date | null>>;
+  /**
+   * 悪化トレンド用のメトリクス（工数モード）。過去の日付は as-of 再構築、最後に現在値を付けて古い順に返す
+   * （pastDates.length + 1 件。現在値はダッシュボードのカードと同じ）
+   */
+  getTrendMetrics(wbsId: number, pastDates: Date[], now?: Date): Promise<EvmMetrics[]>;
   getTaskEvmDetails(wbsId: number): Promise<TaskEvmData[]>;
   getHealthStatus(metrics: EvmMetrics): EvmHealthStatus;
 }
@@ -256,6 +311,8 @@ export class EvmService implements IEvmService {
       interval?: 'daily' | 'weekly' | 'monthly';
       periodMode?: 'project' | 'recent3months' | 'recent1month' | 'custom';
       showPrediction?: boolean;
+      comparisonDate?: Date;
+      phaseId?: number;
     } = {}
   ): Promise<{
     currentMetrics: EvmMetrics;
@@ -265,6 +322,8 @@ export class EvmService implements IEvmService {
     scheduleForecast: ScheduleForecast;
     phaseBreakdown: EvmBreakdownRow[];
     assigneeBreakdown: EvmBreakdownRow[];
+    comparison: EvmComparison | null;
+    bufferConsumption: EvmBufferConsumption | null;
   }> {
     const {
       calculationMode = 'hours',
@@ -273,12 +332,26 @@ export class EvmService implements IEvmService {
       interval = 'weekly',
       periodMode = 'project',
       showPrediction = false,
+      comparisonDate,
+      phaseId,
     } = options;
 
     const now = new Date();
 
     // (1) WBSデータを1回だけ取得（最重量クエリを1回に集約）
-    const wbsData = await this.wbsEvmRepository.getWbsEvmData(wbsId, now);
+    //     フェーズ指定時は、以降の計算をすべてそのフェーズのタスクに絞る
+    const allWbsData = await this.wbsEvmRepository.getWbsEvmData(wbsId, now);
+    const wbsData =
+      phaseId !== undefined ? this.scopeToPhase(allWbsData, phaseId) : allWbsData;
+    const phaseScope: PhaseScope | undefined =
+      phaseId !== undefined
+        ? {
+          phaseId,
+          currentPhaseByTaskId: new Map(
+            allWbsData.tasks.map((task) => [task.taskId, task.meta?.phaseId ?? null])
+          ),
+        }
+        : undefined;
     const method =
       progressMethod ?? wbsData.settings?.progressMeasurementMethod ?? 'SELF_REPORTED';
     const fMethod =
@@ -294,7 +367,8 @@ export class EvmService implements IEvmService {
     const computeCumulativeAc = await this.buildCumulativeAcFn(
       wbsId,
       costRangeEnd,
-      calculationMode
+      calculationMode,
+      phaseId
     );
 
     // (4) 現在メトリクス（カードはライブ値が正）
@@ -306,8 +380,19 @@ export class EvmService implements IEvmService {
     // (5) 進捗スナップショット履歴を1回取得し、as-ofメトリクス関数を構築
     const snapshots = await this.wbsEvmRepository.getProgressSnapshots(wbsId, costRangeEnd);
     const computeHistorical = this.buildAsOfMetricsFn(
-      wbsData, snapshots, now, calculationMode, method, fMethod, businessDayCounter
+      wbsData, snapshots, now, calculationMode, method, fMethod, businessDayCounter, phaseScope
     );
+
+    // (5') 前回からの変化：前回の確認日時点のas-ofメトリクス（時系列と同じ再構築）
+    const comparison: EvmComparison | null =
+      comparisonDate && comparisonDate.getTime() < now.getTime()
+        ? {
+          previousMetrics: computeHistorical(
+            comparisonDate,
+            computeCumulativeAc(comparisonDate)
+          ),
+        }
+        : null;
 
     // (6) 時系列メトリクス
     const dates = this.generateDateRange(startDate, endDate, interval);
@@ -344,15 +429,16 @@ export class EvmService implements IEvmService {
       );
     }
 
-    // (8) フェーズ別・担当者別内訳（現在時点・ライブタスク限定。
-    //     スナップショットにフェーズ/担当者情報が無いため過去日のas-of内訳は算出しない）
+    // (8) フェーズ別・担当者別内訳（現在時点・ライブタスク限定）
+    //     フェーズ指定時は他フェーズの実績が混ざるため「未紐付け・削除済み」行を出さない
     const acByTask = await this.wbsEvmRepository.getActualCostByTask(
       wbsId,
       now,
       calculationMode
     );
     const { phaseBreakdown, assigneeBreakdown } = this.computeBreakdowns(
-      wbsData, acByTask, now, calculationMode, method, businessDayCounter
+      wbsData, acByTask, now, calculationMode, method, businessDayCounter,
+      { includeUnlinked: phaseId === undefined }
     );
 
     return {
@@ -363,7 +449,103 @@ export class EvmService implements IEvmService {
       scheduleForecast,
       phaseBreakdown,
       assigneeBreakdown,
+      comparison,
+      bufferConsumption: this.computeBufferConsumption(
+        wbsData, currentMetrics, comparison?.previousMetrics ?? null, calculationMode
+      ),
     };
+  }
+
+  /**
+   * バッファ消化（2-2）。バッファはWBS全体に属するため、フェーズ指定時（buffers=[]）は null になる。
+   */
+  private computeBufferConsumption(
+    wbsData: WbsEvmData,
+    currentMetrics: EvmMetrics,
+    previousMetrics: EvmMetrics | null,
+    calculationMode: EvmCalculationMode
+  ): EvmBufferConsumption | null {
+    const bufferAmount = this.bufferBacContribution(wbsData, calculationMode);
+    const evaluate = (metrics: EvmMetrics) =>
+      evaluateBufferConsumption({
+        bufferAmount,
+        ev: metrics.ev,
+        ac: metrics.ac,
+        taskBac: metrics.bac - bufferAmount,
+      });
+    const current = evaluate(currentMetrics);
+    if (!current) return null;
+    return { current, previous: previousMetrics ? evaluate(previousMetrics) : null };
+  }
+
+  async getPhaseForecastDates(
+    wbsId: number,
+    now: Date = new Date()
+  ): Promise<Map<number, Date | null>> {
+    const calculationMode: EvmCalculationMode = 'hours';
+    const wbsData = await this.wbsEvmRepository.getWbsEvmData(wbsId, now);
+    const method = wbsData.settings?.progressMeasurementMethod ?? 'SELF_REPORTED';
+    const businessDayCounter = await this.buildBusinessDayCounter(wbsData);
+
+    const phaseIds = new Set<number>();
+    for (const task of wbsData.tasks) {
+      if (task.meta?.phaseId != null) phaseIds.add(task.meta.phaseId);
+    }
+
+    const forecasts = new Map<number, Date | null>();
+    for (const phaseId of phaseIds) {
+      const phaseData = this.scopeToPhase(wbsData, phaseId);
+      const ev = phaseData.tasks.reduce(
+        (sum, task) => sum + task.getEarnedValue(now, calculationMode, method, now),
+        0
+      );
+      const forecast = this.computeScheduleForecast(
+        phaseData, ev, this.computeDateRange(phaseData, now), now, calculationMode, method, businessDayCounter
+      );
+      forecasts.set(phaseId, forecast.forecastCompletionDate);
+    }
+    return forecasts;
+  }
+
+  async getTrendMetrics(
+    wbsId: number,
+    pastDates: Date[],
+    now: Date = new Date()
+  ): Promise<EvmMetrics[]> {
+    const calculationMode: EvmCalculationMode = 'hours';
+    const wbsData = await this.wbsEvmRepository.getWbsEvmData(wbsId, now);
+    const method = wbsData.settings?.progressMeasurementMethod ?? 'SELF_REPORTED';
+    const fMethod = wbsData.settings?.evmForecastMethod ?? 'CPI_ONLY';
+
+    const computeCumulativeAc = await this.buildCumulativeAcFn(wbsId, now, calculationMode);
+    const businessDayCounter = await this.buildBusinessDayCounter(wbsData);
+    const snapshots = await this.wbsEvmRepository.getProgressSnapshots(wbsId, now);
+    const computeHistorical = this.buildAsOfMetricsFn(
+      wbsData, snapshots, now, calculationMode, method, fMethod, businessDayCounter
+    );
+
+    const past = pastDates.map((date) => computeHistorical(date, computeCumulativeAc(date)));
+    const current = this.computeMetricsFromData(
+      wbsData, now, computeCumulativeAc(now), calculationMode, method, fMethod, false, now, businessDayCounter
+    );
+    return [...past, current];
+  }
+
+  async getEvmSummary(wbsId: number, now: Date = new Date()): Promise<EvmSummary> {
+    const calculationMode: EvmCalculationMode = 'hours';
+    const wbsData = await this.wbsEvmRepository.getWbsEvmData(wbsId, now);
+    const method = wbsData.settings?.progressMeasurementMethod ?? 'SELF_REPORTED';
+    const fMethod = wbsData.settings?.evmForecastMethod ?? 'CPI_ONLY';
+
+    const computeCumulativeAc = await this.buildCumulativeAcFn(wbsId, now, calculationMode);
+    const businessDayCounter = await this.buildBusinessDayCounter(wbsData);
+    const currentMetrics = this.computeMetricsFromData(
+      wbsData, now, computeCumulativeAc(now), calculationMode, method, fMethod, false, now, businessDayCounter
+    );
+    const scheduleForecast = this.computeScheduleForecast(
+      wbsData, currentMetrics.ev, this.computeDateRange(wbsData, now), now, calculationMode, method, businessDayCounter
+    );
+    return { currentMetrics, scheduleForecast };
   }
 
   async getEvmDashboardDataSerialized(
@@ -375,6 +557,8 @@ export class EvmService implements IEvmService {
       interval?: 'daily' | 'weekly' | 'monthly';
       periodMode?: 'project' | 'recent3months' | 'recent1month' | 'custom';
       showPrediction?: boolean;
+      comparisonDate?: Date;
+      phaseId?: number;
     } = {}
   ): Promise<EvmDashboardData> {
     const result = await this.getEvmDashboardData(wbsId, options);
@@ -387,15 +571,25 @@ export class EvmService implements IEvmService {
   private async buildCumulativeAcFn(
     wbsId: number,
     endDate: Date,
-    calculationMode: EvmCalculationMode
+    calculationMode: EvmCalculationMode,
+    phaseId?: number
   ): Promise<(evalDate: Date) => number> {
     // 下限はアクティブタスク開始で切らない（soft-delete済みタスクの早期実績も累積ACに含めるため）
-    const actualCostMap = await this.wbsEvmRepository.getActualCostByDate(
-      wbsId,
-      new Date(0),
-      endDate,
-      calculationMode
-    );
+    const actualCostMap =
+      phaseId !== undefined
+        ? await this.wbsEvmRepository.getActualCostByDate(
+          wbsId,
+          new Date(0),
+          endDate,
+          calculationMode,
+          phaseId
+        )
+        : await this.wbsEvmRepository.getActualCostByDate(
+          wbsId,
+          new Date(0),
+          endDate,
+          calculationMode
+        );
 
     const sortedCostEntries = Array.from(actualCostMap.entries())
       .sort(([a], [b]) => a.localeCompare(b));
@@ -688,6 +882,7 @@ export class EvmService implements IEvmService {
    * - タスク未紐付け実績（taskId=null）とライブタスクに存在しないtaskId（削除済み）のACは
    *   「未紐付け・削除済み」行へ合算し、内訳AC合計 = 全体AC を維持する。
    * - 未紐付け行はEV=0のためCPIが「正当な0」に見えてしまうので、SPI/CPIとも明示的にnull。
+   * - フェーズ別の行には、そのフェーズのタスクだけで求めた予定終了日・予測完了日（Earned Schedule）を付ける。
    */
   private computeBreakdowns(
     wbsData: WbsEvmData,
@@ -695,11 +890,13 @@ export class EvmService implements IEvmService {
     now: Date,
     calculationMode: EvmCalculationMode,
     method: ProgressMeasurementMethod,
-    businessDayCounter?: BusinessDayCounter
+    businessDayCounter?: BusinessDayCounter,
+    options: { includeUnlinked: boolean } = { includeUnlinked: true }
   ): { phaseBreakdown: EvmBreakdownRow[]; assigneeBreakdown: EvmBreakdownRow[] } {
-    type Acc = Omit<EvmBreakdownRow, 'spi' | 'cpi'>;
+    type Acc = Omit<EvmBreakdownRow, 'sv' | 'cv' | 'spi' | 'cpi'>;
     const phaseMap = new Map<string, Acc>();
     const assigneeMap = new Map<string, Acc>();
+    const tasksByPhaseKey = new Map<string, TaskEvmData[]>();
     const liveTaskIds = new Set<number>();
 
     const accumulate = (
@@ -744,6 +941,7 @@ export class EvmService implements IEvmService {
         task.meta?.phaseId != null ? `phase:${task.meta.phaseId}` : 'phase:none';
       const phaseName = task.meta?.phaseName ?? '未分類';
       accumulate(phaseMap, phaseKey, phaseName, pv, ev, ac, bac);
+      tasksByPhaseKey.set(phaseKey, [...(tasksByPhaseKey.get(phaseKey) ?? []), task]);
 
       const assigneeKey =
         task.meta?.assigneeId != null
@@ -755,13 +953,17 @@ export class EvmService implements IEvmService {
 
     // 未紐付け・削除済みタスクのAC（内訳AC合計 = 全体AC の不変式を守る）
     let unlinkedAc = 0;
-    for (const [taskId, ac] of acByTask) {
-      if (taskId === null || !liveTaskIds.has(taskId)) unlinkedAc += ac;
+    if (options.includeUnlinked) {
+      for (const [taskId, ac] of acByTask) {
+        if (taskId === null || !liveTaskIds.has(taskId)) unlinkedAc += ac;
+      }
     }
 
     const toRows = (map: Map<string, Acc>): EvmBreakdownRow[] => {
       const rows: EvmBreakdownRow[] = Array.from(map.values()).map((acc) => ({
         ...acc,
+        sv: acc.ev - acc.pv,
+        cv: acc.ev - acc.ac,
         spi: acc.pv === 0 ? null : acc.ev / acc.pv,
         cpi: acc.ac === 0 ? null : acc.ev / acc.ac,
       }));
@@ -774,6 +976,8 @@ export class EvmService implements IEvmService {
           ev: 0,
           ac: unlinkedAc,
           bac: 0,
+          sv: 0,
+          cv: -unlinkedAc,
           spi: null,
           cpi: null,
           isUnlinked: true,
@@ -782,9 +986,39 @@ export class EvmService implements IEvmService {
       return rows;
     };
 
+    const phaseBreakdown = toRows(phaseMap).map((row) => {
+      const tasks = tasksByPhaseKey.get(row.key);
+      if (!tasks) return row;
+      const phaseData: WbsEvmData = { ...wbsData, tasks, buffers: [] };
+      const forecast = this.computeScheduleForecast(
+        phaseData, row.ev, this.computeDateRange(phaseData, now), now, calculationMode, method, businessDayCounter
+      );
+      return {
+        ...row,
+        plannedEndDate: forecast.plannedEndDate?.toISOString() ?? null,
+        forecastCompletionDate: forecast.forecastCompletionDate?.toISOString() ?? null,
+        scheduleDelayDays: forecast.delayDays,
+      };
+    });
+
     return {
-      phaseBreakdown: toRows(phaseMap),
+      phaseBreakdown,
       assigneeBreakdown: toRows(assigneeMap),
+    };
+  }
+
+  /**
+   * フェーズ別EVM用に、WBSデータをそのフェーズの（現在の）タスクだけに絞る。
+   * バッファはフェーズに属さないため含めない（フェーズ別内訳と同じ扱い）。
+   */
+  private scopeToPhase(wbsData: WbsEvmData, phaseId: number): WbsEvmData {
+    const tasks = wbsData.tasks.filter((task) => task.meta?.phaseId === phaseId);
+    return {
+      ...wbsData,
+      tasks,
+      buffers: [],
+      totalPlannedManHours: tasks.reduce((sum, task) => sum + task.plannedManHours, 0),
+      totalBaseManHours: tasks.reduce((sum, task) => sum + task.baseManHours, 0),
     };
   }
 
@@ -972,7 +1206,8 @@ export class EvmService implements IEvmService {
     calculationMode: EvmCalculationMode,
     method: ProgressMeasurementMethod,
     fMethod: EvmForecastMethod,
-    businessDayCounter?: BusinessDayCounter
+    businessDayCounter?: BusinessDayCounter,
+    phaseScope?: PhaseScope
   ): (evalDate: Date, ac: number) => EvmMetrics {
     // taskId別のスナップショット配列（snapshotAt昇順。取得時点でソート済み）
     const snapshotsByTask = new Map<number, TaskProgressSnapshotRecord[]>();
@@ -1006,6 +1241,13 @@ export class EvmService implements IEvmService {
 
         if (asOf) {
           if (asOf.isRemoved) continue; // tombstone以降は寄与0
+          // フェーズ指定時は「その時点のフェーズ」で絞る。フェーズ記録の導入前のスナップショットは
+          // タスクの現在のフェーズで代用する（削除済みで現在のフェーズも不明なタスクは対象外）
+          if (phaseScope) {
+            const phaseAsOf =
+              asOf.phaseId ?? phaseScope.currentPhaseByTaskId.get(taskId) ?? null;
+            if (phaseAsOf !== phaseScope.phaseId) continue;
+          }
           const t = this.taskFromSnapshot(asOf);
           if (asOf.plannedStart && asOf.plannedEnd) {
             pv += t.getPlannedValueAtDate('YOTEI', evalDate, calculationMode, method, businessDayCounter);

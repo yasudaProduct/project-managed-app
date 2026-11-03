@@ -108,6 +108,32 @@ import { ProjectSettingsApplicationService } from "@/applications/project-settin
 import type { IForecastApplicationService } from "@/applications/forecast/forecast-application-service";
 import { ForecastApplicationService } from "@/applications/forecast/forecast-application-service";
 
+// Task Delay関連
+import type { ITaskDelayApplicationService } from "@/applications/task-delay/task-delay-application-service";
+import { TaskDelayApplicationService } from "@/applications/task-delay/task-delay-application-service";
+
+// Data Freshness関連
+import type { IDataFreshnessApplicationService } from "@/applications/data-freshness/data-freshness-application-service";
+import { DataFreshnessApplicationService } from "@/applications/data-freshness/data-freshness-application-service";
+
+// Progress Review関連
+import type { IProgressReviewApplicationService } from "@/applications/progress-review/progress-review-application-service";
+import { ProgressReviewApplicationService } from "@/applications/progress-review/progress-review-application-service";
+
+// Portfolio関連
+import type { IPortfolioApplicationService } from "@/applications/portfolio/portfolio-application-service";
+import { PortfolioApplicationService } from "@/applications/portfolio/portfolio-application-service";
+
+// EVM Trend関連
+import type { IEvmTrendApplicationService } from "@/applications/trend/evm-trend-application-service";
+import { EvmTrendApplicationService } from "@/applications/trend/evm-trend-application-service";
+
+// Estimation Accuracy関連（CQRS）
+import type { IEstimationAccuracyQueryRepository } from "@/applications/estimation-accuracy/iestimation-accuracy-query-repository";
+import { EstimationAccuracyQueryRepository } from "@/infrastructures/estimation-accuracy/estimation-accuracy-query-repository";
+import { GetEstimationAccuracyHandler } from "@/applications/estimation-accuracy/get-estimation-accuracy-handler";
+import { GetEstimationAccuracyQuery } from "@/applications/estimation-accuracy/get-estimation-accuracy-query";
+
 // Prisma
 import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma/prisma';
@@ -192,6 +218,11 @@ container.bind<IWbsTagApplicationService>(SYMBOL.IWbsTagApplicationService).to(W
 container.bind<IWbsAnalyticsApplicationService>(SYMBOL.IWbsAnalyticsApplicationService).to(WbsAnalyticsApplicationService).inSingletonScope();
 container.bind<IProjectSettingsApplicationService>(SYMBOL.IProjectSettingsApplicationService).to(ProjectSettingsApplicationService).inSingletonScope();
 container.bind<IForecastApplicationService>(SYMBOL.IForecastApplicationService).to(ForecastApplicationService).inSingletonScope();
+container.bind<ITaskDelayApplicationService>(SYMBOL.ITaskDelayApplicationService).to(TaskDelayApplicationService).inSingletonScope();
+container.bind<IDataFreshnessApplicationService>(SYMBOL.IDataFreshnessApplicationService).to(DataFreshnessApplicationService).inSingletonScope();
+container.bind<IProgressReviewApplicationService>(SYMBOL.IProgressReviewApplicationService).to(ProgressReviewApplicationService).inSingletonScope();
+container.bind<IPortfolioApplicationService>(SYMBOL.IPortfolioApplicationService).to(PortfolioApplicationService).inSingletonScope();
+container.bind<IEvmTrendApplicationService>(SYMBOL.IEvmTrendApplicationService).to(EvmTrendApplicationService).inSingletonScope();
 container.bind<ICompanyHolidayApplicationService>(SYMBOL.ICompanyHolidayApplicationService).to(CompanyHolidayApplicationService).inSingletonScope();
 container.bind<ICrossWbsWorkloadService>(SYMBOL.ICrossWbsWorkloadService).to(CrossWbsWorkloadService).inSingletonScope();
 
@@ -243,6 +274,8 @@ container.bind<IQueryBus>(SYMBOL.IQueryBus).to(QueryBus).inSingletonScope();
 container.bind<GetDashboardStatsHandler>(SYMBOL.GetDashboardStatsHandler).to(GetDashboardStatsHandler).inSingletonScope();
 container.bind<GetWbsSummaryHandler>(SYMBOL.GetWbsSummaryHandler).to(GetWbsSummaryHandler).inSingletonScope();
 container.bind<GetWbsTaskSummaryHandler>(SYMBOL.GetWbsTaskSummaryHandler).to(GetWbsTaskSummaryHandler).inSingletonScope();
+container.bind<IEstimationAccuracyQueryRepository>(SYMBOL.IEstimationAccuracyQueryRepository).to(EstimationAccuracyQueryRepository).inSingletonScope();
+container.bind<GetEstimationAccuracyHandler>(SYMBOL.GetEstimationAccuracyHandler).to(GetEstimationAccuracyHandler).inSingletonScope();
 
 // QueryBusの初期化（ハンドラーの登録）
 const queryBus = container.get<QueryBus>(SYMBOL.IQueryBus);
@@ -254,5 +287,8 @@ queryBus.register(GetWbsSummaryQuery as new (...args: unknown[]) => GetWbsSummar
 
 const wbsTaskSummaryHandler = container.get<GetWbsTaskSummaryHandler>(SYMBOL.GetWbsTaskSummaryHandler);
 queryBus.register(GetWbsTaskSummaryQuery as new (...args: unknown[]) => GetWbsTaskSummaryQuery, wbsTaskSummaryHandler);
+
+const estimationAccuracyHandler = container.get<GetEstimationAccuracyHandler>(SYMBOL.GetEstimationAccuracyHandler);
+queryBus.register(GetEstimationAccuracyQuery as new (...args: unknown[]) => GetEstimationAccuracyQuery, estimationAccuracyHandler);
 
 export { container };

@@ -211,13 +211,14 @@ describe('Notification', () => {
   });
 
   describe('getActionUrl', () => {
-    it('タスク系通知でtaskIdとprojectIdがある場合はタスクURLを返す', () => {
+    // タスク詳細の画面はないため、遅れ・期限間近のタスク一覧があるプロジェクト画面（サマリータブ）へ遷移する
+    it('タスク系通知でtaskIdとprojectIdがある場合はプロジェクトURLを返す', () => {
       const notification = createNotification({
         type: NotificationType.TASK_DEADLINE_WARNING,
         data: { taskId: 42, projectId: 'proj-1' },
       });
 
-      expect(notification.getActionUrl()).toBe('/projects/proj-1/tasks/42');
+      expect(notification.getActionUrl()).toBe('/projects/proj-1');
     });
 
     it.each([
@@ -226,13 +227,13 @@ describe('Notification', () => {
       NotificationType.TASK_MANHOUR_EXCEEDED,
       NotificationType.TASK_ASSIGNED,
       NotificationType.TASK_UPDATED,
-    ])('%s でtaskIdとprojectIdがある場合はタスクURLを返す', (type) => {
+    ])('%s でtaskIdとprojectIdがある場合はプロジェクトURLを返す', (type) => {
       const notification = createNotification({
         type,
         data: { taskId: 1, projectId: 'p-1' },
       });
 
-      expect(notification.getActionUrl()).toBe('/projects/p-1/tasks/1');
+      expect(notification.getActionUrl()).toBe('/projects/p-1');
     });
 
     it('タスク系通知でtaskIdがない場合はundefinedを返す', () => {

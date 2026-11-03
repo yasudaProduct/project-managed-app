@@ -144,6 +144,30 @@ describe('EvmService: フェーズ別・担当者別内訳', () => {
     expect(impl!.ac).toBe(60);
   });
 
+  it('各行にSV（EV-PV）とCV（EV-AC）が含まれる', async () => {
+    const result = await evmService.getEvmDashboardData(1, {
+      periodMode: 'project',
+    });
+
+    const design = result.phaseBreakdown.find((r) => r.name === '設計');
+    expect(design!.sv).toBeCloseTo(50 - 100, 5);
+    expect(design!.cv).toBeCloseTo(50 - 30, 5);
+
+    const yamada = result.assigneeBreakdown.find((r) => r.name === '山田');
+    expect(yamada!.sv).toBeCloseTo(-50, 5);
+    expect(yamada!.cv).toBeCloseTo(20, 5);
+  });
+
+  it('未紐付け・削除済み行のSVは0、CVは-AC', async () => {
+    const result = await evmService.getEvmDashboardData(1, {
+      periodMode: 'project',
+    });
+
+    const unlinked = result.phaseBreakdown.find((r) => r.isUnlinked);
+    expect(unlinked!.sv).toBe(0);
+    expect(unlinked!.cv).toBe(-15);
+  });
+
   it('担当者別に集計される（軸はタスクの現担当者）', async () => {
     const result = await evmService.getEvmDashboardData(1, {
       periodMode: 'project',
@@ -199,5 +223,46 @@ describe('EvmService: フェーズ別・担当者別内訳', () => {
 
     expect(result.phaseBreakdown.some((r) => r.name === '未分類')).toBe(true);
     expect(result.assigneeBreakdown.some((r) => r.name === '未割当')).toBe(true);
+  });
+
+  describe('前回からの変化（comparisonDate）', () => {
+    it('比較日を渡すと、その日時点のメトリクス（AC・EVは比較日まで）を返す', async () => {
+      mockRepository.getActualCostByDate.mockResolvedValue(
+        new Map([
+          ['2025-05-01', 105],
+          ['2025-05-28', 20],
+        ])
+      );
+
+      const result = await evmService.getEvmDashboardData(1, {
+        periodMode: 'project',
+        comparisonDate: new Date('2025-05-25T00:00:00.000Z'),
+      });
+
+      expect(result.comparison).not.toBeNull();
+      expect(result.comparison!.previousMetrics.date.toISOString()).toBe(
+        '2025-05-25T00:00:00.000Z'
+      );
+      expect(result.comparison!.previousMetrics.ac).toBe(105);
+      expect(result.currentMetrics.ac).toBe(125);
+    });
+
+    it('比較日を渡さなければ comparison は null', async () => {
+      const result = await evmService.getEvmDashboardData(1, { periodMode: 'project' });
+
+      expect(result.comparison).toBeNull();
+    });
+  });
+
+  describe('getEvmSummary（ポートフォリオ一覧用の軽量版）', () => {
+    it('現在メトリクスとスケジュール予測を返し、ダッシュボードと同じ値になる', async () => {
+      const summary = await evmService.getEvmSummary(1);
+      const dashboard = await evmService.getEvmDashboardData(1, { periodMode: 'project' });
+
+      expect(summary.currentMetrics.ev).toBeCloseTo(dashboard.currentMetrics.ev, 5);
+      expect(summary.currentMetrics.ac).toBeCloseTo(dashboard.currentMetrics.ac, 5);
+      expect(summary.currentMetrics.spi).toBeCloseTo(dashboard.currentMetrics.spi!, 5);
+      expect(summary.scheduleForecast).toEqual(dashboard.scheduleForecast);
+    });
   });
 });

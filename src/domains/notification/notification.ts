@@ -241,8 +241,9 @@ export class Notification {
       case NotificationType.TASK_MANHOUR_EXCEEDED:
       case NotificationType.TASK_ASSIGNED:
       case NotificationType.TASK_UPDATED:
+        // タスク詳細の画面はないため、遅れ・期限間近のタスク一覧があるプロジェクト画面へ遷移する
         if (this.data.taskId && this.data.projectId) {
-          return `/projects/${this.data.projectId}/tasks/${this.data.taskId}`;
+          return `/projects/${this.data.projectId}`;
         }
         break;
       case NotificationType.SCHEDULE_DELAY:

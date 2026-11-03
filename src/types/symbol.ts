@@ -97,6 +97,25 @@ export const SYMBOL = {
     // Forecast
     IForecastApplicationService: Symbol.for('IForecastApplicationService'),
 
+    // Task Delay（遅延タスク一覧）
+    ITaskDelayApplicationService: Symbol.for('ITaskDelayApplicationService'),
+
+    // Data Freshness（データの鮮度）
+    IDataFreshnessApplicationService: Symbol.for('IDataFreshnessApplicationService'),
+
+    // Progress Review（進捗確認サイクル・前回の確認日）
+    IProgressReviewApplicationService: Symbol.for('IProgressReviewApplicationService'),
+
+    // Portfolio（ポートフォリオ一覧）
+    IPortfolioApplicationService: Symbol.for('IPortfolioApplicationService'),
+
+    // EVM Trend（悪化トレンドの検知）
+    IEvmTrendApplicationService: Symbol.for('IEvmTrendApplicationService'),
+
+    // Estimation Accuracy（見積精度・CQRS）
+    IEstimationAccuracyQueryRepository: Symbol.for('IEstimationAccuracyQueryRepository'),
+    GetEstimationAccuracyHandler: Symbol.for('GetEstimationAccuracyHandler'),
+
     // WBS Tags
     IWbsTagRepository: Symbol.for('IWbsTagRepository'),
     IWbsTagApplicationService: Symbol.for('IWbsTagApplicationService'),

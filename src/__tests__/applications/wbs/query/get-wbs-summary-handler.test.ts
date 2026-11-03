@@ -113,6 +113,7 @@ describe('GetWbsSummaryHandler', () => {
       upsertProjectSettings: jest.fn(),
       upsertDashboardSettings: jest.fn(),
       upsertEvmSettings: jest.fn(),
+      upsertProgressReviewCycle: jest.fn(),
       findSchedulingSettings: jest.fn().mockResolvedValue(DEFAULT_SCHEDULING_SETTINGS),
       upsertSchedulingSettings: jest.fn(),
     } as jest.Mocked<IProjectSettingsRepository>;

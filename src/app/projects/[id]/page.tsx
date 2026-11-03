@@ -9,7 +9,11 @@ import {
 import { getWbsPhases } from "@/app/wbs/[id]/actions/wbs-phase-actions";
 import { getWbsAssignees } from "@/app/wbs/assignee/assignee-actions";
 import { getTaskAll } from "@/app/wbs/[id]/actions/wbs-task-actions";
-import { getMilestones } from "@/app/wbs/[id]/actions/milestone-actions";
+import { getMilestones, listMilestoneForecasts } from "@/app/wbs/[id]/actions/milestone-actions";
+import { listTaskDelays } from "@/app/wbs/[id]/actions/task-delay-actions";
+import { getDataFreshness } from "@/app/wbs/[id]/actions/data-freshness-actions";
+import { getPreviousReviewDate } from "@/app/wbs/[id]/actions/progress-review-actions";
+import { getEvmTrend } from "@/app/wbs/[id]/actions/evm-actions";
 import { ArrowLeft, Edit } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -101,6 +105,14 @@ export default async function ProjectPage({
       getProjectSettings(projectId),
       getWbsImportSchedule(latestWbs.id),
     ]);
+  // 期限間近の日数・前回の確認日はプロジェクト設定に依存するため、設定の取得後に判定する
+  const previousReviewDate = await getPreviousReviewDate(settings.progressReviewCycle);
+  const [taskDelays, dataFreshness, milestoneForecasts, evmTrend] = await Promise.all([
+    listTaskDelays(latestWbs.id, settings.deadlineAlertDays, previousReviewDate ?? undefined),
+    getDataFreshness(latestWbs.id, projectId),
+    listMilestoneForecasts(latestWbs.id),
+    getEvmTrend(latestWbs.id, projectId),
+  ]);
 
   return (
     <div className="container mx-auto mt-2">
@@ -113,12 +125,18 @@ export default async function ProjectPage({
         phases={phases}
         assignees={assignees}
         milestones={milestones}
+        milestoneForecasts={milestoneForecasts}
+        taskDelays={taskDelays}
+        dataFreshness={dataFreshness}
+        previousReviewDate={previousReviewDate}
+        evmTrend={evmTrend}
         importSchedule={importSchedule}
         defaultTab={tab}
         showEvm={true}
         showTags={false}
         defaultProgressMethod={settings.progressMeasurementMethod}
         defaultForecastMethod={settings.evmForecastMethod}
+        progressReviewCycle={settings.progressReviewCycle}
         deadlineAlertDays={settings.deadlineAlertDays ?? 1}
         costOverrunThresholdPct={settings.costOverrunThresholdPct ?? 100}
       />

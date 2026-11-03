@@ -388,6 +388,7 @@ describe('TaskRepository Integration Tests', () => {
       actualStart: null,
       actualEnd: null,
       isRemoved,
+      phaseId: null,
     });
 
     afterAll(async () => {
@@ -564,6 +565,7 @@ describe('TaskRepository Integration Tests', () => {
       actualStart: null,
       actualEnd: null,
       isRemoved: false,
+      phaseId: null,
       ...overrides,
     });
 
