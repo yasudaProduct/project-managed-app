@@ -1,18 +1,40 @@
 import type { IProjectRepository } from "@/applications/projects/iproject-repository";
 import { Project } from "@/domains/project/project";
 import { ProjectStatus } from "@/domains/project/project-status";
-import type { Project as ProjectType } from "@/types/project";
+import type { Project as ProjectType, ProjectKind, StandingCategory } from "@/types/project";
 import { SYMBOL } from "@/types/symbol";
 import { ProjectStatus as ProjectStatusType} from "@/types/wbs";
 import { inject, injectable } from "inversify";
 import type { IWbsRepository } from "../wbs/iwbs-repository";
 import { Wbs } from "@/domains/wbs/wbs";
 
+export type CreateProjectInput = {
+    name: string;
+    description: string;
+    startDate: Date;
+    endDate: Date;
+    /** 種別（省略時は案件）。作成後は変更しない */
+    kind?: ProjectKind;
+    /** 常設プロジェクトの分類（常設のみ） */
+    category?: StandingCategory;
+};
+
+export type UpdateProjectInput = {
+    id: string;
+    name?: string;
+    description?: string;
+    startDate?: Date;
+    endDate?: Date;
+    status?: ProjectStatusType;
+    /** 常設プロジェクトの分類（常設のみ） */
+    category?: StandingCategory;
+};
+
 export interface IProjectApplicationService {
     getProjectById(id: string): Promise<ProjectType | null>;
     getProjectAll(): Promise<ProjectType[] | null>;
-    createProject(args: { name: string; description: string; startDate: Date; endDate: Date }): Promise<{ success: boolean; error?: string; id?: string }>;
-    updateProject(args: { id: string; name?: string; description?: string; startDate?: Date; endDate?: Date; status?: ProjectStatusType }): Promise<{ success: boolean; error?: string; id?: string }>;
+    createProject(args: CreateProjectInput): Promise<{ success: boolean; error?: string; id?: string }>;
+    updateProject(args: UpdateProjectInput): Promise<{ success: boolean; error?: string; id?: string }>;
     deleteProject(id: string): Promise<{ success: boolean; error?: string; id?: string }>;
 }
 
@@ -36,14 +58,7 @@ export class ProjectApplicationService implements IProjectApplicationService {
     public async getProjectById(id: string): Promise<ProjectType | null> {
         const project = await this.projectRepository.findById(id);
         if (!project) return null;
-        return {
-            id: project.id!,
-            name: project.name,
-            status: project.getStatus(),
-            description: project.description,
-            startDate: project.startDate,
-            endDate: project.endDate,
-        };
+        return toProjectDto(project);
     }
 
     /**
@@ -53,16 +68,7 @@ export class ProjectApplicationService implements IProjectApplicationService {
     public async getProjectAll(): Promise<ProjectType[] | null> {
         const projects = await this.projectRepository.findAll();
 
-        return projects.map((project) => {
-            return {
-                id: project.id!,
-                name: project.name,
-                status: project.getStatus(),
-                description: project.description,
-                startDate: project.startDate,
-                endDate: project.endDate,
-            }
-        });
+        return projects.map((project) => toProjectDto(project));
     }
 
     /**
@@ -70,13 +76,20 @@ export class ProjectApplicationService implements IProjectApplicationService {
      * @param args プロジェクトデータ
      * @returns プロジェクト
      */
-    public async createProject(args: { name: string; description: string; startDate: Date; endDate: Date }): Promise<{ success: boolean; error?: string; id?: string }> {
-        const project = Project.create({
-            name: args.name,
-            description: args.description,
-            startDate: args.startDate,
-            endDate: args.endDate,
-        });
+    public async createProject(args: CreateProjectInput): Promise<{ success: boolean; error?: string; id?: string }> {
+        let project: Project;
+        try {
+            project = Project.create({
+                name: args.name,
+                description: args.description,
+                startDate: args.startDate,
+                endDate: args.endDate,
+                kind: args.kind,
+                category: args.category,
+            });
+        } catch (error) {
+            return { success: false, error: error instanceof Error ? error.message : "プロジェクトの作成に失敗しました。" };
+        }
 
         const check = await this.projectRepository.findByName(project.name);
         if (check) {
@@ -100,25 +113,22 @@ export class ProjectApplicationService implements IProjectApplicationService {
      * @param args プロジェクトデータ
      * @returns プロジェクト
      */
-    public async updateProject(
-        args: {
-            id: string;
-            name?: string;
-            description?: string;
-            startDate?: Date;
-            endDate?: Date;
-            status?: ProjectStatusType
-        }): Promise<{ success: boolean; error?: string; id?: string }> {
+    public async updateProject(args: UpdateProjectInput): Promise<{ success: boolean; error?: string; id?: string }> {
         const project: Project | null = await this.projectRepository.findById(args.id);
         if (!project) return { success: false, error: "プロジェクトが存在しません。" }
 
         const oldName = project.name;
 
-        if (args.name) project.updateName(args.name);
-        if (args.description) project.updateDescription(args.description);
-        if (args.startDate) project.updateStartDate(args.startDate);
-        if (args.endDate) project.updateEndDate(args.endDate);
-        if (args.status) project.updateStatus(new ProjectStatus({ status: args.status }));
+        try {
+            if (args.name) project.updateName(args.name);
+            if (args.description) project.updateDescription(args.description);
+            if (args.startDate) project.updateStartDate(args.startDate);
+            if (args.endDate) project.updateEndDate(args.endDate);
+            if (args.status) project.updateStatus(new ProjectStatus({ status: args.status }));
+            if (args.category) project.updateCategory(args.category);
+        } catch (error) {
+            return { success: false, error: error instanceof Error ? error.message : "プロジェクトの更新に失敗しました。" };
+        }
 
         // プロジェクト名の重複チェック
         const check = await this.projectRepository.findByName(project.name);
@@ -158,4 +168,17 @@ export class ProjectApplicationService implements IProjectApplicationService {
         return { success: true, id: id }
     }
 
+}
+
+function toProjectDto(project: Project): ProjectType {
+    return {
+        id: project.id!,
+        name: project.name,
+        status: project.getStatus(),
+        description: project.description,
+        startDate: project.startDate,
+        endDate: project.endDate,
+        kind: project.kind,
+        category: project.category,
+    };
 }

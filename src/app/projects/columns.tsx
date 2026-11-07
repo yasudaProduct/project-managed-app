@@ -14,6 +14,8 @@ import Link from "next/link";
 export type Project = {
   id: string;
   name: string;
+  /** 種別（案件 / 常設）。常設は分類も含めて表示する */
+  kind: string;
   description: string | undefined;
   startDate: string;
   endDate: string;
@@ -24,6 +26,10 @@ export const columns: ColumnDef<Project & { link?: string }>[] = [
   {
     accessorKey: "name",
     header: "名前",
+  },
+  {
+    accessorKey: "kind",
+    header: "種別",
   },
   {
     accessorKey: "description",

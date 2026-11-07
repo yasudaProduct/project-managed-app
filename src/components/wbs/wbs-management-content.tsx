@@ -12,6 +12,7 @@ import {
   Calendar,
   Settings,
   TrendingUp,
+  Repeat,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,10 @@ import type { MilestoneForecastDto } from "@/applications/milestone/milestone-ap
 import type { EvmTrendDto } from "@/applications/trend/evm-trend-application-service";
 import { DataFreshnessPanel } from "@/components/wbs/data-freshness-panel";
 import type { WbsImportScheduleDto } from "@/types/import-schedule";
+import type { ProjectKind, StandingCategory } from "@/types/project";
+import type { SteadyWorkTaskDto } from "@/types/steady-work-plan";
+import { SteadyWorkPlanPanel } from "@/components/standing-work/steady-work-plan-panel";
+import { getWbsTabs, resolveWbsTab } from "@/components/wbs/wbs-tabs";
 
 type WbsManagementContentProps = {
   wbsId: number;
@@ -49,6 +54,9 @@ type WbsManagementContentProps = {
     status: ProjectStatus;
     startDate: Date;
     endDate: Date;
+    /** 種別（省略時は案件）。常設は タブ構成が変わる（docs/plans/non-project-work-management.md §6.6） */
+    kind?: ProjectKind;
+    category?: StandingCategory;
   };
   tasks: WbsTask[];
   buffers: Array<{
@@ -57,8 +65,10 @@ type WbsManagementContentProps = {
     name: string;
   }>;
   phases: Array<{ id: number; seq: number; name: string; code: string }>;
-  assignees: Array<{ assignee: { displayName: string } | null }> | null;
+  assignees: Array<{ assignee: { id?: number; displayName: string } | null }> | null;
   milestones: Milestone[];
+  /** 常設プロジェクトの定常タスク（定常枠タブに表示） */
+  steadyWorkTasks?: SteadyWorkTaskDto[];
   /** マイルストーンと達成見込み（マイルストーンタブに表示） */
   milestoneForecasts?: MilestoneForecastDto[];
   /** 遅れ・期限間近のタスク（サマリータブに表示） */
@@ -89,6 +99,7 @@ export function WbsManagementContent({
   phases,
   assignees,
   milestones,
+  steadyWorkTasks = [],
   milestoneForecasts = [],
   taskDelays = [],
   dataFreshness = null,
@@ -104,6 +115,15 @@ export function WbsManagementContent({
   deadlineAlertDays = 1,
   costOverrunThresholdPct = 100,
 }: WbsManagementContentProps) {
+  const kind: ProjectKind = project.kind ?? "PROJECT";
+  const isStanding = kind === "STANDING";
+  const tabs = getWbsTabs(kind, { showEvm });
+  const hasTab = (tab: (typeof tabs)[number]) => tabs.includes(tab);
+  const initialTab = resolveWbsTab(kind, defaultTab, { showEvm });
+  const steadyWorkAssignees = (assignees ?? [])
+    .map((row) => row.assignee)
+    .filter((assignee): assignee is { id: number; displayName: string } => assignee?.id !== undefined);
+
   return (
     <>
       {/* アクションメニュー */}
@@ -130,18 +150,20 @@ export function WbsManagementContent({
             <Users className="h-4 w-4" />
           </Button>
         </Link>
-        <Link href={`/wbs/${wbsId}/progress-history`}>
-          <Button className="bg-white text-black ml-2" title="進捗履歴の訂正">
-            <History className="h-4 w-4" />
-          </Button>
-        </Link>
+        {!isStanding && (
+          <Link href={`/wbs/${wbsId}/progress-history`}>
+            <Button className="bg-white text-black ml-2" title="進捗履歴の訂正">
+              <History className="h-4 w-4" />
+            </Button>
+          </Link>
+        )}
         <TaskModal wbsId={wbsId}>
           <Button className="bg-white text-black ml-2 mr-2">
             <CirclePlus className="h-4 w-4" />
             <CalendarCheck className="h-4 w-4" />
           </Button>
         </TaskModal>
-        <WbsImportJobButtons wbsId={wbsId} wbsName={wbsName} />
+        {!isStanding && <WbsImportJobButtons wbsId={wbsId} wbsName={wbsName} />}
       </div>
 
       <Suspense
@@ -152,35 +174,47 @@ export function WbsManagementContent({
         }
       >
         {/* タブ */}
-        <Tabs defaultValue={defaultTab || "summary"} className="mt-2">
+        <Tabs defaultValue={initialTab} className="mt-2">
           <TabsList className="flex flex-row justify-start gap-2 border-b-2 border-gray-200">
-            <TabsTrigger value="summary" className="flex items-center gap-2">
+            <TabsTrigger value="summary" className="flex items-center gap-2" title="サマリー">
               <LayoutDashboard className="h-4 w-4" />
             </TabsTrigger>
-            <TabsTrigger value="list" className="flex items-center gap-2">
+            <TabsTrigger value="list" className="flex items-center gap-2" title="リスト">
               <List className="h-4 w-4" />
             </TabsTrigger>
-            <TabsTrigger value="milestone" className="flex items-center gap-2">
-              <CalendarCheck className="h-4 w-4" />
-            </TabsTrigger>
-            <TabsTrigger value="table" className="flex items-center gap-2">
-              <Table className="h-4 w-4" />
-            </TabsTrigger>
+            {hasTab("steady-work") && (
+              <TabsTrigger value="steady-work" className="flex items-center gap-2" title="定常枠">
+                <Repeat className="h-4 w-4" />
+              </TabsTrigger>
+            )}
+            {hasTab("milestone") && (
+              <TabsTrigger value="milestone" className="flex items-center gap-2" title="マイルストーン">
+                <CalendarCheck className="h-4 w-4" />
+              </TabsTrigger>
+            )}
+            {hasTab("table") && (
+              <TabsTrigger value="table" className="flex items-center gap-2" title="月別集計">
+                <Table className="h-4 w-4" />
+              </TabsTrigger>
+            )}
             <TabsTrigger
               value="assignee-gantt"
               className="flex items-center gap-2"
+              title="担当者ガント"
             >
               <Users className="h-4 w-4" />
             </TabsTrigger>
-            {showEvm && (
-              <TabsTrigger value="evm" className="flex items-center gap-2">
+            {hasTab("evm") && (
+              <TabsTrigger value="evm" className="flex items-center gap-2" title="EVM">
                 <TrendingUp className="h-4 w-4" />
               </TabsTrigger>
             )}
-            <TabsTrigger value="task-scheduling" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
+            {hasTab("task-scheduling") && (
+              <TabsTrigger value="task-scheduling" className="flex items-center gap-2" title="スケジュール">
+                <Calendar className="h-4 w-4" />
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="settings" className="flex items-center gap-2" title="設定">
               <Settings className="h-4 w-4" />
             </TabsTrigger>
           </TabsList>
@@ -194,6 +228,8 @@ export function WbsManagementContent({
                   status: project.status,
                   startDate: project.startDate,
                   endDate: project.endDate,
+                  kind,
+                  category: project.category,
                 }}
                 phases={phases}
                 assignees={assignees || []}
@@ -211,21 +247,34 @@ export function WbsManagementContent({
           <TabsContent value="list">
             <TaskTableViewPage wbsTasks={tasks} wbsId={wbsId} />
           </TabsContent>
-          <TabsContent value="milestone">
-            <MilestoneManagement
-              wbsId={wbsId}
-              initialMilestones={milestoneForecasts}
-              phases={phases}
-              tasks={tasks.map((task) => ({ id: task.id, taskNo: task.taskNo, name: task.name }))}
-            />
-          </TabsContent>
-          <TabsContent value="table">
-            <WbsSummaryTables projectId={project.id} wbsId={wbsId} />
-          </TabsContent>
+          {hasTab("steady-work") && (
+            <TabsContent value="steady-work">
+              <SteadyWorkPlanPanel
+                wbsId={wbsId}
+                initialTasks={steadyWorkTasks}
+                assignees={steadyWorkAssignees}
+              />
+            </TabsContent>
+          )}
+          {hasTab("milestone") && (
+            <TabsContent value="milestone">
+              <MilestoneManagement
+                wbsId={wbsId}
+                initialMilestones={milestoneForecasts}
+                phases={phases}
+                tasks={tasks.map((task) => ({ id: task.id, taskNo: task.taskNo, name: task.name }))}
+              />
+            </TabsContent>
+          )}
+          {hasTab("table") && (
+            <TabsContent value="table">
+              <WbsSummaryTables projectId={project.id} wbsId={wbsId} />
+            </TabsContent>
+          )}
           <TabsContent value="assignee-gantt">
             <AssigneeGanttChart wbsId={wbsId} />
           </TabsContent>
-          {showEvm && (
+          {hasTab("evm") && (
             <TabsContent value="evm" className="space-y-4">
               {dataFreshness && <DataFreshnessPanel freshness={dataFreshness} />}
               <EvmDashboard
@@ -239,12 +288,14 @@ export function WbsManagementContent({
               />
             </TabsContent>
           )}
-          <TabsContent value="task-scheduling">
-            <SchedulingWorkbench wbsId={wbsId} />
-          </TabsContent>
+          {hasTab("task-scheduling") && (
+            <TabsContent value="task-scheduling">
+              <SchedulingWorkbench wbsId={wbsId} />
+            </TabsContent>
+          )}
           <TabsContent value="settings" className="space-y-4">
             <ProjectSettings projectId={project.id} />
-            <WbsImportScheduleSettings wbsId={wbsId} schedule={importSchedule} />
+            {!isStanding && <WbsImportScheduleSettings wbsId={wbsId} schedule={importSchedule} />}
           </TabsContent>
         </Tabs>
       </Suspense>

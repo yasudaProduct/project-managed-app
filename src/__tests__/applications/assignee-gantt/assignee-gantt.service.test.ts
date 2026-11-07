@@ -4,6 +4,8 @@ import { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-
 import { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
+import type { ISteadyWorkPlanRepository } from '@/applications/standing-work/isteady-work-plan-repository';
+import { SteadyWorkPlan } from '@/domains/standing-work/steady-work-plan';
 import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
@@ -22,6 +24,7 @@ describe('AssigneeGanttService', () => {
   let mockCompanyHolidayRepository: jest.Mocked<ICompanyHolidayRepository>;
   let mockWbsAssigneeRepository: jest.Mocked<IWbsAssigneeRepository>;
   let mockSystemSettingsRepository: jest.Mocked<ISystemSettingsRepository>;
+  let mockSteadyWorkPlanRepository: jest.Mocked<ISteadyWorkPlanRepository>;
 
   const testStartDate = new Date('2024-01-15');
   const testEndDate = new Date('2024-01-19');
@@ -71,12 +74,17 @@ describe('AssigneeGanttService', () => {
       update: jest.fn(),
     } as jest.Mocked<ISystemSettingsRepository>;
 
+    mockSteadyWorkPlanRepository = {
+      findActiveByWbsIds: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<ISteadyWorkPlanRepository>;
+
     service = new AssigneeGanttService(
       mockTaskRepository,
       mockUserScheduleRepository,
       mockCompanyHolidayRepository,
       mockWbsAssigneeRepository,
-      mockSystemSettingsRepository
+      mockSystemSettingsRepository,
+      mockSteadyWorkPlanRepository
     );
   });
 
@@ -251,6 +259,48 @@ describe('AssigneeGanttService', () => {
       await expect(
         service.getAssigneeWorkload(testWbsId, 'non-existent-user', testStartDate, testEndDate)
       ).rejects.toThrow('担当者が見つかりません: non-existent-user');
+    });
+  });
+
+  /** 常設プロジェクトの定常枠（docs/plans/non-project-work-management.md §11.3）を単一WBSの負荷にも載せる */
+  describe('定常枠の反映', () => {
+    it('定常枠を持つタスクは枠の値で日別に配分し、YOTEI 期間が無くても負荷に載る', async () => {
+      // Arrange
+      mockWbsAssigneeRepository.findByWbsId.mockResolvedValue([
+        createMockAssignee(1, 'user-1', '山田太郎', 0.5),
+      ]);
+      mockTaskRepository.findByWbsId.mockResolvedValue([]);
+      mockUserScheduleRepository.findByUsersAndDateRange.mockResolvedValue([]);
+      mockCompanyHolidayRepository.findByDateRange.mockResolvedValue([]);
+      mockSteadyWorkPlanRepository.findActiveByWbsIds.mockResolvedValue([
+        {
+          plan: SteadyWorkPlan.createFromDb({
+            id: 1,
+            taskId: 9,
+            unit: 'PER_DAY',
+            hours: 1,
+            validFrom: new Date('2024-01-01'),
+          }),
+          task: { id: 9, name: '保守対応', wbsId: testWbsId, assigneeId: 1 },
+        },
+      ]);
+
+      // Act
+      const result = await service.getAssigneeWorkloads(testWbsId, testStartDate, testEndDate);
+
+      // Assert
+      expect(mockSteadyWorkPlanRepository.findActiveByWbsIds).toHaveBeenCalledWith(
+        [testWbsId],
+        { start: testStartDate, end: testEndDate }
+      );
+      expect(result).toHaveLength(1);
+      // 単一WBSの行は従来どおり参画率を返す
+      expect(result[0].assigneeRate).toBe(0.5);
+      const monday = result[0].dailyAllocations.find(d => d.date.toDateString() === new Date('2024-01-15').toDateString())!;
+      expect(monday.allocatedHours).toBe(1);
+      expect(monday.taskAllocations[0].taskName).toBe('保守対応');
+      const friday = result[0].dailyAllocations.find(d => d.date.toDateString() === new Date('2024-01-19').toDateString())!;
+      expect(friday.allocatedHours).toBe(1);
     });
   });
 });

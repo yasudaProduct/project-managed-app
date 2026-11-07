@@ -2,6 +2,7 @@ import { injectable, inject } from "inversify";
 import type { PrismaClient } from "@prisma/client";
 import { SYMBOL } from "@/types/symbol";
 import type {
+  FindTargetWbsOptions,
   ITargetWbsQueryRepository,
   TargetWbsInfo,
 } from "@/applications/cross-wbs-workload/itarget-wbs-query-repository";
@@ -19,9 +20,12 @@ export class TargetWbsQueryRepository implements ITargetWbsQueryRepository {
     @inject(SYMBOL.PrismaClient) private readonly prisma: PrismaClient
   ) {}
 
-  async findTargetWbs(): Promise<TargetWbsInfo[]> {
+  async findTargetWbs(options?: FindTargetWbsOptions): Promise<TargetWbsInfo[]> {
     const projects = await this.prisma.projects.findMany({
-      where: { status: { in: ["INACTIVE", "ACTIVE"] } },
+      where: {
+        status: { in: ["INACTIVE", "ACTIVE"] },
+        ...(options?.kinds ? { kind: { in: [...options.kinds] } } : {}),
+      },
       select: {
         id: true,
         name: true,

@@ -25,7 +25,10 @@
 その日に担当者が使える時間の上限。[01仕様書](./01-working-hours-allocation.md)の `AssigneeWorkingCalendar.getAvailableHours` に従う（会社休日・個人予定・参画率を考慮）。
 
 ### 対象WBS (Target WBS)
-横断計算（プロジェクト横断ページ・トグルON・他WBS考慮スケジューリング）の対象となるWBS。**未開始(`INACTIVE`)・進行中(`ACTIVE`)** プロジェクトの**最新WBS**（`createdAt desc, id desc` の先頭）を、プロジェクトごとに1件とする。画面操作上は1プロジェクト1WBSだが、テーブル構造上は複数作成できるため最新の1件のみを対象とする。保留(`PENDING`)・完了(`DONE`)・中止(`CANCELLED`)のプロジェクトは対象外。
+横断計算（プロジェクト横断ページ・トグルON・他WBS考慮スケジューリング）の対象となるWBS。**未開始(`INACTIVE`)・進行中(`ACTIVE`)** プロジェクトの**最新WBS**（`createdAt desc, id desc` の先頭）を、プロジェクトごとに1件とする。画面操作上は1プロジェクト1WBSだが、テーブル構造上は複数作成できるため最新の1件のみを対象とする。保留(`PENDING`)・完了(`DONE`)・中止(`CANCELLED`)のプロジェクトは対象外。種別は問わず、**常設プロジェクト**（`kind = STANDING`。[構想・実装設計](../plans/non-project-work-management.md)）も対象に含める（ポートフォリオ・通知など案件分析は `findTargetWbs({ kinds: ['PROJECT'] })` で常設を除く）。
+
+### 定常枠 (Steady Work Plan)
+常設プロジェクトの定常タスクに設定する予定量（`PER_DAY`: 1営業日あたり h / `PER_MONTH`: 1か月あたり h、有効期間）。定常枠を持つタスクは YOTEI 期間・工数ではなく枠で配分する（[§5.4](#54-定常枠を持つタスクの配分)）。
 
 ### 合算 (Merge)
 複数WBS（プロジェクト）分の日別配分を、担当者（ユーザー）単位で1つに集約すること。`WorkloadMergeService.mergeDailyAllocations` が担う。
@@ -62,6 +65,8 @@
 | ドメイン（合算） | `src/domains/assignee-workload/workload-merge-service.ts` |
 | ドメイン（カレンダー） | `src/domains/calendar/assignee-working-calendar.ts`, `company-calendar.ts` |
 | ドメイン（警告） | `src/domains/assignee-workload/workload-warning-service.ts` |
+| ドメイン（定常枠） | `src/domains/standing-work/steady-work-plan.ts`, `steady-work-allocation-service.ts` |
+| アプリケーション（担当者行の配分） | `src/applications/assignee-gantt/assignee-daily-allocation-calculator.ts` |
 | アプリケーション（単一WBS） | `src/applications/assignee-gantt/assignee-gantt-service.ts` |
 | アプリケーション（横断） | `src/applications/cross-wbs-workload/cross-wbs-workload-service.ts` |
 | アプリケーション（DTO変換） | `src/applications/assignee-gantt/workload-data-mapper.ts` |
@@ -111,6 +116,20 @@ allocatedHours = totalHours × ratio
 
 ### 5.3 スケジューリング結果からの按分（別入力）
 `calculateDailyAllocationsFromSchedule(items: ScheduleAllocationInput[], ...)` は、YOTEI期間ではなく前詰め計算結果（開始/終了/工数）を入力とする並行パス。式は§5.2と同じ（比例按分）で、タスクスケジューリングのプレビュー用（[07仕様書](./07-task-scheduling.md)）。
+
+### 5.4 定常枠を持つタスクの配分
+担当者行の配分は `AssigneeDailyAllocationCalculator`（`src/applications/assignee-gantt/assignee-daily-allocation-calculator.ts`）が組み立てる。担当者行に属する定常枠（`ISteadyWorkPlanRepository.findActiveByWbsIds` で範囲と交差するもの）があるタスクは §5.2 の按分対象から外し、`SteadyWorkAllocationService`（`src/domains/standing-work/steady-work-allocation-service.ts`）で次のように配分して合流させる（二重計上しない）。
+
+```
+d が会社休日 or 担当者の全日休暇 or 枠の有効期間外 → 0
+unit = PER_DAY   → hours(d) = hours（半休などで稼働が減っても減らさない）
+unit = PER_MONTH → hours(d) = hours × avail(d) ÷ Σ_{d' ∈ d の月} avail(d')
+                   （avail は rate=1 のカレンダー: 標準勤務時間 − 個人予定。参画率は見ない）
+```
+
+- 定常枠だけを持つ担当者（通常タスクなし）も行に出す
+- 単一WBSモード（`AssigneeGanttService`）・合算モード（`CrossWbsWorkloadService`）・外部配分セット（`getExternalAllocationSets`。07仕様書の他WBS考慮スケジューリングにも流れる）のいずれも同じ計算を使う
+- 合算時のラベルは他のWBSと同じく `projectName`（常設プロジェクト名）
 
 ---
 
@@ -275,6 +294,7 @@ isOverRateCapacity = rateJudgedHours > rateAllowedHours
 | 実現不可能タスク警告 | `src/__tests__/domains/assignee-workload/workload-warning-service.test.ts` |
 | タスク配分の`projectName` | `src/__tests__/domains/assignee-workload/task-allocation.test.ts` |
 | 稼働カレンダー | `src/__tests__/domains/calendar/assignee-working-calendar.test.ts` |
+| 定常枠の日別配分 | `src/__tests__/domains/standing-work/steady-work-allocation-service.test.ts` |
 | 他WBS考慮スケジューリング用カレンダー | `src/__tests__/domains/task-scheduling/external-load-aware-calendar.test.ts` |
 | 単一WBSアプリサービス | `src/__tests__/applications/assignee-gantt/assignee-gantt.service.test.ts` |
 | 横断アプリサービス（対象WBS解決・合算・ハイブリッドRバッジ） | `src/__tests__/applications/cross-wbs-workload/cross-wbs-workload-service.test.ts` |

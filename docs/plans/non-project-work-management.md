@@ -235,6 +235,8 @@ model SteadyWorkPlan {
 
 Step 1 と 2 は同時に進めてもよい。Step 0 は開発の前に **実際の Geppo の案件外行がどの `PROJECT_ID` / `WBS_NO` で入っているか** を確かめる目的も兼ねる（§10 Q1）。
 
+Step 3・4 の詳細な実装計画（サブステップへの分割、仕様、設計、テスト、確認事項）は [実装計画: Step 3・Step 4](./non-project-work-step3-4-plan.md) を参照。
+
 ---
 
 ## 8. 既存コードへの主な影響（Step 1〜2）
@@ -299,3 +301,76 @@ Step 1 と 2 は同時に進めてもよい。Step 0 は開発の前に **実際
 | Q5 | 常設プロジェクトの作成・定常枠の設定は誰が行うか（本人／PM／管理者）。権限制御は必要か | §6.7 |
 | Q6 | 担当者負荷の既定表示を「予定」のままにしてよいか。実績モードを既定にする要望はあるか | §6.8 |
 | Q7 | Step 0（運用で先行）を実施するか。実施する場合、どの常設プロジェクトから始めるか | §7 |
+
+---
+
+## 11. 実装設計（Step 1・2）
+
+- ステータス: **実装済み**（2026-11-03。ブランチ `feature/non-project-work`。統合テスト `src/__integration_tests__/infrastructures/steady-work-plan-repository.test.ts` を含む）
+- 対象: [§7](#7-段階的な進め方ロードマップ案) の Step 1（種別と除外ルール）と Step 2（定常枠と負荷への反映）。Step 3（予定／実績切替・実績タブ・割込み作業ダイアログ）と Step 4 は対象外
+- 進め方: TDD（テストを先に書いて失敗を確認してからコミットし、実装でテストを通す）。既存機能は「種別 = 案件（`PROJECT`）」の挙動を一切変えない
+
+### 11.1 構想からの差分（決定事項）
+
+| 項目 | 構想（§6） | 実装（今回） | 理由 |
+|---|---|---|---|
+| 常設プロジェクトの終了日 | 任意 | **必須のまま**（保守契約の終了日や年度末を入れる） | `endDate` を null 許容にすると DTO・画面（約 40 ファイル）に波及するため Step 1 では見送る。負荷計算は定常枠の有効期間で決まるので、終了日は運用上の目安に留まる |
+| 定常タスクの作成 | タスク登録画面から | **定常枠タブから「定常タスクを追加」**（名前・担当者のみ）。工程が無い場合は既定の工程「定常」（コード `STD`）を自動作成 | 通常のタスク登録は工程・予定期間・工数が必須で、定常タスクには不要なため |
+| 種別の変更 | — | 作成時のみ指定。**作成後は変更不可** | 案件 ↔ 常設の切替は EVM スナップショット等の既存データの意味を変えてしまうため |
+| 入力漏れ判定 | 設定で OFF にできる | 定常枠の有効期間を予定期間として **常に含める**（設定は設けない） | 常設 WBS の鮮度パネルにしか効かず（判定はその WBS のタスクが基準）、案件側の表示は変わらないため |
+| 定常枠の月按分 | 月の疑似タスクを既存按分へ | **日ごとに「月額 × 当日の稼働可能時間 ÷ その月の稼働可能時間合計」** を直接計算 | 有効期間が月の途中で始まっても自然に按分される。計算は専用ドメインサービスに閉じる |
+
+### 11.2 データモデル
+
+```prisma
+enum ProjectKind { PROJECT STANDING }
+enum StandingCategory { MAINTENANCE INTERNAL OTHER }
+enum SteadyPlanUnit { PER_DAY PER_MONTH }
+
+model Projects {
+  kind     ProjectKind       @default(PROJECT)
+  category StandingCategory? // STANDING のみ
+}
+
+model SteadyWorkPlan {            // @@map("steady_work_plan")
+  id        Int            @id @default(autoincrement())
+  taskId    Int            // WbsTask（onDelete: Cascade）
+  unit      SteadyPlanUnit
+  hours     Decimal
+  validFrom DateTime       @db.Date
+  validTo   DateTime?      @db.Date
+  createdAt / updatedAt
+  @@index([taskId, validFrom])
+}
+```
+
+マイグレーションは `prisma/migrations/20261103000000_add_standing_project_and_steady_work_plan/`。既存行は `kind = PROJECT` になり挙動は変わらない。
+
+### 11.3 層ごとの変更
+
+| 層 | 追加・変更 |
+|---|---|
+| types | `src/types/project.ts`: `ProjectKind` / `StandingCategory`（`as const` + union、表示ラベル）、`Project` DTO に `kind` `category?`。`src/types/steady-work-plan.ts`: `SteadyPlanUnit`、`SteadyWorkPlanDto`、`SteadyWorkTaskDto` |
+| domain | `Project`: `kind`（既定 `PROJECT`）・`category`（常設のみ。案件に付けると例外）・`isStanding()`。`src/domains/standing-work/steady-work-plan.ts`: 不変条件（`hours ≥ 0`、`validFrom ≤ validTo`）、`isActiveOn(date)`、`overlapsWith`、`assertNoOverlap`。`steady-work-allocation-service.ts`: 定常枠 → `DailyWorkAllocation[]`（`PER_DAY` は稼働日に固定値、`PER_MONTH` は月額を稼働可能時間比で按分。参画率は見ず rate=1 カレンダー、会社休日・全日休暇は 0）と、通常タスク分との日別マージ |
+| application | `ISteadyWorkPlanRepository`（`findByWbsId` / `findActiveByWbsIds(range)` は所属タスクの id・名前・担当者 id を伴う読み取りモデルを返す）。`IStandingWorkApplicationService`（定常タスク一覧・定常タスク追加・定常枠の作成/更新/削除。常設以外の WBS・担当者なしタスク・期間重複は `{ success: false, error }`）。`ProjectApplicationService.createProject` に `kind` / `category`。`TargetWbsInfo` に `projectKind` を追加し、`PortfolioApplicationService` と `NotificationEventDetector` は `PROJECT` のみ対象。`CrossWbsWorkloadService` / `AssigneeGanttService` は定常枠を持つタスクを枠で配分し（YOTEI 按分の対象から外して二重計上を防ぐ）、枠のみの担当者も行に出す。`DataFreshnessApplicationService` は枠の有効期間を予定期間に加える |
+| infrastructure | `SteadyWorkPlanRepository`（Prisma）。`ProjectRepository` / `TargetWbsQueryRepository` の種別マッピング。`EstimationAccuracyQueryRepository` / `DashboardQueryRepository` は `kind = PROJECT` に限定。DI 登録（`SYMBOL.ISteadyWorkPlanRepository`、`SYMBOL.IStandingWorkApplicationService`） |
+| UI | プロジェクト作成フォームに種別（作成時のみ）と分類（常設のみ）。一覧に種別列と `?kind=` フィルタ。`WbsManagementContent` は常設のとき **サマリー / リスト / 定常枠 / 担当者ガント / 設定** のみ表示（タブ構成は純粋関数 `getWbsTabs(kind)` に切り出してテスト）。定常枠パネル `src/components/standing-work/steady-work-plan-panel.tsx` と Server Action `src/app/wbs/[id]/actions/steady-work-plan-actions.ts` |
+
+### 11.4 テスト計画
+
+| 層 | テスト |
+|---|---|
+| domain | `src/__tests__/domains/project/project.test.ts`（種別・分類の不変条件）、`src/__tests__/domains/standing-work/steady-work-plan.test.ts`、`steady-work-allocation-service.test.ts`（稼働日のみ・休日/全日休暇 0・月按分・有効期間の端・通常タスクとのマージ） |
+| application | `src/__tests__/applications/standing-work/standing-work-application-service.test.ts`、既存の `cross-wbs-workload-service.test.ts` / `assignee-gantt.service.test.ts` / `portfolio-application-service.test.ts` / `notification-event-detector.test.ts` / `data-freshness-application-service.test.ts` / `project-application-service.test.ts` への追加 |
+| UI | `src/__tests__/actions/steady-work-plan-actions.test.ts`、`src/__tests__/actions/projects-actions.test.ts`、`src/__tests__/components/wbs/wbs-tabs.test.ts`、`src/__tests__/components/standing-work/steady-work-plan-panel.test.tsx` |
+| 統合 | `src/__integration_tests__/infrastructures/steady-work-plan-repository.test.ts`（往復・範囲交差・タスク削除時のカスケード） |
+
+### 11.5 実装状況（2026-11-03）
+
+| 項目 | 状況 |
+|---|---|
+| Step 1: 種別（`Projects.kind` / `category`）、プロジェクト作成・一覧の種別対応、案件分析からの除外（ポートフォリオ・通知・見積精度・ダッシュボード）、常設 WBS のタブ構成 | 実装済み |
+| Step 2: 定常枠（`steady_work_plan`）、定常枠タブ（定常タスク追加・枠の追加/編集/削除）、担当者負荷（横断・WBS内・単一WBS）と他WBS考慮スケジューリングへの反映、入力漏れ判定への反映 | 実装済み |
+| Step 3: 予定／実績の切替表示・実績タブ・「割込み作業を追加」 | 計画済み（[別紙](./non-project-work-step3-4-plan.md) 3-A〜3-C）。単発タスクは当面、既存のタスク登録で代替 |
+| Step 4: 保守契約の工数管理・Geppo 別名表 | 計画済み（[別紙](./non-project-work-step3-4-plan.md) 4-B・4-C） |
+| §9.1 Geppo の案件外行の取込挙動 | 未修正。[別紙](./non-project-work-step3-4-plan.md) 4-A として計画 |

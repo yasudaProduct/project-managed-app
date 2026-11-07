@@ -10,6 +10,8 @@ erDiagram
   String id PK
   String name
   ProjectStatus status
+  ProjectKind kind
+  StandingCategory category "nullable"
   String description "nullable"
   DateTime startDate
   DateTime endDate
@@ -159,6 +161,16 @@ erDiagram
   String title
   String location "nullable"
   String description "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"steady_work_plan" {
+  Int id PK
+  Int taskId FK
+  SteadyPlanUnit unit
+  Decimal hours
+  DateTime validFrom
+  DateTime validTo "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -350,6 +362,7 @@ erDiagram
 "work_records" }o--o| "wbs_task" : task
 "work_records" }o--o| "wbs" : wbs
 "user_schedule" }o--|| "users" : user
+"steady_work_plan" }o--|| "wbs_task" : task
 "notifications" }o--|| "users" : user
 "notification_preferences" |o--|| "users" : user
 "push_subscriptions" }o--|| "users" : user
@@ -370,6 +383,8 @@ erDiagram
   - `id`: 
   - `name`: 
   - `status`: 
+  - `kind`: 
+  - `category`: 
   - `description`: 
   - `startDate`: 
   - `endDate`: 
@@ -551,6 +566,18 @@ erDiagram
   - `title`: 
   - `location`: 
   - `description`: 
+  - `createdAt`: 
+  - `updatedAt`: 
+
+### `steady_work_plan`
+
+**Properties**
+  - `id`: 
+  - `taskId`: 
+  - `unit`: 
+  - `hours`: 
+  - `validFrom`: 
+  - `validTo`: 
   - `createdAt`: 
   - `updatedAt`: 
 

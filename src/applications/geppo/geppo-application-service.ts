@@ -83,7 +83,9 @@ export class GeppoApplicationService implements IGeppoApplicationService {
           status: p.getStatus(),
           description: p.description,
           startDate: p.startDate,
-          endDate: p.endDate
+          endDate: p.endDate,
+          kind: p.kind,
+          category: p.category,
         })),
         users: []
       }

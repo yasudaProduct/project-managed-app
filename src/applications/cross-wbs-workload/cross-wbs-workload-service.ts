@@ -12,10 +12,14 @@ import type { IUserScheduleRepository } from '@/applications/calendar/iuser-sche
 import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
 import type { IWbsRepository } from '@/applications/wbs/iwbs-repository';
+import type {
+  ISteadyWorkPlanRepository,
+  SteadyWorkPlanWithTask,
+} from '@/applications/standing-work/isteady-work-plan-repository';
+import { AssigneeDailyAllocationCalculator } from '@/applications/assignee-gantt/assignee-daily-allocation-calculator';
 import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { AssigneeWorkload } from '@/domains/assignee-workload/assignee-workload';
-import { WorkloadCalculationService } from '@/domains/assignee-workload/workload-calculation-service';
 import { WorkloadMergeService, LabeledAllocationSet } from '@/domains/assignee-workload/workload-merge-service';
 import { AssigneeWorkingCalendar, UserSchedule } from '@/domains/calendar/assignee-working-calendar';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
@@ -26,10 +30,11 @@ import { CompanyCalendar } from '@/domains/calendar/company-calendar';
  * 未開始・進行中プロジェクトの最新WBSを対象に、WBS横断の担当者負荷を算出する。
  * 各WBS内の按分は既存ロジック(そのWBSの参画率カレンダー)に従い、
  * 合算時の分母のみ rate=1 カレンダー(標準勤務時間−個人予定)で再計算する。
+ * 常設プロジェクトの定常枠を持つタスクは枠で配分する（AssigneeDailyAllocationCalculator）。
  */
 @injectable()
 export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
-  private readonly workloadCalculationService = new WorkloadCalculationService();
+  private readonly allocationCalculator = new AssigneeDailyAllocationCalculator();
   private readonly workloadMergeService = new WorkloadMergeService();
 
   constructor(
@@ -39,7 +44,8 @@ export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
     @inject(SYMBOL.IUserScheduleRepository) private readonly userScheduleRepository: IUserScheduleRepository,
     @inject(SYMBOL.ICompanyHolidayRepository) private readonly companyHolidayRepository: ICompanyHolidayRepository,
     @inject(SYMBOL.ISystemSettingsRepository) private readonly systemSettingsRepository: ISystemSettingsRepository,
-    @inject(SYMBOL.IWbsRepository) private readonly wbsRepository: IWbsRepository
+    @inject(SYMBOL.IWbsRepository) private readonly wbsRepository: IWbsRepository,
+    @inject(SYMBOL.ISteadyWorkPlanRepository) private readonly steadyWorkPlanRepository: ISteadyWorkPlanRepository
   ) {}
 
   async resolveTargetWbs(excludeProjectId?: string): Promise<TargetWbsInfo[]> {
@@ -53,9 +59,10 @@ export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
     if (targets.length === 0) return [];
 
     const wbsIds = targets.map(target => target.wbsId);
-    const [assignees, tasks, systemSettings, companyHolidays] = await Promise.all([
+    const [assignees, tasks, steadyPlans, systemSettings, companyHolidays] = await Promise.all([
       this.wbsAssigneeRepository.findByWbsIds(wbsIds),
       this.taskRepository.findActiveByWbsIds(wbsIds, { periodOverlaps: { start: startDate, end: endDate } }),
+      this.steadyWorkPlanRepository.findActiveByWbsIds(wbsIds, { start: startDate, end: endDate }),
       this.systemSettingsRepository.get(),
       this.companyHolidayRepository.findByDateRange(startDate, endDate),
     ]);
@@ -68,6 +75,7 @@ export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
       targets,
       assignees,
       tasks,
+      steadyPlans,
       schedulesByUser,
       companyCalendar,
       startDate,
@@ -103,14 +111,16 @@ export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
     const wbs = await this.wbsRepository.findById(wbsId);
     if (!wbs) throw new Error('WBSが見つかりません');
 
-    const [currentTasks, currentAssignees, systemSettings, companyHolidays, targets] = await Promise.all([
-      this.taskRepository.findByWbsId(wbsId),
-      this.wbsAssigneeRepository.findByWbsId(wbsId),
-      this.systemSettingsRepository.get(),
-      this.companyHolidayRepository.findByDateRange(startDate, endDate),
-      // 現プロジェクトの全WBSを対象集合から除外する(2重計上防止)
-      this.resolveTargetWbs(wbs.projectId),
-    ]);
+    const [currentTasks, currentAssignees, currentSteadyPlans, systemSettings, companyHolidays, targets] =
+      await Promise.all([
+        this.taskRepository.findByWbsId(wbsId),
+        this.wbsAssigneeRepository.findByWbsId(wbsId),
+        this.steadyWorkPlanRepository.findActiveByWbsIds([wbsId], { start: startDate, end: endDate }),
+        this.systemSettingsRepository.get(),
+        this.companyHolidayRepository.findByDateRange(startDate, endDate),
+        // 現プロジェクトの全WBSを対象集合から除外する(2重計上防止)
+        this.resolveTargetWbs(wbs.projectId),
+      ]);
     if (currentAssignees.length === 0) return [];
 
     const userIds = [...new Set(currentAssignees.map(assignee => assignee.userId))];
@@ -121,15 +131,17 @@ export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
     let externalSetsByUser = new Map<string, LabeledAllocationSet[]>();
     if (targets.length > 0) {
       const targetIds = targets.map(target => target.wbsId);
-      const [externalAssignees, externalTasks] = await Promise.all([
+      const [externalAssignees, externalTasks, externalSteadyPlans] = await Promise.all([
         this.wbsAssigneeRepository.findByWbsIds(targetIds),
         this.taskRepository.findActiveByWbsIds(targetIds, { periodOverlaps: { start: startDate, end: endDate } }),
+        this.steadyWorkPlanRepository.findActiveByWbsIds(targetIds, { start: startDate, end: endDate }),
       ]);
       const userIdSet = new Set(userIds);
       externalSetsByUser = this.buildAllocationSets({
         targets,
         assignees: externalAssignees.filter(assignee => userIdSet.has(assignee.userId)),
         tasks: externalTasks,
+        steadyPlans: externalSteadyPlans,
         schedulesByUser,
         companyCalendar,
         startDate,
@@ -141,14 +153,15 @@ export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
     // 外部負荷は各行に乗る(稀なデータ形状として許容)。
     return currentAssignees.map(assignee => {
       const schedules = schedulesByUser.get(assignee.userId) ?? [];
-      const currentDaily = this.workloadCalculationService.calculateDailyAllocations(
-        currentTasks.filter(task => task.assigneeId === assignee.id),
+      const currentDaily = this.allocationCalculator.calculate({
+        tasks: currentTasks,
+        steadyPlans: currentSteadyPlans,
         assignee,
-        schedules,
+        userSchedules: schedules,
         companyCalendar,
         startDate,
-        endDate
-      );
+        endDate,
+      });
       const merged = this.workloadMergeService.mergeDailyAllocations({
         sets: [
           { dailyAllocations: currentDaily }, // 現WBS分はラベルなし
@@ -183,11 +196,12 @@ export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
     if (targets.length === 0) return new Map();
 
     const wbsIds = targets.map(target => target.wbsId);
-    const [assignees, tasks, systemSettings, companyHolidays] = await Promise.all([
+    const [assignees, tasks, steadyPlans, systemSettings, companyHolidays] = await Promise.all([
       this.wbsAssigneeRepository.findByWbsIds(wbsIds),
       this.taskRepository.findActiveByWbsIds(wbsIds, {
         periodOverlaps: { start: query.startDate, end: query.endDate },
       }),
+      this.steadyWorkPlanRepository.findActiveByWbsIds(wbsIds, { start: query.startDate, end: query.endDate }),
       this.systemSettingsRepository.get(),
       this.companyHolidayRepository.findByDateRange(query.startDate, query.endDate),
     ]);
@@ -206,6 +220,7 @@ export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
       targets,
       assignees: targetAssignees,
       tasks,
+      steadyPlans,
       schedulesByUser,
       companyCalendar,
       startDate: query.startDate,
@@ -217,11 +232,13 @@ export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
    * (対象WBS×担当者行)ごとに既存ロジックで日別配分を計算し、
    * ユーザーIDごとのラベル付きセットへまとめる。
    * タスクの照合は WbsTask.assigneeId = WbsAssignee.id(join行PK)で行う。
+   * 定常枠（常設プロジェクト）を持つタスクは枠で配分する。
    */
   private buildAllocationSets(args: {
     targets: TargetWbsInfo[];
     assignees: WbsAssignee[];
     tasks: Task[];
+    steadyPlans: SteadyWorkPlanWithTask[];
     schedulesByUser: Map<string, UserSchedule[]>;
     companyCalendar: CompanyCalendar;
     startDate: Date;
@@ -235,20 +252,17 @@ export class CrossWbsWorkloadService implements ICrossWbsWorkloadService {
       const target = targetByWbsId.get(assignee.wbsId);
       if (!target) continue;
 
-      const assigneeTasks = args.tasks.filter(
-        task => task.wbsId === assignee.wbsId && task.assigneeId === assignee.id
-      );
-      if (assigneeTasks.length === 0) continue;
+      const rowInput = { tasks: args.tasks, steadyPlans: args.steadyPlans, assignee };
+      if (!this.allocationCalculator.hasWork(rowInput)) continue;
 
       const schedules = args.schedulesByUser.get(assignee.userId) ?? [];
-      const dailyAllocations = this.workloadCalculationService.calculateDailyAllocations(
-        assigneeTasks,
-        assignee,
-        schedules,
-        args.companyCalendar,
-        args.startDate,
-        args.endDate
-      );
+      const dailyAllocations = this.allocationCalculator.calculate({
+        ...rowInput,
+        userSchedules: schedules,
+        companyCalendar: args.companyCalendar,
+        startDate: args.startDate,
+        endDate: args.endDate,
+      });
 
       const sets = setsByUser.get(assignee.userId) ?? [];
       sets.push({

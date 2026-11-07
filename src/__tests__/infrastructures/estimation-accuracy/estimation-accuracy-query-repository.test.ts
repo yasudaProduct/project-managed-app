@@ -45,11 +45,12 @@ describe('EstimationAccuracyQueryRepository', () => {
     repository = new EstimationAccuracyQueryRepository(prismaMock as unknown as PrismaClient);
   });
 
-  it('中止以外のプロジェクトの最新WBSにある完了タスクを対象にする', async () => {
+  it('中止以外の案件（常設を除く）の最新WBSにある完了タスクを対象にする', async () => {
     await repository.listCompletedTaskEstimates();
 
     expect(prismaMock.projects.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { status: { not: 'CANCELLED' } } })
+      // 常設プロジェクト（定常・不定期作業の受け皿）は見積精度の対象外
+      expect.objectContaining({ where: { status: { not: 'CANCELLED' }, kind: 'PROJECT' } })
     );
     expect(prismaMock.wbsTask.findMany).toHaveBeenCalledWith(
       expect.objectContaining({

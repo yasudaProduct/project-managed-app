@@ -6,6 +6,8 @@ import type { IUserScheduleRepository } from '@/applications/calendar/iuser-sche
 import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
 import type { ISyncLogRepository } from '@/applications/wbs-sync/isync-log-repository';
+import type { ISteadyWorkPlanRepository } from '@/applications/standing-work/isteady-work-plan-repository';
+import { SteadyWorkPlan } from '@/domains/standing-work/steady-work-plan';
 import { Task } from '@/domains/task/task';
 import { TaskNo } from '@/domains/task/value-object/task-id';
 import { TaskStatus } from '@/domains/task/value-object/task-status';
@@ -69,6 +71,7 @@ describe('DataFreshnessApplicationService', () => {
   let companyHolidayRepository: { findByDateRange: jest.Mock };
   let systemSettingsRepository: { get: jest.Mock };
   let syncLogRepository: { getLastSync: jest.Mock };
+  let steadyWorkPlanRepository: { findByWbsId: jest.Mock };
   let service: DataFreshnessApplicationService;
 
   beforeEach(() => {
@@ -132,6 +135,7 @@ describe('DataFreshnessApplicationService', () => {
         syncedAt: new Date('2026-10-31T00:00:00.000Z'),
       }),
     };
+    steadyWorkPlanRepository = { findByWbsId: jest.fn().mockResolvedValue([]) };
     service = new DataFreshnessApplicationService(
       taskRepository as unknown as ITaskRepository,
       wbsAssigneeRepository as unknown as IWbsAssigneeRepository,
@@ -139,7 +143,8 @@ describe('DataFreshnessApplicationService', () => {
       userScheduleRepository as unknown as IUserScheduleRepository,
       companyHolidayRepository as unknown as ICompanyHolidayRepository,
       systemSettingsRepository as unknown as ISystemSettingsRepository,
-      syncLogRepository as unknown as ISyncLogRepository
+      syncLogRepository as unknown as ISyncLogRepository,
+      steadyWorkPlanRepository as unknown as ISteadyWorkPlanRepository
     );
   });
 
@@ -204,5 +209,61 @@ describe('DataFreshnessApplicationService', () => {
     const result = await service.getDataFreshness(1, 'p1', { now });
 
     expect(result.lastWbsSync).toBeNull();
+  });
+
+  /** 常設プロジェクトの定常枠（docs/plans/non-project-work-management.md §6.6）は有効期間を予定期間とみなす */
+  describe('定常枠の有効期間', () => {
+    const steadyTask = makeTask({ id: 4, status: 'IN_PROGRESS', userId: 'u3', periods: [] });
+    const assignees = [
+      WbsAssignee.createFromDb({ id: 3, wbsId: 1, userId: 'u3', userName: '鈴木', rate: 1, costPerHour: 5000, seq: 3 }),
+    ];
+    const businessDays = [
+      '2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23',
+      '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30',
+    ].map((day) => `${day}T00:00:00.000Z`);
+
+    beforeEach(() => {
+      taskRepository.findActiveByWbsId.mockResolvedValue([steadyTask]);
+      wbsAssigneeRepository.findByWbsId.mockResolvedValue(assignees);
+      workRecordRepository.findDailyHoursByUsers.mockResolvedValue([]);
+      workRecordRepository.findLastRecordDateByUsers.mockResolvedValue(new Map());
+      userScheduleRepository.findByUsersAndDateRange.mockResolvedValue([]);
+    });
+
+    it('無期限の定常枠を持つ担当者は、予定タスクが無くても確認期間の全営業日が入力漏れの対象になる', async () => {
+      steadyWorkPlanRepository.findByWbsId.mockResolvedValue([
+        SteadyWorkPlan.createFromDb({ id: 1, taskId: 4, unit: 'PER_DAY', hours: 1, validFrom: d('2026-10-01') }),
+      ]);
+
+      const result = await service.getDataFreshness(1, 'p1', { now });
+
+      expect(steadyWorkPlanRepository.findByWbsId).toHaveBeenCalledWith(1);
+      expect(result.entryCheck.assignees).toEqual([
+        { userId: 'u3', name: '鈴木', lastRecordDate: null, missingDates: businessDays },
+      ]);
+    });
+
+    it('終了日のある定常枠は終了日までを対象にする', async () => {
+      steadyWorkPlanRepository.findByWbsId.mockResolvedValue([
+        SteadyWorkPlan.createFromDb({
+          id: 1,
+          taskId: 4,
+          unit: 'PER_DAY',
+          hours: 1,
+          validFrom: d('2026-10-01'),
+          validTo: d('2026-10-23'),
+        }),
+      ]);
+
+      const result = await service.getDataFreshness(1, 'p1', { now });
+
+      expect(result.entryCheck.assignees[0].missingDates).toEqual(businessDays.slice(0, 5));
+    });
+
+    it('定常枠が無ければ予定タスクの無い担当者は入力漏れの対象にならない（従来どおり）', async () => {
+      const result = await service.getDataFreshness(1, 'p1', { now });
+
+      expect(result.entryCheck.assignees[0].missingDates).toEqual([]);
+    });
   });
 });

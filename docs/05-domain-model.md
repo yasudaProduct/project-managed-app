@@ -7,7 +7,8 @@ ER図と実装中の`src/domains/`配下を要約し、主要集約と境界を�
 ### Project 集約
 - `projects`, `project_settings`
 - 責務: プロジェクトのライフサイクル、ステータス管理、設定（進捗測定方式・見通し計算方式・EVM除外設定等）
-- 主要エンティティ: `Project`（id, name, status, description, startDate, endDate）
+- 主要エンティティ: `Project`（id, name, status, kind, category, description, startDate, endDate）
+- 種別（`kind`）: `PROJECT`（案件。従来どおり）/ `STANDING`（常設。保守・社内雑務など定常・不定期作業の受け皿。EVM・ポートフォリオ・見積精度・通知の対象外で、担当者負荷にだけ反映する。[構想・実装設計](./plans/non-project-work-management.md)）
 
 ### WBS 集約
 - `wbs`, `wbs_phase`, `wbs_task`, `task_period`, `task_kosu`, `task_status_log`, `milestone`, `task_dependencies`, `wbs_buffer`, `wbs_assignee`, `wbs_tag`
@@ -46,6 +47,13 @@ ER図と実装中の`src/domains/`配下を要約し、主要集約と境界を�
 - `work_records`, 参照: `users`, `wbs_task`
 - 責務: 実績工数の記録（Geppoインポート対応）
 - 主要エンティティ: `WorkRecord`（userId, taskId, startDate, endDate, manHours）
+
+### StandingWork 集約（常設プロジェクトの定常枠）
+- `steady_work_plan`, 参照: `wbs_task`, `projects`
+- 責務: 常設プロジェクトの定常タスクについて「担当者が使う予定量」を定常枠（1営業日あたり / 1か月あたりの時間 + 有効期間）として持ち、日別の負荷へ展開する（詳細は [構想・実装設計 §6.4, §11](./plans/non-project-work-management.md)）
+- 主要エンティティ:
+  - `SteadyWorkPlan`（taskId, unit=`PER_DAY`/`PER_MONTH`, hours, validFrom, validTo?）
+  - `SteadyWorkTaskInput`（定常枠を持つタスクの配分計算入力）
 
 ### Calendar 集約
 - `company_holidays`, `user_schedule`
@@ -132,6 +140,9 @@ ER図と実装中の`src/domains/`配下を要約し、主要集約と境界を�
 | TaskStatus | task | `NOT_STARTED` / `IN_PROGRESS` / `COMPLETED` / `ON_HOLD` |
 | PhaseCode | phase | フェーズコード（英数字のみ） |
 | ProjectStatus | project | `INACTIVE` / `ACTIVE` / `DONE` / `CANCELLED` / `PENDING` |
+| ProjectKind | project | `PROJECT`（案件）/ `STANDING`（常設） |
+| StandingCategory | project | `MAINTENANCE` / `INTERNAL` / `OTHER`（常設の分類） |
+| SteadyPlanUnit | standing-work | `PER_DAY`（1営業日あたり）/ `PER_MONTH`（1か月あたり） |
 | TaskAllocation | assignee-workload | タスクIDと配分工数のペア（不変） |
 | EvmCalculationMode | evm | `hours` / `cost` |
 | ProgressMeasurementMethod | evm | `ZERO_HUNDRED` / `FIFTY_FIFTY` / `SELF_REPORTED` |
@@ -152,6 +163,12 @@ ER図と実装中の`src/domains/`配下を要約し、主要集約と境界を�
 ### Project
 - `startDate ≤ endDate`（開始日は終了日より前）
 - 新規作成時のデフォルトステータスは `INACTIVE`
+- 種別（`kind`）は作成後に変更しない。分類（`category`）は常設（`STANDING`）のみ持てる
+
+### SteadyWorkPlan
+- `hours ≥ 0`、`validFrom ≤ validTo`（`validTo` なしは無期限）
+- 同一タスクの定常枠は有効期間が重ならない（`assertNoOverlap`）
+- 定常枠を持てるのは常設プロジェクトの WBS のタスクで、担当者が設定されていること（Application 層で検証）
 
 ### Task / Period / ManHour
 - `Period`: `startDate ≤ endDate`
@@ -224,6 +241,7 @@ ER図と実装中の`src/domains/`配下を要約し、主要集約と境界を�
 | WorkloadCalculationService | assignee-workload | 担当者の日別作業配分計算（稼働可能時間比率で按分） |
 | WorkloadMergeService | assignee-workload | 複数WBS（プロジェクト）分の日別配分をユーザー単位で合算（分母は参画率キャップなしの標準勤務時間−個人予定） |
 | WorkloadWarningService | assignee-workload | 実現不可能タスクの検知（`NO_WORKING_DAYS`） |
+| SteadyWorkAllocationService | standing-work | 定常枠の日別配分（`PER_DAY` は稼働日に固定値、`PER_MONTH` は月額を稼働可能時間比で按分。参画率は見ない）と通常タスク配分との合流 |
 | ExternalLoadAwareCalendar | task-scheduling | 他WBS負荷を考慮した稼働カレンダー。参画率を「取り分の予約」として扱い、外部負荷を取り分外の時間から優先消費 |
 | TaskDependencyValidator | task-dependency | 循環参照チェック・重複検出・妥当性検証 |
 | TaskProgressCalculator | task | 実効進捗率計算（0/100法・50/50法・自己申告）、加重平均進捗率 |
@@ -251,11 +269,13 @@ ER図と実装中の`src/domains/`配下を要約し、主要集約と境界を�
   - `ISystemSettingsRepository`
   - `ISyncLogRepository`, `IExcelWbsRepository`
   - `ITaskDependencyRepository`
-  - `ITargetWbsQueryRepository`（未開始・進行中プロジェクトの最新WBSを解決。担当者別作業負荷ヒートマップの横断集計で使用）
+  - `ITargetWbsQueryRepository`（未開始・進行中プロジェクトの最新WBSを解決。担当者別作業負荷ヒートマップの横断集計で使用。`kinds` で案件のみに絞れる）
+  - `ISteadyWorkPlanRepository`（定常枠。範囲と交差する枠を所属タスク情報付きで返す `findActiveByWbsIds`）
 
 ## 境界づけられたコンテキスト
 
 - **計画（WBS/Task）と実績（WorkRecord）** は別境界。同期はGeppoインポートが担保
+- **常設プロジェクト（StandingWork）** は計画境界の一部だが、案件分析（EVM / Forecast / ポートフォリオ / 見積精度 / 通知）からは `kind` で除外し、担当者負荷（AssigneeWorkload）とデータ鮮度（入力漏れ）にだけ合流する
 - **EVM / Forecast** は計画・実績の双方を横断する分析境界
 - **通知（Notification）** は横断境界（イベント入力、配信出力）
 - **カレンダー（Calendar）** は計画・負荷計算の共通基盤

@@ -346,4 +346,102 @@ describe('ProjectApplicationService', () => {
       expect(result.error).toBe('プロジェクトが存在しません。');
     });
   });
+
+  /** プロジェクトの種別（案件 / 常設）。docs/plans/non-project-work-management.md §11 */
+  describe('種別（kind）と分類（category）', () => {
+    beforeEach(() => {
+      projectRepository.findByName.mockResolvedValue(null);
+      projectRepository.create.mockImplementation((project) => {
+        Object.defineProperty(project, 'id', { value: 'project-standing' });
+        return Promise.resolve(project);
+      });
+      wbsRepository.create.mockImplementation((wbs) => Promise.resolve(wbs));
+    });
+
+    it('常設プロジェクトを分類付きで作成し、種別と分類をリポジトリへ渡すこと', async () => {
+      const result = await projectApplicationService.createProject({
+        name: '社内業務',
+        description: '',
+        startDate,
+        endDate,
+        kind: 'STANDING',
+        category: 'INTERNAL',
+      });
+
+      expect(result).toEqual({ success: true, id: 'project-standing' });
+      const created: Project = projectRepository.create.mock.calls[0][0];
+      expect(created.kind).toBe('STANDING');
+      expect(created.category).toBe('INTERNAL');
+      // 常設でも WBS は自動作成する（Geppo 取込・担当者の受け皿）
+      expect(wbsRepository.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('種別を省略すると案件として作成されること', async () => {
+      await projectApplicationService.createProject({ name: '案件A', description: '', startDate, endDate });
+
+      const created: Project = projectRepository.create.mock.calls[0][0];
+      expect(created.kind).toBe('PROJECT');
+      expect(created.category).toBeUndefined();
+    });
+
+    it('案件に分類を付けるとエラーを返し、作成しないこと', async () => {
+      const result = await projectApplicationService.createProject({
+        name: '案件A',
+        description: '',
+        startDate,
+        endDate,
+        kind: 'PROJECT',
+        category: 'INTERNAL',
+      });
+
+      expect(result).toEqual({ success: false, error: '分類は常設プロジェクトのみ設定できます' });
+      expect(projectRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('取得結果の DTO に種別と分類を含めること', async () => {
+      const standing = Project.create({ name: '社内業務', startDate, endDate, kind: 'STANDING', category: 'OTHER' });
+      Object.defineProperty(standing, 'id', { value: 'project-standing' });
+      projectRepository.findById.mockResolvedValue(standing);
+      projectRepository.findAll.mockResolvedValue([standing]);
+
+      const one = await projectApplicationService.getProjectById('project-standing');
+      const all = await projectApplicationService.getProjectAll();
+
+      expect(one).toMatchObject({ kind: 'STANDING', category: 'OTHER' });
+      expect(all?.[0]).toMatchObject({ kind: 'STANDING', category: 'OTHER' });
+    });
+
+    it('常設プロジェクトの分類を更新できること', async () => {
+      const standing = Project.create({ name: '社内業務', startDate, endDate, kind: 'STANDING', category: 'OTHER' });
+      Object.defineProperty(standing, 'id', { value: 'project-standing' });
+      projectRepository.findById.mockResolvedValue(standing);
+      projectRepository.findByName.mockResolvedValue(null);
+      projectRepository.update.mockImplementation((project) => Promise.resolve(project));
+
+      const result = await projectApplicationService.updateProject({
+        id: 'project-standing',
+        status: 'ACTIVE',
+        category: 'MAINTENANCE',
+      });
+
+      expect(result.success).toBe(true);
+      const updated: Project = projectRepository.update.mock.calls[0][0];
+      expect(updated.category).toBe('MAINTENANCE');
+    });
+
+    it('案件の分類を更新しようとするとエラーを返すこと', async () => {
+      const project = Project.create({ name: '案件A', startDate, endDate });
+      Object.defineProperty(project, 'id', { value: 'project-1' });
+      projectRepository.findById.mockResolvedValue(project);
+
+      const result = await projectApplicationService.updateProject({
+        id: 'project-1',
+        status: 'ACTIVE',
+        category: 'MAINTENANCE',
+      });
+
+      expect(result).toEqual({ success: false, error: '分類は常設プロジェクトのみ設定できます' });
+      expect(projectRepository.update).not.toHaveBeenCalled();
+    });
+  });
 });

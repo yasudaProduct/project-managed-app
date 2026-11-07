@@ -166,7 +166,7 @@ export class NotificationEventDetector {
 
   private async loadTaskContexts(): Promise<TaskContext[]> {
     const contexts: TaskContext[] = [];
-    for (const target of await this.targetWbsQueryRepository.findTargetWbs()) {
+    for (const target of await this.targetWbsQueryRepository.findTargetWbs({ kinds: ['PROJECT'] })) {
       const settings = withProjectSettingsDefaults(
         target.projectId,
         await this.projectSettingsRepository.findByProjectId(target.projectId)

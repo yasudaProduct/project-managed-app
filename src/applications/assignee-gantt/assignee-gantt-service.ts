@@ -1,15 +1,15 @@
 import { injectable, inject } from 'inversify';
 import { IAssigneeGanttService } from './iassignee-gantt-service';
 import { AssigneeWorkload } from '@/domains/assignee-workload/assignee-workload';
-import { WorkloadCalculationService } from '@/domains/assignee-workload/workload-calculation-service';
 import { WorkloadWarningService, WorkloadWarning } from '@/domains/assignee-workload/workload-warning-service';
+import { AssigneeDailyAllocationCalculator } from './assignee-daily-allocation-calculator';
 import type { ITaskRepository } from '@/applications/task/itask-repository';
 import type { IUserScheduleRepository } from '@/applications/calendar/iuser-schedule-repository';
 import type { ICompanyHolidayRepository } from '@/applications/calendar/icompany-holiday-repository';
 import type { IWbsAssigneeRepository } from '@/applications/wbs/iwbs-assignee-repository';
 import type { ISystemSettingsRepository } from '@/applications/system-settings/isystem-settings-repository';
+import type { ISteadyWorkPlanRepository } from '@/applications/standing-work/isteady-work-plan-repository';
 import { SYMBOL } from '@/types/symbol';
-import { Task } from '@/domains/task/task';
 import { WbsAssignee } from '@/domains/wbs/wbs-assignee';
 import { UserSchedule } from '@/domains/calendar/assignee-working-calendar';
 import { CompanyCalendar } from '@/domains/calendar/company-calendar';
@@ -20,7 +20,7 @@ import { CompanyCalendar } from '@/domains/calendar/company-calendar';
  */
 @injectable()
 export class AssigneeGanttService implements IAssigneeGanttService {
-  private readonly workloadCalculationService: WorkloadCalculationService;
+  private readonly allocationCalculator: AssigneeDailyAllocationCalculator;
   private readonly workloadWarningService: WorkloadWarningService;
 
   constructor(
@@ -28,9 +28,10 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     @inject(SYMBOL.IUserScheduleRepository) private readonly userScheduleRepository: IUserScheduleRepository,
     @inject(SYMBOL.ICompanyHolidayRepository) private readonly companyHolidayRepository: ICompanyHolidayRepository,
     @inject(SYMBOL.IWbsAssigneeRepository) private readonly wbsAssigneeRepository: IWbsAssigneeRepository,
-    @inject(SYMBOL.ISystemSettingsRepository) private readonly systemSettingsRepository: ISystemSettingsRepository
+    @inject(SYMBOL.ISystemSettingsRepository) private readonly systemSettingsRepository: ISystemSettingsRepository,
+    @inject(SYMBOL.ISteadyWorkPlanRepository) private readonly steadyWorkPlanRepository: ISteadyWorkPlanRepository
   ) {
-    this.workloadCalculationService = new WorkloadCalculationService();
+    this.allocationCalculator = new AssigneeDailyAllocationCalculator();
     this.workloadWarningService = new WorkloadWarningService();
   }
 
@@ -69,11 +70,12 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       return [];
     }
 
-    // 2. 会社休日と担当者の個人予定を取得
-    const [systemSettings, userSchedules, companyHolidays] = await Promise.all([
+    // 2. 会社休日と担当者の個人予定、定常枠（常設プロジェクト）を取得
+    const [systemSettings, userSchedules, companyHolidays, steadyPlans] = await Promise.all([
       this.systemSettingsRepository.get(),
       this.getUserSchedulesForAssignees(assignees, startDate, endDate),
-      this.companyHolidayRepository.findByDateRange(startDate, endDate)
+      this.companyHolidayRepository.findByDateRange(startDate, endDate),
+      this.steadyWorkPlanRepository.findActiveByWbsIds([wbsId], { start: startDate, end: endDate })
     ]);
     const companyCalendar = new CompanyCalendar(
       systemSettings.standardWorkingHours,
@@ -83,21 +85,19 @@ export class AssigneeGanttService implements IAssigneeGanttService {
     // 担当者別に作業負荷を計算
     const workloads: AssigneeWorkload[] = [];
     for (const assignee of assignees) {
-      // 担当者に割り当てられたタスクを取得
-      const assigneeTasks = this.getTasksByAssignee(tasks, assignee.id!);
-
       // 担当者の個人予定を取得
       const assigneeSchedules = this.getUserSchedulesByAssignee(userSchedules, assignee.userId);
 
-      // 担当者の作業負荷を計算
-      const dailyAllocations = this.workloadCalculationService.calculateDailyAllocations(
-        assigneeTasks,
+      // 担当者の作業負荷を計算（通常タスクは YOTEI 按分、定常枠を持つタスクは枠で配分）
+      const dailyAllocations = this.allocationCalculator.calculate({
+        tasks,
+        steadyPlans,
         assignee,
-        assigneeSchedules,
+        userSchedules: assigneeSchedules,
         companyCalendar,
         startDate,
         endDate
-      );
+      });
 
       // 担当者の作業負荷を作成
       const workload = AssigneeWorkload.create({
@@ -213,10 +213,6 @@ export class AssigneeGanttService implements IAssigneeGanttService {
       return [];
     }
     return await this.userScheduleRepository.findByUsersAndDateRange(userIds, startDate, endDate);
-  }
-
-  private getTasksByAssignee(tasks: Task[], assigneeId: number): Task[] {
-    return tasks.filter(task => task.assigneeId === assigneeId);
   }
 
   private getUserSchedulesByAssignee(schedules: UserSchedule[], userId: string): UserSchedule[] {

@@ -171,4 +171,10 @@ describe('PortfolioApplicationService', () => {
     expect(a.healthStatus).toBe('no_data');
     consoleError.mockRestore();
   });
+
+  it('対象は案件（PROJECT）のみ。常設プロジェクトは一覧に含めない', async () => {
+    await service.listPortfolio(now);
+
+    expect(targetWbsQueryRepository.findTargetWbs).toHaveBeenCalledWith({ kinds: ['PROJECT'] });
+  });
 });

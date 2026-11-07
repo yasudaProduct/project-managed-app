@@ -27,6 +27,8 @@ export default async function EditProjectPage({
           startDate: project.startDate,
           endDate: project.endDate,
           status: project.status,
+          kind: project.kind,
+          category: project.category,
         }}
       />
     </div>

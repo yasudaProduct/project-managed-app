@@ -6,10 +6,12 @@ import { SYMBOL } from "@/types/symbol"
 import { ProjectStatus } from "@/types/wbs"
 import { revalidatePath } from "next/cache"
 import { container } from "@/lib/inversify.config"
-import { Project } from "@/types/project"
+import { PROJECT_KINDS, STANDING_CATEGORIES, type Project, type ProjectKind, type StandingCategory } from "@/types/project"
 import type { ActionResult } from "@/types/action-result"
 
-const projectApplicationService = container.get<IProjectApplicationService>(SYMBOL.IProjectApplicationService);
+function getProjectApplicationService(): IProjectApplicationService {
+    return container.get<IProjectApplicationService>(SYMBOL.IProjectApplicationService);
+}
 
 /**
  * プロジェクトを取得
@@ -17,7 +19,7 @@ const projectApplicationService = container.get<IProjectApplicationService>(SYMB
  * @returns プロジェクト
  */
 export async function getProjectById(id: string): Promise<Project | null> {
-    return await projectApplicationService.getProjectById(id);
+    return await getProjectApplicationService().getProjectById(id);
 }
 
 /**
@@ -25,7 +27,7 @@ export async function getProjectById(id: string): Promise<Project | null> {
  * @returns プロジェクト一覧
  */
 export async function getProjectAll() {
-    return await projectApplicationService.getProjectAll();
+    return await getProjectApplicationService().getProjectAll();
 }
 
 const createProjectSchema = z.object({
@@ -33,6 +35,10 @@ const createProjectSchema = z.object({
     description: z.string().max(100, "説明は100文字以下で入力してください。").optional(),
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
+    /** 種別（省略時は案件）。作成後は変更しない */
+    kind: z.enum(PROJECT_KINDS).optional(),
+    /** 常設プロジェクトの分類（常設のみ） */
+    category: z.enum(STANDING_CATEGORIES).optional(),
 });
 
 /**
@@ -45,17 +51,22 @@ export async function createProject(projectData: {
     description: string
     startDate: Date
     endDate: Date
+    kind?: ProjectKind
+    category?: StandingCategory
 }): Promise<ActionResult<Project>> {
     const parsed = createProjectSchema.safeParse(projectData);
     if (!parsed.success) {
         return { success: false, error: "入力値が不正です。" };
     }
 
+    const projectApplicationService = getProjectApplicationService();
     const { success, error, id } = await projectApplicationService.createProject({
         name: parsed.data.name,
         description: parsed.data.description ?? "",
         startDate: parsed.data.startDate,
         endDate: parsed.data.endDate,
+        kind: parsed.data.kind,
+        category: parsed.data.category,
     });
 
     if (!success || !id) {
@@ -79,6 +90,8 @@ const updateProjectSchema = z.object({
     startDate: z.string().optional(),
     endDate: z.string().optional(),
     status: z.enum(["INACTIVE", "ACTIVE", "DONE", "CANCELLED", "PENDING"]),
+    /** 常設プロジェクトの分類（常設のみ） */
+    category: z.enum(STANDING_CATEGORIES).optional(),
 });
 
 /**
@@ -95,6 +108,7 @@ export async function updateProject(
         startDate?: string
         endDate?: string
         status: ProjectStatus
+        category?: StandingCategory
     },
 ): Promise<ActionResult<Project>> {
     const parsed = updateProjectSchema.safeParse(projectData);
@@ -102,6 +116,7 @@ export async function updateProject(
         return { success: false, error: "入力値が不正です。" };
     }
 
+    const projectApplicationService = getProjectApplicationService();
     const { success, error, id } = await projectApplicationService.updateProject({
         id: projectId,
         name: parsed.data.name,
@@ -109,6 +124,7 @@ export async function updateProject(
         startDate: new Date(parsed.data.startDate!),
         endDate: new Date(parsed.data.endDate!),
         status: parsed.data.status,
+        category: parsed.data.category,
     });
 
     if (!success || !id) {
@@ -133,7 +149,7 @@ export async function updateProject(
  * @returns 削除したプロジェクトID
  */
 export async function deleteProject(projectId: string): Promise<ActionResult<{ id: string }>> {
-    const { success, error, id } = await projectApplicationService.deleteProject(projectId);
+    const { success, error, id } = await getProjectApplicationService().deleteProject(projectId);
     if (!success || !id) {
         return { success: false, error: error ?? "プロジェクトの削除に失敗しました。" };
     }

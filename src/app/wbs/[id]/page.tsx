@@ -13,6 +13,7 @@ import { getPreviousReviewDate } from "./actions/progress-review-actions";
 import { getEvmTrend } from "./actions/evm-actions";
 import { getProjectSettings } from "./project-settings-actions";
 import { getWbsImportSchedule } from "./import-schedule-actions";
+import { listSteadyWorkTasks } from "./actions/steady-work-plan-actions";
 import { WbsManagementContent } from "@/components/wbs/wbs-management-content";
 
 export default async function WbsManagementPage({
@@ -47,11 +48,13 @@ export default async function WbsManagementPage({
     ]);
   // 期限間近の日数・前回の確認日はプロジェクト設定に依存するため、設定の取得後に判定する
   const previousReviewDate = await getPreviousReviewDate(settings.progressReviewCycle);
-  const [taskDelays, dataFreshness, milestoneForecasts, evmTrend] = await Promise.all([
+  const [taskDelays, dataFreshness, milestoneForecasts, evmTrend, steadyWorkTasks] = await Promise.all([
     listTaskDelays(wbs.id, settings.deadlineAlertDays, previousReviewDate ?? undefined),
     getDataFreshness(wbs.id, wbs.projectId),
     listMilestoneForecasts(wbs.id),
     getEvmTrend(wbs.id, wbs.projectId),
+    // 常設プロジェクトのみ定常枠タブを表示する
+    project.kind === "STANDING" ? listSteadyWorkTasks(wbs.id) : Promise.resolve([]),
   ]);
 
   return (
@@ -66,6 +69,7 @@ export default async function WbsManagementPage({
         assignees={assignees}
         milestones={milestones}
         milestoneForecasts={milestoneForecasts}
+        steadyWorkTasks={steadyWorkTasks}
         taskDelays={taskDelays}
         dataFreshness={dataFreshness}
         previousReviewDate={previousReviewDate}

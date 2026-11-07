@@ -184,6 +184,9 @@ import { IWbsAnalyticsApplicationService, WbsAnalyticsApplicationService } from 
 import type { ICrossWbsWorkloadService } from '@/applications/cross-wbs-workload/icross-wbs-workload-service';
 import { CrossWbsWorkloadService } from '@/applications/cross-wbs-workload/cross-wbs-workload-service';
 import type { ITargetWbsQueryRepository } from '@/applications/cross-wbs-workload/itarget-wbs-query-repository';
+import type { ISteadyWorkPlanRepository } from '@/applications/standing-work/isteady-work-plan-repository';
+import { SteadyWorkPlanRepository } from '@/infrastructures/standing-work/steady-work-plan-repository';
+import { IStandingWorkApplicationService, StandingWorkApplicationService } from '@/applications/standing-work/standing-work-application-service';
 import { TargetWbsQueryRepository } from '@/infrastructures/cross-wbs-workload/target-wbs-query-repository';
 
 
@@ -256,6 +259,8 @@ container.bind<IProjectSettingsRepository>(SYMBOL.IProjectSettingsRepository).to
 container.bind<IWbsTagRepository>(SYMBOL.IWbsTagRepository).to(WbsTagRepository).inSingletonScope();
 container.bind<IWbsCrossQueryRepository>(SYMBOL.IWbsCrossQueryRepository).to(WbsCrossQueryRepository).inSingletonScope();
 container.bind<ITargetWbsQueryRepository>(SYMBOL.ITargetWbsQueryRepository).to(TargetWbsQueryRepository).inSingletonScope();
+container.bind<ISteadyWorkPlanRepository>(SYMBOL.ISteadyWorkPlanRepository).to(SteadyWorkPlanRepository).inSingletonScope();
+container.bind<IStandingWorkApplicationService>(SYMBOL.IStandingWorkApplicationService).to(StandingWorkApplicationService).inSingletonScope();
 
 
 // Geppo Import関連サービス

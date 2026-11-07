@@ -72,7 +72,7 @@ export class PortfolioApplicationService implements IPortfolioApplicationService
   ) {}
 
   public async listPortfolio(now: Date = new Date()): Promise<PortfolioRowDto[]> {
-    const targets = await this.targetWbsQueryRepository.findTargetWbs();
+    const targets = await this.targetWbsQueryRepository.findTargetWbs({ kinds: ['PROJECT'] });
     const rows = await Promise.all(targets.map((target) => this.buildRow(target, now)));
     return rows.sort(
       (a, b) =>
