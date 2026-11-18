@@ -33,7 +33,7 @@ EVM（Earned Value Management）は、プロジェクトの進捗をスケジュ
 | PV_BASE | Planned Value (Base) | 基準計画価値 | 基準スケジュール（KIJUN期間）に基づいて計算したPV。変更前の当初計画値 |
 | EV | Earned Value | 出来高 | 評価日時点で実際に完了した作業量を、計画単価で換算した値 |
 | AC | Actual Cost | 実績コスト | 評価日時点までに実際に投入した工数またはコストの累計値 |
-| BAC | Budget At Completion | 完了時予算 | プロジェクト全体の基準総工数またはコスト（バッファを含む）。基準（KIJUN）未設定タスクは予定工数にフォールバックする |
+| BAC | Budget At Completion | 完了時予算 | プロジェクト全体の基準総工数またはコスト（バッファを含む）。基準（KIJUN）未設定タスクは予定工数にフォールバックする（改訂予定：[15-buffer](./15-buffer.md) ではバッファを含めない） |
 | SV | Schedule Variance | スケジュール差異 | EV - PV。正の値はスケジュール前倒し、負の値は遅延を示す |
 | CV | Cost Variance | コスト差異 | EV - AC。正の値はコスト節約、負の値はコスト超過を示す |
 | SPI | Schedule Performance Index | スケジュール効率指標 | EV / PV。1.0が計画通り、1.0超が前倒し、1.0未満が遅延 |
@@ -333,6 +333,8 @@ SPIt = ES / AT（時間ベースのスケジュール効率）
 ---
 
 ## 9. バッファの取り扱い
+
+> **改訂予定**：バッファの扱いは再設計した（[15-buffer](./15-buffer.md)、未実装）。新しい仕様では、バッファを BAC に含めず、確定・取り崩し・解放などを台帳で管理する。この章は現行の実装の説明であり、バッファ機能の実装時に改訂する（改訂の内容は 15-buffer の16章）。
 
 WBSに設定されたバッファ（`WbsBuffer`）の工数は、BAC計算時に追加される。
 
@@ -733,7 +735,7 @@ EVMダッシュボードのメトリクスカードの下に、前回の確認�
 |------|------------|------|
 | `progressMeasurementMethod` | enum / SELF_REPORTED | 進捗測定方式（4章） |
 | `evmForecastMethod` | enum / CPI_ONLY | EAC/ETC予測方式（6章） |
-| `evmBufferCostMethod` | enum / AVERAGE_RATE | バッファの金額換算方式（9章） |
+| `evmBufferCostMethod` | enum / AVERAGE_RATE | バッファの金額換算方式（9章）（改訂予定：換算単価の決め方に変わり、EXCLUDE は廃止。[15-buffer](./15-buffer.md) 10章） |
 | `evmPvDistribution` | enum / CALENDAR | PV按分方式（暦日/営業日、4.4） |
 | `evmHealthyThresholdPct` | Int / 90 | ヘルス判定healthyしきい値（8章） |
 | `evmWarningThresholdPct` | Int / 80 | ヘルス判定warningしきい値（8章） |

@@ -153,7 +153,7 @@ ExcelのWBS（Geppo の MySQL を経由）を正とし、差分同期・洗い�
 | 8 | タスクNoの形式チェック（注意事項として示す） | プレビュー用の差分計算 |
 | 9 | 基準を画面で入力できるようにする | `src/applications/task/task-application-service.ts`、`src/app/wbs/[id]/actions/wbs-task-actions.ts`、タスクの作成・編集画面 |
 | 10 | 呼び方の変更（同期 → インポート）と、データの鮮度の表示の見直し | 画面全般、`docs/specs/10-data-freshness.md` の対象 |
-| 11 | 仕様書の改訂 | `docs/specs/06-mysql-import.md`、`docs/specs/10-data-freshness.md` |
+| 11 | ドキュメントの改訂 | `docs/specs/06-mysql-import.md`、`docs/specs/10-data-freshness.md`、`docs/specs/02-evm.md`（「WBS同期」の言い回し）、`docs/07-system-architecture.md`（定期実行の流れ「WBS同期 → 実績 前月・当月」） |
 
 `KIJUN_KOSU_BUFFER` を取り込まないようにした後、すでに保存されている種別 RISK の工数は、移行作業なしで消える。インポートは期間を作り直し、工数は期間と一緒に削除される（`TaskKosu` の `onDelete: Cascade`）ためである。論理削除済みのタスクには残るが、どこからも読まれない。
 

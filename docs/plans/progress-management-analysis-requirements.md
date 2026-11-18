@@ -273,7 +273,7 @@ Q0 は他のすべての前提。数字を信用できないと、どの分析�
 | 1-5 | 前回からの変化 | 実装済み | [02-evm 付録](../specs/02-evm.md)、[09-task-delay §5](../specs/09-task-delay.md) |
 | 3-1 | ポートフォリオ一覧 | 実装済み | [11-portfolio](../specs/11-portfolio.md) |
 | 2-1 | EVM のフェーズ切り替え・フェーズ別予測完了日 | 実装済み | [02-evm 付録「フェーズ別EVM」](../specs/02-evm.md) |
-| 2-2 | バッファ消化管理 | 実装済み | [02-evm §9「バッファ消化」](../specs/02-evm.md) |
+| 2-2 | バッファ消化管理 | 再設計中（未実装） | [15-buffer](../specs/15-buffer.md)（現行の実装は [02-evm §9「バッファ消化」](../specs/02-evm.md)） |
 | 2-3 | マイルストーン達成見込み | 実装済み | [12-milestone](../specs/12-milestone.md) |
 | 2-4 | 基準日程からのずれ | 実装済み | [13-schedule-slip](../specs/13-schedule-slip.md) |
 | 3-2 | 見積精度分析 | 実装済み | [14-estimation-accuracy](../specs/14-estimation-accuracy.md) |

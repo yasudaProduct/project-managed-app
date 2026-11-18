@@ -13,6 +13,7 @@ ER図と実装中の`src/domains/`配下を要約し、主要集約と境界を�
 ### WBS 集約
 - `wbs`, `wbs_phase`, `wbs_task`, `task_period`, `task_kosu`, `task_status_log`, `milestone`, `task_dependencies`, `wbs_buffer`, `wbs_assignee`, `wbs_tag`
 - 責務: タスク分解、期間/工数管理、依存関係、バッファ、担当者割当、タグ分類
+- 改訂予定: `wbs_buffer` は廃止し、新しい集約「バッファ計画」（計画・明細・台帳・確定時のタスク一覧）に置き換える（[15-buffer](./specs/15-buffer.md)、未実装）
 - 主要エンティティ:
   - `Wbs`（id, projectId, name）
   - `WbsAssignee`（wbsId, userId, rate, costPerHour, seq）
@@ -154,7 +155,7 @@ ER図と実装中の`src/domains/`配下を要約し、主要集約と境界を�
 | ImportJobStatus | import-job | `PENDING` / `RUNNING` / `COMPLETED` / `FAILED` / `CANCELLED` |
 | ImportJobStartResult | import-job | `STARTED` / `BUSY` / `NOT_PENDING` |
 | WbsSyncMode | wbs-sync | `diff` / `replace` |
-| BufferType | wbs | `RISK` / `OTHER` |
+| BufferType | wbs | `RISK` / `OTHER`（改訂予定：廃止。[15-buffer](./specs/15-buffer.md)） |
 | SyncStatus | sync | `SUCCESS` / `FAILED` / `PARTIAL` |
 | CompanyHolidayType | calendar | `NATIONAL` / `COMPANY` / `SPECIAL` |
 
