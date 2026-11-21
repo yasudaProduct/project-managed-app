@@ -10,13 +10,24 @@ import { TaskStatus } from "@/domains/task/value-object/task-status";
 // モッククラス
 class MockTaskRepository implements ITaskRepository {
   private tasks: Task[] = [];
+  private deletedTasks: Task[] = [];
 
   setTasks(tasks: Task[]) {
     this.tasks = tasks;
   }
 
+  /** 論理削除済み（isDeleted=true）のタスクを設定する */
+  setDeletedTasks(tasks: Task[]) {
+    this.deletedTasks = tasks;
+  }
+
+  /** 実リポジトリと同様に論理削除済みは含めない */
   async findAll(wbsId: number): Promise<Task[]> {
     return this.tasks.filter(task => task.wbsId === wbsId);
+  }
+
+  async findIncludingDeletedByWbsId(wbsId: number): Promise<Task[]> {
+    return [...this.tasks, ...this.deletedTasks].filter(task => task.wbsId === wbsId);
   }
 
   async findById(id: number): Promise<Task | null> {
@@ -343,6 +354,87 @@ describe("TaskFactory", () => {
 
       // Assert
       expect(result.getValue()).toBe("D1-0004");
+    });
+
+    // taskNo の一意制約は (taskNo, wbsId) で工程は関係しない。
+    // 工程変更・論理削除で phaseId や表示対象から外れたタスクも番号を使っている。
+    describe("WBS内で使用済みの番号と衝突しない", () => {
+      const d2PhaseId = 101; // 工程D2
+      const d10PhaseId = 110; // 工程D10
+
+      const createTask = (args: { id: number; taskNo: string; phaseId?: number }) =>
+        Task.createFromDb({
+          id: args.id,
+          name: `タスク${args.id}`,
+          wbsId: wbsId,
+          phaseId: args.phaseId,
+          taskNo: TaskNo.reconstruct(args.taskNo),
+          status: new TaskStatus({ status: "NOT_STARTED" }),
+        });
+
+      it("工程を変更して他工程へ移ったタスクの番号も使用済みとして扱う", async () => {
+        // Arrange: D1-0001〜D1-0007 のうち D1-0007 を工程D2へ移動した
+        mockTaskRepository.setTasks([
+          createTask({ id: 1, taskNo: "D1-0001", phaseId }),
+          createTask({ id: 2, taskNo: "D1-0002", phaseId }),
+          createTask({ id: 3, taskNo: "D1-0003", phaseId }),
+          createTask({ id: 4, taskNo: "D1-0004", phaseId }),
+          createTask({ id: 5, taskNo: "D1-0005", phaseId }),
+          createTask({ id: 6, taskNo: "D1-0006", phaseId }),
+          createTask({ id: 7, taskNo: "D1-0007", phaseId: d2PhaseId }),
+        ]);
+
+        // Act
+        const result = await taskFactory.createTaskId(wbsId, phaseId);
+
+        // Assert
+        expect(result.getValue()).toBe("D1-0008");
+      });
+
+      it("工程が未設定になったタスクの番号も使用済みとして扱う", async () => {
+        // Arrange: WBS同期で工程が外れた（phaseId=null）
+        mockTaskRepository.setTasks([
+          createTask({ id: 1, taskNo: "D1-0001", phaseId }),
+          createTask({ id: 2, taskNo: "D1-0002", phaseId: undefined }),
+        ]);
+
+        // Act
+        const result = await taskFactory.createTaskId(wbsId, phaseId);
+
+        // Assert
+        expect(result.getValue()).toBe("D1-0003");
+      });
+
+      it("論理削除済みタスクの番号も使用済みとして扱う", async () => {
+        // Arrange
+        mockTaskRepository.setTasks([
+          createTask({ id: 1, taskNo: "D1-0001", phaseId }),
+        ]);
+        mockTaskRepository.setDeletedTasks([
+          createTask({ id: 2, taskNo: "D1-0002", phaseId }),
+        ]);
+
+        // Act
+        const result = await taskFactory.createTaskId(wbsId, phaseId);
+
+        // Assert
+        expect(result.getValue()).toBe("D1-0003");
+      });
+
+      it("工程コードが前方一致する別工程（D10）のタスクは採番に影響しない", async () => {
+        // Arrange: D10 のタスク（工程D1へ移動したものを含む）
+        mockTaskRepository.setTasks([
+          createTask({ id: 1, taskNo: "D1-0002", phaseId }),
+          createTask({ id: 2, taskNo: "D10-0050", phaseId: d10PhaseId }),
+          createTask({ id: 3, taskNo: "D10-0051", phaseId }),
+        ]);
+
+        // Act
+        const result = await taskFactory.createTaskId(wbsId, phaseId);
+
+        // Assert
+        expect(result.getValue()).toBe("D1-0003");
+      });
     });
   });
 });

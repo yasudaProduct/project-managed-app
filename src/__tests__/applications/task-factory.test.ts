@@ -22,7 +22,7 @@ describe('TaskFactory', () => {
     // モックリポジトリの作成
     taskRepository = {
       findById: jest.fn(),
-      findAll: jest.fn(),
+      findIncludingDeletedByWbsId: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -58,14 +58,14 @@ describe('TaskFactory', () => {
       phaseRepository.findById.mockResolvedValue(mockPhase);
 
       // タスクが存在しない場合（初めてのタスク）
-      taskRepository.findAll.mockResolvedValue([]);
+      taskRepository.findIncludingDeletedByWbsId.mockResolvedValue([]);
 
       // テスト対象メソッド実行
       const taskId = await taskFactory.createTaskId(wbsId, 1);
 
       // 検証
       expect(phaseRepository.findById).toHaveBeenCalledWith(1);
-      expect(taskRepository.findAll).toHaveBeenCalledWith(wbsId);
+      expect(taskRepository.findIncludingDeletedByWbsId).toHaveBeenCalledWith(wbsId);
       expect(taskId.getValue()).toBe('D1-0001');
     });
 
@@ -96,7 +96,7 @@ describe('TaskFactory', () => {
         status: new TaskStatus({ status: 'NOT_STARTED' }),
       });
 
-      taskRepository.findAll.mockResolvedValue([task1, task2]);
+      taskRepository.findIncludingDeletedByWbsId.mockResolvedValue([task1, task2]);
 
       // テスト対象メソッド実行
       const taskId = await taskFactory.createTaskId(wbsId, 1);
@@ -130,7 +130,7 @@ describe('TaskFactory', () => {
         status: new TaskStatus({ status: 'COMPLETED' }),
       });
 
-      taskRepository.findAll.mockResolvedValue([task1, task2]);
+      taskRepository.findIncludingDeletedByWbsId.mockResolvedValue([task1, task2]);
 
       // テスト対象メソッド実行（開発フェーズのタスクID生成）
       const taskId = await taskFactory.createTaskId(wbsId, 2);
@@ -176,7 +176,7 @@ describe('TaskFactory', () => {
         status: new TaskStatus({ status: 'NOT_STARTED' }),
       });
 
-      taskRepository.findAll.mockResolvedValue([task1, task3]);
+      taskRepository.findIncludingDeletedByWbsId.mockResolvedValue([task1, task3]);
 
       // テスト対象メソッド実行
       const taskId = await taskFactory.createTaskId(wbsId, 1);
