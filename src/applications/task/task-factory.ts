@@ -21,7 +21,9 @@ export class TaskFactory implements ITaskFactory {
         }
 
         // 指定されたPhase内の最新のタスクIDを取得
-        const allTasks = await this.taskRepository.findAll(wbsId);
+        // taskNo+wbsId の一意制約は論理削除済みの行も対象になるため、論理削除済みも含めて採番する。
+        // 月報（Geppo）の実績はプロジェクトID＋タスクNoで紐付くため、番号は再利用しない。
+        const allTasks = await this.taskRepository.findIncludingDeletedByWbsId(wbsId);
         const phaseTasks = allTasks.filter(
             (task) => task.phaseId === phaseId && task.taskNo?.getValue().startsWith(wbsPhase.code.value())
         );
