@@ -8,15 +8,25 @@ import { PhaseCode } from "@/domains/phase/phase-code";
 import { TaskStatus } from "@/domains/task/value-object/task-status";
 
 // モッククラス
+// 実リポジトリと同様に、findAll は有効タスクのみ、findIncludingDeletedByWbsId は論理削除済みも含めて返す
 class MockTaskRepository implements ITaskRepository {
   private tasks: Task[] = [];
+  private deletedTasks: Task[] = [];
 
   setTasks(tasks: Task[]) {
     this.tasks = tasks;
   }
 
+  setDeletedTasks(tasks: Task[]) {
+    this.deletedTasks = tasks;
+  }
+
   async findAll(wbsId: number): Promise<Task[]> {
     return this.tasks.filter(task => task.wbsId === wbsId);
+  }
+
+  async findIncludingDeletedByWbsId(wbsId: number): Promise<Task[]> {
+    return [...this.tasks, ...this.deletedTasks].filter(task => task.wbsId === wbsId);
   }
 
   async findById(id: number): Promise<Task | null> {
@@ -343,6 +353,63 @@ describe("TaskFactory", () => {
 
       // Assert
       expect(result.getValue()).toBe("D1-0004");
+    });
+
+    describe("論理削除済みタスクがある場合（taskNo+wbsIdの一意制約は論理削除行も対象のため、番号を再利用しない）", () => {
+      const createD1Task = (id: number, taskNo: string) =>
+        Task.createFromDb({
+          id,
+          name: `タスク${id}`,
+          wbsId: wbsId,
+          phaseId: phaseId,
+          taskNo: TaskNo.reconstruct(taskNo),
+          status: new TaskStatus({ status: "NOT_STARTED" }),
+        });
+
+      it("最大番号のタスクが論理削除済みの場合、その次の番号を返す（D1-0005削除済み → D1-0006）", async () => {
+        // Arrange
+        // D1-0001〜D1-0004は有効、D1-0005は論理削除済み（WBS差分同期でExcelから消えたタスクなど）
+        mockTaskRepository.setTasks([
+          createD1Task(1, "D1-0001"),
+          createD1Task(2, "D1-0002"),
+          createD1Task(3, "D1-0003"),
+          createD1Task(4, "D1-0004"),
+        ]);
+        mockTaskRepository.setDeletedTasks([createD1Task(5, "D1-0005")]);
+
+        // Act
+        const result = await taskFactory.createTaskId(wbsId, phaseId);
+
+        // Assert
+        expect(result.getValue()).toBe("D1-0006");
+      });
+
+      it("工程内のタスクがすべて論理削除済みの場合も、削除済みの最大番号の次を返す", async () => {
+        // Arrange
+        mockTaskRepository.setTasks([]);
+        mockTaskRepository.setDeletedTasks([
+          createD1Task(1, "D1-0001"),
+          createD1Task(2, "D1-0002"),
+        ]);
+
+        // Act
+        const result = await taskFactory.createTaskId(wbsId, phaseId);
+
+        // Assert
+        expect(result.getValue()).toBe("D1-0003");
+      });
+
+      it("論理削除済みタスクの番号が有効タスクより小さい場合は、有効タスクの最大番号の次を返す", async () => {
+        // Arrange
+        mockTaskRepository.setTasks([createD1Task(3, "D1-0003")]);
+        mockTaskRepository.setDeletedTasks([createD1Task(1, "D1-0001")]);
+
+        // Act
+        const result = await taskFactory.createTaskId(wbsId, phaseId);
+
+        // Assert
+        expect(result.getValue()).toBe("D1-0004");
+      });
     });
   });
 });
