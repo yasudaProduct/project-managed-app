@@ -20,10 +20,15 @@ export class TaskFactory implements ITaskFactory {
             throw new Error("Phase not found");
         }
 
-        // 指定されたPhase内の最新のタスクIDを取得
-        const allTasks = await this.taskRepository.findAll(wbsId);
+        // taskNo の一意制約は (taskNo, wbsId) で工程は関係しない。
+        // 工程変更で他工程へ移ったタスクや論理削除済みタスクも番号を使っているため、
+        // 工程では絞らず WBS 内（論理削除込み）の同じ工程コードの番号を対象にする。
+        // 区切りの "-" まで含めて判定し、D1 と D10 を区別する。
+        // 月報（Geppo）の実績はプロジェクトID＋タスクNoで紐付くため、番号は再利用しない。
+        const taskNoPrefix = `${wbsPhase.code.value()}-`;
+        const allTasks = await this.taskRepository.findIncludingDeletedByWbsId(wbsId);
         const phaseTasks = allTasks.filter(
-            (task) => task.phaseId === phaseId && task.taskNo?.getValue().startsWith(wbsPhase.code.value())
+            (task) => task.taskNo?.getValue().startsWith(taskNoPrefix)
         );
         
         // タスクNo順でソートし、最後のタスクを取得

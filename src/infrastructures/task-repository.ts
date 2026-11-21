@@ -85,7 +85,7 @@ export class TaskRepository implements ITaskRepository {
         return this.findAllInternal(wbsId, false);
     }
 
-    /** 論理削除済みを含む全タスク。syncの照合用・replaceAllの全削除用。 */
+    /** 論理削除済みを含む全タスク。syncの照合用・replaceAllの全削除用・タスクNoの採番用。 */
     async findIncludingDeletedByWbsId(wbsId: number): Promise<Task[]> {
         return this.findAllInternal(wbsId, true);
     }

@@ -78,7 +78,7 @@ interface ITaskRepository {
         wbsIds: number[],
         options?: { periodOverlaps?: { start: Date; end: Date } }
     ): Promise<Task[]>;
-    /** 論理削除済みを含む全タスク（sync照合・replaceAll全削除用） */
+    /** 論理削除済みを含む全タスク（sync照合・replaceAll全削除・タスクNo採番用） */
     findIncludingDeletedByWbsId(wbsId: number): Promise<Task[]>;
     /** 差分照合用の軽量な同期状態（id/taskNo/isDeletedのみ、論理削除込み） */
     findSyncStateByWbsId(wbsId: number): Promise<TaskSyncState[]>;
