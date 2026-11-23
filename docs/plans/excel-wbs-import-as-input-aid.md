@@ -89,12 +89,12 @@ ExcelのWBS（Geppo の MySQL を経由）を正とし、差分同期・洗い�
 | 方針 | 内容 |
 |---|---|
 | 体系 | 「工程コード-4桁の連番」（例：D1-0001）に統一する。インポートで体系から外れる番号は、プレビューの注意事項として示す（取り込みは止めない） |
-| 誰が付けるか | インポートで作るタスクは Excel の番号、システムで作るタスクはシステムの採番。システムの採番は、同じ工程の続きの番号になる |
+| 誰が付けるか | インポートで作るタスクは Excel の番号、システムで作るタスクはシステムの採番。システムの採番は、WBS 内で同じ工程コードを持つ番号の続きになる |
 | 変えない | 一度作ったタスクNoは変えない。システムには番号を変える画面がない。Excel で番号を付け替えた場合は「削除＋追加」として扱い、プレビューで警告する |
-| 再利用しない | 採番は、論理削除済みのタスクも含めた最大の番号＋1とする |
+| 再利用しない | 採番は、論理削除済みのタスクも含めた最大の番号＋1とする（[#80](https://github.com/yasudaProduct/project-managed-app/pull/80) で対応済み） |
 | 月報 | 月報には、このタスクNoで実績を入力する。取り崩しで作ったタスクも同じ |
 
-**現行の不具合**：システムの採番（`src/applications/task/task-factory.ts`）は、論理削除済みのタスクを数えない（`findAll` が論理削除を除外する）。一方、DBの一意制約（WBS＋タスクNo）は論理削除済みのタスクも対象である。そのため、工程の中で一番大きい番号のタスクが論理削除されていると、同じ番号を採番してタスクの作成に失敗する。「再利用しない」方針への変更で解消する。
+**解消した不具合**：以前のシステムの採番（`src/applications/task/task-factory.ts`）は、論理削除済みのタスクを数えなかった。一方、DBの一意制約（WBS＋タスクNo）は論理削除済みのタスクも対象である。そのため、工程の中で一番大きい番号のタスクが論理削除されていると、同じ番号を採番してタスクの作成に失敗していた。[#80](https://github.com/yasudaProduct/project-managed-app/pull/80) で、WBS 内（論理削除済みを含む）の同じ工程コードの番号から採番するように直した（`develop` にマージ済み）。
 
 ## 5. システムでの入力
 
@@ -135,9 +135,9 @@ ExcelのWBS（Geppo の MySQL を経由）を正とし、差分同期・洗い�
 2. **月報は手動でインポートする。** WBSの定期インポートを止めると、月報の定期取り込みも一緒に止まるため、作業実績のGeppo取り込み画面から取り込む
 3. **画面では基準（KIJUN）と実績日を入力できない。** 新しく作るタスクには基準が入らず、BACには予定工数で計上される
 
-### 既知の不具合
+### 解消した不具合
 
-工程の中で一番大きい番号のタスクが論理削除されていると、その工程に画面からタスクを作れない（4章）。暫定期間は画面でタスクを作る機会が増えるため、優先して直す。
+工程の中で一番大きい番号のタスクが論理削除されていると、その工程に画面からタスクを作れない不具合があった（4章）。[#80](https://github.com/yasudaProduct/project-managed-app/pull/80) で修正した。本番に反映されるまでは、この点も周知に含める。
 
 ## 9. 改修項目
 
@@ -149,7 +149,7 @@ ExcelのWBS（Geppo の MySQL を経由）を正とし、差分同期・洗い�
 | 4 | プレビューと注意事項 | インポートの画面（`src/components/wbs/wbs-import-job-buttons.tsx` ほか）、プレビュー用の差分計算 |
 | 5 | 実行の記録（実行者を含む） | `SyncLog`、`ImportJob` |
 | 6 | `KIJUN_KOSU_BUFFER` を取り込まない | `src/domains/sync/wbs-data-mapper.ts` |
-| 7 | タスクNoを再利用しない採番 | `src/applications/task/task-factory.ts`、`src/infrastructures/task-repository.ts` |
+| 7 | タスクNoを再利用しない採番（**対応済み**：[#80](https://github.com/yasudaProduct/project-managed-app/pull/80)） | `src/applications/task/task-factory.ts`、`src/infrastructures/task-repository.ts` |
 | 8 | タスクNoの形式チェック（注意事項として示す） | プレビュー用の差分計算 |
 | 9 | 基準を画面で入力できるようにする | `src/applications/task/task-application-service.ts`、`src/app/wbs/[id]/actions/wbs-task-actions.ts`、タスクの作成・編集画面 |
 | 10 | 呼び方の変更（同期 → インポート）と、データの鮮度の表示の見直し | 画面全般、`docs/specs/10-data-freshness.md` の対象 |
